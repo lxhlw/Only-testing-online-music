@@ -40,6 +40,18 @@
       </section>
 
       <section class="card">
+        <h2>搜索与 musicUrl 测试</h2>
+        <p class="muted">使用网页搜索接口获取「成都」结果，再把歌曲信息交给当前 LX 音源解析 musicUrl。</p>
+        <div class="actions">
+          <input id="search-input" type="text" value="成都"
+            autocapitalize="off" autocomplete="off" spellcheck="false"
+            aria-label="搜索关键词">
+          <button id="search-btn" type="button">搜索</button>
+        </div>
+        <div id="search-results" class="source-list" aria-live="polite"></div>
+      </section>
+
+      <section class="card">
         <h2>真实音源测试基准</h2>
         <p class="muted">下一阶段使用原版六音音源搜索：<strong>成都</strong>。不会转换 LX 音源协议。</p>
       </section>
