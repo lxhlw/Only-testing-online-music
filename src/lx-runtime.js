@@ -188,6 +188,8 @@
     return bytes;
   }
 
+  if (!global.globalThis) global.globalThis = global;
+
   var bus = new EventBus();
   var requestHandler = function (url, options, callback) {
     callback(new Error('LX request handler is not configured'), null, null);
