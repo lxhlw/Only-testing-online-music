@@ -15,9 +15,19 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
 const pageErrors = []
 const failedResponses = []
+const proxyTargets = []
 
 page.on('pageerror', error => pageErrors.push(String(error)))
 page.on('requestfailed', request => console.log('REQUEST FAILED:', request.method(), request.url(), request.failure()?.errorText || 'unknown'))
+page.on('request', request => {
+  const url = request.url()
+  if (url.includes('/api/proxy?url=')) {
+    try {
+      const target = new URL(url).searchParams.get('url')
+      if (target) proxyTargets.push({ method: request.method(), target })
+    } catch {}
+  }
+})
 page.on('response', response => {
   if (response.status() >= 400) failedResponses.push(
     response.status() + ' ' + response.request().method() + ' ' + response.url()
@@ -123,6 +133,26 @@ try {
     'Page status:',
     await page.locator('#status').textContent().catch(() => 'unavailable')
   )
+  console.error('Proxy targets:', JSON.stringify(proxyTargets, null, 2))
+  if (proxyTargets.length) {
+    for (const item of proxyTargets.slice(-5)) {
+      try {
+        const direct = await fetch(item.target, {
+          method: item.method,
+          headers: { 'User-Agent': 'lx-music-web/2.0.0', 'Content-Type': 'application/json' },
+          redirect: 'manual'
+        })
+        const body = await direct.text()
+        console.error('DIRECT RUNNER FETCH:', item.method, item.target)
+        console.error('DIRECT STATUS:', direct.status, direct.statusText)
+        console.error('DIRECT LOCATION:', direct.headers.get('location') || 'none')
+        console.error('DIRECT BODY:', body.slice(0, 2000))
+      } catch (error) {
+        console.error('DIRECT RUNNER FETCH ERROR:', item.target)
+        console.error(String(error))
+      }
+    }
+  }
   console.error('LX request trace:', JSON.stringify(await page.evaluate(() => {
     const active = window.LXSourceManager && window.LXSourceManager.getActive
       ? window.LXSourceManager.getActive() : null
