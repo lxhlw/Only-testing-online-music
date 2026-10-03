@@ -266,48 +266,6 @@
       if (callback) callback(e, item);
     }
   }
-    var item = {
-      id: String(Date.now()) + '-' + Math.floor(Math.random() * 100000),
-      url: url,
-      name: meta.name,
-      description: meta.description,
-      version: meta.version,
-      author: meta.author,
-      homepage: meta.homepage,
-      code: code,
-      inited: false,
-      sources: null,
-      error: null
-    };
-
-    var initHandler = function (data) {
-      if (item.inited) return;
-      item.inited = true;
-      item.sources = data && data.sources ? data.sources : null;
-      notify();
-      if (global.OnlyTestingMusicApp && global.OnlyTestingMusicApp.onSourceInited) {
-        global.OnlyTestingMusicApp.onSourceInited(item);
-      }
-    };
-
-    var lxOn = global.LXRuntime.on;
-    lxOn.call(global.LXRuntime, global.LXRuntime.EVENT_NAMES.inited, initHandler);
-
-    try {
-      evaluate(code, meta);
-      sources.push(item);
-      persist();
-      active = item;
-      notify();
-      if (callback) callback(null, item);
-    } catch (e) {
-      item.error = e && e.message ? e.message : String(e);
-      if (callback) callback(e, item);
-    } finally {
-      global.LXRuntime.off(global.LXRuntime.EVENT_NAMES.inited, initHandler);
-    }
-  }
-
   function installFromUrl(url, callback) {
     xhr(url, function (err, code) {
       if (err) return callback(err);
