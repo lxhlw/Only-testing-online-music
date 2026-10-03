@@ -5,85 +5,17 @@
   var sources = [];
   var active = null;
 
+  function trim(s) { return String(s || '').replace(/^\s+|\s+$/g, ''); }
+
   function parseMeta(code, url) {
-    var name = (code.match(/@name\s+([^\n*\r]+)/i) || [])[1];
-    var description = (code.match(/@description\s+([^\n*\r]+)/i) || [])[1];
-    var version = (code.match(/@version\s+([^\n*\r]+)/i) || [])[1];
-    var author = (code.match(/@author\s+([^\n*\r]+)/i) || [])[1];
-    var homepage = (code.match(/@homepage\s+([^\n*\r]+)/i) || [])[1];
     return {
-      name: name ? name.trim() : 'Unnamed LX Source',
-      description: description ? description.trim() : '',
-      version: version ? version.trim() : '',
-      author: author ? author.trim() : '',
-      homepage: homepage ? homepage.trim() : '',
+      name: trim((code.match(/@name\s+([^\n*\r]+)/i) || [])[1]) || 'Unnamed LX Source',
+      description: trim((code.match(/@description\s+([^\n*\r]+)/i) || [])[1]),
+      version: trim((code.match(/@version\s+([^\n*\r]+)/i) || [])[1]),
+      author: trim((code.match(/@author\s+([^\n*\r]+)/i) || [])[1]),
+      homepage: trim((code.match(/@homepage\s+([^\n*\r]+)/i) || [])[1]),
       url: url
     };
-  }
-
-  function xhr(url, callback) {
-    var req = new XMLHttpRequest();
-    req.onreadystatechange = function () {
-      if (req.readyState !== 4) return;
-      if (req.status >= 200 && req.status < 300 || req.status === 0) {
-        callback(null, req.responseText);
-      } else {
-        callback(new Error('HTTP ' + req.status), null);
-      }
-    };
-    req.onerror = function () { callback(new Error('Network request failed'), null); };
-    req.open('GET', url, true);
-    req.send(null);
-    return function () {
-      try { req.abort(); } catch (e) {}
-    };
-  }
-
-  function persist() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sources));
-    } catch (e) {}
-  }
-
-  function loadPersisted() {
-    try {
-      var raw = localStorage.getItem(STORAGE_KEY);
-      sources = raw ? JSON.parse(raw) : [];
-      if (!(sources instanceof Array)) sources = [];
-      for (var i = 0; i < sources.length; i += 1) rehydrateItem(sources[i]);
-    } catch (e) {
-      sources = [];
-    }
-  }
-
-  function rehydrateItem(item) {
-    if (!item || typeof item.code !== 'string') return;
-    item.runtime = global.createLXRuntime({
-      env: 'desktop',
-      onInited: function (data) {
-        item.inited = true;
-        item.sources = data && data.sources ? data.sources : null;
-        item.initInfo = data || null;
-        persist();
-        notify();
-        if (global.OnlyTestingMusicApp && global.OnlyTestingMusicApp.onSourceInited) {
-          global.OnlyTestingMusicApp.onSourceInited(item);
-        }
-      },
-      onUpdateAlert: function (data) {
-        item.updateAlert = data || null;
-        persist();
-        notify();
-      }
-    });
-    item.runtime.__requestHandler = makeRequestHandler();
-    var meta = parseMeta(item.code, item.url);
-    try {
-      evaluate(item.code, meta, item.runtime);
-    } catch (e) {
-      item.error = e && e.message ? e.message : String(e);
-      item.inited = false;
-    }
   }
 
   function notify() {
@@ -92,244 +24,254 @@
     }
   }
 
-  function makeRequestHandler() {
-    return function (url, options, callback) {
-      var targetUrl = String(url || '');
-      var reqUrl = targetUrl;
+  function persist() {
+    try {
+      var clean = [];
+      for (var i = 0; i < sources.length; i += 1) {
+        var x = sources[i];
+        clean.push({
+          id:x.id,url:x.url,name:x.name,description:x.description,version:x.version,
+          author:x.author,homepage:x.homepage,code:x.code,inited:!!x.inited,
+          sources:x.sources || null,initInfo:x.initInfo || null,error:x.error || null
+        });
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
+    } catch (e) {}
+  }
+
+  function loadRaw() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      var value = raw ? JSON.parse(raw) : [];
+      return value instanceof Array ? value : [];
+    } catch (e) { return []; }
+  }
+
+  function makeRequestHandler(runtime) {
+    return function(url, options, callback) {
+      var target = String(url || '');
+      var requestUrl = target;
       try {
-        var current = new URL(global.location.href);
-        var target = new URL(targetUrl, current.href);
-        if (target.origin !== current.origin) {
-          reqUrl = current.origin + '/api/proxy?url=' + encodeURIComponent(target.href);
+        var page = new URL(global.location.href);
+        var dest = new URL(target, page.href);
+        if (dest.origin !== page.origin) {
+          requestUrl = page.origin + '/api/proxy?url=' + encodeURIComponent(dest.href);
         }
       } catch (e) {}
+
       var opts = options || {};
       var method = String(opts.method || 'GET').toUpperCase();
-      var req = new XMLHttpRequest();
+      var xhr = new XMLHttpRequest();
       var done = false;
-      var proxyHeaders = false;
-      if (reqUrl.indexOf('/api/proxy?url=') >= 0) {
-        proxyHeaders = true;
-        reqUrl = reqUrl + '&_=' + Date.now();
-      }
+      var proxied = requestUrl.indexOf('/api/proxy?url=') >= 0;
 
       function finish(err, body) {
         if (done) return;
         done = true;
-        if (err) {
-          callback(err, null, null);
-          return;
-        }
+        if (err) return callback.call(runtime, err, null, null);
 
-        var response = {
-          statusCode: req.status,
-          statusMessage: req.statusText || '',
+        var parsed = body;
+        try { parsed = JSON.parse(body); } catch (e) {}
+        callback.call(runtime, null, {
+          statusCode: xhr.status,
+          statusMessage: xhr.statusText || '',
           headers: {},
-          bytes: body ? body.length : 0,
+          bytes: body ? String(body).length : 0,
           raw: body || '',
-          body: body || ''
-        };
-        callback(null, response, body || '');
+          body: parsed
+        }, parsed);
       }
 
-      req.onreadystatechange = function () {
-        if (req.readyState !== 4) return;
-        if (req.status >= 200 && req.status < 300 || req.status === 0) finish(null, req.responseText);
-        else finish(new Error('HTTP ' + req.status), null);
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState !== 4) return;
+        if ((xhr.status >= 200 && xhr.status < 300) || xhr.status === 0) finish(null, xhr.responseText);
+        else finish(new Error('HTTP ' + xhr.status), null);
       };
-      req.onerror = function () { finish(new Error('Network request failed'), null); };
-      req.ontimeout = function () { finish(new Error('Request timeout'), null); };
+      xhr.onerror = function() { finish(new Error('Network request failed'), null); };
+      xhr.ontimeout = function() { finish(new Error('Request timeout'), null); };
 
       try {
-        req.open(method, reqUrl, true);
-        if (opts.timeout) req.timeout = Number(opts.timeout);
+        xhr.open(method, requestUrl, true);
+        if (opts.timeout && xhr.timeout !== undefined) xhr.timeout = Number(opts.timeout);
+
         if (opts.headers) {
-          for (var key in opts.headers) {
-            if (Object.prototype.hasOwnProperty.call(opts.headers, key)) req.setRequestHeader(key, opts.headers[key]);
+          if (proxied) {
+            try { xhr.setRequestHeader('X-LX-Headers', JSON.stringify(opts.headers)); } catch (e) {}
+          } else {
+            for (var key in opts.headers) if (Object.prototype.hasOwnProperty.call(opts.headers, key)) {
+              try { xhr.setRequestHeader(key, opts.headers[key]); } catch (e) {}
+            }
           }
         }
 
         var body = null;
         if (opts.form && typeof opts.form === 'object') {
           var parts = [];
-          for (var formKey in opts.form) {
-            if (Object.prototype.hasOwnProperty.call(opts.form, formKey)) {
-              parts.push(encodeURIComponent(formKey) + '=' + encodeURIComponent(opts.form[formKey]));
-            }
+          for (var fk in opts.form) if (Object.prototype.hasOwnProperty.call(opts.form, fk)) {
+            parts.push(encodeURIComponent(fk) + '=' + encodeURIComponent(opts.form[fk]));
           }
           body = parts.join('&');
-          if (!opts.headers || !opts.headers['Content-Type'] && !opts.headers['content-type']) {
-            req.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-          }
+          try { xhr.setRequestHeader('Content-Type','application/x-www-form-urlencoded'); } catch (e) {}
         } else if (opts.body != null) {
           body = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body);
-        } else if (opts.formData) {
-          body = opts.formData;
-        }
+        } else if (opts.formData) body = opts.formData;
 
-        req.send(body);
+        xhr.send(body);
       } catch (e) {
         finish(e, null);
       }
 
-      return function () {
-        try { req.abort(); } catch (e) {}
-      };
+      return function(){ try { xhr.abort(); } catch (e) {} };
     };
   }
 
-  function evaluate(code, meta) {
-    var lx = runtime;
-    lx.currentScriptInfo = {
-      name: meta.name,
-      description: meta.description,
-      version: meta.version,
-      author: meta.author,
-      homepage: meta.homepage,
-      rawScript: code
-    };
-
-    var previousLX = global.lx;
-    var previousGlobalThisLX = global.globalThis && global.globalThis.lx;
-    global.lx = lx;
-    if (!global.globalThis) global.globalThis = global;
-    global.globalThis.lx = lx;
-
-    var fn;
-    try {
-      fn = new Function('globalThis', 'window', 'console', 'setTimeout', 'clearTimeout', code + '\n//# sourceURL=' + meta.url);
-      return {
-        result: fn(global, global, global.console, global.setTimeout, global.clearTimeout),
-        previousLX: previousLX,
-        previousGlobalThisLX: previousGlobalThisLX
-      };
-    } catch (e) {
-      global.lx = previousLX;
-      if (global.globalThis && previousGlobalThisLX) global.globalThis.lx = previousGlobalThisLX;
-      throw e;
-    }
-  }
-
-  function installFromCode(code, url, callback) {
-    var meta = parseMeta(code, url);
-    var item = {
-      id: String(Date.now()) + '-' + Math.floor(Math.random() * 100000),
-      url: url,
-      name: meta.name,
-      description: meta.description,
-      version: meta.version,
-      author: meta.author,
-      homepage: meta.homepage,
-      code: code,
-      inited: false,
-      sources: null,
-      error: null,
-      runtime: null
-    };
-
-    item.runtime = global.createLXRuntime({
-      env: 'desktop',
-      requestHandler: null,
-      onInited: function (data) {
-        item.inited = true;
-        item.sources = data && data.sources ? data.sources : null;
-        item.initInfo = data || null;
-        persist();
-        notify();
+  function executeSource(item) {
+    var runtime = global.createLXRuntime({
+      env:'web',
+      onInited:function(data){
+        item.inited=true;
+        item.sources=data && data.sources ? data.sources : null;
+        item.initInfo=data || null;
+        item.error=null;
+        persist(); notify();
         if (global.OnlyTestingMusicApp && global.OnlyTestingMusicApp.onSourceInited) {
           global.OnlyTestingMusicApp.onSourceInited(item);
         }
       },
-      onUpdateAlert: function (data) {
-        item.updateAlert = data || null;
+      onUpdateAlert:function(data){
+        item.updateAlert=data || null;
         persist();
-        notify();
       }
     });
 
-    item.runtime._setRequestHandler = function () {};
-    item.runtime._setRequestHandler = function (handler) { item.runtime.__requestHandler = handler; };
-    item.runtime.request = function (url, options, cb) {
-      var handler = item.runtime.__requestHandler || makeRequestHandler();
-      return handler.call(item.runtime, url, options || {}, cb || function () {});
+    runtime.request = makeRequestHandler(runtime);
+    item.runtime=runtime;
+    item.inited=false;
+    item.sources=null;
+    item.error=null;
+
+    var meta=parseMeta(item.code,item.url);
+    runtime.currentScriptInfo={
+      name:meta.name,description:meta.description,version:meta.version,
+      author:meta.author,homepage:meta.homepage,rawScript:item.code
     };
 
-    var initHandler = function () {};
+    var previousLX=global.lx;
+    var previousGlobal=global.globalThis && global.globalThis.lx;
 
     try {
-      evaluate(code, meta, item.runtime);
-      sources.push(item);
-      persist();
-      active = item;
-      notify();
-      if (callback) callback(null, item);
+      if (!global.globalThis) global.globalThis=global;
+      global.lx=runtime;
+      global.globalThis.lx=runtime;
+      var fn=new Function(
+        'globalThis','window','console','setTimeout','clearTimeout',
+        item.code+'\n//# sourceURL='+item.url
+      );
+      fn(global,global,global.console,global.setTimeout,global.clearTimeout);
     } catch (e) {
-      item.error = e && e.message ? e.message : String(e);
+      item.error=e && e.message ? e.message : String(e);
+      throw e;
+    } finally {
+      global.lx=previousLX;
+      if (global.globalThis) global.globalThis.lx=previousGlobal;
+    }
+
+    return item;
+  }
+
+  function addOrReplace(item) {
+    var next=[];
+    for (var i=0;i<sources.length;i+=1) if (sources[i].url!==item.url) next.push(sources[i]);
+    next.push(item);
+    sources=next;
+    active=item;
+    persist(); notify();
+  }
+
+  function installFromCode(code,url,callback) {
+    var meta=parseMeta(code,url);
+    var item={
+      id:String(Date.now())+'-'+Math.floor(Math.random()*100000),
+      url:url,name:meta.name,description:meta.description,version:meta.version,
+      author:meta.author,homepage:meta.homepage,code:String(code),inited:false,
+      sources:null,initInfo:null,error:null,runtime:null
+    };
+    try {
+      executeSource(item);
+      addOrReplace(item);
+      if (callback) callback(null,item);
+    } catch (e) {
       persist();
-      if (callback) callback(e, item);
+      if (callback) callback(e,item);
     }
   }
-  function installFromUrl(url, callback) {
-    xhr(url, function (err, code) {
+
+  function installFromUrl(url,callback) {
+    var xhr=new XMLHttpRequest(),done=false;
+    function finish(err,code) {
+      if (done) return; done=true;
       if (err) return callback(err);
-      if (!code || !String(code).trim()) return callback(new Error('LX source code is empty'));
-      installFromCode(String(code), url, callback);
-    });
+      if (!code || !String(code).replace(/\s+/g,'')) return callback(new Error('LX source code is empty'));
+      installFromCode(String(code),url,callback);
+    }
+    xhr.onreadystatechange=function(){
+      if(xhr.readyState!==4)return;
+      if((xhr.status>=200&&xhr.status<300)||xhr.status===0)finish(null,xhr.responseText);
+      else finish(new Error('HTTP '+xhr.status));
+    };
+    xhr.onerror=function(){finish(new Error('Network request failed'));};
+    xhr.open('GET',url,true); xhr.send(null);
+    return function(){try{xhr.abort();}catch(e){}};
+  }
+
+  function rehydrate(item) {
+    if (!item || typeof item.code!=='string') return;
+    try { executeSource(item); } catch (e) { item.inited=false; }
+  }
+
+  function init() {
+    sources=loadRaw();
+    for(var i=0;i<sources.length;i+=1)rehydrate(sources[i]);
+    active=sources.length?sources[0]:null;
+    persist(); notify();
   }
 
   function remove(id) {
-    var next = [];
-    for (var i = 0; i < sources.length; i += 1) {
-      if (sources[i].id !== id) next.push(sources[i]);
-    }
-    sources = next;
-    persist();
-    notify();
+    var next=[];
+    for(var i=0;i<sources.length;i+=1)if(sources[i].id!==id)next.push(sources[i]);
+    sources=next;
+    if(active && active.id===id)active=sources.length?sources[0]:null;
+    persist(); notify();
   }
 
   function clear() {
-    sources = [];
-    active = null;
-    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    sources=[]; active=null;
+    try{localStorage.removeItem(STORAGE_KEY);}catch(e){}
     notify();
   }
 
   function activate(id) {
-    for (var i = 0; i < sources.length; i += 1) {
-      if (sources[i].id === id) {
-        active = sources[i];
-        return active;
-      }
+    for(var i=0;i<sources.length;i+=1)if(sources[i].id===id){
+      active=sources[i]; notify(); return active;
     }
     return null;
   }
 
-  function activate(id) {
-    for (var i = 0; i < sources.length; i += 1) {
-      if (sources[i].id === id) {
-        active = sources[i];
-        return active;
-      }
+  function requestAction(source,action,info,callback) {
+    if(!active || !active.runtime){
+      if(callback)callback(new Error('No active LX source runtime')); return;
     }
-    return null;
+    active.runtime.__requestAction(source,action,info).then(function(result){
+      if(callback)callback(null,result);
+    }).catch(function(err){
+      if(callback)callback(err);
+    });
   }
 
-  function getSources() { return sources.slice(); }
-  function getActive() { return active; }
-
-  global.LXSourceManager = {
-    init: function () {
-      loadPersisted();
-      active = sources.length ? sources[0] : null;
-      notify();
-    },
-    installFromUrl: installFromUrl,
-    installFromCode: installFromCode,
-    remove: remove,
-    clear: clear,
-    activate: activate,
-    getSources: getSources,
-    activate: activate,
-    getActive: getActive
+  global.LXSourceManager={
+    init:init,installFromUrl:installFromUrl,installFromCode:installFromCode,
+    remove:remove,clear:clear,activate:activate,requestAction:requestAction,
+    getSources:function(){return sources.slice();},
+    getActive:function(){return active;}
   };
 })(window);
