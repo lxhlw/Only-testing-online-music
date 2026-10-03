@@ -118,6 +118,27 @@ try {
     audio.load()
   })
 
+  const audioSrc = await page.locator('#audio').getAttribute('src')
+  console.log('Resolved audio src:', audioSrc)
+
+  if (audioSrc) {
+    try {
+      const probe = await fetch(audioSrc, {
+        redirect: 'manual',
+        headers: { 'User-Agent': 'lx-music-web/2.0.0' }
+      })
+      const probeBody = await probe.text()
+      console.log('AUDIO PROBE STATUS:', probe.status, probe.statusText)
+      console.log('AUDIO PROBE CONTENT-TYPE:', probe.headers.get('content-type') || 'none')
+      console.log('AUDIO PROBE LOCATION:', probe.headers.get('location') || 'none')
+      console.log('AUDIO PROBE LENGTH:', probe.headers.get('content-length') || 'unknown')
+      console.log('AUDIO PROBE BODY:', probeBody.slice(0, 600))
+    } catch (error) {
+      console.log('AUDIO PROBE ERROR:', String(error))
+      if (error && error.cause) console.log('AUDIO PROBE CAUSE:', String(error.cause))
+    }
+  }
+
   await page.evaluate(() => {
     const audio = document.getElementById('audio')
     return audio.play().catch(error => {
