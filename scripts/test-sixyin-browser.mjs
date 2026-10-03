@@ -96,44 +96,166 @@ try {
   console.log('Search results:', searchState.count)
   console.log('First result:', searchState.firstTitle)
 
-  await page.locator('#search-results .search-row').first().getByRole(
-    'button',
-    { name: 'LX musicUrl 测试' }
-  ).click()
+  const rows = page.locator('#search-results .search-row')
+  const rowCount = await rows.count()
+  const testCount = Math.min(5, rowCount)
+  assert.ok(testCount > 0, 'No search rows available for playback testing')
 
-  await page.waitForFunction(
-    () => {
-      const audio = document.getElementById('audio')
-      return Boolean(audio && /^https?:/i.test(audio.src))
-    },
-    null,
-    { timeout: 120000 }
-  )
+  const attempts = []
+  let playbackPassed = false
 
-  await page.evaluate(() => {
+  for (let i = 0; i < testCount; i += 1) {
+    const row = rows.nth(i)
+    const title = await row.locator('b').textContent()
+    const singer = await row.locator('span').textContent()
+    const button = row.getByRole('button', { name: 'LX musicUrl 测试' })
+    console.log('\n--- Playback candidate ' + (i + 1) + '/' + testCount + ' ---')
+    console.log('Song:', title, '-', singer)
+
+    await button.click()
+
+    try {
+      await page.waitForFunction(
+        () => {
+          const text = document.getElementById('status')?.textContent || ''
+          return /LX musicUrl (已返回播放地址|失败|返回了无效结果)/.test(text)
+        },
+        null,
+        { timeout: 30000 }
+      )
+
+      const status = await page.locator('#status').textContent()
+      const src = await page.locator('#audio').getAttribute('src')
+      const attempt = { index: i + 1, title, singer, status, src, probe: null, playback: null }
+
+      console.log('Status:', status)
+      console.log('Resolved audio src:', src || 'none')
+
+      if (!src || !/^https?:/i.test(src) || !/已返回播放地址/.test(status)) {
+        attempts.push(attempt)
+        continue
+      }
+
+      try {
+        const probe = await fetch(src, {
+          redirect: 'manual',
+          headers: { 'User-Agent': 'lx-music-web/2.0.0' }
+        })
+        const probeBody = await probe.text()
+        attempt.probe = {
+          status: probe.status,
+          statusText: probe.statusText,
+          contentType: probe.headers.get('content-type') || '',
+          location: probe.headers.get('location') || '',
+          contentLength: probe.headers.get('content-length') || '',
+          body: probeBody.slice(0, 300)
+        }
+        console.log('Probe:', JSON.stringify(attempt.probe))
+      } catch (error) {
+        attempt.probe = { error: String(error), cause: error?.cause ? String(error.cause) : '' }
+        console.log('Probe error:', JSON.stringify(attempt.probe))
+      }
+
+      await page.evaluate(() => {
+        const audio = document.getElementById('audio')
+        audio.pause()
+        audio.currentTime = 0
+        audio.preload = 'auto'
+        audio.muted = true
+        audio.load()
+      })
+
+      try {
+        await page.evaluate(async () => {
+          const audio = document.getElementById('audio')
+          if (!audio) throw new Error('Audio element not found')
+          await audio.play()
+        })
+
+        await page.waitForFunction(
+          () => {
+            const audio = document.getElementById('audio')
+            return Boolean(audio && audio.readyState >= 2)
+          },
+          null,
+          { timeout: 12000 }
+        )
+
+        await page.waitForFunction(
+          () => {
+            const audio = document.getElementById('audio')
+            return Boolean(audio && audio.currentTime > 0.05)
+          },
+          null,
+          { timeout: 12000 }
+        )
+
+        const playback = await page.evaluate(() => {
+          const audio = document.getElementById('audio')
+          return {
+            readyState: audio.readyState,
+            currentTime: audio.currentTime,
+            paused: audio.paused,
+            networkState: audio.networkState,
+            error: audio.error ? {
+              code: audio.error.code,
+              message: audio.error.message || ''
+            } : null
+          }
+        })
+        attempt.playback = playback
+        console.log('Playback:', JSON.stringify(playback))
+
+        if (playback.readyState >= 2 && playback.currentTime > 0.05) {
+          playbackPassed = true
+          attempts.push(attempt)
+          console.log('PASS: candidate produced actual HTML5 playback')
+          break
+        }
+      } catch (error) {
+        attempt.playback = {
+          error: String(error),
+          cause: error?.cause ? String(error.cause) : ''
+        }
+        console.log('Playback error:', JSON.stringify(attempt.playback))
+      }
+
+      attempts.push(attempt)
+    } catch (error) {
+      attempts.push({
+        index: i + 1,
+        title,
+        singer,
+        status: await page.locator('#status').textContent().catch(() => ''),
+        src: await page.locator('#audio').getAttribute('src').catch(() => null),
+        error: String(error)
+      })
+    }
+  }
+
+  console.log('\nPlayback attempts:', JSON.stringify(attempts, null, 2))
+  assert.equal(playbackPassed, true, 'None of the first ' + testCount + ' search results produced actual HTML5 playback')
+
+  const finalState = await page.evaluate(() => {
     const audio = document.getElementById('audio')
-    if (!audio) throw new Error('Audio element not found')
-    audio.preload = 'auto'
-    audio.muted = true
-    audio.load()
+    return {
+      tagName: audio && audio.tagName,
+      src: audio && audio.src,
+      readyState: audio && audio.readyState,
+      currentTime: audio && audio.currentTime,
+      paused: audio && audio.paused,
+      networkState: audio && audio.networkState,
+      status: document.getElementById('status').textContent || ''
+    }
   })
 
-  const audioSrc = await page.locator('#audio').getAttribute('src')
-  console.log('Resolved audio src:', audioSrc)
+  assert.equal(finalState.tagName, 'AUDIO')
+  assert.match(finalState.src, /^https?:/i)
+  assert.ok(finalState.readyState >= 2, 'Audio did not reach HAVE_CURRENT_DATA')
+  assert.ok(Number(finalState.currentTime) > 0.05, 'Audio did not advance playback time')
 
-  if (audioSrc) {
-    try {
-      const probe = await fetch(audioSrc, {
-        redirect: 'manual',
-        headers: { 'User-Agent': 'lx-music-web/2.0.0' }
-      })
-      const probeBody = await probe.text()
-      console.log('AUDIO PROBE STATUS:', probe.status, probe.statusText)
-      console.log('AUDIO PROBE CONTENT-TYPE:', probe.headers.get('content-type') || 'none')
-      console.log('AUDIO PROBE LOCATION:', probe.headers.get('location') || 'none')
-      console.log('AUDIO PROBE LENGTH:', probe.headers.get('content-length') || 'unknown')
-      console.log('AUDIO PROBE BODY:', probeBody.slice(0, 600))
-    } catch (error) {
+  console.log('PASS: at least one 成都 result reached real HTML5 playback')
+} catch (error) {
       console.log('AUDIO PROBE ERROR:', String(error))
       if (error && error.cause) console.log('AUDIO PROBE CAUSE:', String(error.cause))
     }
