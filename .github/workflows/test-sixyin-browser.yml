@@ -1,0 +1,45 @@
+name: Test Original SixYin In Chromium
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  sixyin-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start local site
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/wrangler.log 2>&1 &
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8788/ > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Test original SixYin in real Chromium
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-sixyin-browser.mjs
+
+      - name: Show local server log on failure
+        if: failure()
+        run: cat /tmp/wrangler.log || true
