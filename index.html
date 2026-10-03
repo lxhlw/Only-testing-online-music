@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Only Testing Online Music</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">LX Music Web</div>
+      <div class="subtitle">Legacy Web Player</div>
+    </header>
+
+    <main class="page">
+      <section class="card">
+        <h1>在线音乐测试</h1>
+        <p class="muted">第一阶段：直接导入原版 LX Music 音源脚本。</p>
+
+        <label for="source-url">LX 音源 URL</label>
+        <input id="source-url" type="text" autocapitalize="off" autocomplete="off"
+          spellcheck="false"
+          value="https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/latest.js">
+
+        <div class="actions">
+          <button id="install-btn" type="button">导入音源</button>
+          <button id="clear-btn" type="button" class="secondary">清空已安装音源</button>
+        </div>
+
+        <div id="status" class="status">等待导入。</div>
+      </section>
+
+      <section class="card">
+        <div class="card-title-row">
+          <h2>已安装音源</h2>
+          <span id="source-count" class="badge">0</span>
+        </div>
+        <div id="source-list" class="source-list"></div>
+      </section>
+
+      <section class="card">
+        <h2>LX Runtime</h2>
+        <pre id="runtime-info" class="runtime-info"></pre>
+      </section>
+
+      <section class="card">
+        <h2>Phase 1 验证</h2>
+        <div class="check-row"><span>静态网页</span><b class="ok">READY</b></div>
+        <div class="check-row"><span>原始 LX 源保存</span><b id="check-storage" class="pending">WAIT</b></div>
+        <div class="check-row"><span>globalThis.lx Runtime</span><b id="check-runtime" class="pending">WAIT</b></div>
+        <div class="check-row"><span>音源 inited</span><b id="check-inited" class="pending">WAIT</b></div>
+      </section>
+    </main>
+
+    <footer class="player">
+      <div class="player-text">
+        <div id="player-title">未播放</div>
+        <div id="player-artist" class="muted">—</div>
+      </div>
+      <audio id="audio" controls preload="none"></audio>
+    </footer>
+  </div>
+
+  <script src="src/lx-runtime.js"></script>
+  <script src="src/source-manager.js"></script>
+  <script src="src/app.js"></script>
+</body>
+</html>
