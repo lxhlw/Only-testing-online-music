@@ -4,6 +4,8 @@ import { chromium } from 'playwright'
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8788'
 const SOURCE_URL = process.env.SIXYIN_SOURCE_URL || 'https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/latest.js'
 const KEYWORD = '成都'
+const VERSION = process.env.SIXYIN_VERSION || 'unknown'
+const INIT_TIMEOUT = Number(process.env.SIXYIN_INIT_TIMEOUT_MS || 30000)
 
 const browser = await chromium.launch({
   headless: true,
@@ -15,6 +17,7 @@ const pageErrors = []
 const failedResponses = []
 
 page.on('pageerror', error => pageErrors.push(String(error)))
+page.on('requestfailed', request => console.log('REQUEST FAILED:', request.method(), request.url(), request.failure()?.errorText || 'unknown'))
 page.on('response', response => {
   if (response.status() >= 400) failedResponses.push(
     response.status() + ' ' + response.request().method() + ' ' + response.url()
@@ -22,7 +25,7 @@ page.on('response', response => {
 })
 
 try {
-  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 })
+  console.log('SixYin version:', VERSION)\n  console.log('Source URL:', SOURCE_URL)\n  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 })
   assert.equal(await page.locator('#install-btn').isVisible(), true, 'App did not load')
 
   await page.locator('#source-url').fill(SOURCE_URL)
@@ -35,7 +38,7 @@ try {
       return Boolean(items.length && items[0].inited && items[0].runtime && items[0].sources)
     },
     null,
-    { timeout: 120000 }
+    { timeout: INIT_TIMEOUT }
   )
 
   const sourceState = await page.evaluate(() => {
