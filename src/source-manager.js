@@ -189,8 +189,8 @@
       }
     };
 
-    lxOn = global.LXRuntime.on;
-    lxOn(global.LXRuntime.EVENT_NAMES.inited, initHandler);
+    var lxOn = global.LXRuntime.on;
+    lxOn.call(global.LXRuntime, global.LXRuntime.EVENT_NAMES.inited, initHandler);
 
     try {
       evaluate(code, meta);
@@ -232,6 +232,16 @@
     notify();
   }
 
+  function activate(id) {
+    for (var i = 0; i < sources.length; i += 1) {
+      if (sources[i].id === id) {
+        active = sources[i];
+        return active;
+      }
+    }
+    return null;
+  }
+
   function getSources() { return sources.slice(); }
   function getActive() { return active; }
 
@@ -245,6 +255,7 @@
     installFromCode: installFromCode,
     remove: remove,
     clear: clear,
+    activate: activate,
     getSources: getSources,
     getActive: getActive
   };
