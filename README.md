@@ -10,6 +10,8 @@ The project does **not** use WhyMusic and does not modify the L101 Volume Float 
 
 ### Core goals
 
+- Primary real-source search test keyword: **成都**
+
 - LX Music-style search, playlists, favorites, history, lyrics, player, and settings
 - Import **original LX Music source JavaScript files directly**
 - Do not convert an LX source into another plugin protocol
@@ -21,7 +23,7 @@ The project does **not** use WhyMusic and does not modify the L101 Volume Float 
 
 ## Current phase
 
-Phase 1 establishes the browser shell and LX source loader/runtime.
+Phase 4 establishes the per-source LX Runtime and legacy-browser cryptography foundation.
 
 It currently provides:
 
@@ -35,7 +37,7 @@ It currently provides:
 - Initial `buffer` and `crypto` compatibility primitives
 - Source initialization reporting
 
-The network proxy, full cryptography/zlib compatibility, complete source actions, player, playlists, and production deployment will be implemented in later phases.
+The same-origin network proxy and browser cryptography foundation are now present. Full zlib compatibility, complete source actions, search UI, player controls, playlists, and production deployment will be implemented in later phases.
 
 ## LX compatibility target
 
