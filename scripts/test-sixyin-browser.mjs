@@ -110,18 +110,56 @@ try {
     { timeout: 120000 }
   )
 
+  await page.evaluate(() => {
+    const audio = document.getElementById('audio')
+    if (!audio) throw new Error('Audio element not found')
+    audio.preload = 'auto'
+    audio.muted = true
+    audio.load()
+  })
+
+  await page.evaluate(() => {
+    const audio = document.getElementById('audio')
+    return audio.play().catch(error => {
+      throw new Error('Audio.play() failed: ' + error.message)
+    })
+  })
+
+  await page.waitForFunction(
+    () => {
+      const audio = document.getElementById('audio')
+      return Boolean(audio && audio.readyState >= 2)
+    },
+    null,
+    { timeout: 20000 }
+  )
+
+  await page.waitForFunction(
+    () => {
+      const audio = document.getElementById('audio')
+      return Boolean(audio && audio.currentTime > 0.05)
+    },
+    null,
+    { timeout: 20000 }
+  )
+
   const playbackState = await page.evaluate(() => {
     const audio = document.getElementById('audio')
     return {
       tagName: audio && audio.tagName,
       src: audio && audio.src,
       readyState: audio && audio.readyState,
+      currentTime: audio && audio.currentTime,
+      paused: audio && audio.paused,
+      networkState: audio && audio.networkState,
       status: document.getElementById('status').textContent || ''
     }
   })
 
   assert.equal(playbackState.tagName, 'AUDIO')
   assert.match(playbackState.src, /^https?:/i)
+  assert.ok(playbackState.readyState >= 2, 'Audio did not reach HAVE_CURRENT_DATA')
+  assert.ok(Number(playbackState.currentTime) > 0.05, 'Audio did not advance playback time')
   assert.match(playbackState.status, /musicUrl 已返回播放地址/)
 
   console.log('PASS: original SixYin musicUrl returned an HTTP(S) URL')
