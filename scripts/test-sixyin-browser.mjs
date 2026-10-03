@@ -123,6 +123,12 @@ try {
     'Page status:',
     await page.locator('#status').textContent().catch(() => 'unavailable')
   )
+  console.error('LX request trace:', JSON.stringify(await page.evaluate(() => {
+    const active = window.LXSourceManager && window.LXSourceManager.getActive
+      ? window.LXSourceManager.getActive() : null
+    return active && active.runtime && active.runtime.__debugRequests
+      ? active.runtime.__debugRequests : []
+  }).catch(() => []), null, 2))
   console.error('Page errors:', pageErrors.join('\n') || 'none')
   console.error('Failed responses:', failedResponses.join('\n') || 'none')
   process.exitCode = 1
