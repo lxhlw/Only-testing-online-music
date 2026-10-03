@@ -259,6 +259,20 @@
       }
     };
 
+    runtime.__requestAction = function (source, action, info) {
+      return bus.emitAsync('request', {
+        source: source,
+        action: action,
+        info: info
+      }, runtime).then(function (results) {
+        var i;
+        for (i = 0; i < results.length; i += 1) {
+          if (results[i] != null) return results[i];
+        }
+        throw new Error('LX request returned no result');
+      });
+    };
+
     return runtime;
   }
 
