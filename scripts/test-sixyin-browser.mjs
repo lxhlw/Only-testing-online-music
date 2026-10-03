@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright'
+import dns from 'node:dns/promises'
+import tls from 'node:tls'
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8788'
 const SOURCE_URL = process.env.LX_SOURCE_URL || 'https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/latest.js'
@@ -149,7 +151,46 @@ try {
         console.error('DIRECT BODY:', body.slice(0, 2000))
       } catch (error) {
         console.error('DIRECT RUNNER FETCH ERROR:', item.target)
-        console.error(String(error))
+        console.error('DIRECT ERROR:', String(error))
+        console.error('DIRECT ERROR NAME:', error && error.name ? error.name : 'unknown')
+        console.error('DIRECT ERROR MESSAGE:', error && error.message ? error.message : 'unknown')
+        console.error('DIRECT ERROR CAUSE:', error && error.cause ? String(error.cause) : 'none')
+        if (error && error.cause) {
+          console.error('DIRECT CAUSE CODE:', error.cause.code || 'none')
+          console.error('DIRECT CAUSE ERRNO:', error.cause.errno || 'none')
+          console.error('DIRECT CAUSE SYSCALL:', error.cause.syscall || 'none')
+          console.error('DIRECT CAUSE HOSTNAME:', error.cause.hostname || 'none')
+        }
+        try {
+          const u = new URL(item.target)
+          const addresses = await dns.lookup(u.hostname, { all: true })
+          console.error('DNS LOOKUP:', JSON.stringify(addresses))
+          await new Promise((resolve, reject) => {
+            const socket = tls.connect({
+              host: u.hostname,
+              port: u.port ? Number(u.port) : 443,
+              servername: u.hostname,
+              rejectUnauthorized: true,
+              timeout: 10000
+            })
+            socket.once('secureConnect', () => {
+              console.error('TLS CONNECT: OK')
+              console.error('TLS PROTOCOL:', socket.getProtocol() || 'unknown')
+              console.error('TLS AUTH:', socket.authorized ? 'authorized' : 'not-authorized')
+              socket.end()
+              resolve()
+            })
+            socket.once('error', reject)
+            socket.once('timeout', () => {
+              socket.destroy()
+              reject(new Error('TLS socket timeout'))
+            })
+          })
+        } catch (diagError) {
+          console.error('NETWORK DIAGNOSTIC ERROR:', String(diagError))
+          if (diagError && diagError.cause) console.error('NETWORK DIAGNOSTIC CAUSE:', String(diagError.cause))
+          if (diagError && diagError.code) console.error('NETWORK DIAGNOSTIC CODE:', diagError.code)
+        }
       }
     }
   }
