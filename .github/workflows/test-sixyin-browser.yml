@@ -20,6 +20,8 @@ jobs:
             url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/1.2.1.js"
           - name: "lx-latest"
             url: "https://ghproxy.net/raw.githubusercontent.com/pdone/lx-music-source/main/lx/latest.js"
+          - name: "flower-latest"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
