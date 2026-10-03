@@ -141,6 +141,7 @@
       global.LXMusicSearch.qq(keyword, 1, 20, function (err, result) {
         if (err) return setStatus('搜索失败：' + escapeHtml(err.message || err), 'fail');
         setStatus('搜索完成：' + result.list.length + ' 条结果。', 'ready');
+        global.__LXLastSearchResults = result.list.slice();
         renderSearchResults(result.list);
       });
     };
