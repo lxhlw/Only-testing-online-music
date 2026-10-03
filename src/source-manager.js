@@ -85,7 +85,7 @@
       xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) return;
         if ((xhr.status >= 200 && xhr.status < 300) || xhr.status === 0) finish(null, xhr.responseText);
-        else finish(new Error('HTTP ' + xhr.status), null);
+        else finish(new Error('HTTP ' + xhr.status + (xhr.responseText ? ': ' + String(xhr.responseText).slice(0, 1200) : '')), null);
       };
       xhr.onerror = function() { finish(new Error('Network request failed'), null); };
       xhr.ontimeout = function() { finish(new Error('Request timeout'), null); };
