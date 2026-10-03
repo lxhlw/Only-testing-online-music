@@ -1,0 +1,20 @@
+name: Test Original SixYin Runtime
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  sixyin-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Test original SixYin
+        run: node scripts/test-sixyin-runtime.mjs
