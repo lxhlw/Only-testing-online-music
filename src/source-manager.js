@@ -48,6 +48,7 @@
   }
 
   function makeRequestHandler(runtime) {
+    runtime.__debugRequests = [];
     return function(url, options, callback) {
       var target = String(url || '');
       var requestUrl = target;
@@ -61,6 +62,16 @@
 
       var opts = options || {};
       var method = String(opts.method || 'GET').toUpperCase();
+      try {
+        runtime.__debugRequests.push({
+          url: String(target),
+          method: method,
+          headers: opts.headers || null,
+          proxied: requestUrl !== target,
+          proxyUrl: requestUrl
+        });
+        if (runtime.__debugRequests.length > 100) runtime.__debugRequests.shift();
+      } catch (e) {}
       var xhr = new XMLHttpRequest();
       var done = false;
       var proxied = requestUrl.indexOf('/api/proxy?url=') >= 0;
