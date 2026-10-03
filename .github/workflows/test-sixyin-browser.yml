@@ -7,8 +7,13 @@ on:
 
 jobs:
   sixyin-browser:
+    name: SixYin browser ${{ matrix.version }}
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 6
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ["1.2.0", "1.2.1"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,21 +34,19 @@ jobs:
           npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/wrangler.log 2>&1 &
           for i in {1..30}; do
             if curl --fail --silent http://127.0.0.1:8788/ > /dev/null; then
-              break
+              exit 0
             fi
             sleep 1
           done
+          cat /tmp/wrangler.log
+          exit 1
 
-      - name: Test SixYin 1.2.0 in real Chromium
+      - name: Test original SixYin in real Chromium
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
-          SIXYIN_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/1.2.0.js
-        run: node scripts/test-sixyin-browser.mjs
-
-      - name: Test SixYin 1.2.1 in real Chromium
-        env:
-          TEST_BASE_URL: http://127.0.0.1:8788
-          SIXYIN_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/1.2.1.js
+          SIXYIN_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/${{ matrix.version }}.js
+          SIXYIN_VERSION: ${{ matrix.version }}
+          SIXYIN_INIT_TIMEOUT_MS: 30000
         run: node scripts/test-sixyin-browser.mjs
 
       - name: Show local server log on failure
