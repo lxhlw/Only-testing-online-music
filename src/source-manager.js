@@ -94,11 +94,24 @@
 
   function makeRequestHandler() {
     return function (url, options, callback) {
-      var reqUrl = String(url || '');
+      var targetUrl = String(url || '');
+      var reqUrl = targetUrl;
+      try {
+        var current = new URL(global.location.href);
+        var target = new URL(targetUrl, current.href);
+        if (target.origin !== current.origin) {
+          reqUrl = current.origin + '/api/proxy?url=' + encodeURIComponent(target.href);
+        }
+      } catch (e) {}
       var opts = options || {};
       var method = String(opts.method || 'GET').toUpperCase();
       var req = new XMLHttpRequest();
       var done = false;
+      var proxyHeaders = false;
+      if (reqUrl.indexOf('/api/proxy?url=') >= 0) {
+        proxyHeaders = true;
+        reqUrl = reqUrl + '&_=' + Date.now();
+      }
 
       function finish(err, body) {
         if (done) return;
