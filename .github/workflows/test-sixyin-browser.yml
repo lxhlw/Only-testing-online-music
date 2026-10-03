@@ -36,6 +36,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Validate browser test script
+        run: node --check scripts/test-sixyin-browser.mjs
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
@@ -57,6 +60,7 @@ jobs:
           LX_SOURCE_URL: ${{ matrix.source.url }}
           LX_SOURCE_NAME: ${{ matrix.source.name }}
           SIXYIN_INIT_TIMEOUT_MS: 30000
+          PLAYBACK_CANDIDATES: 3
         run: node scripts/test-sixyin-browser.mjs
 
       - name: Show local server log on failure
