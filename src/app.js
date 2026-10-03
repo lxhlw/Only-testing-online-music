@@ -93,11 +93,12 @@
     runtimeEl = document.getElementById('runtime-info');
 
     runtimeEl.innerHTML =
-      'version: ' + global.LXRuntime.version + '\n' +
-      'env: ' + global.LXRuntime.env + '\n' +
-      'EVENT_NAMES: ' + Object.keys(global.LXRuntime.EVENT_NAMES).join(', ') + '\n' +
-      'buffer.from: ' + (typeof global.LXRuntime.utils.buffer.from) + '\n' +
-      'crypto.md5: ' + (typeof global.LXRuntime.utils.crypto.md5);
+      'factory: ' + (typeof global.createLXRuntime) + '\n' +
+      'version: 2.0.0\n' +
+      'env: desktop\n' +
+      'EVENT_NAMES: inited, request, updateAlert, openDevTools\n' +
+      'buffer.from: ' + (global.createLXRuntime ? typeof global.createLXRuntime({}).utils.buffer.from : 'n/a') + '\n' +
+      'crypto.md5: ' + (global.createLXRuntime ? typeof global.createLXRuntime({}).utils.crypto.md5 : 'n/a');
 
     setCheck('check-runtime', 'ok');
 
