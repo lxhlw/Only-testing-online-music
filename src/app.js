@@ -4,7 +4,7 @@
   var statusEl;
   var listEl;
   var countEl;
-  var runtimeEl;
+  var runtimeEl, resultsEl;
 
   function setStatus(text, type) {
     statusEl.className = 'status' + (type ? ' ' + type : '');
@@ -91,6 +91,7 @@
     listEl = document.getElementById('source-list');
     countEl = document.getElementById('source-count');
     runtimeEl = document.getElementById('runtime-info');
+    resultsEl = document.getElementById('search-results');
 
     runtimeEl.innerHTML =
       'factory: ' + (typeof global.createLXRuntime) + '\n' +
@@ -132,7 +133,59 @@
       setStatus('已清空本地音源。');
     };
 
+    document.getElementById('search-btn').onclick = function () {
+      var keyword = document.getElementById('search-input').value.replace(/^\s+|\s+$/g, '');
+      if (!keyword) return setStatus('请输入搜索词。', 'fail');
+      setStatus('正在搜索「' + escapeHtml(keyword) + '」……');
+      resultsEl.innerHTML = '';
+      global.LXMusicSearch.qq(keyword, 1, 20, function (err, result) {
+        if (err) return setStatus('搜索失败：' + escapeHtml(err.message || err), 'fail');
+        setStatus('搜索完成：' + result.list.length + ' 条结果。', 'ready');
+        renderSearchResults(result.list);
+      });
+    };
+
     renderSources(global.LXSourceManager.getSources());
+  }
+
+  function renderSearchResults(items) {
+    resultsEl.innerHTML = '';
+    for (var i = 0; i < items.length; i += 1) {
+      var item = items[i];
+      var row = document.createElement('div');
+      row.className = 'search-row';
+      row.innerHTML = '<b>' + escapeHtml(item.name) + '</b> <span>' + escapeHtml(item.singer) + '</span>';
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.innerHTML = 'LX musicUrl 测试';
+      button.onclick = (function (music) {
+        return function () {
+          var active = global.LXSourceManager.getActive();
+          if (!active || !active.runtime || !active.inited) return setStatus('请先导入并初始化六音音源。', 'fail');
+          setStatus('正在调用 LX musicUrl：' + escapeHtml(music.name) + '……');
+          global.LXSourceManager.requestAction('tx', 'musicUrl', {
+            type: '128k',
+            musicInfo: {
+              source: 'tx', id: music.id, songId: music.id,
+              songmid: music.songmid, mediaMid: music.mediaMid,
+              albumId: music.albumId, name: music.name, singer: music.singer
+            }
+          }, function (err, result) {
+            if (err) return setStatus('LX musicUrl 失败：' + escapeHtml(err.message || err), 'fail');
+            var url = typeof result === 'string' ? result : (result && result.url);
+            if (!url || !/^https?:/i.test(url)) return setStatus('LX musicUrl 返回了无效结果。', 'fail');
+            var audio = document.getElementById('audio');
+            audio.src = url;
+            document.getElementById('player-title').innerHTML = escapeHtml(music.name);
+            document.getElementById('player-artist').innerHTML = escapeHtml(music.singer);
+            setStatus('LX musicUrl 已返回播放地址。', 'ready');
+            try { audio.play(); } catch (e) {}
+          });
+        };
+      })(item);
+      row.appendChild(button);
+      resultsEl.appendChild(row);
+    }
   }
 
   global.OnlyTestingMusicApp = {
