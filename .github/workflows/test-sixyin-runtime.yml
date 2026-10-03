@@ -1,8 +1,6 @@
-name: Test Original SixYin Runtime
+name: Legacy Node VM SixYin Test (manual only)
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
