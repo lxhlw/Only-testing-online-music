@@ -1,0 +1,14 @@
+{
+  "name": "only-testing-online-music",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Online music testing for older devices",
+  "type": "module",
+  "scripts": {
+    "test:sixyin:browser": "node scripts/test-sixyin-browser.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0",
+    "wrangler": "4.147.0"
+  }
+}
