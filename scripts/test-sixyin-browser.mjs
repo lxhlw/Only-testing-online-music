@@ -25,7 +25,9 @@ page.on('response', response => {
 })
 
 try {
-  console.log('SixYin version:', VERSION)\n  console.log('Source URL:', SOURCE_URL)\n  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 })
+  console.log('LX source:', VERSION)
+  console.log('Source URL:', SOURCE_URL)
+  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 })
   assert.equal(await page.locator('#install-btn').isVisible(), true, 'App did not load')
 
   await page.locator('#source-url').fill(SOURCE_URL)
