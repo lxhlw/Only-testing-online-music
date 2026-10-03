@@ -102,10 +102,13 @@ runtime.currentScriptInfo = {
 context.lx = runtime
 context.globalThis.lx = runtime
 
-vm.runInContext(sourceCode, context, {
-  filename: SOURCE_URL,
-  timeout: 20000,
-})
+try {
+  vm.runInContext(sourceCode, context, { filename: 'sixyin-latest.js', timeout: 20000 })
+} catch (error) {
+  console.error('SixYin execution error:', error && error.name, error && error.message)
+  console.error('Stack:', error && error.stack ? String(error.stack).slice(-3000) : 'none')
+  throw error
+}
 
 await new Promise(resolve => setTimeout(resolve, 8000))
 
