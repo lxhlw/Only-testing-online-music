@@ -179,7 +179,7 @@
   }
 
   function evaluate(code, meta) {
-    var lx = global.LXRuntime;
+    var lx = runtime;
     lx.currentScriptInfo = {
       name: meta.name,
       description: meta.description,
@@ -192,6 +192,8 @@
     var previousLX = global.lx;
     var previousGlobalThisLX = global.globalThis && global.globalThis.lx;
     global.lx = lx;
+    if (!global.globalThis) global.globalThis = global;
+    global.globalThis.lx = lx;
 
     var fn;
     try {
@@ -203,6 +205,7 @@
       };
     } catch (e) {
       global.lx = previousLX;
+      if (global.globalThis && previousGlobalThisLX) global.globalThis.lx = previousGlobalThisLX;
       throw e;
     }
   }
