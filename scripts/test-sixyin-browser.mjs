@@ -2,9 +2,9 @@ import assert from 'node:assert/strict'
 import { chromium } from 'playwright'
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8788'
-const SOURCE_URL = process.env.SIXYIN_SOURCE_URL || 'https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/latest.js'
+const SOURCE_URL = process.env.LX_SOURCE_URL || 'https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/latest.js'
 const KEYWORD = '成都'
-const VERSION = process.env.SIXYIN_VERSION || 'unknown'
+const VERSION = process.env.LX_SOURCE_NAME || 'unknown'
 const INIT_TIMEOUT = Number(process.env.SIXYIN_INIT_TIMEOUT_MS || 30000)
 
 const browser = await chromium.launch({
