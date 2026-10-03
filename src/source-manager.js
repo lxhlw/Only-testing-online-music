@@ -50,8 +50,39 @@
       var raw = localStorage.getItem(STORAGE_KEY);
       sources = raw ? JSON.parse(raw) : [];
       if (!(sources instanceof Array)) sources = [];
+      for (var i = 0; i < sources.length; i += 1) rehydrateItem(sources[i]);
     } catch (e) {
       sources = [];
+    }
+  }
+
+  function rehydrateItem(item) {
+    if (!item || typeof item.code !== 'string') return;
+    item.runtime = global.createLXRuntime({
+      env: 'desktop',
+      onInited: function (data) {
+        item.inited = true;
+        item.sources = data && data.sources ? data.sources : null;
+        item.initInfo = data || null;
+        persist();
+        notify();
+        if (global.OnlyTestingMusicApp && global.OnlyTestingMusicApp.onSourceInited) {
+          global.OnlyTestingMusicApp.onSourceInited(item);
+        }
+      },
+      onUpdateAlert: function (data) {
+        item.updateAlert = data || null;
+        persist();
+        notify();
+      }
+    });
+    item.runtime.__requestHandler = makeRequestHandler();
+    var meta = parseMeta(item.code, item.url);
+    try {
+      evaluate(item.code, meta, item.runtime);
+    } catch (e) {
+      item.error = e && e.message ? e.message : String(e);
+      item.inited = false;
     }
   }
 
@@ -176,6 +207,63 @@
       code: code,
       inited: false,
       sources: null,
+      error: null,
+      runtime: null
+    };
+
+    item.runtime = global.createLXRuntime({
+      env: 'desktop',
+      requestHandler: null,
+      onInited: function (data) {
+        item.inited = true;
+        item.sources = data && data.sources ? data.sources : null;
+        item.initInfo = data || null;
+        persist();
+        notify();
+        if (global.OnlyTestingMusicApp && global.OnlyTestingMusicApp.onSourceInited) {
+          global.OnlyTestingMusicApp.onSourceInited(item);
+        }
+      },
+      onUpdateAlert: function (data) {
+        item.updateAlert = data || null;
+        persist();
+        notify();
+      }
+    });
+
+    item.runtime._setRequestHandler = function () {};
+    item.runtime._setRequestHandler = function (handler) { item.runtime.__requestHandler = handler; };
+    item.runtime.request = function (url, options, cb) {
+      var handler = item.runtime.__requestHandler || makeRequestHandler();
+      return handler.call(item.runtime, url, options || {}, cb || function () {});
+    };
+
+    var initHandler = function () {};
+
+    try {
+      evaluate(code, meta, item.runtime);
+      sources.push(item);
+      persist();
+      active = item;
+      notify();
+      if (callback) callback(null, item);
+    } catch (e) {
+      item.error = e && e.message ? e.message : String(e);
+      persist();
+      if (callback) callback(e, item);
+    }
+  }
+    var item = {
+      id: String(Date.now()) + '-' + Math.floor(Math.random() * 100000),
+      url: url,
+      name: meta.name,
+      description: meta.description,
+      version: meta.version,
+      author: meta.author,
+      homepage: meta.homepage,
+      code: code,
+      inited: false,
+      sources: null,
       error: null
     };
 
@@ -242,13 +330,23 @@
     return null;
   }
 
+  function activate(id) {
+    for (var i = 0; i < sources.length; i += 1) {
+      if (sources[i].id === id) {
+        active = sources[i];
+        return active;
+      }
+    }
+    return null;
+  }
+
   function getSources() { return sources.slice(); }
   function getActive() { return active; }
 
   global.LXSourceManager = {
     init: function () {
       loadPersisted();
-      global.LXRuntime._setRequestHandler(makeRequestHandler());
+      active = sources.length ? sources[0] : null;
       notify();
     },
     installFromUrl: installFromUrl,
@@ -257,6 +355,7 @@
     clear: clear,
     activate: activate,
     getSources: getSources,
+    activate: activate,
     getActive: getActive
   };
 })(window);
