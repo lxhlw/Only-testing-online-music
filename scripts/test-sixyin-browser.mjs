@@ -75,17 +75,10 @@ async function probeMediaUrl(url) {
 }
 
 async function tryPlayCurrentAudio() {
-  await page.evaluate(() => {
-    const audio = document.getElementById('audio')
-    if (!audio) throw new Error('Audio element not found')
-    audio.pause()
-    audio.removeAttribute('src')
-    audio.load()
-  })
-
   return page.evaluate(async () => {
     const audio = document.getElementById('audio')
     if (!audio) throw new Error('Audio element not found')
+    if (!audio.src) throw new Error('Audio source is empty')
     audio.preload = 'auto'
     audio.muted = true
     audio.load()
