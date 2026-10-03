@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { chromium } from 'playwright'
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8788'
-const SOURCE_URL = 'https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/latest.js'
+const SOURCE_URL = process.env.SIXYIN_SOURCE_URL || 'https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/latest.js'
 const KEYWORD = '成都'
 
 const browser = await chromium.launch({
