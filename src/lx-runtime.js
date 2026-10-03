@@ -217,11 +217,35 @@
         crypto: {
           md5: md5Raw,
           randomBytes: randomBytes,
-          aesEncrypt: function () {
-            throw new Error('LX aesEncrypt not implemented yet');
+          aesEncrypt: function (buffer, mode, key, iv) {
+            if (!global.forge || !global.forge.cipher) throw new Error('crypto runtime is not loaded');
+            var input = latin1(bytesFrom(buffer));
+            var keyBytes = latin1(bytesFrom(key));
+            var ivBytes = iv == null ? null : latin1(bytesFrom(iv));
+            var normalized = String(mode || '').toLowerCase();
+            if (normalized.indexOf('aes-') === 0) normalized = normalized.substring(4);
+            var parts = normalized.split('-');
+            var blockMode = parts.length > 1 ? parts[1] : 'ecb';
+            var cipher = global.forge.cipher.createCipher(blockMode === 'ecb' ? 'AES-ECB' : 'AES-CBC', keyBytes);
+            var startOptions = blockMode === 'ecb' ? {} : { iv: ivBytes || '' };
+            cipher.start(startOptions);
+            cipher.update(global.forge.util.createBuffer(input, 'raw'));
+            cipher.finish();
+            return makeBuffer(cipher.output.getBytes());
           },
-          rsaEncrypt: function () {
-            throw new Error('LX rsaEncrypt not implemented yet');
+          rsaEncrypt: function (buffer, key) {
+            if (!global.forge || !global.forge.pki) throw new Error('crypto runtime is not loaded');
+            var pem = String(key || '');
+            var publicKey = global.forge.pki.publicKeyFromPem(pem);
+            var input = bytesFrom(buffer);
+            var bytes = [];
+            for (var i = 0; i < input.length; i += 1) bytes.push(input[i]);
+            var raw = latin1(input);
+            var keySize = publicKey.n.bitLength() / 8;
+            if (raw.length > keySize) throw new Error('RSA input is too large');
+            while (raw.length < keySize) raw = '\x00' + raw;
+            var out = publicKey.encrypt(raw, 'NONE');
+            return makeBuffer(out);
           }
         },
         zlib: {
