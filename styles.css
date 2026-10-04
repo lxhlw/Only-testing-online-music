@@ -105,3 +105,10 @@ code{word-break:break-all}
   .library-actions{width:100%}
   .library-actions button{flex:1}
 }
+
+.search-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.search-actions button{margin-top:0}
+@media(max-width:600px){
+  .search-actions{display:flex;flex-direction:column}
+  .search-actions button{width:100%}
+}
