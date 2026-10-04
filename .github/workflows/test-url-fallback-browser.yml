@@ -1,17 +1,8 @@
-name: Test URL API Fallback In Chromium
+name: Test URL API Fallback In Chromium (manual)
 
 # Regression workflow: keep URL-less legacy browser compatibility covered.
 # Triggered regression after the URL fallback parser fix.
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/test-url-fallback-browser.yml"
-      - "scripts/test-sixyin-browser.mjs"
-      - "src/**"
-      - "functions/**"
-      - "index.html"
-      - "styles.css"
   workflow_dispatch:
 
 jobs:

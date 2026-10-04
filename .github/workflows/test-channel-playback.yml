@@ -1,8 +1,6 @@
-name: Test Source Channel Playback Matrix
+name: Test Source Channel Playback Matrix (manual)
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:

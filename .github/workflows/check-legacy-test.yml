@@ -1,16 +1,6 @@
-name: Check Legacy Test Page
+name: Check Legacy Test Page (manual)
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "legacy-test.html"
-      - "scripts/check-legacy-test.mjs"
-      - "scripts/smoke-legacy-test.mjs"
-      - ".github/workflows/check-legacy-test.yml"
-      - "src/**"
-      - "styles.css"
-      - "index.html"
   workflow_dispatch:
 
 jobs:

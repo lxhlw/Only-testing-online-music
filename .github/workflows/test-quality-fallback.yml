@@ -1,17 +1,6 @@
-name: Test Playback Quality Fallback
+name: Test Playback Quality Fallback (manual)
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "src/app.js"
-      - "src/play-settings.js"
-      - "settings.html"
-      - "index.html"
-      - "styles.css"
-      - "scripts/test-quality-fallback-browser.mjs"
-      - "package.json"
-      - ".github/workflows/test-quality-fallback.yml"
   workflow_dispatch:
 
 concurrency:

@@ -1,0 +1,60 @@
+name: Core Validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "settings.html"
+      - "legacy-test.html"
+      - "styles.css"
+      - "src/**"
+      - "scripts/**"
+      - "package.json"
+      - ".github/workflows/test-core.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: core-validation
+  cancel-in-progress: true
+
+jobs:
+  core:
+    name: Deterministic project checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Check core JavaScript syntax
+        run: |
+          node --check src/app.js
+          node --check src/lx-runtime.js
+          node --check src/music-library.js
+          node --check src/music-lyrics.js
+          node --check src/music-search.js
+          node --check src/play-settings.js
+          node --check src/sha1.js
+          node --check src/source-manager.js
+
+      - name: Validate legacy page syntax
+        run: node scripts/check-legacy-test.mjs
+
+      - name: Test playback settings
+        run: node scripts/test-settings.mjs
+
+      - name: Test music library
+        run: node scripts/test-music-library.mjs
+
+      - name: Test lyrics parser
+        run: node scripts/test-music-lyrics.mjs

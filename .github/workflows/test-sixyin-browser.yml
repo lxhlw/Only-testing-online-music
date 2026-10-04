@@ -1,8 +1,6 @@
-name: Test Original SixYin In Chromium
+name: Test Original LX Sources In Chromium (manual)
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:

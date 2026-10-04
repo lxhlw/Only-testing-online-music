@@ -1,8 +1,6 @@
-name: Test QQ Search
+name: Test QQ Search (manual)
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:

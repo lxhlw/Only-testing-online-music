@@ -1,18 +1,6 @@
-name: Test Playback Settings
+name: Test Playback Settings (manual)
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "src/play-settings.js"
-      - "settings.html"
-      - "src/app.js"
-      - "index.html"
-      - "styles.css"
-      - "scripts/test-settings.mjs"
-      - "package.json"
-      - ".github/workflows/test-playback-settings.yml"
   workflow_dispatch:
 
 jobs:

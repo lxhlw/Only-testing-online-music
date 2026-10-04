@@ -1,13 +1,6 @@
-name: Test Juhe 3 In Chromium
+name: Test Juhe 3 In Chromium (manual)
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/test-lx4-browser.yml"
-      - "scripts/test-sixyin-browser.mjs"
-      - "src/**"
-      - "functions/**"
   workflow_dispatch:
 
 jobs:
