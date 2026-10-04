@@ -178,22 +178,9 @@
       typeof window.JSON.stringify === 'function' ? 'PASS' : 'FAIL',
       typeof window.JSON);
 
-    var promiseOk = safeTest(function () {
-      if (typeof window.Promise !== 'function') return false;
-      var settled = false;
-      var value = null;
-      var promise = new window.Promise(function (resolve) {
-        resolve('LX');
-      });
-      if (!promise || typeof promise.then !== 'function') return false;
-      promise.then(function (result) {
-        value = result;
-        settled = true;
-      });
-      return typeof promise.catch === 'function' && value === 'LX' && settled === true;
-    });
-    addCheck('Promise', promiseOk ? 'PASS' : 'FAIL',
-      promiseOk ? '创建、resolve 与 then 测试通过' : 'Promise 不可正常创建或执行');
+    var promiseAvailable = typeof window.Promise === 'function';
+    addCheck('Promise', promiseAvailable ? 'PASS' : 'FAIL',
+      promiseAvailable ? '构造函数可用，异步执行测试随后进行' : 'Promise 不存在');
 
     var arrayBufferOk = safeTest(function () {
       if (typeof window.ArrayBuffer !== 'function') return false;
@@ -274,6 +261,81 @@
       typeof window.XMLHttpRequest === 'function' ? 'PASS' : 'FAIL',
       '使用 XHR 检查');
 
+    function testPromiseAsync() {
+      if (!promiseAvailable) return;
+
+      var settled = false;
+      var value = null;
+      var promiseOk = true;
+      var promise = null;
+
+      try {
+        promise = new window.Promise(function (resolve) {
+          resolve('LX');
+        });
+
+        if (!promise || typeof promise.then !== 'function' || typeof promise.catch !== 'function') {
+          promiseOk = false;
+        } else {
+          promise.then(function (result) {
+            value = result;
+            settled = true;
+          }, function () {
+            promiseOk = false;
+          });
+
+          window.setTimeout(function () {
+            if (settled && value === 'LX' && promiseOk) {
+              replaceCheck('Promise', 'PASS', '创建、resolve 与 then 异步执行测试通过');
+            } else {
+              replaceCheck('Promise', 'FAIL', 'Promise 创建成功，但 then 未能正常异步执行');
+            }
+            renderChecksOnly();
+            updateReport();
+          }, 0);
+          return;
+        }
+      } catch (e) {
+        promiseOk = false;
+      }
+
+      replaceCheck('Promise', promiseOk ? 'PASS' : 'FAIL',
+        promiseOk ? 'Promise 基础接口检查通过' : 'Promise 不可正常创建或使用');
+      renderChecksOnly();
+      updateReport();
+    }
+
+    function replaceCheck(name, state, detail) {
+      for (var i = 0; i < checks.length; i += 1) {
+        if (checks[i].name === name) {
+          if (checks[i].state === 'PASS') passes -= 1;
+          else if (checks[i].state === 'FAIL') fails -= 1;
+          else warns -= 1;
+          checks[i].state = state;
+          checks[i].detail = detail;
+          if (state === 'PASS') passes += 1;
+          else if (state === 'FAIL') fails += 1;
+          else warns += 1;
+          return;
+        }
+      }
+    }
+
+    function renderChecksOnly() {
+      var html = '';
+      var i;
+      for (i = 0; i < checks.length; i += 1) {
+        html += '<div class="row"><span class="label">' + esc(checks[i].name) +
+          '</span><span class="' +
+          (checks[i].state === 'PASS' ? 'pass' :
+            (checks[i].state === 'FAIL' ? 'fail' : 'warn')) +
+          '">' + esc(checks[i].state) + '</span> <span>' +
+          esc(checks[i].detail) + '</span></div>';
+      }
+      byId('checks').innerHTML = html;
+      renderSummary();
+    }
+
     function render() {
       var html = '';
       var i;
@@ -301,6 +363,7 @@
         '<div class="row"><span class="label">OGG canPlayType</span>' + esc(ogg || '—') + '</div>' +
         '<div class="row"><span class="label">当前页面</span>' + esc(location.href) + '</div>';
 
+      testPromiseAsync();
       testResource('src/lx-runtime.js');
       testResource('src/source-manager.js');
       testResource('src/music-search.js');
