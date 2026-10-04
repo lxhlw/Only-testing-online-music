@@ -172,6 +172,12 @@
       document.getElementById('install-btn').click();
     };
 
+    document.getElementById('sixyin-install-btn').onclick = function () {
+      document.getElementById('source-url').value =
+        'https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/latest.js';
+      document.getElementById('install-btn').click();
+    };
+
     document.getElementById('clear-btn').onclick = function () {
       global.LXSourceManager.clear();
       setCheck('check-storage', 'pending');
