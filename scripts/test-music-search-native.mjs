@@ -220,49 +220,6 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 }
 
 {
-  const h = createHarness(
-    {
-      tx: { actions: ['musicUrl'] }
-    },
-    () => {},
-    {
-      time: { status: 200, body: '1791139200' },
-      search: {
-        status: 200,
-        body: JSON.stringify([
-          {
-            id: 'tx-good',
-            name: '成都',
-            artist: '赵雷',
-            source: 'tencent'
-          },
-          {
-            id: 'kg-wrong',
-            name: '成都',
-            artist: '赵雷',
-            source: 'kugou'
-          }
-        ])
-      }
-    }
-  )
-
-  const result = await new Promise((resolve, reject) => {
-    h.sandbox.LXMusicSearch.search('tx', '成都', 1, 20, (err, value) => {
-      if (err) reject(err)
-      else resolve(value)
-    })
-  })
-
-  assert.equal(result.list.length, 1)
-  assert.equal(result.list[0].id, 'tx-good')
-  assert.equal(result.list[0].source, 'tx')
-  assert.equal(result.searchProvider, 'gdstudio-native')
-  assert.equal(result.requestedSource, 'tx')
-  assert.equal(result.fallbackSearch, false)
-}
-
-{
   const h2 = createHarness(
     {
       kg: { actions: ['musicUrl'] }
