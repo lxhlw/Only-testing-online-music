@@ -310,6 +310,14 @@
     addCheck('Number 数值转换', numberOk ? 'PASS' : 'FAIL',
       numberOk ? 'Number 字符串/小数/NaN 实际测试通过' : 'Number 数值转换行为异常');
 
+    var functionCtorOk = safeTest(function () {
+      if (typeof window.Function !== 'function') return false;
+      var fn = new window.Function('a', 'b', 'return a + b;');
+      return typeof fn === 'function' && fn(2, 3) === 5;
+    });
+    addCheck('Function 构造执行', functionCtorOk ? 'PASS' : 'FAIL',
+      functionCtorOk ? 'new Function() 创建与执行测试通过' : 'Function 构造函数不可正常使用');
+
     var uriEncodingOk = safeTest(function () {
       if (typeof window.encodeURIComponent !== 'function' ||
           typeof window.decodeURIComponent !== 'function') return false;
