@@ -5,6 +5,17 @@
   var listEl;
   var countEl;
   var runtimeEl, resultsEl;
+  var channelListEl, qualityListEl;
+  var selectedChannel = null;
+  var selectedQuality = '128k';
+
+  var CHANNEL_NAMES = {
+    kw: '酷我音乐',
+    kg: '酷狗音乐',
+    tx: 'QQ音乐',
+    wy: '网易云音乐',
+    mg: '咪咕音乐'
+  };
 
   function setStatus(text, type) {
     statusEl.className = 'status' + (type ? ' ' + type : '');
@@ -82,6 +93,77 @@
     el.innerHTML = state === 'ok' ? 'PASS' : (state === 'fail' ? 'FAIL' : 'WAIT');
   }
 
+  function getSupportedChannels() {
+    var active = global.LXSourceManager.getActive();
+    var supported = [];
+    var sources = active && active.sources ? active.sources : {};
+    for (var key in sources) {
+      if (!Object.prototype.hasOwnProperty.call(sources, key)) continue;
+      var info = sources[key] || {};
+      var actions = info.actions || [];
+      if (actions.indexOf('musicUrl') >= 0 || !info.actions) supported.push(key);
+    }
+    return supported;
+  }
+
+  function renderChannelSelectors() {
+    if (!channelListEl || !qualityListEl) return;
+    var active = global.LXSourceManager.getActive();
+    var supported = getSupportedChannels();
+    channelListEl.innerHTML = '';
+    qualityListEl.innerHTML = '';
+
+    if (!active || !active.inited || !supported.length) {
+      channelListEl.innerHTML = '<span class="muted">当前音源没有可用的在线音乐渠道。</span>';
+      qualityListEl.innerHTML = '<span class="muted">暂无音质选项。</span>';
+      selectedChannel = null;
+      return;
+    }
+
+    if (supported.indexOf(selectedChannel) < 0) {
+      selectedChannel = supported.indexOf('tx') >= 0 ? 'tx' : supported[0];
+    }
+
+    for (var i = 0; i < supported.length; i += 1) {
+      var key = supported[i];
+      var channelInfo = active.sources[key] || {};
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'channel-button' + (key === selectedChannel ? ' active' : '');
+      button.innerHTML = escapeHtml(channelInfo.name || CHANNEL_NAMES[key] || key.toUpperCase());
+      button.title = key.toUpperCase();
+      button.onclick = (function (channel) {
+        return function () {
+          selectedChannel = channel;
+          renderChannelSelectors();
+          resultsEl.innerHTML = '';
+          setStatus('已选择播放渠道：' + escapeHtml(CHANNEL_NAMES[channel] || channel.toUpperCase()));
+        };
+      })(key);
+      channelListEl.appendChild(button);
+    }
+
+    var qualities = (active.sources[selectedChannel] && active.sources[selectedChannel].qualitys) || [];
+    if (!qualities.length) qualities = ['128k'];
+    if (qualities.indexOf(selectedQuality) < 0) selectedQuality = qualities[0];
+
+    for (var q = 0; q < qualities.length; q += 1) {
+      var quality = String(qualities[q]);
+      var qButton = document.createElement('button');
+      qButton.type = 'button';
+      qButton.className = 'channel-button' + (quality === selectedQuality ? ' active' : '');
+      qButton.innerHTML = escapeHtml(quality);
+      qButton.onclick = (function (value) {
+        return function () {
+          selectedQuality = value;
+          renderChannelSelectors();
+          setStatus('已选择音质：' + escapeHtml(value));
+        };
+      })(quality);
+      qualityListEl.appendChild(qButton);
+    }
+  }
+
   function onSourceInited(item) {
     setCheck('check-inited', 'ok');
     setStatus('音源已执行并发送 inited：<b>' + escapeHtml(item.name) + '</b>', 'ready');
@@ -89,29 +171,46 @@
 
   function testMusic(music) {
     var active = global.LXSourceManager.getActive();
+    var supported = getSupportedChannels();
     if (!active || !active.runtime || !active.inited) {
       setStatus('请先导入并初始化 LX 音源。', 'fail');
       return;
     }
+    if (!selectedChannel || supported.indexOf(selectedChannel) < 0) {
+      setStatus('当前音源没有可用的播放渠道。', 'fail');
+      return;
+    }
 
-    setStatus('正在调用 LX musicUrl：' + escapeHtml(music.name) + '……');
-    global.LXSourceManager.requestAction('tx', 'musicUrl', {
-      type: '128k',
-      musicInfo: {
-        source: 'tx', id: music.id, songId: music.id,
-        songmid: music.songmid, mediaMid: music.mediaMid,
-        albumId: music.albumId, name: music.name, singer: music.singer
-      }
+    var source = music && music.source ? music.source : selectedChannel;
+    if (source !== selectedChannel) {
+      setStatus('该歌曲属于 ' + escapeHtml(CHANNEL_NAMES[source] || source.toUpperCase()) + '，当前选择的是 ' + escapeHtml(CHANNEL_NAMES[selectedChannel] || selectedChannel.toUpperCase()) + '。请重新搜索。', 'fail');
+      return;
+    }
+
+    var musicInfo = {};
+    var key;
+    for (key in music) {
+      if (Object.prototype.hasOwnProperty.call(music, key) && key !== 'raw') musicInfo[key] = music[key];
+    }
+    musicInfo.source = source;
+    musicInfo.songId = musicInfo.songId || music.id;
+    musicInfo.name = musicInfo.name || '';
+    musicInfo.singer = musicInfo.singer || '';
+
+    setStatus('正在调用 ' + escapeHtml(CHANNEL_NAMES[source] || source.toUpperCase()) + ' musicUrl：' + escapeHtml(music.name) + '……');
+    global.LXSourceManager.requestAction(source, 'musicUrl', {
+      type: selectedQuality,
+      musicInfo: musicInfo
     }, function (err, result) {
       if (err) return setStatus('LX musicUrl 失败：' + escapeHtml(err.message || err), 'fail');
-      var url = typeof result === 'string' ? result : (result && result.url);
+      var url = typeof result === 'string' ? result : (result && (result.url || result.result));
       if (!url || !/^https?:/i.test(url)) return setStatus('LX musicUrl 返回了无效结果。', 'fail');
 
       var audio = document.getElementById('audio');
       audio.src = url;
       document.getElementById('player-title').innerHTML = escapeHtml(music.name);
       document.getElementById('player-artist').innerHTML = escapeHtml(music.singer);
-      setStatus('LX musicUrl 已返回播放地址，正在尝试播放。', 'ready');
+      setStatus((CHANNEL_NAMES[source] || source.toUpperCase()) + ' musicUrl 已返回播放地址，正在尝试播放。', 'ready');
       try {
         var playResult = audio.play();
         if (playResult && typeof playResult.catch === 'function') {
@@ -131,6 +230,8 @@
     countEl = document.getElementById('source-count');
     runtimeEl = document.getElementById('runtime-info');
     resultsEl = document.getElementById('search-results');
+    channelListEl = document.getElementById('channel-list');
+    qualityListEl = document.getElementById('quality-list');
 
     runtimeEl.innerHTML =
       'factory: ' + (typeof global.createLXRuntime) + '\n' +
@@ -141,6 +242,7 @@
       'crypto.md5: ' + (global.createLXRuntime ? typeof global.createLXRuntime({}).utils.crypto.md5 : 'n/a');
 
     setCheck('check-runtime', 'ok');
+    renderChannelSelectors();
 
     document.getElementById('install-btn').onclick = function () {
       var url = document.getElementById('source-url').value.replace(/^\s+|\s+$/g, '');
@@ -194,12 +296,15 @@
     document.getElementById('quick-test-btn').onclick = function () {
       var active = global.LXSourceManager.getActive();
       if (!active || !active.runtime || !active.inited) {
-        return setStatus('请先一键导入已验证 Huibq，并等待状态显示 READY。', 'fail');
+        return setStatus('请先导入并初始化 LX 音源。', 'fail');
+      }
+      if (!selectedChannel) {
+        return setStatus('当前音源没有可用的播放渠道。', 'fail');
       }
 
-      setStatus('正在搜索「成都」……');
+      setStatus('正在按 ' + escapeHtml(CHANNEL_NAMES[selectedChannel] || selectedChannel.toUpperCase()) + ' 搜索「成都」……');
       resultsEl.innerHTML = '';
-      global.LXMusicSearch.qq('成都', 1, 3, function (err, result) {
+      global.LXMusicSearch.search(selectedChannel, '成都', 1, 3, function (err, result) {
         if (err) return setStatus('搜索「成都」失败：' + escapeHtml(err.message || err), 'fail');
         if (!result.list || !result.list.length) return setStatus('搜索「成都」没有返回结果。', 'fail');
 
@@ -214,9 +319,10 @@
   }
 
   function searchAndRender(keyword) {
-    setStatus('正在搜索「' + escapeHtml(keyword) + '」……');
+    if (!selectedChannel) return setStatus('请先选择播放渠道。', 'fail');
+    setStatus('正在按 ' + escapeHtml(CHANNEL_NAMES[selectedChannel] || selectedChannel.toUpperCase()) + ' 搜索「' + escapeHtml(keyword) + '」……');
     resultsEl.innerHTML = '';
-    global.LXMusicSearch.qq(keyword, 1, 20, function (err, result) {
+    global.LXMusicSearch.search(selectedChannel, keyword, 1, 20, function (err, result) {
       if (err) return setStatus('搜索失败：' + escapeHtml(err.message || err), 'fail');
       setStatus('搜索完成：' + result.list.length + ' 条结果。', 'ready');
       global.__LXLastSearchResults = result.list.slice();
@@ -230,10 +336,11 @@
       var item = items[i];
       var row = document.createElement('div');
       row.className = 'search-row';
-      row.innerHTML = '<b>' + escapeHtml(item.name) + '</b> <span>' + escapeHtml(item.singer) + '</span>';
+      row.innerHTML = '<b>' + escapeHtml(item.name) + '</b> <span>' + escapeHtml(item.singer) + '</span>' +
+        '<small class="search-source">' + escapeHtml(CHANNEL_NAMES[item.source] || item.source || '') + '</small>';
       var button = document.createElement('button');
       button.type = 'button';
-      button.innerHTML = 'LX musicUrl 测试';
+      button.innerHTML = '解析并播放';
       button.onclick = (function (music) {
         return function () { testMusic(music); };
       })(item);
