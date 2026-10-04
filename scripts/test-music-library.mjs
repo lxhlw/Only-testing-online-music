@@ -48,7 +48,10 @@ const song2 = {
   raw: { file: { media_mid: 'song-2' } }
 }
 
-assert.deepEqual(library.snapshot(), { queue: [], history: [], favorites: [] })
+const initial = library.snapshot()
+assert.deepEqual(Array.from(initial.queue), [])
+assert.deepEqual(Array.from(initial.history), [])
+assert.deepEqual(Array.from(initial.favorites), [])
 
 assert.equal(library.addQueue(song1), true)
 assert.equal(library.addQueue(song1), true)

@@ -73,7 +73,7 @@
       source: source,
       albumName: String(albumName || ''),
       interval: item && item.interval != null ? item.interval : '',
-      songmid: String(item && (item.songmid || item.mid || '') || ''),
+      songmid: String(item && (item.songmid || item.mid || item.id || '') || ''),
       mediaMid: String(item && (item.mediaMid || item.media_mid || '') || ''),
       albumId: String(item && (item.albumId || item.album_id || '') || ''),
       image: String(item && (item.pic || item.image || item.img || '') || ''),

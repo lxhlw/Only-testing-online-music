@@ -409,6 +409,9 @@
     }
     musicInfo.source = source;
     musicInfo.songId = musicInfo.songId || music.id;
+    if (!musicInfo.songmid && !musicInfo.hash && music.id != null) {
+      musicInfo.songmid = String(music.id);
+    }
     musicInfo.name = musicInfo.name || '';
     musicInfo.singer = musicInfo.singer || '';
     return musicInfo;
