@@ -114,6 +114,9 @@ try {
     )
 
     const manager = window.LXSourceManager
+    window.LXMusicSearch.resolveMusicUrl = function (source, musicInfo, quality, callback) {
+      callback(new Error('resolver intentionally disabled by quality-isolation test'))
+    }
     const original = manager.requestAction
     window.__qualityFallbackCalls = []
 
