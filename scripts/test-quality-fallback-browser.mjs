@@ -8,6 +8,7 @@ const INIT_TIMEOUT_MS = Number(process.env.INIT_TIMEOUT_MS || 30000)
 const SEARCH_TIMEOUT_MS = Number(process.env.SEARCH_TIMEOUT_MS || 60000)
 const PLAYBACK_TIMEOUT_MS = Number(process.env.PLAYBACK_TIMEOUT_MS || 12000)
 const FALLBACK_AUDIO_URL = 'https://quality-fallback.invalid/only-testing-online-music.wav'
+const SHORT_ERROR_AUDIO_URL = 'https://quality-error.invalid/only-testing-online-music.wav'
 
 function createTestWav(seconds = 1, sampleRate = 8000) {
   const channels = 1
@@ -46,7 +47,8 @@ const browser = await chromium.launch({
 })
 
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
-const testWav = createTestWav()
+const testWav = createTestWav(130)
+const shortErrorWav = createTestWav(9)
 const pageErrors = []
 
 page.on('pageerror', error => {
@@ -79,6 +81,15 @@ await page.route('**/api/proxy?url=*', async route => {
       status: 200,
       contentType: 'audio/wav',
       body: testWav,
+    })
+    return
+  }
+
+  if (target === SHORT_ERROR_AUDIO_URL) {
+    await route.fulfill({
+      status: 200,
+      contentType: 'audio/wav',
+      body: shortErrorWav,
     })
     return
   }
@@ -135,7 +146,7 @@ try {
         window.__qualityFallbackCalls.push(quality)
 
         if (quality === '320k') {
-          callback(new Error('forced 320k failure for fallback test'))
+          callback(null, 'https://quality-error.invalid/only-testing-online-music.wav')
           return
         }
 
@@ -222,7 +233,7 @@ try {
     currentTime: result.currentTime,
     paused: result.paused,
   }, null, 2))
-  console.log('PASS: 320k failure automatically downgraded to 128k and reached real HTML5 playback')
+  console.log('PASS: 9-second error audio was rejected and 128k full-length fallback reached real HTML5 playback')
 } catch (error) {
   console.error('QUALITY FALLBACK TEST FAILED')
   console.error(error?.stack || String(error))
