@@ -487,33 +487,28 @@
       if (!timerAvailable) return;
 
       var fired = false;
-      var cancelled = false;
-      var handle = null;
+      var cancelledFired = false;
 
       try {
-        handle = window.setTimeout(function () {
+        window.setTimeout(function () {
           fired = true;
         }, 0);
 
-        if (typeof handle === 'undefined' || handle === null) {
-          cancelled = true;
-        }
-
         var cancelledHandle = window.setTimeout(function () {
-          cancelled = false;
+          cancelledFired = true;
         }, 20);
         window.clearTimeout(cancelledHandle);
 
         window.setTimeout(function () {
-          var success = fired && cancelled === false;
+          var success = fired && !cancelledFired;
           replaceCheck(
             'setTimeout / clearTimeout',
             success ? 'PASS' : 'FAIL',
-            success ? '定时器触发与取消测试通过' : '定时器触发或取消行为异常'
+            success ? '定时器触发与 clearTimeout 取消测试通过' : '定时器触发或取消行为异常'
           );
           renderChecksOnly();
           updateReport();
-        }, 30);
+        }, 40);
       } catch (e) {
         replaceCheck('setTimeout / clearTimeout', 'FAIL', '定时器执行异常');
         renderChecksOnly();
