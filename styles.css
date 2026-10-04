@@ -41,6 +41,8 @@ button.secondary{background:#e8eaed;color:#202124}
 .player{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#fff;border-top:1px solid #dadce0;padding:9px 12px;display:flex;gap:12px;align-items:center}
 .player-text{flex:1;min-width:0}
 #player-title,#player-artist{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player-controls{display:flex;align-items:center;gap:7px}
+.player-nav{min-height:34px;padding:0 9px;font-size:13px}
 audio{width:230px;max-width:48vw}
 @media(max-width:600px){
   .page{padding:10px}
@@ -111,4 +113,9 @@ code{word-break:break-all}
 @media(max-width:600px){
   .search-actions{display:flex;flex-direction:column}
   .search-actions button{width:100%}
+}
+
+@media(max-width:600px){
+  .player-controls{gap:4px}
+  .player-nav{padding:0 7px;font-size:12px}
 }
