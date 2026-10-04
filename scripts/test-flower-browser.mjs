@@ -4,6 +4,7 @@ import { chromium } from 'playwright'
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8788'
 const SOURCE_URL = process.env.LX_SOURCE_URL || 'https://ghproxy.net/raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js'
 const KEYWORD = '周杰伦'
+const CHANNELS = (process.env.TEST_CHANNELS || 'kw,kg,tx,wy,mg').split(',').map(item => item.trim().toLowerCase()).filter(Boolean)
 const INIT_TIMEOUT_MS = Number(process.env.INIT_TIMEOUT_MS || 30000)
 const SEARCH_TIMEOUT_MS = Number(process.env.SEARCH_TIMEOUT_MS || 60000)
 const PLAYBACK_TIMEOUT_MS = Number(process.env.PLAYBACK_TIMEOUT_MS || 15000)
@@ -83,141 +84,120 @@ try {
   console.log('Source:', state.name)
   console.log('Channels:', state.sources.join(', '))
 
-  const kgButton = page.locator('#channel-list .channel-button[title="KG"]')
-  assert.equal(await kgButton.count(), 1, 'KG channel button is missing')
-  await kgButton.click()
+  assert.ok(CHANNELS.length > 0, 'No channels configured')
+  assert.ok(CHANNELS.every(channel => /^(kw|kg|tx|wy|mg)$/.test(channel)), 'Unsupported test channel: ' + CHANNELS.join(','))
 
-  await page.locator('#search-input').fill(KEYWORD)
-  await page.locator('#search-btn').click()
+  const summary = []
 
-  await page.waitForFunction(
-    () => document.querySelectorAll('#search-results .search-row').length > 0,
-    null,
-    { timeout: SEARCH_TIMEOUT_MS },
-  )
+  for (const channel of CHANNELS) {
+    const button = page.locator('#channel-list .channel-button[title="' + channel.toUpperCase() + '"]')
+    assert.equal(await button.count(), 1, channel.toUpperCase() + ' channel button is missing')
+    await button.click()
 
-  const results = await page.evaluate(() => {
-    return (window.__LXLastSearchResults || []).slice(0, 8).map(item => ({
-      id: item.id || '',
-      hash: item.hash || item.raw?.hash || '',
-      songmid: item.songmid || '',
-      name: item.name || '',
-      singer: item.singer || '',
-      source: item.source || '',
-      rawSource: item.raw?.source || '',
-    }))
-  })
-
-  assert.ok(results.length > 0, 'KG search returned no results')
-  assert.ok(
-    results.every(item => item.source === 'kg' && item.hash),
-    'KG search results must contain a Kugou hash and remain bound to KG: ' + JSON.stringify(results)
-  )
-  assert.ok(
-    results.every(item => item.source === 'kg'),
-    'KG search returned results not bound to the KG source: ' + JSON.stringify(results)
-  )
-  console.log('PASS: KG search results remain bound to the selected source')
-  console.log('First KG result:', JSON.stringify(results[0]))
-
-  const playbackAttempts = []
-  const testCount = Math.min(5, results.length)
-
-  for (let i = 0; i < testCount; i += 1) {
-    const row = page.locator('#search-results .search-row').nth(i)
-    await row.getByRole('button', { name: '解析并播放' }).click()
+    await page.locator('#search-input').fill(KEYWORD)
+    await page.locator('#search-btn').click()
 
     await page.waitForFunction(
       () => {
         const status = document.getElementById('status')?.textContent || ''
-        return /已返回 128k 播放地址|musicUrl 失败/.test(status)
+        return document.querySelectorAll('#search-results .search-row').length > 0 || /搜索失败/.test(status)
       },
       null,
-      { timeout: PLAYBACK_TIMEOUT_MS },
+      { timeout: SEARCH_TIMEOUT_MS },
     )
 
-    const attempt = await page.evaluate(() => {
-      const active = window.LXSourceManager.getActive()
-      const audio = document.getElementById('audio')
-      return {
-        status: document.getElementById('status')?.textContent || '',
-        env: active?.runtime?.env || '',
-        audioUrl: audio?.src || '',
-        readyState: Number(audio?.readyState || 0),
-        error: audio?.error ? {
-          code: audio.error.code,
-          message: audio.error.message || '',
-        } : null,
-      }
+    const results = await page.evaluate(() => {
+      return (window.__LXLastSearchResults || []).slice(0, 8).map(item => ({
+        id: item.id || '',
+        hash: item.hash || item.raw?.hash || '',
+        songmid: item.songmid || '',
+        name: item.name || '',
+        singer: item.singer || '',
+        source: item.source || '',
+        rawSource: item.raw?.source || '',
+      }))
     })
 
-    playbackAttempts.push({
-      index: i + 1,
-      result: results[i],
-      ...attempt,
-    })
-
-    if (/已返回 128k 播放地址/.test(attempt.status)) break
-  }
-
-  const playback = playbackAttempts.find(item => /已返回 128k 播放地址/.test(item.status)) || playbackAttempts[0]
-  assert.ok(playback, 'No Flower musicUrl attempts were completed')
-  assert.equal(playback.env, 'desktop')
-
-  const flowerUrlRequests = proxyTargets.filter(item => {
-    return item.target.indexOf('/flower/v1/url/kg/') >= 0 &&
-      item.target.slice(-5).toLowerCase() === '/128k'
-  })
-  const attemptedHashSet = {}
-  for (const item of playbackAttempts) attemptedHashSet[String(item.result.hash || '').toUpperCase()] = true
-  assert.ok(
-    flowerUrlRequests.length >= playbackAttempts.length,
-    'Flower KG requests were not observed for all tested results'
-  )
-  assert.ok(
-    flowerUrlRequests.every(item => {
-      const parts = item.target.split('/')
-      const hash = parts[parts.length - 2] || ''
-      return parts[parts.length - 3] === 'kg' &&
-        parts[parts.length - 1].toLowerCase() === '128k' &&
-        Boolean(attemptedHashSet[String(hash).toUpperCase()])
-    }),
-    'Flower KG endpoint did not receive the selected search-result hashes: ' +
-      JSON.stringify(flowerUrlRequests, null, 2)
-  )
-
-  const succeeded = /已返回 128k 播放地址/.test(playback.status)
-  const upstreamUnavailable = playbackAttempts.length > 0 &&
-    playbackAttempts.every(item => /musicUrl 失败（128k）：HTTP (400|403)/.test(item.status))
-
-  if (!succeeded) {
     assert.ok(
-      upstreamUnavailable,
-      'Flower musicUrl failed with an unexpected response: ' +
-        JSON.stringify(playbackAttempts, null, 2)
+      results.length > 0,
+      channel.toUpperCase() + ' search returned no results. Status: ' + await page.locator('#status').textContent()
     )
-    console.log('WARN: Flower KG endpoint was reached with correct hashes, but the external Flower service rejected all tested requests.')
-    console.log('No cross-platform search fallback is used.')
-  } else {
-    assert.match(playback.audioUrl, /^https?:/i, 'Flower musicUrl did not return a playable URL')
-    assert.equal(playback.error, null, 'Audio element reported a media error')
+    assert.ok(
+      results.every(item => item.source === channel),
+      channel.toUpperCase() + ' search leaked another source: ' + JSON.stringify(results)
+    )
+    if (channel === 'kg') assert.ok(results.every(item => item.hash), 'KG results must contain a Kugou hash')
+    if (channel === 'kw') assert.ok(results.every(item => item.songmid), 'KW results must contain a Kuwo songmid')
+    if (channel === 'mg') assert.ok(results.every(item => item.id || item.copyrightId), 'MG results must contain a Migu identifier')
+
+    const attempts = []
+    const candidateCount = Math.min(3, results.length)
+    for (let i = 0; i < candidateCount; i += 1) {
+      await page.locator('#search-results .search-row').nth(i).getByRole('button', { name: '解析并播放' }).click()
+
+      try {
+        await page.waitForFunction(
+          () => {
+            const status = document.getElementById('status')?.textContent || ''
+            return /正在播放|musicUrl 失败|已返回 .+ 播放地址/.test(status)
+          },
+          null,
+          { timeout: PLAYBACK_TIMEOUT_MS },
+        )
+      } catch {}
+
+      const attempt = await page.evaluate(() => {
+        const audio = document.getElementById('audio')
+        return {
+          status: document.getElementById('status')?.textContent || '',
+          audioUrl: audio?.src || '',
+          readyState: Number(audio?.readyState || 0),
+          currentTime: Number(audio?.currentTime || 0),
+          error: audio?.error ? {
+            code: audio.error.code,
+            message: audio.error.message || '',
+          } : null,
+        }
+      })
+      attempts.push({ index: i + 1, result: results[i], ...attempt })
+      if (/正在播放/.test(attempt.status) || attempt.currentTime >= 0.5) break
+    }
+
+    const success = attempts.find(item => /正在播放/.test(item.status) || item.currentTime >= 0.5)
+    assert.ok(
+      success,
+      channel.toUpperCase() + ' playback failed after ' + attempts.length + ' candidates: ' +
+      JSON.stringify(attempts, null, 2)
+    )
+
+    const targetSeen = proxyTargets.some(item => {
+      const target = item.target
+      if (channel === 'kw') return /search\.kuwo\.cn\/r\.s/.test(target) || /flower\/v1\/url\/kw\//.test(target)
+      if (channel === 'kg') return /songsearch\.kugou\.com\/song_search_v2/.test(target) ||
+        /mobilecdn\.kugou\.com\/api\/v3\/search\/song/.test(target) ||
+        /flower\/v1\/url\/kg\//.test(target)
+      if (channel === 'tx') return /gdstudio\.xyz\/api\.php/.test(target) || /flower\/v1\/url\/tx\//.test(target)
+      if (channel === 'wy') return /gdstudio\.xyz\/api\.php/.test(target) || /flower\/v1\/url\/wy\//.test(target)
+      return /gdstudio\.xyz\/api\.php/.test(target) || /flower\/v1\/url\/mg\//.test(target)
+    })
+    assert.ok(targetSeen, channel.toUpperCase() + ' did not produce expected platform/Flower proxy traffic')
+
+    summary.push({ channel, result: results[0], playback: success, attempts })
+    console.log('PASS:', channel.toUpperCase(), 'search + playback')
   }
 
-  console.log('FLOWER RESULT')
+  console.log('FLOWER CHANNEL MATRIX')
   console.log(JSON.stringify({
     sourceUrl: SOURCE_URL,
     keyword: KEYWORD,
-    result: playback.result,
-    playbackAttempts,
-    status: playback.status,
-    audioUrl: playback.audioUrl,
-    readyState: playback.readyState,
-    env: playback.env,
-    upstreamUnavailable,
+    channels: CHANNELS,
+    summary,
+    flowerTargets: proxyTargets.filter(item => /flower\/v1\/url\/(kw|kg|tx|wy|mg)\//.test(item.target)),
+    failedResponses,
+    pageErrors,
   }, null, 2))
-  console.log(succeeded
-    ? 'PASS: Flower KG search and musicUrl both use the same LX source'
-    : 'PASS: Flower KG search integration is correct; upstream Flower playback service is unavailable from the test environment')
+  console.log('PASS: Flower source search + playback matrix succeeded for all requested channels')
+
 } catch (error) {
   console.error('FLOWER BROWSER TEST FAILED')
   console.error(error?.stack || String(error))

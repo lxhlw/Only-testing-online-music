@@ -29,9 +29,15 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     setTimeout(() => {
       let targetUrl = self.url
       try { targetUrl = decodeURIComponent(self.url) } catch {}
+      const searchIndex = calls.filter(call => {
+        return String(call.xhrUrl || '').indexOf('/time') < 0
+      }).length - 1
+      const searchResponses = Array.isArray(responses.search)
+        ? responses.search
+        : [responses.search || { status: 200, body: '[]' }]
       const response = targetUrl.indexOf('/time') >= 0
         ? (responses.time || { status: 200, body: '1791139200' })
-        : (responses.search || { status: 200, body: '[]' })
+        : (searchResponses[Math.min(searchIndex, searchResponses.length - 1)] || { status: 200, body: '[]' })
       self.readyState = 4
       self.status = response.status
       self.responseText = response.body
@@ -151,7 +157,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   assert.equal(result.list[0].name, '晴天')
   assert.equal(result.list[0].singer, '周杰伦')
   assert.equal(result.list[0].interval, '04:29')
-  assert.deepEqual(result.list[0].types.map(item => item.type), ['flac', '128k'])
+  assert.deepEqual(result.list[0].types.map(item => item.type), ['128k', 'flac'])
 
   assert.equal(h.calls.length, 1)
   assert.equal(h.calls[0].xhrMethod, 'GET')
@@ -249,22 +255,54 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     () => {},
     {
       time: { status: 200, body: '1791139200' },
-      search: {
-        status: 400,
-        body: 'wrong platform'
-      }
+      search: [
+        {
+          status: 400,
+          body: 'primary unavailable'
+        },
+        {
+          status: 200,
+          body: JSON.stringify({
+            status: 1,
+            error: '',
+            data: {
+              total: 1,
+              info: [
+                {
+                  audio_id: 778899,
+                  hash: 'ABCDEF0123456789ABCDEF0123456789',
+                  filename: '周杰伦 - 晴天',
+                  songname: '晴天',
+                  singername: '周杰伦',
+                  album_name: '叶惠美',
+                  album_id: '12345',
+                  duration: 269,
+                  '320hash': 'FEDCBA9876543210FEDCBA9876543210'
+                }
+              ]
+            }
+          })
+        }
+      ]
     }
   )
 
-  await new Promise(resolve => {
-    h2.sandbox.LXMusicSearch.search('kg', '周杰伦', 1, 20, () => resolve())
+  const result = await new Promise((resolve, reject) => {
+    h2.sandbox.LXMusicSearch.search('kg', '周杰伦', 1, 20, (err, value) => {
+      if (err) reject(err)
+      else resolve(value)
+    })
   })
 
-  const failedCalls = h2.calls.filter(call => call.xhrMethod === 'GET')
-  assert.equal(failedCalls.length, 1)
-  assert.equal(failedCalls[0].xhrBody, null)
-  assert.match(decodeURIComponent(failedCalls[0].xhrUrl), /songsearch\.kugou\.com\/song_search_v2/)
-  assert.match(decodeURIComponent(failedCalls[0].xhrUrl), /(^|&)keyword=/)
+  assert.equal(result.source, 'kg')
+  assert.equal(result.searchProvider, 'kugou-mobile-native')
+  assert.equal(result.requestedSource, 'kg')
+  assert.equal(result.list.length, 1)
+  assert.equal(result.list[0].source, 'kg')
+  assert.equal(result.list[0].id, '778899')
+  assert.equal(result.list[0].hash, 'ABCDEF0123456789ABCDEF0123456789')
+  assert.match(decodeURIComponent(h2.calls[0].xhrUrl), /songsearch\.kugou\.com\/song_search_v2/)
+  assert.match(decodeURIComponent(h2.calls[1].xhrUrl), /mobilecdn\.kugou\.com\/api\/v3\/search\/song/)
 }
 
 

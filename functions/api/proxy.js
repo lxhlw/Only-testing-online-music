@@ -112,14 +112,47 @@ export async function onRequest(context) {
   var init = { method: method, headers: pickForwardHeaders(request), redirect: 'follow' };
   if (method !== 'GET' && method !== 'HEAD') init.body = request.body;
 
-  try {
-    var upstream = await fetch(target.toString(), init);
-    return new Response(upstream.body, {
-      status: upstream.status,
-      statusText: upstream.statusText,
-      headers: copyResponseHeaders(upstream, request)
-    });
-  } catch (e) {
+  // Cloudflare rejects direct-IP requests with Error 1003. Flower publishes
+  // its resolver on this IP, so try known DNS aliases for the same origin.
+  var candidateUrls = [target.toString()];
+  if (target.hostname.toLowerCase() === '97.64.37.235') {
+    candidateUrls = [];
+    var flowerAliases = ['ts.tempmusic.tk', 'tm.tempmusic.tk'];
+    for (var fi = 0; fi < flowerAliases.length; fi += 1) {
+      try {
+        var alias = new URL(target.toString());
+        alias.hostname = flowerAliases[fi];
+        candidateUrls.push(alias.toString());
+      } catch (e) {}
+    }
+    candidateUrls.push(target.toString());
+  }
+
+  var lastError = null;
+  for (var ci = 0; ci < candidateUrls.length; ci += 1) {
+    try {
+      var upstream = await fetch(candidateUrls[ci], init);
+      if (upstream.status >= 200 && upstream.status < 300) {
+        return new Response(upstream.body, {
+          status: upstream.status,
+          statusText: upstream.statusText,
+          headers: copyResponseHeaders(upstream, request)
+        });
+      }
+      if (ci === candidateUrls.length - 1) {
+        return new Response(upstream.body, {
+          status: upstream.status,
+          statusText: upstream.statusText,
+          headers: copyResponseHeaders(upstream, request)
+        });
+      }
+      lastError = new Error('Upstream HTTP ' + upstream.status + ' from ' + candidateUrls[ci]);
+    } catch (e) {
+      lastError = e;
+    }
+  }
+
+  if (lastError) throw lastError;
     return new Response(JSON.stringify({
       error: 'Upstream request failed',
       message: e && e.message ? e.message : String(e)

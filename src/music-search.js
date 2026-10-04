@@ -408,15 +408,53 @@
     );
   }
 
-  function searchKugou(keyword, page, limit, callback) {
-    var url = 'http://songsearch.kugou.com/song_search_v2' +
-      '?platform=AndroidFilter' +
-      '&iscorrection=1' +
+  function buildKugouList(rawList) {
+    var list = [];
+    var seen = {};
+
+    function pushItem(item) {
+      if (!item) return;
+      var hash = String(
+        item.FileHash || item.hash || item['128hash'] || item.HQFileHash ||
+        item['320hash'] || item.SQFileHash || item.sqhash || ''
+      ).toUpperCase();
+      var audioId = String(item.Audioid || item.audio_id || item.songmid || '');
+      var key = audioId + '|' + hash;
+      if (!hash || !audioId || seen[key]) return;
+      seen[key] = true;
+
+      list.push(normalizeSong({
+        id: audioId,
+        songmid: audioId,
+        hash: hash,
+        name: String(item.OriSongName || item.SongName || item.songname || item.name || ''),
+        artist: formatKugouArtist(item.Singers || item.singers || item.singername || item.artist),
+        album: String(item.AlbumName || item.album_name || item.albumName || item.album || ''),
+        albumId: String(item.AlbumID || item.album_id || item.albumId || ''),
+        interval: formatKugouInterval(item.Duration != null ? item.Duration : item.duration),
+        source: 'kugou',
+        types: []
+      }, 'kg'));
+    }
+
+    for (var i = 0; i < rawList.length; i += 1) {
+      pushItem(rawList[i]);
+      var groups = rawList[i] && Array.isArray(rawList[i].Grp)
+        ? rawList[i].Grp
+        : (rawList[i] && Array.isArray(rawList[i].group) ? rawList[i].group : []);
+      for (var g = 0; g < groups.length; g += 1) pushItem(groups[g]);
+    }
+
+    return list;
+  }
+
+  function searchKugouMobile(keyword, page, limit, callback) {
+    var url = 'http://mobilecdn.kugou.com/api/v3/search/song' +
+      '?format=json' +
       '&keyword=' + encodeURIComponent(keyword) +
-      '&hifiquality=0' +
+      '&page=' + encodeURIComponent(page) +
       '&pagesize=' + encodeURIComponent(limit) +
-      '&PrivilegeFilter=0' +
-      '&page=' + encodeURIComponent(page);
+      '&showtype=1';
 
     requestViaProxy(
       url,
@@ -429,56 +467,84 @@
       true,
       function (err, data) {
         if (err) return callback(err);
-        if (!data || Number(data.error_code) !== 0 || !data.data) {
+        if (!data || Number(data.status) !== 1 || !data.data) {
           return callback(new Error(
-            'Kugou search returned error code ' + String(data && data.error_code != null ? data.error_code : 'unknown') +
+            'Kugou mobile search returned invalid response' +
+            (data && data.error ? ': ' + String(data.error) : '')
+          ));
+        }
+
+        var rawList = Array.isArray(data.data.info) ? data.data.info : [];
+        var list = buildKugouList(rawList);
+        if (!list.length) return callback(new Error('Kugou mobile search returned no usable songs'));
+
+        var total = Number(data.data.total);
+        if (!isFinite(total)) total = list.length;
+
+        callback(null, {
+          source: 'kg',
+          page: page,
+          total: total,
+          isEnd: page * limit >= total,
+          list: list,
+          searchProvider: 'kugou-mobile-native',
+          requestedSource: 'kg',
+          fallbackSearch: false
+        });
+      }
+    );
+  }
+
+  function searchKugou(keyword, page, limit, callback) {
+    var url = 'http://songsearch.kugou.com/song_search_v2' +
+      '?platform=AndroidFilter' +
+      '&iscorrection=1' +
+      '&keyword=' + encodeURIComponent(keyword) +
+      '&hifiquality=0' +
+      '&pagesize=' + encodeURIComponent(limit) +
+      '&PrivilegeFilter=0' +
+      '&page=' + encodeURIComponent(page);
+
+    function fallbackToMobile(primaryError) {
+      searchKugouMobile(keyword, page, limit, function (mobileErr, mobileResult) {
+        if (!mobileErr) return callback(null, mobileResult);
+        callback(primaryError || mobileErr);
+      });
+    }
+
+    requestViaProxy(
+      url,
+      'GET',
+      null,
+      {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
+        'Accept': 'application/json, text/javascript, */*; q=0.01'
+      },
+      true,
+      function (err, data) {
+        if (err) return fallbackToMobile(err);
+        if (!data || Number(data.error_code) !== 0 || !data.data) {
+          return fallbackToMobile(new Error(
+            'Kugou search returned error code ' +
+            String(data && data.error_code != null ? data.error_code : 'unknown') +
             (data && data.error ? ': ' + String(data.error) : '')
           ));
         }
 
         var rawList = Array.isArray(data.data.lists) ? data.data.lists : [];
-        var list = [];
-        var seen = {};
+        var list = buildKugouList(rawList);
+        if (!list.length) return fallbackToMobile(new Error('Kugou search returned no usable songs'));
 
-        function pushItem(item) {
-          if (!item) return;
-          var hash = String(item.FileHash || item.hash || '').toUpperCase();
-          var audioId = String(item.Audioid || item.audio_id || item.songmid || '');
-          var key = audioId + '|' + hash;
-          if (!hash || !audioId || seen[key]) return;
-          seen[key] = true;
-
-          list.push(normalizeSong({
-            id: audioId,
-            songmid: audioId,
-            hash: hash,
-            name: String(item.OriSongName || item.SongName || item.name || ''),
-            artist: formatKugouArtist(item.Singers || item.singers || item.artist),
-            album: String(item.AlbumName || item.albumName || item.album || ''),
-            albumId: String(item.AlbumID || item.albumId || ''),
-            interval: formatKugouInterval(item.Duration),
-            source: 'kugou',
-            types: []
-          }, 'kg'));
-        }
-
-        for (var i = 0; i < rawList.length; i += 1) {
-          pushItem(rawList[i]);
-          var groups = rawList[i] && Array.isArray(rawList[i].Grp) ? rawList[i].Grp : [];
-          for (var g = 0; g < groups.length; g += 1) pushItem(groups[g]);
-        }
-
-        if (!list.length) {
-          return callback(new Error('Kugou search returned no usable songs'));
-        }
+        var total = Number(data.data.total);
+        if (!isFinite(total)) total = list.length;
 
         callback(null, {
           source: 'kg',
           page: page,
-          total: data.data.total != null ? Number(data.data.total) : list.length,
-          isEnd: false,
+          total: total,
+          isEnd: page * limit >= total,
           list: list,
-          searchProvider: 'kugou',
+          searchProvider: 'kugou-native',
           requestedSource: 'kg',
           fallbackSearch: false
         });
