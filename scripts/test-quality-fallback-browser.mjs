@@ -6,7 +6,7 @@ const SOURCE_URL = process.env.LX_SOURCE_URL || 'https://raw.githubusercontent.c
 const KEYWORD = '成都'
 const INIT_TIMEOUT_MS = Number(process.env.INIT_TIMEOUT_MS || 30000)
 const SEARCH_TIMEOUT_MS = Number(process.env.SEARCH_TIMEOUT_MS || 60000)
-const PLAYBACK_TIMEOUT_MS = Number(process.env.PLAYBACK_TIMEOUT_MS || 12000)
+const PLAYBACK_TIMEOUT_MS = Number(process.env.PLAYBACK_TIMEOUT_MS || 20000)
 const FALLBACK_AUDIO_URL = 'https://quality-fallback.invalid/only-testing-online-music.wav'
 const SHORT_ERROR_AUDIO_URL = 'https://quality-error.invalid/only-testing-online-music.wav'
 
@@ -212,14 +212,13 @@ try {
     () => {
       const audio = document.getElementById('audio')
       const calls = window.__qualityFallbackCalls || []
+      const status = document.getElementById('status')?.textContent || ''
       return Boolean(
         audio &&
         !audio.error &&
         calls.length >= 2 &&
-        (
-          audio.currentTime >= 0.5 ||
-          audio.readyState >= 2
-        )
+        status.includes('128k') &&
+        audio.currentTime >= 0.5
       )
     },
     null,
