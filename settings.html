@@ -130,11 +130,8 @@
         fixedQuality: selected === 'highest' ? '320k' : selected,
         autoFallback: fallbackEl.checked
       });
-      for (var i = 0; i < qualityRadios.length; i += 1) {
-      qualityRadios[i].onclick = renderQualityChoices;
-    }
-
-    loadForm();
+      setSelectedQuality(settings.qualityMode === 'fixed' ? settings.fixedQuality : 'highest');
+      fallbackEl.checked = settings.autoFallback;
       setStatus('已保存：' + global.LXPlaySettings.getLabel(settings), 'ready');
     };
 
@@ -144,6 +141,10 @@
       fallbackEl.checked = settings.autoFallback;
       setStatus('已恢复默认：' + global.LXPlaySettings.getLabel(settings), 'ready');
     };
+
+    for (var i = 0; i < qualityRadios.length; i += 1) {
+      qualityRadios[i].onclick = renderQualityChoices;
+    }
 
     loadForm();
   })(window);
