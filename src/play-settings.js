@@ -145,7 +145,14 @@
     }
 
     var preferred = String(config.fixedQuality || '');
-    var preferredIndex = list.indexOf(preferred);
+    var preferredKey = getQualityKey(preferred);
+    var preferredIndex = -1;
+    for (var i = 0; i < list.length; i += 1) {
+      if (getQualityKey(list[i]) === preferredKey) {
+        preferredIndex = i;
+        break;
+      }
+    }
 
     // Requested quality is unavailable. The safest fallback is the current
     // source's highest available quality, not a guessed quality key.
