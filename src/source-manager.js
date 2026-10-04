@@ -54,10 +54,22 @@
       var target = String(url || '');
       var requestUrl = target;
       try {
-        var page = new URL(global.location.href);
-        var dest = new URL(target, page.href);
-        if (dest.origin !== page.origin) {
-          requestUrl = page.origin + '/api/proxy?url=' + encodeURIComponent(dest.href);
+        if (typeof global.URL === 'function') {
+          var page = new global.URL(global.location.href);
+          var dest = new global.URL(target, page.href);
+          if (dest.origin !== page.origin) {
+            requestUrl = page.origin + '/api/proxy?url=' + encodeURIComponent(dest.href);
+          }
+        } else {
+          var pageOrigin = global.location.protocol + '//' + global.location.host;
+          var absoluteTarget = target;
+          if (/^\\/\\//.test(absoluteTarget)) {
+            absoluteTarget = global.location.protocol + absoluteTarget;
+          }
+          var originMatch = absoluteTarget.match(/^(https?:\\/\\/[^\\/]+)/i);
+          if (originMatch && originMatch[1].toLowerCase() !== pageOrigin.toLowerCase()) {
+            requestUrl = pageOrigin + '/api/proxy?url=' + encodeURIComponent(absoluteTarget);
+          }
         }
       } catch (e) {}
 
