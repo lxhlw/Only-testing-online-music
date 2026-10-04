@@ -170,9 +170,11 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     h2.sandbox.LXMusicSearch.search('kg', '周杰伦', 1, 20, () => resolve())
   })
 
-  const failedCalls = h2.calls.filter(call => call.xhrMethod === 'POST')
+  const failedCalls = h2.calls.filter(call => call.xhrMethod === 'GET')
   assert.equal(failedCalls.length, 1)
-  assert.match(failedCalls[0].xhrBody, /(^|&)source=kugou(&|$)/)
+  assert.equal(failedCalls[0].xhrBody, null)
+  assert.match(decodeURIComponent(failedCalls[0].xhrUrl), /songsearch\.kugou\.com\/song_search_v2/)
+  assert.match(decodeURIComponent(failedCalls[0].xhrUrl), /(^|&)keyword=/)
 }
 
 
