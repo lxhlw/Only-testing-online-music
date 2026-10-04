@@ -191,6 +191,23 @@
     });
     addCheck('localStorage', storageOk ? 'PASS' : 'FAIL', '读写测试');
 
+    var eventFactoryOk = safeTest(function () {
+      if (typeof document.createEvent !== 'function') return false;
+      var target = document.createElement('div');
+      if (!target || typeof target.dispatchEvent !== 'function') return false;
+      var fired = false;
+      target.addEventListener('lx-test', function () {
+        fired = true;
+      }, false);
+      var event = document.createEvent('Event');
+      if (!event || typeof event.initEvent !== 'function') return false;
+      event.initEvent('lx-test', true, true);
+      target.dispatchEvent(event);
+      return fired;
+    });
+    addCheck('DOM Event 创建/派发', eventFactoryOk ? 'PASS' : 'WARN',
+      eventFactoryOk ? 'createEvent / initEvent / dispatchEvent 测试通过' : '旧浏览器事件创建或派发能力不可用');
+
     var jsonOk = safeTest(function () {
       if (!window.JSON ||
           typeof window.JSON.parse !== 'function' ||
