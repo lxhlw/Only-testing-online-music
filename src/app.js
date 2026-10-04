@@ -513,22 +513,38 @@
     startPlayback(music, source);
   }
 
-  function playNextQueued() {
+  function playQueuedOffset(offset) {
     if (!global.LXMusicLibrary || !playbackState) return;
     var queue = global.LXMusicLibrary.snapshot().queue;
     var currentKey = musicKey(playbackState.music);
-    var next = null;
+    var currentIndex = -1;
+
     for (var i = 0; i < queue.length; i += 1) {
-      if (musicKey(queue[i]) === currentKey && i + 1 < queue.length) {
-        next = queue[i + 1];
+      if (musicKey(queue[i]) === currentKey) {
+        currentIndex = i;
         break;
       }
     }
-    if (!next) {
-      setStatus('当前播放队列已播放到最后一首。', 'ready');
+
+    if (currentIndex < 0) {
+      setStatus('当前歌曲不在播放队列中。', 'warn');
       return;
     }
-    playLibraryMusic(next);
+
+    var targetIndex = currentIndex + offset;
+    if (targetIndex < 0) {
+      setStatus('已经是播放队列第一首。', 'ready');
+      return;
+    }
+    if (targetIndex >= queue.length) {
+      setStatus('已经是播放队列最后一首。', 'ready');
+      return;
+    }
+    playLibraryMusic(queue[targetIndex]);
+  }
+
+  function playNextQueued() {
+    playQueuedOffset(1);
   }
 
   function bind() {
@@ -636,6 +652,14 @@
         renderLibrary();
         setStatus('已清空最近播放记录。', 'ready');
       }
+    };
+
+    document.getElementById('prev-track-btn').onclick = function () {
+      playQueuedOffset(-1);
+    };
+
+    document.getElementById('next-track-btn').onclick = function () {
+      playQueuedOffset(1);
     };
 
     document.getElementById('search-btn').onclick = function () {
