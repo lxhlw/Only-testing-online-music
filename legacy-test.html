@@ -225,6 +225,7 @@
     addCheck('Promise', promiseAvailable ? 'PASS' : 'FAIL',
       promiseAvailable ? '构造函数可用，异步执行测试随后进行' : 'Promise 不存在');
     addPendingCheck('Promise.all', '等待 Promise.all 异步测试');
+    addPendingCheck('Promise.resolve/reject', '等待 Promise.resolve / reject 异步测试');
 
     var arrayBufferOk = safeTest(function () {
       if (typeof window.ArrayBuffer !== 'function') return false;
@@ -328,6 +329,54 @@
     addCheck('Web 项目脚本可读取',
       typeof window.XMLHttpRequest === 'function' ? 'PASS' : 'FAIL',
       '使用 XHR 检查');
+
+    function testPromiseStaticMethods() {
+      if (!promiseAvailable) return;
+
+      try {
+        if (typeof window.Promise.resolve !== 'function' || typeof window.Promise.reject !== 'function') {
+          replaceCheck('Promise.resolve/reject', 'FAIL', 'Promise.resolve 或 Promise.reject 不存在');
+          renderChecksOnly();
+          updateReport();
+          return;
+        }
+
+        var resolveOk = false;
+        var rejectOk = false;
+        var completed = 0;
+
+        function finishOne() {
+          completed += 1;
+          if (completed !== 2) return;
+          var success = resolveOk && rejectOk;
+          replaceCheck(
+            'Promise.resolve/reject',
+            success ? 'PASS' : 'FAIL',
+            success ? 'resolve / reject 实际异步测试通过' : 'resolve / reject 异步行为异常'
+          );
+          renderChecksOnly();
+          updateReport();
+        }
+
+        window.Promise.resolve('LX').then(function (value) {
+          resolveOk = value === 'LX';
+          finishOne();
+        }, function () {
+          finishOne();
+        });
+
+        window.Promise.reject('LX').then(function () {
+          finishOne();
+        }, function (reason) {
+          rejectOk = reason === 'LX';
+          finishOne();
+        });
+      } catch (e) {
+        replaceCheck('Promise.resolve/reject', 'FAIL', 'Promise 静态方法执行异常');
+        renderChecksOnly();
+        updateReport();
+      }
+    }
 
     function testPromiseAll() {
       if (!promiseAvailable) return;
@@ -472,6 +521,7 @@
 
       testPromiseAsync();
       testPromiseAll();
+      testPromiseStaticMethods();
       testResource('src/lx-runtime.js');
       testResource('src/source-manager.js');
       testResource('src/music-search.js');
