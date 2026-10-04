@@ -32,6 +32,8 @@ jobs:
             url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/latest.js"
           - name: "ikun-latest"
             url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/ikun/latest.js"
+          - name: "juhe-latest"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/juhe/latest.js"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
