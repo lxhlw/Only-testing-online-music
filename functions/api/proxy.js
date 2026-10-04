@@ -152,13 +152,11 @@ export async function onRequest(context) {
     }
   }
 
-  if (lastError) throw lastError;
-    return new Response(JSON.stringify({
-      error: 'Upstream request failed',
-      message: e && e.message ? e.message : String(e)
-    }), {
-      status: 502,
-      headers: Object.assign({'Content-Type': 'application/json; charset=utf-8'}, corsHeaders(request))
-    });
-  }
+  return new Response(JSON.stringify({
+    error: 'Upstream request failed',
+    message: lastError && lastError.message ? lastError.message : 'No upstream response'
+  }), {
+    status: 502,
+    headers: Object.assign({'Content-Type': 'application/json; charset=utf-8'}, corsHeaders(request))
+  });
 }

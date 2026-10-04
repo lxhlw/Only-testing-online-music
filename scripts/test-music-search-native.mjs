@@ -157,7 +157,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   assert.equal(result.list[0].name, '晴天')
   assert.equal(result.list[0].singer, '周杰伦')
   assert.equal(result.list[0].interval, '04:29')
-  assert.deepEqual(result.list[0].types.map(item => item.type), ['128k', 'flac'])
+  assert.equal(result.list[0].types.map(item => item.type).join('|'), '128k|flac')
 
   assert.equal(h.calls.length, 1)
   assert.equal(h.calls[0].xhrMethod, 'GET')
