@@ -7,6 +7,7 @@ const SOURCE_NAME = process.env.LX_SOURCE_NAME || 'unknown'
 const KEYWORD = '成都'
 const INIT_TIMEOUT = Number(process.env.SIXYIN_INIT_TIMEOUT_MS || 30000)
 const CANDIDATE_COUNT = Number(process.env.PLAYBACK_CANDIDATES || 5)
+const MIN_PLAYBACK_SECONDS = Number(process.env.MIN_PLAYBACK_SECONDS || 0.5)
 
 const browser = await chromium.launch({
   headless: true,
@@ -225,7 +226,7 @@ try {
       await page.waitForFunction(
         () => {
           const audio = document.getElementById('audio')
-          return Boolean(audio && audio.currentTime > 0.05)
+          return Boolean(audio && audio.currentTime >= MIN_PLAYBACK_SECONDS)
         },
         null,
         { timeout: 12000 }
@@ -246,7 +247,7 @@ try {
       })
 
       console.log('Playback:', JSON.stringify(attempt.playback))
-      if (attempt.playback.readyState >= 2 && attempt.playback.currentTime > 0.05) {
+      if (attempt.playback.readyState >= 2 && attempt.playback.currentTime >= MIN_PLAYBACK_SECONDS) {
         playbackPassed = true
         attempts.push(attempt)
         console.log('PASS: candidate produced actual HTML5 playback')
