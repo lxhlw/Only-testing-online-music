@@ -72,10 +72,19 @@ code{word-break:break-all}
 .setting-label{font-weight:bold}
 .setting-help{font-size:13px;color:#70757a;line-height:1.45;margin-top:4px}
 .setting-row-checkbox input{width:22px;height:22px;flex:0 0 auto}
+.quality-choice-row{align-items:flex-start}
+.quality-choice-group{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end;max-width:440px}
+.quality-option{display:inline-flex;align-items:center;gap:6px;margin:0;padding:8px 11px;border:1px solid #d0d3d6;border-radius:6px;background:#fff;font-weight:normal;cursor:pointer}
+.quality-option input{width:16px;height:16px;margin:0;padding:0}
+.quality-option span{font-size:14px;white-space:nowrap}
+.quality-option:has(input:checked){border-color:#3f51b5;background:#eef0ff}
 .info-box{padding:11px;border:1px solid #e0e0e0;border-radius:6px;background:#f8f9fa;line-height:1.8}
 @media(max-width:600px){
   .channel-button{width:auto;min-width:92px}
   .setting-inline{align-items:stretch;flex-direction:column}
   .setting-row{align-items:flex-start;flex-direction:column}
   .setting-row select{width:100%}
+  .quality-choice-row{display:block}
+  .quality-choice-group{justify-content:flex-start;max-width:none;margin-top:10px}
+  .quality-option{flex:0 0 auto}
 }
