@@ -62,7 +62,9 @@ try {
     const row = page.locator('#search-results .search-row').first()
     result.title = await row.locator('b').textContent()
     result.singer = await row.locator('span').textContent()
-    await row.locator('button').click()
+    const playButton = row.getByRole('button', { name: '解析并播放' })
+    assert.equal(await playButton.count(), 1, 'Search result must expose exactly one playback button')
+    await playButton.click()
     try {
       await waitForMusicUrlStatus()
       result.musicUrlStatus = await page.locator('#status').textContent()

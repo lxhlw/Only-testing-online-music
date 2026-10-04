@@ -129,7 +129,10 @@ try {
     { timeout: SEARCH_TIMEOUT_MS },
   )
 
-  await page.locator('#search-results .search-row').first().locator('button').click()
+  const firstResult = page.locator('#search-results .search-row').first()
+  const playButton = firstResult.getByRole('button', { name: '解析并播放' })
+  assert.equal(await playButton.count(), 1, 'Search result must expose exactly one playback button')
+  await playButton.click()
 
   await page.waitForFunction(
     () => {
