@@ -164,9 +164,10 @@ try {
   assert.ok(playback, 'No Flower musicUrl attempts were completed')
   assert.equal(playback.env, 'desktop')
 
-  const flowerUrlRequests = proxyTargets.filter(item =>
-    /\\/flower\\/v1\\/url\\/kg\\/([^/]+)\\/128k$/i.test(item.target)
-  )
+  const flowerUrlRequests = proxyTargets.filter(item => {
+    return item.target.indexOf('/flower/v1/url/kg/') >= 0 &&
+      /\\/128k$/i.test(item.target)
+  })
   const attemptedHashSet = {}
   for (const item of playbackAttempts) attemptedHashSet[String(item.result.hash || '').toUpperCase()] = true
   assert.ok(
