@@ -5,6 +5,9 @@ const KG_SEARCH_URL = 'http://songsearch.kugou.com/song_search_v2?platform=Andro
 const CF_PROXY_BASE = 'https://24e6d4a5.only-testing-online-music.pages.dev/api/proxy?url='
 
 const flowerSource = await (await fetch(FLOWER_SOURCE_URL)).text()
+const flowerInfoResponse = await fetch('https://registry.npmmirror.com/flower-source-info/latest')
+if (!flowerInfoResponse.ok) throw new Error('flower-source-info fetch failed: HTTP ' + flowerInfoResponse.status)
+const flowerInfo = await flowerInfoResponse.json()
 const kgResponse = await fetch(KG_SEARCH_URL, {
   headers: {
     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
@@ -83,19 +86,15 @@ function captureFlowerRequest(musicInfo) {
       })
 
       if (url.includes('flower-source-info/latest')) {
-        const packageBody = {
-          s: 'kw|128k,320k,flac&kg|128k,320k,flac&tx|128k,320k,flac&wy|128k,320k,flac&mg|128k,320k,flac',
-          vinfo: { lv: 1, lu: '', lh: '' },
-        }
         const response = {
           statusCode: 200,
           statusMessage: 'OK',
           headers: {},
-          bytes: JSON.stringify(packageBody).length,
-          raw: JSON.stringify(packageBody),
-          body: packageBody,
+          bytes: JSON.stringify(flowerInfo).length,
+          raw: JSON.stringify(flowerInfo),
+          body: flowerInfo,
         }
-        callback(null, response, packageBody)
+        callback(null, response, flowerInfo)
         return () => {}
       }
 
@@ -178,24 +177,3 @@ for (const candidate of candidates) {
       statusText: response.statusText,
       body: body.slice(0, 1000),
     }
-  } catch (error) {
-    proxy = { error: String(error) }
-  }
-
-  results.push({
-    candidate,
-    generatedUrl: captured.url,
-    generatedHeaders: captured.headers,
-    direct,
-    proxy,
-  })
-}
-
-console.log(JSON.stringify({
-  searchStatus: kgResponse.status,
-  candidateCount: candidates.length,
-  results,
-}, null, 2))
-
-if (!results.length) throw new Error('No Flower test candidates were generated')
-console.log('PASS: real KG search -> Flower request -> direct/proxy comparison completed')
