@@ -45,6 +45,58 @@ function decodeChunkedBody(text) {
   return out;
 }
 
+async function fetchFlowerResolverViaHost(target, request) {
+  var bases = [
+    'http://ts.tempmusics.tk',
+    'http://tm.tempmusics.tk',
+    'https://ts.tempmusics.tk',
+    'https://tm.tempmusics.tk'
+  ];
+  var forwarded = pickForwardHeaders(request);
+  var lastError = null;
+
+  for (var bi = 0; bi < bases.length; bi += 1) {
+    var base = bases[bi];
+    var endpoint = base + target.pathname + target.search;
+    try {
+      var upstream = await fetch(endpoint, {
+        method: String(request.method || 'GET').toUpperCase(),
+        headers: forwarded,
+        redirect: 'follow'
+      });
+      var body = await upstream.text();
+      var trimmed = String(body || '').replace(/^\s+|\s+$/g, '');
+
+      if (upstream.status >= 200 && upstream.status < 300 &&
+          /^(?:https?:\/\/|\{|\[)/i.test(trimmed)) {
+        return new Response(trimmed, {
+          status: 200,
+          statusText: 'OK',
+          headers: new Headers({
+            'Content-Type': upstream.headers.get('Content-Type') || 'text/plain; charset=utf-8',
+            'Cache-Control': 'no-store'
+          })
+        });
+      }
+
+      lastError = new Error(
+        'Flower host HTTP ' + upstream.status + ' via ' + endpoint +
+        (trimmed ? ': ' + trimmed.slice(0, 180) : '')
+      );
+    } catch (e) {
+      lastError = e;
+    }
+  }
+
+  return new Response(JSON.stringify({
+    error: 'Flower host resolver failed',
+    message: lastError && lastError.message ? lastError.message : 'No Flower host response'
+  }), {
+    status: 502,
+    headers: Object.assign({'Content-Type': 'application/json; charset=utf-8'}, corsHeaders(request))
+  });
+}
+
 async function fetchFlowerResolverViaSocket(target, request) {
   var hosts = ['97.64.37.235', 'ts.tempmusics.tk', 'tm.tempmusics.tk'];
   var encoder = new TextEncoder();
@@ -334,6 +386,11 @@ export async function onRequest(context) {
   // its resolver on this IP, so try known DNS aliases for the same origin.
   if (target.hostname.toLowerCase() === '97.64.37.235'
       && /^\/flower\/v1\/url\//.test(target.pathname)) {
+    var flowerHostResponse = await fetchFlowerResolverViaHost(target, request);
+    if (flowerHostResponse.status >= 200 && flowerHostResponse.status < 300) {
+      return flowerHostResponse;
+    }
+
     var flowerSocketResponse = await fetchFlowerResolverViaSocket(target, request);
     if (flowerSocketResponse.status >= 200 && flowerSocketResponse.status < 300) {
       return flowerSocketResponse;
