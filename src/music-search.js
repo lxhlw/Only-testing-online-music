@@ -552,98 +552,138 @@
     );
   }
 
-  var QUALITY_TO_BR = {
-    '128k': '128',
-    '192k': '192',
-    '256k': '192',
-    '320k': '320',
-    'flac': '740',
-    'flac24bit': '999',
-    'flac32bit': '999',
-    '24bit': '999',
-    'wav': '740',
-    'ape': '740',
-    'hires': '999',
-    'atmos': '999',
-    'atmos_plus': '999',
-    'master': '999'
+  var TUNEFREE_SOURCE_MAP = {
+    kw: 'kuwo',
+    kg: 'kugou',
+    tx: 'qq',
+    wy: 'netease',
+    mg: 'migu'
   };
 
-  function getGdPlaybackId(source, musicInfo) {
+  var TUNEFREE_QUALITY_MAP = {
+    '128k': '128k',
+    '192k': '192k',
+    '256k': '320k',
+    '320k': '320k',
+    'flac': 'flac',
+    'flac24bit': 'flac24bit',
+    'flac32bit': 'flac24bit',
+    '24bit': 'flac24bit',
+    'wav': 'flac',
+    'ape': 'flac',
+    'hires': 'flac24bit',
+    'atmos': 'flac24bit',
+    'atmos_plus': 'flac24bit',
+    'master': 'flac24bit'
+  };
+
+  function getTuneFreeIds(source, musicInfo) {
     var info = musicInfo || {};
+    var ids = [];
+
+    function add(value) {
+      var id = String(value == null ? '' : value).replace(/^\s+|\s+$/g, '');
+      if (!id) return;
+      for (var i = 0; i < ids.length; i += 1) {
+        if (ids[i] === id) return;
+      }
+      ids.push(id);
+    }
+
     if (source === 'kg') {
-      return String(info.hash || info.fileHash || info.songmid || info.id || '').replace(/^\s+|\s+$/g, '');
+      add(info.hash);
+      add(info.fileHash);
+      add(info.songmid);
+      add(info.id);
+    } else if (source === 'mg') {
+      add(info.copyrightId);
+      add(info.copyright_id);
+      add(info.songmid);
+      add(info.id);
+    } else {
+      add(info.songmid);
+      add(info.mediaMid);
+      add(info.mid);
+      add(info.id);
     }
-    if (source === 'mg') {
-      return String(info.copyrightId || info.copyright_id || info.songmid || info.id || '').replace(/^\s+|\s+$/g, '');
-    }
-    return String(info.songmid || info.mediaMid || info.mid || info.id || '').replace(/^\s+|\s+$/g, '');
+
+    return ids;
   }
 
-  function resolveGdStudioUrl(source, musicInfo, quality, callback) {
+  function resolveTuneFreeUrl(source, musicInfo, quality, callback) {
     source = String(source || '').toLowerCase();
-    var mapped = SOURCE_MAP[source];
-    if (!mapped) return callback(new Error('Unsupported playback source: ' + source));
+    var platform = TUNEFREE_SOURCE_MAP[source];
+    if (!platform) return callback(new Error('Unsupported TuneFree source: ' + source));
 
-    var songId = getGdPlaybackId(source, musicInfo);
-    if (!songId) return callback(new Error('No platform track id for ' + source));
+    var ids = getTuneFreeIds(source, musicInfo);
+    if (!ids.length) return callback(new Error('No platform track id for ' + source));
 
-    getGdServerTime(function (timeErr, serverTime) {
-      if (timeErr) return callback(timeErr);
+    var br = TUNEFREE_QUALITY_MAP[String(quality || '').toLowerCase()] || '128k';
+    var lastError = null;
 
-      var br = QUALITY_TO_BR[String(quality || '').toLowerCase()] || '128';
-      var encodedId = encodeURIComponent(songId);
-      var sign;
-      try {
-        sign = gdStudioSign(encodedId, serverTime);
-      } catch (e) {
-        return callback(e);
+    function tryId(index) {
+      if (index >= ids.length) {
+        return callback(lastError || new Error('TuneFree returned no playable URL for ' + platform));
       }
 
-      var form = encodeForm({
-        types: 'url',
-        source: mapped,
-        id: songId,
-        br: br,
-        s: sign
-      });
+      var url = 'https://music-dl.sayqz.com/api/' +
+        '?source=' + encodeURIComponent(platform) +
+        '&id=' + encodeURIComponent(ids[index]) +
+        '&type=url' +
+        '&br=' + encodeURIComponent(br);
 
       requestViaProxy(
-        API_ENDPOINT,
-        'POST',
-        form,
+        url,
+        'GET',
+        null,
         {
           'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
-          'Accept': 'application/json, text/javascript, */*; q=0.01',
-          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+          'Accept': 'application/json, audio/mpeg, audio/*, */*; q=0.01'
         },
-        true,
+        false,
         function (err, data) {
-          if (err) return callback(err);
-
-          var url = data && typeof data.url === 'string' ? data.url :
-            (data && data.data && typeof data.data.url === 'string' ? data.data.url : '');
-          if (!url || !/^https?:/i.test(url)) {
-            return callback(new Error(
-              'GD Studio returned no playable URL for ' + mapped + ' (' + br + ')'
-            ));
+          if (err) {
+            lastError = err;
+            return tryId(index + 1);
           }
 
-          var actualBr = data && data.br != null ? data.br :
-            (data && data.data && data.data.br != null ? data.data.br : br);
+          var text = String(data || '').replace(/^\s+|\s+$/g, '');
+          var returnedUrl = '';
+          try {
+            var parsed = JSON.parse(text);
+            returnedUrl = parsed && (parsed.url || parsed.data && parsed.data.url) || '';
+          } catch (e) {}
+
+          if (!returnedUrl && /^https?:/i.test(text)) returnedUrl = text;
+
+          // TuneFree may respond with a 302/stream body rather than JSON. In
+          // that case the URL itself is the playable endpoint we can proxy.
+          if (!returnedUrl && text && /^(audio|video)\//i.test(text)) {
+            returnedUrl = url;
+          }
+
+          if (!returnedUrl || !/^https?:/i.test(returnedUrl)) {
+            lastError = new Error(
+              'TuneFree returned no playable URL for ' + platform + ' (' + br + ')'
+            );
+            return tryId(index + 1);
+          }
 
           callback(null, {
-            url: String(url).replace(/^\s+|\s+$/g, ''),
+            url: String(returnedUrl).replace(/^\s+|\s+$/g, ''),
             source: source,
-            provider: 'gd-studio',
+            provider: 'tune-free',
             requestedQuality: String(quality || ''),
             requestedBr: br,
-            actualBr: String(actualBr || br)
+            id: ids[index]
           });
         }
       );
-    });
+    }
+
+    tryId(0);
   }
+
 
   function searchViaGdStudio(source, keyword, page, limit, callback) {
     // GD Studio is only used for platforms it currently exposes. Never
@@ -702,6 +742,6 @@
     search: search,
     sourceMap: SOURCE_MAP,
     normalizeSong: normalizeSong,
-    resolveMusicUrl: resolveGdStudioUrl
+    resolveMusicUrl: resolveTuneFreeUrl
   };
 })(window);

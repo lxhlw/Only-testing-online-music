@@ -320,24 +320,19 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     },
     () => {},
     {
-      time: { status: 200, body: '1791139200' },
       search: {
         status: 200,
-        body: JSON.stringify({
-          url: 'https://cdn.example.test/audio.mp3',
-          br: 128,
-          size: 1234
-        })
+        body: 'https://cdn.example.test/audio.mp3'
       }
     }
   )
 
   const cases = [
-    { source: 'kw', info: { songmid: '62355680' }, quality: '128k', expected: 'kuwo', id: '62355680', br: '128' },
-    { source: 'kg', info: { hash: 'ABCDEF0123456789' }, quality: '320k', expected: 'kugou', id: 'ABCDEF0123456789', br: '320' },
-    { source: 'tx', info: { songmid: '00112233' }, quality: 'flac', expected: 'tencent', id: '00112233', br: '740' },
-    { source: 'wy', info: { songmid: '99887766' }, quality: '320k', expected: 'netease', id: '99887766', br: '320' },
-    { source: 'mg', info: { copyrightId: '55667788' }, quality: 'flac24bit', expected: 'migu', id: '55667788', br: '999' }
+    { source: 'kw', info: { songmid: '62355680' }, quality: '128k', expected: 'kuwo', id: '62355680', br: '128k' },
+    { source: 'kg', info: { hash: 'ABCDEF0123456789' }, quality: '320k', expected: 'kugou', id: 'ABCDEF0123456789', br: '320k' },
+    { source: 'tx', info: { songmid: '00112233' }, quality: '320k', expected: 'qq', id: '00112233', br: '320k' },
+    { source: 'wy', info: { songmid: '99887766' }, quality: '192k', expected: 'netease', id: '99887766', br: '192k' },
+    { source: 'mg', info: { copyrightId: '55667788' }, quality: 'flac24bit', expected: 'migu', id: '55667788', br: 'flac24bit' }
   ]
 
   for (const item of cases) {
@@ -349,17 +344,18 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
         (err, value) => err ? reject(err) : resolve(value)
       )
     })
-    assert.equal(result.provider, 'gd-studio')
+    assert.equal(result.provider, 'tune-free')
     assert.equal(result.url, 'https://cdn.example.test/audio.mp3')
 
     const call = h.calls[h.calls.length - 1]
-    const body = new URLSearchParams(call.xhrBody)
-    assert.equal(body.get('types'), 'url')
-    assert.equal(body.get('source'), item.expected)
-    assert.equal(body.get('id'), item.id)
-    assert.equal(body.get('br'), item.br)
-    assert.ok(body.get('s'))
+    const target = new URL(call.xhrUrl).searchParams.get('url')
+    const requestUrl = new URL(target)
+    assert.equal(requestUrl.searchParams.get('source'), item.expected)
+    assert.equal(requestUrl.searchParams.get('id'), item.id)
+    assert.equal(requestUrl.searchParams.get('type'), 'url')
+    assert.equal(requestUrl.searchParams.get('br'), item.br)
   }
 }
+
 
 console.log('PASS: LX search routing stays channel-bound and never mixes providers')
