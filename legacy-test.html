@@ -346,6 +346,15 @@
     addCheck('Array 类型识别', objectToStringOk ? 'PASS' : 'FAIL',
       objectToStringOk ? 'Object.prototype.toString 数组识别测试通过' : '数组类型识别异常');
 
+    var hasOwnPropertyOk = safeTest(function () {
+      if (!Object.prototype || typeof Object.prototype.hasOwnProperty !== 'function') return false;
+      var value = {source:'huibq'};
+      return Object.prototype.hasOwnProperty.call(value, 'source') &&
+        !Object.prototype.hasOwnProperty.call(value, 'missing');
+    });
+    addCheck('hasOwnProperty', hasOwnPropertyOk ? 'PASS' : 'FAIL',
+      hasOwnPropertyOk ? '对象自有属性判断测试通过' : 'hasOwnProperty 不可正常使用');
+
     var arrayMethodOk = safeTest(function () {
       var source = [1, 2, 3];
       var sliced = source.slice(1);
