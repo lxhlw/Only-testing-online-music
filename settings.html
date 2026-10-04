@@ -87,6 +87,15 @@
       return 'highest';
     }
 
+    function renderQualityChoices() {
+      for (var i = 0; i < qualityRadios.length; i += 1) {
+        var option = qualityRadios[i].parentNode;
+        if (!option) continue;
+        var selected = qualityRadios[i].checked;
+        option.className = 'quality-option' + (selected ? ' selected' : '');
+      }
+    }
+
     function setSelectedQuality(value) {
       var target = value || 'highest';
       var matched = false;
@@ -99,6 +108,7 @@
           qualityRadios[j].checked = qualityRadios[j].value === 'highest';
         }
       }
+      renderQualityChoices();
     }
 
     function setStatus(text, type) {
@@ -120,7 +130,11 @@
         fixedQuality: selected === 'highest' ? '320k' : selected,
         autoFallback: fallbackEl.checked
       });
-      loadForm();
+      for (var i = 0; i < qualityRadios.length; i += 1) {
+      qualityRadios[i].onclick = renderQualityChoices;
+    }
+
+    loadForm();
       setStatus('已保存：' + global.LXPlaySettings.getLabel(settings), 'ready');
     };
 
