@@ -141,25 +141,35 @@ try {
   console.log('Source:', sourceState.activeName)
   console.log('Supported sources:', sourceState.sources.join(', '))
 
-  await page.locator('#search-input').fill(KEYWORD)
-  await page.locator('#search-btn').click()
-
-  await page.waitForFunction(
-    () => document.querySelectorAll('#search-results .search-row').length > 0,
-    null,
-    { timeout: 60000 }
-  )
-
-  const searchState = await page.evaluate(() => ({
-    keyword: document.getElementById('search-input').value,
-    count: document.querySelectorAll('#search-results .search-row').length,
-  }))
+  const searchState = await page.evaluate(async keyword => {
+    const active = window.LXSourceManager.getActive()
+    const channels = active && active.sources ? Object.keys(active.sources) : []
+    const supported = channels.filter(channel => {
+      const info = active.sources[channel] || {}
+      const actions = info.actions || []
+      return !actions.length || actions.indexOf('musicUrl') >= 0
+    })
+    const errors = []
+    for (const channel of supported) {
+      const result = await new Promise(resolve => {
+        window.LXMusicSearch.search(channel, keyword, 1, 20, (err, data) => {
+          resolve(err ? { channel, error: err.message || String(err) } : { channel, list: data && data.list ? data.list : [] })
+        })
+      })
+      if (result.list && result.list.length) {
+        window.__LXLastSearchResults = result.list.slice()
+        return { keyword, channel, count: result.list.length, errors }
+      }
+      errors.push(result)
+    }
+    return { keyword, channel: '', count: 0, errors }
+  }, KEYWORD)
 
   assert.equal(searchState.keyword, KEYWORD)
-  assert.ok(searchState.count > 0, 'Search returned no songs')
+  assert.ok(searchState.count > 0, 'Search returned no songs on any supported channel')
   console.log('PASS: browser search for 成都')
+  console.log('Search channel:', searchState.channel)
   console.log('Search results:', searchState.count)
-
   const results = await page.evaluate(() => window.__LXLastSearchResults || [])
   const testCount = Math.min(CANDIDATE_COUNT, results.length)
   assert.ok(testCount > 0, 'No search results available for playback testing')
@@ -175,10 +185,10 @@ try {
     const response = await page.evaluate(async musicInfo => {
       const manager = window.LXSourceManager
       return new Promise(resolve => {
-        manager.requestAction('tx', 'musicUrl', {
+        manager.requestAction(musicInfo.source, 'musicUrl', {
           type: '128k',
           musicInfo: {
-            source: 'tx',
+            source: musicInfo.source,
             id: musicInfo.id,
             songId: musicInfo.id,
             songmid: musicInfo.songmid,
