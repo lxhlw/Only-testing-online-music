@@ -38,6 +38,7 @@ jobs:
 
       - name: Check core JavaScript syntax
         run: |
+          node --check src/promise-lite.js
           node --check src/app.js
           node --check src/lx-runtime.js
           node --check src/music-library.js
@@ -49,6 +50,9 @@ jobs:
 
       - name: Validate legacy page syntax
         run: node scripts/check-legacy-test.mjs
+
+      - name: Test Promise compatibility
+        run: node scripts/test-promise-lite.mjs
 
       - name: Test playback settings
         run: node scripts/test-settings.mjs
