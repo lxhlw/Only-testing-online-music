@@ -1,0 +1,60 @@
+name: Test LX 4 In Chromium
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/test-lx4-browser.yml"
+      - "scripts/test-sixyin-browser.mjs"
+      - "src/**"
+      - "functions/**"
+  workflow_dispatch:
+
+jobs:
+  lx4-browser:
+    name: LX source browser lx-4
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Validate browser test script
+        run: node --check scripts/test-sixyin-browser.mjs
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start local site
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/wrangler.log 2>&1 &
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8788/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/wrangler.log
+          exit 1
+
+      - name: Test LX 4 in real Chromium
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+          LX_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/lx/4.js
+          LX_SOURCE_NAME: lx-4
+          SIXYIN_INIT_TIMEOUT_MS: 30000
+          PLAYBACK_CANDIDATES: 3
+        run: node scripts/test-sixyin-browser.mjs
+
+      - name: Show local server log on failure
+        if: failure()
+        run: cat /tmp/wrangler.log || true
