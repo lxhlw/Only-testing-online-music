@@ -6,6 +6,7 @@
   var countEl;
   var runtimeEl, resultsEl;
   var channelListEl, qualitySummaryEl;
+  var queueListEl, favoriteListEl, historyListEl;
   var selectedChannel = null;
   var playbackState = null;
   var playbackToken = 0;
@@ -183,6 +184,101 @@
     }
   }
 
+  function musicKey(music) {
+    if (!music) return '';
+    var source = String(music.source || '').toLowerCase();
+    var id = String(music.id || music.songId || music.songmid || music.mid || music.hash || '');
+    return source + ':' + id;
+  }
+
+  function playLibraryMusic(music) {
+    var source = music && music.source ? String(music.source).toLowerCase() : '';
+    var supported = getSupportedChannels();
+    if (!source || supported.indexOf(source) < 0) {
+      setStatus('当前音源无法播放已保存歌曲：' + escapeHtml(music && music.name || '未知歌曲'), 'fail');
+      return;
+    }
+    selectedChannel = source;
+    renderChannelSelectors();
+    testMusic(music, false);
+  }
+
+  function makeLibraryButton(text, handler, secondary) {
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.innerHTML = text;
+    if (secondary) button.className = 'secondary';
+    button.onclick = handler;
+    return button;
+  }
+
+  function renderLibraryList(target, items, mode) {
+    if (!target) return;
+    target.innerHTML = '';
+
+    for (var i = 0; i < items.length; i += 1) {
+      var item = items[i];
+      var row = document.createElement('div');
+      row.className = 'library-row';
+
+      var main = document.createElement('div');
+      main.className = 'library-main';
+      main.innerHTML =
+        '<div class="library-title">' + escapeHtml(item.name || '未知歌曲') + '</div>' +
+        '<div class="library-meta">' +
+        escapeHtml(item.singer || '未知歌手') + ' · ' +
+        escapeHtml(CHANNEL_NAMES[item.source] || String(item.source || '').toUpperCase()) +
+        '</div>';
+
+      var actions = document.createElement('div');
+      actions.className = 'library-actions';
+
+      actions.appendChild(makeLibraryButton('播放', (function (music) {
+        return function () { playLibraryMusic(music); };
+      })(item)));
+
+      if (mode === 'queue') {
+        actions.appendChild(makeLibraryButton('删除', (function (music) {
+          return function () {
+            global.LXMusicLibrary.removeQueue(music);
+            renderLibrary();
+          };
+        })(item), true));
+      } else if (mode === 'favorite') {
+        actions.appendChild(makeLibraryButton('加入队列', (function (music) {
+          return function () {
+            global.LXMusicLibrary.addQueue(music);
+            renderLibrary();
+            setStatus('已加入播放队列：' + escapeHtml(music.name), 'ready');
+          };
+        })(item), true));
+      } else {
+        actions.appendChild(makeLibraryButton(
+          global.LXMusicLibrary.isFavorite(item) ? '取消收藏' : '收藏',
+          (function (music) {
+            return function () {
+              global.LXMusicLibrary.toggleFavorite(music);
+              renderLibrary();
+            };
+          })(item),
+          true
+        ));
+      }
+
+      row.appendChild(main);
+      row.appendChild(actions);
+      target.appendChild(row);
+    }
+  }
+
+  function renderLibrary() {
+    if (!global.LXMusicLibrary) return;
+    var data = global.LXMusicLibrary.snapshot();
+    renderLibraryList(queueListEl, data.queue, 'queue');
+    renderLibraryList(favoriteListEl, data.favorites, 'favorite');
+    renderLibraryList(historyListEl, data.history, 'history');
+  }
+
   function onSourceInited(item) {
     setCheck('check-inited', 'ok');
     setStatus('音源已执行并发送 inited：<b>' + escapeHtml(item.name) + '</b>', 'ready');
@@ -348,6 +444,10 @@
 
     state.waitingForAudio = false;
     state.playing = true;
+    if (global.LXMusicLibrary) {
+      global.LXMusicLibrary.addHistory(state.music);
+      renderLibrary();
+    }
     setStatus(
       (CHANNEL_NAMES[state.source] || state.source.toUpperCase()) +
       ' 正在播放 · ' + escapeHtml(state.quality),
@@ -386,7 +486,7 @@
     setStatus('当前音质无法播放，且没有可用的更低音质可切换' + errorCode + '。', 'fail');
   }
 
-  function testMusic(music) {
+  function testMusic(music, addToQueue) {
     var active = global.LXSourceManager.getActive();
     var supported = getSupportedChannels();
     if (!active || !active.runtime || !active.inited) {
@@ -406,7 +506,29 @@
       return;
     }
 
+    if (addToQueue !== false && global.LXMusicLibrary) {
+      global.LXMusicLibrary.addQueue(music);
+      renderLibrary();
+    }
     startPlayback(music, source);
+  }
+
+  function playNextQueued() {
+    if (!global.LXMusicLibrary || !playbackState) return;
+    var queue = global.LXMusicLibrary.snapshot().queue;
+    var currentKey = musicKey(playbackState.music);
+    var next = null;
+    for (var i = 0; i < queue.length; i += 1) {
+      if (musicKey(queue[i]) === currentKey && i + 1 < queue.length) {
+        next = queue[i + 1];
+        break;
+      }
+    }
+    if (!next) {
+      setStatus('当前播放队列已播放到最后一首。', 'ready');
+      return;
+    }
+    playLibraryMusic(next);
   }
 
   function bind() {
@@ -417,6 +539,9 @@
     resultsEl = document.getElementById('search-results');
     channelListEl = document.getElementById('channel-list');
     qualitySummaryEl = document.getElementById('quality-summary');
+    queueListEl = document.getElementById('queue-list');
+    favoriteListEl = document.getElementById('favorite-list');
+    historyListEl = document.getElementById('history-list');
 
     runtimeEl.innerHTML =
       'factory: ' + (typeof global.createLXRuntime) + '\n' +
@@ -438,6 +563,9 @@
       audio.onplaying = function () {
         var state = playbackState;
         if (state) handleAudioPlaying(state.token, state.url);
+      };
+      audio.onended = function () {
+        playNextQueued();
       };
     }
 
@@ -484,6 +612,32 @@
       setStatus('已清空本地音源。');
     };
 
+    document.getElementById('clear-queue-btn').onclick = function () {
+      if (global.LXMusicLibrary) {
+        global.LXMusicLibrary.clearQueue();
+        renderLibrary();
+        setStatus('已清空播放队列。', 'ready');
+      }
+    };
+
+    document.getElementById('clear-favorites-btn').onclick = function () {
+      if (!global.LXMusicLibrary) return;
+      var data = global.LXMusicLibrary.snapshot();
+      for (var fi = data.favorites.length - 1; fi >= 0; fi -= 1) {
+        global.LXMusicLibrary.toggleFavorite(data.favorites[fi]);
+      }
+      renderLibrary();
+      setStatus('已清空收藏。', 'ready');
+    };
+
+    document.getElementById('clear-history-btn').onclick = function () {
+      if (global.LXMusicLibrary) {
+        global.LXMusicLibrary.clearHistory();
+        renderLibrary();
+        setStatus('已清空最近播放记录。', 'ready');
+      }
+    };
+
     document.getElementById('search-btn').onclick = function () {
       var keyword = document.getElementById('search-input').value.replace(/^\s+|\s+$/g, '');
       if (!keyword) return setStatus('请输入搜索词。', 'fail');
@@ -509,11 +663,13 @@
         global.__LXLastSearchResults = result.list.slice();
         renderSearchResults(result.list);
         setStatus('已找到「成都」结果，正在测试第一首。', 'ready');
-        testMusic(result.list[0]);
+        testMusic(result.list[0], true);
       });
     };
 
     renderSources(global.LXSourceManager.getSources());
+    renderLibrary();
+    if (global.LXMusicLibrary) global.LXMusicLibrary.onChange(renderLibrary);
   }
 
   function searchAndRender(keyword) {
@@ -536,13 +692,44 @@
       row.className = 'search-row';
       row.innerHTML = '<b>' + escapeHtml(item.name) + '</b> <span>' + escapeHtml(item.singer) + '</span>' +
         '<small class="search-source">' + escapeHtml(CHANNEL_NAMES[item.source] || item.source || '') + '</small>';
-      var button = document.createElement('button');
-      button.type = 'button';
-      button.innerHTML = '解析并播放';
-      button.onclick = (function (music) {
-        return function () { testMusic(music); };
+      var actions = document.createElement('div');
+      actions.className = 'search-actions';
+
+      var playButton = document.createElement('button');
+      playButton.type = 'button';
+      playButton.innerHTML = '解析并播放';
+      playButton.onclick = (function (music) {
+        return function () { testMusic(music, true); };
       })(item);
-      row.appendChild(button);
+      actions.appendChild(playButton);
+
+      var queueButton = document.createElement('button');
+      queueButton.type = 'button';
+      queueButton.className = 'secondary';
+      queueButton.innerHTML = '加入队列';
+      queueButton.onclick = (function (music) {
+        return function () {
+          if (global.LXMusicLibrary) global.LXMusicLibrary.addQueue(music);
+          renderLibrary();
+          setStatus('已加入播放队列：' + escapeHtml(music.name), 'ready');
+        };
+      })(item);
+      actions.appendChild(queueButton);
+
+      var favoriteButton = document.createElement('button');
+      favoriteButton.type = 'button';
+      favoriteButton.className = 'secondary';
+      favoriteButton.innerHTML = global.LXMusicLibrary && global.LXMusicLibrary.isFavorite(item) ? '取消收藏' : '收藏';
+      favoriteButton.onclick = (function (music) {
+        return function () {
+          if (global.LXMusicLibrary) global.LXMusicLibrary.toggleFavorite(music);
+          renderLibrary();
+          renderSearchResults(global.__LXLastSearchResults || []);
+        };
+      })(item);
+      actions.appendChild(favoriteButton);
+
+      row.appendChild(actions);
       resultsEl.appendChild(row);
     }
   }
