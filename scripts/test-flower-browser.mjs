@@ -9,6 +9,33 @@ const INIT_TIMEOUT_MS = Number(process.env.INIT_TIMEOUT_MS || 30000)
 const SEARCH_TIMEOUT_MS = Number(process.env.SEARCH_TIMEOUT_MS || 60000)
 const PLAYBACK_TIMEOUT_MS = Number(process.env.PLAYBACK_TIMEOUT_MS || 15000)
 
+function parseDuration(value) {
+  if (value == null || value === '') return 0
+  if (typeof value === 'number') {
+    const n = Number(value)
+    if (!Number.isFinite(n) || n <= 0) return 0
+    return n > 10000 ? n / 1000 : n
+  }
+  const text = String(value).trim()
+  if (!text) return 0
+  if (text.includes(':')) {
+    return text.split(':').reduce((total, part) => {
+      const n = Number(part)
+      return Number.isFinite(n) && n >= 0 ? total * 60 + n : NaN
+    }, 0)
+  }
+  const n = Number(text)
+  return Number.isFinite(n) && n > 0 ? (n > 10000 ? n / 1000 : n) : 0
+}
+
+function isPlausiblePlaybackDuration(actual, expected) {
+  if (!Number.isFinite(actual) || actual <= 0 || !Number.isFinite(expected) || expected <= 0) return true
+  if (expected >= 120) return actual >= Math.max(30, expected * 0.45)
+  if (expected >= 60) return actual >= Math.max(20, expected * 0.45)
+  if (expected >= 30) return actual >= Math.max(15, expected * 0.40)
+  return actual >= Math.max(8, expected * 0.30)
+}
+
 const browser = await chromium.launch({
   headless: true,
   args: ['--autoplay-policy=no-user-gesture-required'],
@@ -115,6 +142,7 @@ try {
         singer: item.singer || '',
         source: item.source || '',
         rawSource: item.raw?.source || '',
+        interval: item.interval ?? item.duration ?? item.raw?.interval ?? item.raw?.duration ?? 0,
       }))
     })
 
@@ -139,7 +167,7 @@ try {
         await page.waitForFunction(
           () => {
             const audio = document.getElementById('audio')
-            return Number(audio?.currentTime || 0) >= 0.5 || Boolean(audio?.error)
+            return Number(audio?.currentTime || 0) >= 0.8 || Boolean(audio?.error)
           },
           null,
           { timeout: PLAYBACK_TIMEOUT_MS },
@@ -164,11 +192,16 @@ try {
       if (attempt.currentTime >= 0.5 && attempt.readyState >= 2 && !attempt.error) break
     }
 
-    const success = attempts.find(item => item.currentTime >= 0.5 && item.readyState >= 2 && !item.error)
+    const success = attempts.find(item =>
+      item.currentTime >= 0.8 &&
+      item.readyState >= 2 &&
+      !item.error &&
+      isPlausiblePlaybackDuration(item.duration, parseDuration(item.result.interval))
+    )
     assert.ok(
       success,
-      channel.toUpperCase() + ' playback failed after ' + attempts.length + ' candidates: ' +
-      JSON.stringify(attempts, null, 2)
+      channel.toUpperCase() + ' playback did not produce a plausible full-length song after ' +
+      attempts.length + ' candidates: ' + JSON.stringify(attempts, null, 2)
     )
     assert.ok(
       String(success.audioUrl || '').indexOf('/api/proxy?url=') >= 0,
@@ -208,37 +241,3 @@ try {
       )
       return (
         /jadeite\.migu\.cn\/music_search\/v3\/search\/searchAll/.test(target) ||
-        /flower\/v1\/url\/mg\//.test(target) ||
-        /lxmusicapi\.onrender\.com\/url\/mg\//.test(target) ||
-        /music-dl\.sayqz\.com\/api\//.test(target)
-      )
-    })
-    assert.ok(targetSeen, channel.toUpperCase() + ' did not produce expected platform/Flower proxy traffic')
-
-    summary.push({ channel, result: results[0], playback: success, attempts })
-    console.log('PASS:', channel.toUpperCase(), 'search + playback')
-  }
-
-  console.log('FLOWER CHANNEL MATRIX')
-  console.log(JSON.stringify({
-    sourceUrl: SOURCE_URL,
-    keyword: KEYWORD,
-    channels: CHANNELS,
-    summary,
-    flowerTargets: proxyTargets.filter(item => /flower\/v1\/url\/(kw|kg|tx|wy|mg)\//.test(item.target)),
-    failedResponses,
-    pageErrors,
-  }, null, 2))
-  console.log('PASS: Flower source search + playback matrix succeeded for all requested channels')
-
-} catch (error) {
-  console.error('FLOWER BROWSER TEST FAILED')
-  console.error(error?.stack || String(error))
-  console.error('Page status:', await page.locator('#status').textContent().catch(() => 'unavailable'))
-  console.error('Proxy targets:', JSON.stringify(proxyTargets, null, 2))
-  console.error('Failed responses:', failedResponses.join('\n') || 'none')
-  console.error('Page errors:', pageErrors.join('\n') || 'none')
-  process.exitCode = 1
-} finally {
-  await browser.close()
-}
