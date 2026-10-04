@@ -1244,7 +1244,7 @@
     return searchViaPlatform(source, keyword, page, limit, function (err, result) {
       if (err) return callback(err);
       result.requestedSource = source;
-      result.fallbackSearch = false;
+      result.fallbackSearch = result.fallbackSearch === true;
       return callback(null, result);
     });
   }
