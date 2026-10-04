@@ -298,6 +298,126 @@
     return (minutes < 10 ? '0' : '') + minutes + ':' + (remain < 10 ? '0' : '') + remain;
   }
 
+  function decodeKuwoText(value) {
+    var text = String(value == null ? '' : value);
+    return text
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\\+/g, function (match) { return match; });
+  }
+
+  function formatKuwoInterval(seconds) {
+    var total = Number(seconds);
+    if (!isFinite(total) || total < 0) return '';
+    total = Math.floor(total);
+    var minutes = Math.floor(total / 60);
+    var remain = total % 60;
+    return (minutes < 10 ? '0' : '') + minutes + ':' + (remain < 10 ? '0' : '') + remain;
+  }
+
+  function parseKuwoNMinfos(raw) {
+    var types = [];
+    var text = String(raw || '');
+    if (!text) return types;
+
+    var pieces = text.split(';');
+    for (var i = 0; i < pieces.length; i += 1) {
+      var match = pieces[i].match(/level:(\\w+),bitrate:(\\d+),format:(\\w+),size:([\\w.]+)/);
+      if (!match) continue;
+
+      var bitrate = match[2];
+      if (bitrate === '4000') types.push({ type: 'flac24bit', size: match[4] });
+      else if (bitrate === '2000') types.push({ type: 'flac', size: match[4] });
+      else if (bitrate === '320') types.push({ type: '320k', size: match[4] });
+      else if (bitrate === '192') types.push({ type: '192k', size: match[4] });
+      else if (bitrate === '128') types.push({ type: '128k', size: match[4] });
+    }
+
+    return types;
+  }
+
+  function searchKuwo(keyword, page, limit, callback) {
+    var url = 'http://search.kuwo.cn/r.s' +
+      '?client=kt' +
+      '&all=' + encodeURIComponent(keyword) +
+      '&pn=' + encodeURIComponent(page - 1) +
+      '&rn=' + encodeURIComponent(limit) +
+      '&uid=794762570' +
+      '&ver=kwplayer_ar_9.2.2.1' +
+      '&vipver=1' +
+      '&show_copyright_off=1' +
+      '&newver=1' +
+      '&ft=music' +
+      '&cluster=0' +
+      '&strategy=2012' +
+      '&encoding=utf8' +
+      '&rformat=json' +
+      '&vermerge=1' +
+      '&mobi=1' +
+      '&issubtitle=1';
+
+    requestViaProxy(
+      url,
+      'GET',
+      null,
+      {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
+        'Accept': 'application/json, text/javascript, */*; q=0.01'
+      },
+      true,
+      function (err, data) {
+        if (err) return callback(err);
+
+        var raw = data && data.abslist;
+        if (!Array.isArray(raw)) {
+          return callback(new Error('Kuwo search result format is invalid'));
+        }
+
+        var list = [];
+        for (var i = 0; i < raw.length; i += 1) {
+          var item = raw[i] || {};
+          var rawId = String(item.MUSICRID || '').replace(/^MUSIC_/, '');
+          var name = decodeKuwoText(item.SONGNAME);
+          var singer = decodeKuwoText(item.ARTIST);
+          var albumName = decodeKuwoText(item.ALBUM);
+          var albumId = decodeKuwoText(item.ALBUMID);
+          if (!rawId || !name) continue;
+
+          list.push(normalizeSong({
+            id: rawId,
+            songmid: rawId,
+            name: name,
+            singer: singer,
+            albumName: albumName,
+            albumId: albumId,
+            interval: formatKuwoInterval(item.DURATION),
+            source: 'kw',
+            types: parseKuwoNMinfos(item.N_MINFO),
+            raw: item
+          }, 'kw'));
+        }
+
+        if (!list.length) {
+          return callback(new Error('Kuwo search returned no usable songs'));
+        }
+
+        callback(null, {
+          source: 'kw',
+          page: page,
+          total: Number(data.TOTAL || list.length),
+          isEnd: false,
+          list: list,
+          searchProvider: 'kuwo-native',
+          requestedSource: 'kw',
+          fallbackSearch: false
+        });
+      }
+    );
+  }
+
   function searchKugou(keyword, page, limit, callback) {
     var url = 'http://songsearch.kugou.com/song_search_v2' +
       '?platform=AndroidFilter' +
@@ -383,6 +503,7 @@
   }
 
   function searchViaPlatform(source, keyword, page, limit, callback) {
+    if (source === 'kw') return searchKuwo(keyword, page, limit, callback);
     if (source === 'kg') return searchKugou(keyword, page, limit, callback);
     return searchViaGdStudio(source, keyword, page, limit, callback);
   }
