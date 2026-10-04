@@ -113,9 +113,12 @@ try {
     }
   })
 
-  await page.locator('#channel-list .channel-button').filter({ hasText: 'QQ音乐' }).click().catch(async () => {
+  const txButton = page.locator('#channel-list .channel-button[title="TX"]')
+  if (await txButton.count()) {
+    await txButton.click()
+  } else {
     await page.locator('#channel-list .channel-button').first().click()
-  })
+  }
 
   await page.locator('#search-input').fill(KEYWORD)
   await page.locator('#search-btn').click()
