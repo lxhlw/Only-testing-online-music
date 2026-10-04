@@ -1,0 +1,29 @@
+name: Test Playback Settings
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/play-settings.js"
+      - "settings.html"
+      - "src/app.js"
+      - "index.html"
+      - "styles.css"
+      - "scripts/test-settings.mjs"
+      - "package.json"
+      - ".github/workflows/test-playback-settings.yml"
+  workflow_dispatch:
+
+jobs:
+  settings:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Test playback settings
+        run: node scripts/test-settings.mjs
