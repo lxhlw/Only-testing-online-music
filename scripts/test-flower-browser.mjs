@@ -199,6 +199,7 @@ try {
         /lxmusicapi\.onrender\.com\/url\/tx\//.test(target)
       )
       if (channel === 'wy') return (
+        /music\.163\.com\/api\/cloudsearch\/pc/.test(target) ||
         /music\.163\.com\/api\/search\/get\/web/.test(target) ||
         /interface\.music\.163\.com\/eapi\/batch/.test(target) ||
         /music-api\.gdstudio\.xyz\/api\.php/.test(target) ||

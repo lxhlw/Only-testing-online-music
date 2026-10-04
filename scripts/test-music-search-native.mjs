@@ -405,9 +405,12 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     if (item.source === 'wy') {
       assert.equal(result.list[0].songmid, '2001')
       assert.equal(result.list[0].singer, '周杰伦')
-      assert.equal(h.calls[0].xhrMethod, 'GET')
+      assert.equal(h.calls[0].xhrMethod, 'POST')
       const requestUrl = new URL(h.calls[0].xhrUrl)
-      assert.match(requestUrl.searchParams.get('url') || '', /music\.163\.com\/api\/search\/get\/web/)
+      const target = new URL(requestUrl.searchParams.get('url'))
+      assert.match(target.pathname, /\/api\/cloudsearch\/pc$/)
+      assert.match(decodeURIComponent(h.calls[0].xhrBody || ''), /type=1/)
+      assert.match(decodeURIComponent(h.calls[0].xhrBody || ''), /offset=0/)
     }
     if (item.source === 'mg') {
       assert.equal(result.list[0].copyrightId, 'mg-copy-1')

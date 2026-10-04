@@ -666,7 +666,9 @@
           fallbackResult.searchProvider = 'gdstudio-native';
           fallbackResult.requestedSource = 'wy';
           fallbackResult.fallbackSearch = true;
-          fallbackResult.fallbackFrom = primaryError ? String(primaryError.message || primaryError) : 'netease-native';
+          fallbackResult.fallbackFrom = primaryError
+            ? String(primaryError.message || primaryError)
+            : 'netease-native';
           return callback(null, fallbackResult);
         }
         callback(primaryError || fallbackErr);
@@ -674,18 +676,21 @@
     }
 
     var offset = limit * (page - 1);
-    var url = 'https://music.163.com/api/search/get/web' +
-      '?s=' + encodeURIComponent(keyword) +
-      '&type=1' +
-      '&offset=' + encodeURIComponent(offset) +
-      '&total=' + encodeURIComponent(page === 1 ? 'true' : 'false') +
-      '&limit=' + encodeURIComponent(limit);
+    var target = 'https://music.163.com/api/cloudsearch/pc';
+    var body = encodeForm({
+      s: keyword,
+      type: 1,
+      offset: offset,
+      limit: limit,
+      total: page === 1 ? 'true' : 'false'
+    });
 
     requestViaProxy(
-      url,
-      'GET',
-      null,
+      target,
+      'POST',
+      body,
       {
+        'Content-Type': 'application/x-www-form-urlencoded',
         'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
         'Referer': 'https://music.163.com/',
         'Accept': 'application/json, text/plain, */*'
@@ -696,12 +701,13 @@
 
         var root = data && data.result ? data.result : data;
         var songs = root && Array.isArray(root.songs) ? root.songs : [];
-        if (!songs.length) return fallbackToGd(new Error('Netease search returned no usable songs'));
+        if (!songs.length) return fallbackToGd(new Error('Netease cloudsearch returned no usable songs'));
 
         var resources = [];
         for (var i = 0; i < songs.length; i += 1) {
           var song = songs[i] || {};
           if (song.id == null || !song.name) continue;
+
           resources.push({
             baseInfo: {
               simpleSongData: {
@@ -710,14 +716,14 @@
                 dt: song.duration || 0,
                 ar: Array.isArray(song.artists) ? song.artists : [],
                 al: song.album || {},
-                privilege: {}
+                privilege: song.privilege || {}
               }
             }
           });
         }
 
         var list = buildNeteaseList(resources);
-        if (!list.length) return fallbackToGd(new Error('Netease search returned no usable songs'));
+        if (!list.length) return fallbackToGd(new Error('Netease cloudsearch returned no usable songs'));
 
         var total = Number(root.songCount);
         if (!isFinite(total)) total = list.length;
