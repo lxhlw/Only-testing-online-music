@@ -184,6 +184,18 @@
     addCheck('Uint8Array', typeof window.Uint8Array === 'function' ? 'PASS' : 'FAIL',
       typeof window.Uint8Array);
 
+    addCheck('ArrayBuffer', typeof window.ArrayBuffer === 'function' ? 'PASS' : 'FAIL',
+      typeof window.ArrayBuffer);
+
+    addCheck('DataView', typeof window.DataView === 'function' ? 'PASS' : 'FAIL',
+      typeof window.DataView);
+
+    addCheck('btoa', typeof window.btoa === 'function' ? 'PASS' : 'FAIL',
+      typeof window.btoa);
+
+    addCheck('URL', typeof window.URL === 'function' ? 'PASS' : 'WARN',
+      typeof window.URL);
+
     addCheck('crypto.getRandomValues',
       window.crypto && typeof window.crypto.getRandomValues === 'function' ? 'PASS' : 'WARN',
       window.crypto ? typeof window.crypto.getRandomValues : 'crypto 不存在');
