@@ -277,7 +277,13 @@
       return;
     }
 
-    var channelInfo = active.sources && active.sources[source] || {};
+    var audio = document.getElementById('audio');
+    if (audio) {
+      audio.pause();
+      audio.onerror = null;
+      audio.onplaying = null;
+    }
+
     var plan = getQualityPlan(active, source);
     if (!plan.length) plan = ['128k'];
 
@@ -290,16 +296,34 @@
       plan: plan,
       index: 0,
       quality: plan[0],
+      url: '',
       waitingForAudio: false
     };
 
     requestQuality(music, source, buildMusicInfo(music, source), plan, 0, token);
   }
 
-  function handleAudioError() {
+  function handleAudioPlaying(expectedToken, expectedUrl) {
+    var state = playbackState;
+    if (!state || state.token !== playbackToken || !state.waitingForAudio) return;
+    if (expectedToken != null && expectedToken !== state.token) return;
+    if (expectedUrl && state.url !== expectedUrl) return;
+
+    state.waitingForAudio = false;
+    state.playing = true;
+    setStatus(
+      (CHANNEL_NAMES[state.source] || state.source.toUpperCase()) +
+      ' 正在播放 · ' + escapeHtml(state.quality),
+      'ready'
+    );
+  }
+
+  function handleAudioError(expectedToken, expectedUrl) {
     var state = playbackState;
     var settings = getPlaySettings();
     if (!state || !state.waitingForAudio || state.token !== playbackToken) return;
+    if (expectedToken != null && expectedToken !== state.token) return;
+    if (expectedUrl && state.url !== expectedUrl) return;
     state.waitingForAudio = false;
 
     if (settings.autoFallback && state.index + 1 < state.plan.length) {
@@ -369,7 +393,16 @@
     renderChannelSelectors();
 
     var audio = document.getElementById('audio');
-    if (audio) audio.onerror = handleAudioError;
+    if (audio) {
+      audio.onerror = function () {
+        var state = playbackState;
+        if (state) handleAudioError(state.token, state.url);
+      };
+      audio.onplaying = function () {
+        var state = playbackState;
+        if (state) handleAudioPlaying(state.token, state.url);
+      };
+    }
 
     document.getElementById('install-btn').onclick = function () {
       var url = document.getElementById('source-url').value.replace(/^\s+|\s+$/g, '');
