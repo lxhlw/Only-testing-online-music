@@ -108,6 +108,64 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 {
   const h = createHarness(
     {
+      kw: { actions: ['musicUrl'] }
+    },
+    () => {},
+    {
+      time: { status: 500, body: 'must not be used' },
+      search: {
+        status: 200,
+        body: JSON.stringify({
+          TOTAL: '1',
+          SHOW: '1',
+          abslist: [
+            {
+              MUSICRID: 'MUSIC_62355680',
+              SONGNAME: '晴天',
+              ARTIST: '周杰伦',
+              ALBUM: '叶惠美',
+              ALBUMID: 'MUSIC_123',
+              DURATION: '269',
+              N_MINFO: 'level:lossless,bitrate:2000,format:flac,size:30.2M;level:standard,bitrate:128,format:mp3,size:4.2M'
+            }
+          ]
+        })
+      }
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.search('kw', '周杰伦', 1, 20, (err, value) => {
+      if (err) reject(err)
+      else resolve(value)
+    })
+  })
+
+  assert.equal(result.source, 'kw')
+  assert.equal(result.searchProvider, 'kuwo-native')
+  assert.equal(result.requestedSource, 'kw')
+  assert.equal(result.fallbackSearch, false)
+  assert.equal(result.list.length, 1)
+  assert.equal(result.list[0].id, '62355680')
+  assert.equal(result.list[0].songmid, '62355680')
+  assert.equal(result.list[0].name, '晴天')
+  assert.equal(result.list[0].singer, '周杰伦')
+  assert.equal(result.list[0].interval, '04:29')
+  assert.deepEqual(result.list[0].types.map(item => item.type), ['flac', '128k'])
+
+  assert.equal(h.calls.length, 1)
+  assert.equal(h.calls[0].xhrMethod, 'GET')
+  assert.equal(h.calls[0].xhrBody, null)
+  const kuwoUrl = decodeURIComponent(h.calls[0].xhrUrl)
+  assert.match(kuwoUrl, /search\.kuwo\.cn\/r\.s/)
+  assert.match(kuwoUrl, /(?:^|&)all=周杰伦(?:&|$)/)
+  assert.match(kuwoUrl, /(?:^|&)pn=0(?:&|$)/)
+  assert.match(kuwoUrl, /(?:^|&)rn=20(?:&|$)/)
+}
+
+{
+  const h = createHarness(
+    {
       tx: { actions: ['musicSearch', 'musicUrl'] }
     },
     (sourceName, action, info, callback) => {
