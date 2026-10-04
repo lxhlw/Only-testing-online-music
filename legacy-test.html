@@ -242,6 +242,20 @@
     addCheck('input 事件', inputEventOk ? 'PASS' : 'WARN',
       inputEventOk ? '输入事件绑定与触发测试通过' : 'input 事件能力不可用或未触发');
 
+    var domMutationOk = safeTest(function () {
+      var parent = document.createElement('div');
+      var child = document.createElement('span');
+      child.innerHTML = 'LX';
+      if (!parent || !child || typeof parent.appendChild !== 'function' ||
+          typeof parent.removeChild !== 'function') return false;
+      parent.appendChild(child);
+      var appended = parent.firstChild === child && parent.childNodes.length === 1;
+      parent.removeChild(child);
+      return appended && parent.childNodes.length === 0 && !parent.firstChild;
+    });
+    addCheck('DOM 创建/插入/移除', domMutationOk ? 'PASS' : 'FAIL',
+      domMutationOk ? 'createElement / appendChild / removeChild 测试通过' : 'DOM 节点操作异常');
+
     var jsonOk = safeTest(function () {
       if (!window.JSON ||
           typeof window.JSON.parse !== 'function' ||
