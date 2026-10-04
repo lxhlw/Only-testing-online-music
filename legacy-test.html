@@ -17,6 +17,8 @@
     .fail{color:#b00020;font-weight:bold}
     .warn{color:#996600;font-weight:bold}
     button,a{display:inline-block;padding:9px 12px;margin:4px 6px 4px 0;border:1px solid #bbb;border-radius:6px;background:#eee;color:#111;text-decoration:none}
+    button{font:inherit}
+    textarea{width:100%;min-height:180px;box-sizing:border-box;border:1px solid #bbb;border-radius:6px;padding:8px;font:13px monospace;background:#fafafa;color:#222}
     pre{white-space:pre-wrap;word-break:break-word;background:#f7f7f7;padding:8px;border-radius:4px;font-size:13px}
   </style>
 </head>
@@ -25,6 +27,8 @@
     <h1>Android 4.4 / Via 浏览器自检</h1>
     <p>此页面只测试浏览器与当前 Web 项目的基础能力，不测试远端音乐服务。</p>
     <div id="summary">正在检测……</div>
+    <button id="copy-btn" type="button">复制完整检测报告</button>
+    <div id="copy-status" class="muted"></div>
   </div>
 
   <div class="card">
@@ -43,9 +47,21 @@
     <a href="./">打开音乐测试页</a>
   </div>
 
+  <div class="card">
+    <h2>完整报告</h2>
+    <p>无法直接复制时，可以长按下面文本框并选择“全选→复制”。</p>
+    <textarea id="report" readonly></textarea>
+  </div>
+
   <script>
   (function () {
     'use strict';
+
+    var checks = [];
+    var passes = 0;
+    var fails = 0;
+    var warns = 0;
+    var resourceResults = [];
 
     function byId(id) { return document.getElementById(id); }
 
@@ -57,47 +73,37 @@
         .replace(/"/g, '&quot;');
     }
 
-    var checks = [];
-    var passes = 0;
-    var fails = 0;
-    var warns = 0;
-
     function addCheck(name, state, detail) {
-      checks.push({
-        name: name,
-        state: state,
-        detail: detail
-      });
+      checks.push({name:name,state:state,detail:detail});
       if (state === 'PASS') passes += 1;
       else if (state === 'FAIL') fails += 1;
       else warns += 1;
     }
 
-    function safeTest(name, fn) {
-      try {
-        return fn();
-      } catch (e) {
-        addCheck(name, 'FAIL', String(e && e.message ? e.message : e));
-        return false;
-      }
+    function safeTest(fn) {
+      try { return fn(); }
+      catch (e) { return false; }
     }
 
-    addCheck('JavaScript 基础', typeof window === 'object' && typeof document === 'object' ? 'PASS' : 'FAIL',
+    addCheck('JavaScript 基础',
+      typeof window === 'object' && typeof document === 'object' ? 'PASS' : 'FAIL',
       'window/document 可用');
 
-    addCheck('addEventListener', typeof window.addEventListener === 'function' ? 'PASS' : 'FAIL',
+    addCheck('addEventListener',
+      typeof window.addEventListener === 'function' ? 'PASS' : 'FAIL',
       typeof window.addEventListener);
 
-    addCheck('localStorage', safeTest('localStorage', function () {
+    var storageOk = safeTest(function () {
       var key = '__legacy_test__';
       window.localStorage.setItem(key, 'ok');
       var value = window.localStorage.getItem(key);
       window.localStorage.removeItem(key);
-      if (value !== 'ok') throw new Error('读写结果异常');
-      return true;
-    }) ? 'PASS' : 'FAIL', '读写测试');
+      return value === 'ok';
+    });
+    addCheck('localStorage', storageOk ? 'PASS' : 'FAIL', '读写测试');
 
-    addCheck('JSON', typeof window.JSON === 'object' &&
+    addCheck('JSON',
+      typeof window.JSON === 'object' &&
       typeof window.JSON.parse === 'function' &&
       typeof window.JSON.stringify === 'function' ? 'PASS' : 'FAIL',
       typeof window.JSON);
@@ -112,7 +118,8 @@
       window.crypto && typeof window.crypto.getRandomValues === 'function' ? 'PASS' : 'WARN',
       window.crypto ? typeof window.crypto.getRandomValues : 'crypto 不存在');
 
-    addCheck('XMLHttpRequest', typeof window.XMLHttpRequest === 'function' ? 'PASS' : 'FAIL',
+    addCheck('XMLHttpRequest',
+      typeof window.XMLHttpRequest === 'function' ? 'PASS' : 'FAIL',
       typeof window.XMLHttpRequest);
 
     addCheck('fetch',
@@ -120,7 +127,8 @@
       typeof window.fetch);
 
     var audio = document.createElement('audio');
-    addCheck('HTML5 Audio 元素', !!audio && typeof audio.play === 'function' ? 'PASS' : 'FAIL',
+    addCheck('HTML5 Audio 元素',
+      !!audio && typeof audio.play === 'function' ? 'PASS' : 'FAIL',
       typeof audio.play);
 
     var mp3 = '';
@@ -131,12 +139,11 @@
       m4a = audio.canPlayType('audio/mp4');
       ogg = audio.canPlayType('audio/ogg; codecs="vorbis"');
     }
-    addCheck('MP3 编解码能力',
-      mp3 ? 'PASS' : 'FAIL',
+
+    addCheck('MP3 编解码能力', mp3 ? 'PASS' : 'FAIL',
       mp3 || '浏览器未报告支持');
 
-    addCheck('M4A 编解码能力',
-      m4a ? 'PASS' : 'WARN',
+    addCheck('M4A 编解码能力', m4a ? 'PASS' : 'WARN',
       m4a || '浏览器未报告支持');
 
     addCheck('Web 项目脚本可读取',
@@ -148,8 +155,11 @@
       var i;
       for (i = 0; i < checks.length; i += 1) {
         html += '<div class="row"><span class="label">' + esc(checks[i].name) +
-          '</span><span class="' + (checks[i].state === 'PASS' ? 'pass' : (checks[i].state === 'FAIL' ? 'fail' : 'warn')) +
-          '">' + esc(checks[i].state) + '</span> <span>' + esc(checks[i].detail) + '</span></div>';
+          '</span><span class="' +
+          (checks[i].state === 'PASS' ? 'pass' :
+            (checks[i].state === 'FAIL' ? 'fail' : 'warn')) +
+          '">' + esc(checks[i].state) + '</span> <span>' +
+          esc(checks[i].detail) + '</span></div>';
       }
       byId('checks').innerHTML = html;
 
@@ -179,6 +189,7 @@
       testResource('src/lx-runtime.js');
       testResource('src/source-manager.js');
       testResource('src/music-search.js');
+      updateReport();
     }
 
     function testResource(path) {
@@ -187,21 +198,91 @@
       xhr.open('GET', path, true);
       xhr.onreadystatechange = function () {
         if (xhr.readyState !== 4) return;
-        var existing = byId('resources').innerHTML;
         var state = xhr.status >= 200 && xhr.status < 300 ? 'PASS' : 'FAIL';
+        resourceResults.push({path:path,status:xhr.status,state:state});
+        var existing = byId('resources').innerHTML;
         byId('resources').innerHTML = existing +
           '<div class="row"><span class="label">' + esc(path) +
           '</span><span class="' + (state === 'PASS' ? 'pass' : 'fail') + '">' +
           state + '</span> HTTP ' + esc(xhr.status) + '</div>';
+        updateReport();
       };
       try {
         xhr.send(null);
       } catch (e) {
-        byId('resources').innerHTML +=
-          '<div class="row"><span class="label">' + esc(path) +
-          '</span><span class="fail">FAIL</span> ' + esc(e.message || e) + '</div>';
+        resourceResults.push({path:path,status:'send-error',state:'FAIL'});
+        updateReport();
       }
     }
+
+    function buildReport() {
+      var lines = [];
+      var i;
+      lines.push('Only-testing-online-music Android 4.4 / Via 自检报告');
+      lines.push('时间：' + new Date().toString());
+      lines.push('');
+      lines.push('汇总：PASS ' + passes + ' / WARN ' + warns + ' / FAIL ' + fails);
+      lines.push('');
+      lines.push('[基础能力]');
+      for (i = 0; i < checks.length; i += 1) {
+        lines.push(checks[i].state + ' | ' + checks[i].name + ' | ' + checks[i].detail);
+      }
+      lines.push('');
+      lines.push('[设备信息]');
+      lines.push('User Agent: ' + navigator.userAgent);
+      lines.push('窗口尺寸: ' + window.innerWidth + ' x ' + window.innerHeight);
+      lines.push('屏幕尺寸: ' + window.screen.width + ' x ' + window.screen.height);
+      lines.push('devicePixelRatio: ' + (window.devicePixelRatio || '—'));
+      lines.push('语言: ' + (navigator.language || navigator.userLanguage || '—'));
+      lines.push('在线状态: ' + (navigator.onLine ? 'online' : 'offline'));
+      lines.push('');
+      lines.push('[媒体能力]');
+      lines.push('MP3 canPlayType: ' + (mp3 || '—'));
+      lines.push('M4A canPlayType: ' + (m4a || '—'));
+      lines.push('OGG canPlayType: ' + (ogg || '—'));
+      lines.push('');
+      lines.push('[项目资源]');
+      if (!resourceResults.length) {
+        lines.push('检测尚未完成');
+      } else {
+        for (i = 0; i < resourceResults.length; i += 1) {
+          lines.push(resourceResults[i].state + ' | ' + resourceResults[i].path + ' | HTTP ' + resourceResults[i].status);
+        }
+      }
+      lines.push('');
+      lines.push('页面：' + location.href);
+      return lines.join('\n');
+    }
+
+    function updateReport() {
+      byId('report').value = buildReport();
+    }
+
+    function copyReport() {
+      var area = byId('report');
+      var status = byId('copy-status');
+      area.focus();
+      area.select();
+      area.selectionStart = 0;
+      area.selectionEnd = area.value.length;
+
+      var ok = false;
+      try {
+        if (document.execCommand) ok = document.execCommand('copy');
+      } catch (e) {
+        ok = false;
+      }
+
+      if (ok) {
+        status.innerHTML = '已复制完整报告，请直接粘贴回来。';
+        status.className = 'pass';
+      } else {
+        status.innerHTML = '自动复制失败，请长按下面“完整报告”文本框，选择全选→复制。';
+        status.className = 'warn';
+      }
+    }
+
+    byId('copy-btn').onclick = copyReport;
 
     if (document.readyState === 'loading') {
       window.addEventListener('DOMContentLoaded', render, false);
