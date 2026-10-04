@@ -238,8 +238,20 @@
     for (var i = 0; i < list.length; i += 1) {
       var item = list[i] || {};
       var itemSource = String(item.source || '').toLowerCase();
-      var normalizedSource = GD_TO_LX_SOURCE[itemSource] || source;
-      var song = normalizeSong(item, normalizedSource);
+
+      // A platform fallback may expose an explicit source field. Never allow
+      // a result from another platform to leak into the selected channel.
+      // Native LX source results without a source field remain bound to the
+      // requested source.
+      if (itemSource) {
+        var expectedProvider = SOURCE_MAP[source] || '';
+        var normalizedItemSource = GD_TO_LX_SOURCE[itemSource] || itemSource;
+        if (expectedProvider && normalizedItemSource !== source && itemSource !== source) {
+          continue;
+        }
+      }
+
+      var song = normalizeSong(item, source);
       if (!song.id || !song.name) continue;
       result.push(song);
     }
@@ -389,31 +401,31 @@
     var sourceInfo = active && active.sources ? active.sources[source] : null;
     var actions = sourceInfo && sourceInfo.actions ? sourceInfo.actions : [];
 
+    // LX Music separates platform search from user-source playback:
+    // a custom LX source such as Flower normally declares musicUrl only.
+    // When musicSearch is declared, it is authoritative and must never be
+    // replaced with another provider on failure. Otherwise use the native
+    // platform search path for the selected channel.
     if (actions.indexOf('musicSearch') >= 0 && global.LXSourceManager && global.LXSourceManager.requestAction) {
       return searchNative(source, keyword, page, limit, function (nativeErr, nativeResult) {
-        if (!nativeErr) return callback(null, nativeResult);
-
-        if (SOURCE_MAP[source]) {
-          return searchViaPlatform(source, keyword, page, limit, function (fallbackErr, fallbackResult) {
-            if (fallbackErr) {
-              var combined = new Error(
-                'LX musicSearch failed: ' + (nativeErr.message || nativeErr) +
-                '; GD Studio same-platform fallback failed: ' + (fallbackErr.message || fallbackErr)
-              );
-              combined.nativeError = nativeErr;
-              combined.fallbackError = fallbackErr;
-              return callback(combined);
-            }
-            fallbackResult.fallbackFrom = 'native';
-            return callback(null, fallbackResult);
-          });
-        }
-
-        return callback(nativeErr);
+        if (nativeErr) return callback(nativeErr);
+        nativeResult.searchProvider = 'lx-native';
+        nativeResult.requestedSource = source;
+        nativeResult.fallbackSearch = false;
+        return callback(null, nativeResult);
       });
     }
 
-    return searchViaPlatform(source, keyword, page, limit, callback);
+    if (!SOURCE_MAP[source]) {
+      return callback(new Error('当前 LX 音源未提供 musicSearch，且该渠道没有可用的平台搜索适配：' + source));
+    }
+
+    return searchViaPlatform(source, keyword, page, limit, function (err, result) {
+      if (err) return callback(err);
+      result.requestedSource = source;
+      result.fallbackSearch = false;
+      return callback(null, result);
+    });
   }
 
   global.LXMusicSearch = {
