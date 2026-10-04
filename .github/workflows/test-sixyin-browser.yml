@@ -28,6 +28,8 @@ jobs:
             url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/huanyin/latest.js"
           - name: "grass-latest"
             url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/grass/latest.js"
+          - name: "huibq-latest"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/latest.js"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
