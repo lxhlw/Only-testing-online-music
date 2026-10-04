@@ -38,7 +38,7 @@
     return parts.join('&');
   }
 
-  function requestViaProxy(targetUrl, method, body, headers, callback) {
+  function requestViaProxy(targetUrl, method, body, headers, parseJson, callback) {
     var origin = global.location && global.location.origin
       ? global.location.origin
       : (global.location.protocol + '//' + global.location.host);
@@ -60,6 +60,9 @@
         return finish(new Error(
           'Search API HTTP ' + xhr.status + (detail ? ': ' + detail : '')
         ));
+      }
+      if (!parseJson) {
+        return finish(null, xhr.responseText);
       }
       try {
         finish(null, JSON.parse(xhr.responseText));
@@ -96,6 +99,7 @@
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
         'Accept': 'text/plain, */*; q=0.01'
       },
+      false,
       function (err, data) {
         if (err) return callback(err);
         var timeText = typeof data === 'string' ? data : String(data || '');
@@ -160,6 +164,7 @@
           'Accept': 'application/json, text/javascript, */*; q=0.01',
           'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
         },
+        true,
         function (err, data) {
           if (err) return callback(err);
           var normalized = normalizeResult(source, page, data);
