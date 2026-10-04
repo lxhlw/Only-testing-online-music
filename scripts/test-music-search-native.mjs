@@ -49,6 +49,9 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     window: null,
     console,
     Date,
+    btoa(value) {
+      return Buffer.from(String(value), 'latin1').toString('base64')
+    },
     LXLegacySHA1() {
       return '0123456789abcdef0123456789abcdef0123456789'
     },
@@ -333,6 +336,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       search: {
         status: 200,
         body: JSON.stringify({
+          code: 0,
           url: 'https://cdn.example.test/audio.mp3',
           br: 128,
           size: 1234
@@ -342,11 +346,11 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   )
 
   const cases = [
-    { source: 'kw', info: { songmid: '62355680' }, quality: '128k', expected: 'kuwo', id: '62355680', br: '128' },
-    { source: 'kg', info: { songmid: '778899', hash: 'ABCDEF0123456789' }, quality: '320k', expected: 'kugou', id: '778899', br: '320' },
-    { source: 'tx', info: { songmid: '00112233' }, quality: '320k', expected: 'tencent', id: '00112233', br: '320' },
-    { source: 'wy', info: { songmid: '99887766' }, quality: '192k', expected: 'netease', id: '99887766', br: '192' },
-    { source: 'mg', info: { copyrightId: '55667788' }, quality: 'flac24bit', expected: 'migu', id: '55667788', br: '999' }
+    { source: 'kw', info: { songmid: '62355680' }, quality: '128k', expected: 'kuwo', id: '62355680', huibqQuality: '128k' },
+    { source: 'kg', info: { songmid: '778899', hash: 'ABCDEF0123456789' }, quality: '320k', expected: 'kugou', id: 'ABCDEF0123456789', huibqQuality: '320k' },
+    { source: 'tx', info: { songmid: '00112233' }, quality: '320k', expected: 'tencent', id: '00112233', huibqQuality: '320k' },
+    { source: 'wy', info: { songmid: '99887766' }, quality: '192k', expected: 'netease', id: '99887766', huibqQuality: '128k' },
+    { source: 'mg', info: { copyrightId: '55667788', songmid: 'mg-song-55667788' }, quality: 'flac24bit', expected: 'migu', id: 'mg-song-55667788', huibqQuality: '320k' }
   ]
 
   for (const item of cases) {
@@ -358,17 +362,146 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
         (err, value) => err ? reject(err) : resolve(value)
       )
     })
-    assert.equal(result.provider, 'gd-studio')
+    assert.equal(result.provider, 'huibq')
     assert.equal(result.url, 'https://cdn.example.test/audio.mp3')
     assert.equal(result.id, item.id)
 
     const call = h.calls[h.calls.length - 1]
     const target = new URL(call.xhrUrl).searchParams.get('url')
     const requestUrl = new URL(target)
-    assert.equal(requestUrl.searchParams.get('types'), 'url')
-    assert.equal(requestUrl.searchParams.get('source'), item.expected)
-    assert.equal(requestUrl.searchParams.get('id'), item.id)
-    assert.equal(requestUrl.searchParams.get('br'), item.br)
+    assert.match(requestUrl.pathname, new RegExp('/url/' + item.source + '/' + item.id + '/' + item.huibqQuality + '  }
+}
+
+
+
+{
+  const cases = [
+    {
+      source: 'tx',
+      expectedProvider: 'qqmusic-native',
+      response: {
+        code: 0,
+        'music.search.SearchCgiService': {
+          code: 0,
+          data: {
+            body: {
+              song: {
+                list: [{
+                  id: 1001,
+                  mid: '003abc',
+                  title: '晴天',
+                  singer: [{ name: '周杰伦', mid: '0025' }],
+                  interval: 269,
+                  album: { name: '叶惠美', mid: 'alb1' },
+                  file: { media_mid: 'media1', size_128mp3: 1000000, size_320mp3: 2000000, size_flac: 4000000, size_hires: 8000000 }
+                }]
+              }
+            },
+            meta: { sum: 1 }
+          }
+        }
+      }
+    },
+    {
+      source: 'wy',
+      expectedProvider: 'netease-native',
+      response: {
+        data: {
+          code: 200,
+          data: {
+            totalCount: 1,
+            resources: [{
+              baseInfo: {
+                simpleSongData: {
+                  id: 2001,
+                  name: '晴天',
+                  dt: 269000,
+                  ar: [{ name: '周杰伦', id: 1 }],
+                  al: { id: 2, name: '叶惠美', picUrl: 'https://img.example/2.jpg' },
+                  privilege: { maxBrLevel: 'hires', maxbr: 999000 },
+                  hr: { size: 8000000 },
+                  sq: { size: 4000000 },
+                  h: { size: 2000000 },
+                  l: { size: 1000000 }
+                }
+              }
+            }]
+          }
+        }
+      }
+    },
+    {
+      source: 'mg',
+      expectedProvider: 'migu-native',
+      response: {
+        code: '000000',
+        songResultData: {
+          totalCount: '1',
+          resultList: [[{
+            songId: 'mg-song-1',
+            copyrightId: 'mg-copy-1',
+            name: '晴天',
+            album: '叶惠美',
+            albumId: 'mg-alb',
+            duration: '269',
+            singerList: [{ name: '周杰伦' }],
+            audioFormats: [
+              { formatType: 'PQ', asize: 1000000 },
+              { formatType: 'HQ', asize: 2000000 },
+              { formatType: 'SQ', asize: 4000000 },
+              { formatType: 'ZQ24', asize: 8000000 }
+            ]
+          }]]
+        }
+      }
+    }
+  ]
+
+  for (const item of cases) {
+    const h = createHarness(
+      {
+        [item.source]: { actions: ['musicUrl'] }
+      },
+      () => {},
+      { search: { status: 200, body: JSON.stringify(item.response) } }
+    )
+
+    const result = await new Promise((resolve, reject) => {
+      h.sandbox.LXMusicSearch.search(item.source, '周杰伦', 1, 20, (err, value) => {
+        if (err) reject(err)
+        else resolve(value)
+      })
+    })
+
+    assert.equal(result.source, item.source)
+    assert.equal(result.searchProvider, item.expectedProvider)
+    assert.equal(result.requestedSource, item.source)
+    assert.equal(result.list.length, 1)
+    assert.equal(result.list[0].source, item.source)
+
+    if (item.source === 'tx') {
+      assert.equal(result.list[0].songmid, '003abc')
+      assert.equal(result.list[0].name, '晴天')
+      assert.equal(result.list[0].singer, '周杰伦')
+      assert.equal(new URL(h.calls[0].xhrUrl).searchParams.has('sign'), true)
+      assert.equal(h.calls[0].xhrMethod, 'POST')
+    }
+    if (item.source === 'wy') {
+      assert.equal(result.list[0].songmid, '2001')
+      assert.equal(result.list[0].singer, '周杰伦')
+      assert.equal(h.calls[0].xhrMethod, 'POST')
+      assert.match(String(h.calls[0].xhrBody || ''), /params=/)
+    }
+    if (item.source === 'mg') {
+      assert.equal(result.list[0].copyrightId, 'mg-copy-1')
+      assert.equal(result.list[0].songmid, 'mg-song-1')
+      assert.equal(result.list[0].singer, '周杰伦')
+      assert.equal(h.calls[0].xhrMethod, 'GET')
+    }
+  }
+}
+
+console.log('PASS: LX search routing stays channel-bound and never mixes providers')))
   }
 }
 

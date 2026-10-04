@@ -138,8 +138,10 @@ try {
       try {
         await page.waitForFunction(
           () => {
+            const audio = document.getElementById('audio')
             const status = document.getElementById('status')?.textContent || ''
-            return /正在播放|musicUrl 失败|已返回 .+ 播放地址/.test(status)
+            return Number(audio?.currentTime || 0) >= 0.5 ||
+              /musicUrl 失败|已返回 .+ 播放地址/.test(status)
           },
           null,
           { timeout: PLAYBACK_TIMEOUT_MS },
@@ -164,7 +166,7 @@ try {
       if (/正在播放/.test(attempt.status) || attempt.currentTime >= 0.5) break
     }
 
-    const success = attempts.find(item => /正在播放/.test(item.status) || item.currentTime >= 0.5)
+    const success = attempts.find(item => item.currentTime >= 0.5 && item.readyState >= 2 && !item.error)
     assert.ok(
       success,
       channel.toUpperCase() + ' playback failed after ' + attempts.length + ' candidates: ' +
@@ -178,14 +180,15 @@ try {
 
     const targetSeen = proxyTargets.some(item => {
       const target = item.target
-      if (channel === 'kw') return /search\.kuwo\.cn\/r\.s/.test(target) || /flower\/v1\/url\/kw\//.test(target) || /music-api\.gdstudio\.xyz\/api\.php/.test(target) || /music-dl\.sayqz\.com\/api\//.test(target)
+      if (channel === 'kw') return /search\.kuwo\.cn\/r\.s/.test(target) || /flower\/v1\/url\/kw\//.test(target) || /lxmusicapi\.onrender\.com\/url\/kw\//.test(target) || /music-api\.gdstudio\.xyz\/api\.php/.test(target) || /music-dl\.sayqz\.com\/api\//.test(target)
       if (channel === 'kg') return /songsearch\.kugou\.com\/song_search_v2/.test(target) ||
         /mobilecdn\.kugou\.com\/api\/v3\/search\/song/.test(target) ||
         /flower\/v1\/url\/kg\//.test(target) ||
+        /lxmusicapi\.onrender\.com\/url\/kg\//.test(target) ||
         /music-api\.gdstudio\.xyz\/api\.php/.test(target) ||
         /music-dl\.sayqz\.com\/api\//.test(target)
-      if (channel === 'tx') return /u\.y\.qq\.com\/cgi-bin\/musics\.fcg/.test(target) || /flower\/v1\/url\/tx\//.test(target)
-      if (channel === 'wy') return /interface\.music\.163\.com\/eapi\/batch/.test(target) || /flower\/v1\/url\/wy\//.test(target)
+      if (channel === 'tx') return /u\.y\.qq\.com\/cgi-bin\/musics\.fcg/.test(target) || /flower\/v1\/url\/tx\//.test(target) || /lxmusicapi\.onrender\.com\/url\/tx\//.test(target)
+      if (channel === 'wy') return /interface\.music\.163\.com\/eapi\/batch/.test(target) || /flower\/v1\/url\/wy\//.test(target) || /lxmusicapi\.onrender\.com\/url\/wy\//.test(target)
       return /jadeite\.migu\.cn\/music_search\/v3\/search\/searchAll/.test(target) || /flower\/v1\/url\/mg\//.test(target)
     })
     assert.ok(targetSeen, channel.toUpperCase() + ' did not produce expected platform/Flower proxy traffic')

@@ -2,6 +2,24 @@
   'use strict';
 
   var API_ENDPOINT = 'https://music-api.gdstudio.xyz/api.php';
+  var HUIBQ_API_ENDPOINT = 'https://lxmusicapi.onrender.com';
+  var HUIBQ_API_KEY = 'share-v3';
+  var HUIBQ_QUALITY_MAP = {
+    '128k': '128k',
+    '192k': '128k',
+    '256k': '128k',
+    '320k': '320k',
+    'flac': '320k',
+    'flac24bit': '320k',
+    'flac32bit': '320k',
+    '24bit': '320k',
+    'wav': '320k',
+    'ape': '320k',
+    'hires': '320k',
+    'atmos': '320k',
+    'atmos_plus': '320k',
+    'master': '320k'
+  };
 
   var SOURCE_MAP = {
     kw: 'kuwo',
@@ -1007,6 +1025,86 @@
     return ids;
   }
 
+
+  function getHuibqPlaybackId(source, musicInfo) {
+    var info = musicInfo || {};
+    var candidates = [];
+
+    function add(value) {
+      var id = String(value == null ? '' : value).replace(/^\s+|\s+$/g, '');
+      if (!id) return;
+      for (var i = 0; i < candidates.length; i += 1) {
+        if (candidates[i] === id) return;
+      }
+      candidates.push(id);
+    }
+
+    if (source === 'kg') {
+      add(info.hash);
+      add(info.songmid);
+      add(info.id);
+    } else if (source === 'mg') {
+      add(info.songmid);
+      add(info.copyrightId);
+      add(info.copyright_id);
+      add(info.id);
+    } else {
+      add(info.songmid);
+      add(info.mediaMid);
+      add(info.mid);
+      add(info.id);
+    }
+
+    return candidates[0] || '';
+  }
+
+  function resolveHuibqUrl(source, musicInfo, quality, callback) {
+    source = String(source || '').toLowerCase();
+    if (!SOURCE_MAP[source]) return callback(new Error('Unsupported playback source: ' + source));
+
+    var id = getHuibqPlaybackId(source, musicInfo);
+    if (!id) return callback(new Error('No platform track id for Huibq playback: ' + source));
+
+    var requestedQuality = String(quality || '').toLowerCase();
+    var huibqQuality = HUIBQ_QUALITY_MAP[requestedQuality] || '128k';
+    var url = HUIBQ_API_ENDPOINT +
+      '/url/' + encodeURIComponent(source) +
+      '/' + encodeURIComponent(id) +
+      '/' + encodeURIComponent(huibqQuality);
+
+    requestViaProxy(
+      url,
+      'GET',
+      null,
+      {
+        'User-Agent': 'lx-music-web/2.0.0',
+        'Accept': 'application/json, text/plain, */*',
+        'X-Request-Key': HUIBQ_API_KEY
+      },
+      true,
+      function (err, data) {
+        if (err) return callback(err);
+
+        var code = data && data.code != null ? Number(data.code) : NaN;
+        var returnedUrl = data && typeof data.url === 'string' ? data.url : '';
+        if (code !== 0 || !/^https?:/i.test(returnedUrl)) {
+          var message = data && data.msg ? String(data.msg) : 'Huibq returned no playable URL';
+          return callback(new Error(message));
+        }
+
+        callback(null, {
+          url: String(returnedUrl).replace(/^\s+|\s+$/g, ''),
+          source: source,
+          provider: 'huibq',
+          requestedQuality: String(quality || ''),
+          requestedQualityMapped: huibqQuality,
+          actualBr: huibqQuality,
+          id: id
+        });
+      }
+    );
+  }
+
   function resolveGdStudioUrl(source, musicInfo, quality, callback) {
     source = String(source || '').toLowerCase();
     var mapped = SOURCE_MAP[source];
@@ -1128,10 +1226,26 @@
     });
   }
 
+
+  function resolveMusicUrl(source, musicInfo, quality, callback) {
+    resolveHuibqUrl(source, musicInfo, quality, function (huibqErr, huibqResult) {
+      if (!huibqErr && huibqResult && huibqResult.url) return callback(null, huibqResult);
+
+      resolveGdStudioUrl(source, musicInfo, quality, function (gdErr, gdResult) {
+        if (!gdErr && gdResult && gdResult.url) return callback(null, gdResult);
+
+        var message = 'Huibq playback failed';
+        if (huibqErr && huibqErr.message) message += ': ' + huibqErr.message;
+        if (gdErr && gdErr.message) message += '；GD Studio playback failed: ' + gdErr.message;
+        callback(new Error(message));
+      });
+    });
+  }
+
   global.LXMusicSearch = {
     search: search,
     sourceMap: SOURCE_MAP,
     normalizeSong: normalizeSong,
-    resolveMusicUrl: resolveGdStudioUrl
+    resolveMusicUrl: resolveMusicUrl
   };
 })(window);

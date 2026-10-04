@@ -183,12 +183,12 @@ function isPrivateHost(hostname) {
 function pickForwardHeaders(request) {
   var out = new Headers();
   var requested = request.headers.get('X-LX-Headers');
-  if (!requested) return out;
-  var data;
-  try { data = JSON.parse(requested); } catch (e) { return out; }
-  if (!data || typeof data !== 'object') return out;
+  var data = null;
+  if (requested) {
+    try { data = JSON.parse(requested); } catch (e) { data = null; }
+  }
 
-  for (var key in data) {
+  if (data && typeof data === 'object') for (var key in data) {
     if (!Object.prototype.hasOwnProperty.call(data, key)) continue;
     var lower = key.toLowerCase();
     if (lower === 'host' || lower === 'content-length' || lower === 'connection'

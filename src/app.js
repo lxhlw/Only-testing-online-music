@@ -545,7 +545,7 @@
                 source,
                 musicInfo,
                 settings,
-                'GD Studio 平台兜底'
+                fallbackResult.provider === 'huibq' ? 'Huibq 平台兜底' : 'GD Studio 平台兜底'
               );
             }
             if (settings.autoFallback && index + 1 < plan.length) {
@@ -580,7 +580,7 @@
                 source,
                 musicInfo,
                 settings,
-                'GD Studio 平台兜底'
+                fallbackResult.provider === 'huibq' ? 'Huibq 平台兜底' : 'GD Studio 平台兜底'
               );
             }
             if (settings.autoFallback && index + 1 < plan.length) {
