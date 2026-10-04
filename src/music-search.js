@@ -57,7 +57,7 @@
   }
 
   function normalizeArtist(artist) {
-    if (artist instanceof Array) return artist.join('、');
+    if (Array.isArray(artist)) return artist.join('、');
     if (artist && typeof artist === 'object') {
       if (artist.name) return String(artist.name);
       return '';
@@ -97,14 +97,14 @@
     var total;
     var isEnd = false;
 
-    if (data instanceof Array) {
+    if (Array.isArray(data)) {
       list = data;
       total = list.length;
-    } else if (data && data.list instanceof Array) {
+    } else if (data && Array.isArray(data.list)) {
       list = data.list;
       total = data.total != null ? Number(data.total) : list.length;
       isEnd = data.isEnd === true;
-    } else if (data && data.data && data.data.list instanceof Array) {
+    } else if (data && data.data && data.Array.isArray(data.list)) {
       list = data.data.list;
       total = data.data.total != null ? Number(data.data.total) : list.length;
       isEnd = data.data.isEnd === true;
