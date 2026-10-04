@@ -342,14 +342,8 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       expectedProvider: 'netease-native',
       response: {
         result: {
-          songCount: 1,
-          songs: [{
-            id: 2001,
-            name: '晴天',
-            duration: 269000,
-            artists: [{ name: '周杰伦', id: 1 }],
-            album: { id: 2, name: '叶惠美', picUrl: 'https://img.example/2.jpg' }
-          }]
+          songCount: 0,
+          songs: []
         }
       }
     },
@@ -416,6 +410,47 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       assert.equal(h.calls[0].xhrMethod, 'GET')
     }
   }
+}
+
+{
+  const h = createHarness(
+    {
+      wy: { actions: ['musicUrl'] }
+    },
+    () => {},
+    {
+      search: [
+        {
+          status: 200,
+          body: JSON.stringify({ result: { songCount: 0, songs: [] } })
+        },
+        {
+          status: 200,
+          body: JSON.stringify([
+            { id: 'wy-good', name: '晴天', artist: '周杰伦', source: 'netease', songmid: 'wy-good' },
+            { id: 'tx-bad', name: '晴天', artist: '周杰伦', source: 'tencent', songmid: 'tx-bad' }
+          ])
+        }
+      ]
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.search('wy', '周杰伦', 1, 20, (err, value) => {
+      if (err) reject(err)
+      else resolve(value)
+    })
+  })
+
+  assert.equal(result.source, 'wy')
+  assert.equal(result.searchProvider, 'gdstudio-native')
+  assert.equal(result.fallbackSearch, true)
+  assert.equal(result.list.length, 1)
+  assert.equal(result.list[0].source, 'wy')
+  assert.equal(result.list[0].id, 'wy-good')
+  assert.match(decodeURIComponent(h.calls[0].xhrUrl), /music\.163\.com\/api\/search\/get\/web/)
+  assert.match(decodeURIComponent(h.calls[1].xhrUrl), /music-api\.gdstudio\.xyz\/api\.php/)
+  assert.equal(new URL(h.calls[1].xhrUrl).searchParams.get('source'), 'netease')
 }
 
 console.log('PASS: LX search routing stays channel-bound and never mixes providers')

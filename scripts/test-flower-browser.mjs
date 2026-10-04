@@ -201,6 +201,7 @@ try {
       if (channel === 'wy') return (
         /music\.163\.com\/api\/search\/get\/web/.test(target) ||
         /interface\.music\.163\.com\/eapi\/batch/.test(target) ||
+        /music-api\.gdstudio\.xyz\/api\.php/.test(target) ||
         /flower\/v1\/url\/wy\//.test(target) ||
         /lxmusicapi\.onrender\.com\/url\/wy\//.test(target)
       )
