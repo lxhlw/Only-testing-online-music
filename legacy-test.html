@@ -306,6 +306,22 @@
     addCheck('String 核心方法', stringCoreOk ? 'PASS' : 'FAIL',
       stringCoreOk ? 'replace / split / indexOf / case / substr 测试通过' : '字符串核心方法行为异常');
 
+    var dateNowOk = safeTest(function () {
+      if (!window.Date || typeof window.Date.now !== 'function') return false;
+      var before = new window.Date().getTime();
+      var now = window.Date.now();
+      var after = new window.Date().getTime();
+      return now >= before && now <= after;
+    });
+    addCheck('Date.now', dateNowOk ? 'PASS' : 'FAIL',
+      dateNowOk ? '当前时间戳实际测试通过' : 'Date.now 不可正常使用');
+
+    var timerAvailable = typeof window.setTimeout === 'function' &&
+      typeof window.clearTimeout === 'function';
+    addCheck('setTimeout / clearTimeout', timerAvailable ? 'WARN' : 'FAIL',
+      timerAvailable ? '等待异步定时器实际测试' : '定时器函数不存在');
+
+
     var urlOk = safeTest(function () {
       var testUrl = new window.URL('https://example.com/test?a=1');
       return testUrl.hostname === 'example.com' && testUrl.pathname === '/test' && testUrl.search === '?a=1';
@@ -405,6 +421,44 @@
         });
       } catch (e) {
         replaceCheck('Promise.resolve/reject', 'FAIL', 'Promise 静态方法执行异常');
+        renderChecksOnly();
+        updateReport();
+      }
+    }
+
+    function testTimerAsync() {
+      if (!timerAvailable) return;
+
+      var fired = false;
+      var cancelled = false;
+      var handle = null;
+
+      try {
+        handle = window.setTimeout(function () {
+          fired = true;
+        }, 0);
+
+        if (typeof handle === 'undefined' || handle === null) {
+          cancelled = true;
+        }
+
+        var cancelledHandle = window.setTimeout(function () {
+          cancelled = false;
+        }, 20);
+        window.clearTimeout(cancelledHandle);
+
+        window.setTimeout(function () {
+          var success = fired && cancelled === false;
+          replaceCheck(
+            'setTimeout / clearTimeout',
+            success ? 'PASS' : 'FAIL',
+            success ? '定时器触发与取消测试通过' : '定时器触发或取消行为异常'
+          );
+          renderChecksOnly();
+          updateReport();
+        }, 30);
+      } catch (e) {
+        replaceCheck('setTimeout / clearTimeout', 'FAIL', '定时器执行异常');
         renderChecksOnly();
         updateReport();
       }
@@ -554,6 +608,7 @@
       testPromiseAsync();
       testPromiseAll();
       testPromiseStaticMethods();
+      testTimerAsync();
       testResource('src/lx-runtime.js');
       testResource('src/source-manager.js');
       testResource('src/music-search.js');
