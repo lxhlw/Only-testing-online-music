@@ -1,4 +1,4 @@
-name: Test LX 4 In Chromium
+name: Test LX 5 In Chromium
 
 on:
   push:
@@ -11,8 +11,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  lx4-browser:
-    name: LX source browser lx-4
+  lx5-browser:
+    name: LX source browser lx-5
     runs-on: ubuntu-latest
     timeout-minutes: 6
 
@@ -46,11 +46,11 @@ jobs:
           cat /tmp/wrangler.log
           exit 1
 
-      - name: Test LX 4 in real Chromium
+      - name: Test LX 5 in real Chromium
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
-          LX_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/lx/4.js
-          LX_SOURCE_NAME: lx-4
+          LX_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/lx/5.js
+          LX_SOURCE_NAME: lx-5
           SIXYIN_INIT_TIMEOUT_MS: 30000
           PLAYBACK_CANDIDATES: 3
         run: node scripts/test-sixyin-browser.mjs
