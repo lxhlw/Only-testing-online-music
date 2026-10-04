@@ -162,11 +162,13 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   assert.equal(h.calls.length, 1)
   assert.equal(h.calls[0].xhrMethod, 'GET')
   assert.equal(h.calls[0].xhrBody, null)
-  const kuwoUrl = decodeURIComponent(h.calls[0].xhrUrl)
+  const kuwoProxyRequest = new URL(h.calls[0].xhrUrl)
+  const kuwoUrl = kuwoProxyRequest.searchParams.get('url')
+  assert.ok(kuwoUrl, 'Kuwo request must expose nested target URL')
   assert.match(kuwoUrl, /search\.kuwo\.cn\/r\.s/)
-  assert.match(kuwoUrl, /(?:^|&)all=周杰伦(?:&|$)/)
-  assert.match(kuwoUrl, /(?:^|&)pn=0(?:&|$)/)
-  assert.match(kuwoUrl, /(?:^|&)rn=20(?:&|$)/)
+  assert.equal(new URL(kuwoUrl).searchParams.get('all'), '周杰伦')
+  assert.equal(new URL(kuwoUrl).searchParams.get('pn'), '0')
+  assert.equal(new URL(kuwoUrl).searchParams.get('rn'), '20')
 }
 
 {

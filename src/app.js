@@ -394,6 +394,29 @@
     setStatus('音源已执行并发送 inited：<b>' + escapeHtml(item.name) + '</b>', 'ready');
   }
 
+  function buildPlayableUrl(url) {
+    var value = String(url || '');
+    if (!/^https?:/i.test(value)) return value;
+
+    try {
+      if (global.location && typeof global.URL === 'function') {
+        var target = new global.URL(value, global.location.href);
+        var page = new global.URL(global.location.href);
+        if (target.origin === page.origin && target.protocol === page.protocol) {
+          return target.href;
+        }
+        return page.origin + '/api/proxy?url=' + encodeURIComponent(target.href);
+      }
+    } catch (e) {}
+
+    try {
+      var origin = String(global.location.protocol || '') + '//' + String(global.location.host || '');
+      if (origin) return origin + '/api/proxy?url=' + encodeURIComponent(value);
+    } catch (e) {}
+
+    return value;
+  }
+
   function buildMusicInfo(music, source) {
     var musicInfo = {};
     var key;
@@ -449,6 +472,7 @@
       }
 
       var url = typeof result === 'string' ? result : (result && (result.url || result.result));
+      if (url != null) url = String(url).replace(/^\s+|\s+$/g, '');
       if (!url || !/^https?:/i.test(url)) {
         if (settings.autoFallback && index + 1 < plan.length) {
           return requestQuality(music, source, musicInfo, plan, index + 1, token);
@@ -457,20 +481,22 @@
       }
 
       var audio = document.getElementById('audio');
+      var playableUrl = buildPlayableUrl(url);
       playbackState.waitingForAudio = true;
       playbackState.quality = quality;
-      playbackState.url = url;
+      playbackState.url = playableUrl;
+      playbackState.sourceUrl = url;
 
       // Drop handlers for the previous media attempt before assigning a new
       // URL. Legacy browsers can dispatch a late error event after src changes.
       audio.onerror = function () {
-        handleAudioError(token, url);
+        handleAudioError(token, playableUrl);
       };
       audio.onplaying = function () {
-        handleAudioPlaying(token, url);
+        handleAudioPlaying(token, playableUrl);
       };
       audio.preload = 'auto';
-      audio.src = url;
+      audio.src = playableUrl;
       if (typeof audio.load === 'function') audio.load();
 
       document.getElementById('player-title').innerHTML = escapeHtml(music.name);

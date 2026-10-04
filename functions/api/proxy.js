@@ -3,7 +3,7 @@ function corsHeaders(request) {
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-LX-Headers',
+    'Access-Control-Allow-Headers': 'Content-Type, Range, If-Range, If-None-Match, If-Modified-Since, X-LX-Headers',
     'Access-Control-Max-Age': '86400',
     'Vary': 'Origin'
   };
@@ -46,6 +46,13 @@ function pickForwardHeaders(request) {
     var value = String(data[key]);
     if (value.length > 4096) continue;
     try { out.set(key, value); } catch (e) {}
+  }
+  var mediaHeaders = ['Range', 'If-Range', 'If-None-Match', 'If-Modified-Since', 'Accept', 'User-Agent'];
+  for (var mi = 0; mi < mediaHeaders.length; mi += 1) {
+    var mediaKey = mediaHeaders[mi];
+    var mediaValue = request.headers.get(mediaKey);
+    if (!mediaValue || mediaValue.length > 4096) continue;
+    try { out.set(mediaKey, mediaValue); } catch (e) {}
   }
   return out;
 }
@@ -117,7 +124,7 @@ export async function onRequest(context) {
   var candidateUrls = [target.toString()];
   if (target.hostname.toLowerCase() === '97.64.37.235') {
     candidateUrls = [];
-    var flowerAliases = ['ts.tempmusic.tk', 'tm.tempmusic.tk'];
+    var flowerAliases = ['ts.tempmusics.tk', 'tm.tempmusics.tk', 'ts.tempmusic.tk', 'tm.tempmusic.tk'];
     for (var fi = 0; fi < flowerAliases.length; fi += 1) {
       try {
         var alias = new URL(target.toString());

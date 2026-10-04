@@ -153,6 +153,7 @@ try {
           audioUrl: audio?.src || '',
           readyState: Number(audio?.readyState || 0),
           currentTime: Number(audio?.currentTime || 0),
+          duration: Number(audio?.duration || 0),
           error: audio?.error ? {
             code: audio.error.code,
             message: audio.error.message || '',
@@ -168,6 +169,11 @@ try {
       success,
       channel.toUpperCase() + ' playback failed after ' + attempts.length + ' candidates: ' +
       JSON.stringify(attempts, null, 2)
+    )
+    assert.ok(
+      String(success.audioUrl || '').indexOf('/api/proxy?url=') >= 0,
+      channel.toUpperCase() + ' playback URL was not normalized through the same-origin media proxy: ' +
+      JSON.stringify(success, null, 2)
     )
 
     const targetSeen = proxyTargets.some(item => {
