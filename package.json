@@ -7,7 +7,8 @@
   "scripts": {
     "test:sixyin:browser": "node scripts/test-sixyin-browser.mjs",
     "test:settings": "node scripts/test-settings.mjs",
-    "test:quality-fallback": "node scripts/test-quality-fallback-browser.mjs"
+    "test:quality-fallback": "node scripts/test-quality-fallback-browser.mjs",
+    "test:library": "node scripts/test-music-library.mjs"
   },
   "devDependencies": {
     "playwright": "1.63.0",
