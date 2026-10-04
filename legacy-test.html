@@ -884,14 +884,12 @@
       }
 
       setPlaybackStatus('WARN', '正在进行一键完整自检……');
-      testActualPlayback();
-
-      window.setTimeout(function () {
+      testActualPlayback(function () {
         testNetwork();
-      }, 120);
+      });
     }
 
-    function testActualPlayback() {
+    function testActualPlayback(done) {
       var target = byId('test-audio');
       var src = makeWavDataUri();
       var finished = false;
@@ -899,11 +897,13 @@
 
       if (!target || typeof target.play !== 'function') {
         setPlaybackStatus('FAIL', 'Audio.play 不存在，无法进行实际播放测试。');
+        if (done) done();
         return;
       }
 
       if (!src) {
         setPlaybackStatus('FAIL', '浏览器缺少 btoa，无法生成本地测试音频。');
+        if (done) done();
         return;
       }
 
@@ -913,6 +913,7 @@
         window.clearTimeout(timer);
         playbackResult.currentTime = Number(target.currentTime || 0);
         setPlaybackStatus(state, detail);
+        if (done) done();
       }
 
       target.onplaying = function () {
