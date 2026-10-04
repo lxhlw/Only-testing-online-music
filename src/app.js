@@ -12,6 +12,7 @@
   var selectedChannel = null;
   var playbackState = null;
   var playbackToken = 0;
+  var searchToken = 0;
   var MIN_UNKNOWN_MEDIA_DURATION_SECONDS = 15;
 
   var CHANNEL_NAMES = {
@@ -157,6 +158,8 @@
       button.onclick = (function (channel) {
         return function () {
           selectedChannel = channel;
+          searchToken += 1;
+          global.__LXLastSearchResults = [];
           renderChannelSelectors();
           resultsEl.innerHTML = '';
           setStatus('已选择播放渠道：' + escapeHtml(CHANNEL_NAMES[channel] || channel.toUpperCase()) +
@@ -1133,10 +1136,14 @@
         return setStatus('当前音源没有可用的播放渠道。', 'fail');
       }
 
-      setStatus('正在按 ' + escapeHtml(CHANNEL_NAMES[selectedChannel] || selectedChannel.toUpperCase()) +
+      var channel = selectedChannel;
+      var token = ++searchToken;
+      global.__LXLastSearchResults = [];
+      setStatus('正在按 ' + escapeHtml(CHANNEL_NAMES[channel] || channel.toUpperCase()) +
         ' 搜索「成都」……');
       resultsEl.innerHTML = '';
-      global.LXMusicSearch.search(selectedChannel, '成都', 1, 3, function (err, result) {
+      global.LXMusicSearch.search(channel, '成都', 1, 3, function (err, result) {
+        if (token !== searchToken || channel !== selectedChannel) return;
         if (err) return setStatus('搜索「成都」失败：' + escapeHtml(err.message || err), 'fail');
         if (!result.list || !result.list.length) return setStatus('搜索「成都」没有返回结果。', 'fail');
 
@@ -1205,9 +1212,17 @@
 
   function searchAndRender(keyword) {
     if (!selectedChannel) return setStatus('请先选择播放渠道。', 'fail');
-    setStatus('正在按 ' + escapeHtml(CHANNEL_NAMES[selectedChannel] || selectedChannel.toUpperCase()) + ' 搜索「' + escapeHtml(keyword) + '」……');
+
+    var channel = selectedChannel;
+    var token = ++searchToken;
+
+    setStatus('正在按 ' + escapeHtml(CHANNEL_NAMES[channel] || channel.toUpperCase()) + ' 搜索「' + escapeHtml(keyword) + '」……');
     resultsEl.innerHTML = '';
-    global.LXMusicSearch.search(selectedChannel, keyword, 1, 20, function (err, result) {
+    global.__LXLastSearchResults = [];
+
+    global.LXMusicSearch.search(channel, keyword, 1, 20, function (err, result) {
+      if (token !== searchToken || channel !== selectedChannel) return;
+
       if (err) return setStatus('搜索失败：' + escapeHtml(err.message || err), 'fail');
       setStatus('搜索完成：' + result.list.length + ' 条结果。', 'ready');
       global.__LXLastSearchResults = result.list.slice();
