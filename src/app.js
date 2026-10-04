@@ -7,6 +7,8 @@
   var runtimeEl, resultsEl;
   var channelListEl, qualitySummaryEl;
   var queueListEl, favoriteListEl, historyListEl;
+  var lyricsStatusEl, lyricsTitleEl, lyricsLinesEl, lyricsRefreshBtn;
+  var lyricsState = null;
   var selectedChannel = null;
   var playbackState = null;
   var playbackToken = 0;
@@ -181,6 +183,114 @@
           '<span class="quality-summary-detail">当前渠道最高：' + escapeHtml(highest || '—') +
           ' · 可用：' + escapeHtml(available.join(', ')) + nextText + '</span>';
       }
+    }
+  }
+
+  function sourceSupportsAction(source, action) {
+    var active = global.LXSourceManager.getActive();
+    if (!active || !active.sources || !active.sources[source]) return false;
+    var actions = active.sources[source].actions;
+    return actions instanceof Array && actions.indexOf(action) >= 0;
+  }
+
+  function setLyricsStatus(text, type) {
+    if (!lyricsStatusEl) return;
+    lyricsStatusEl.className = 'lyrics-status' + (type ? ' ' + type : '');
+    lyricsStatusEl.innerHTML = text;
+  }
+
+  function clearLyrics() {
+    lyricsState = null;
+    if (lyricsTitleEl) lyricsTitleEl.innerHTML = '未选择歌曲';
+    if (lyricsLinesEl) lyricsLinesEl.innerHTML = '';
+    setLyricsStatus('播放支持歌词的 LX 音源后会自动尝试加载歌词。');
+  }
+
+  function renderLyricsResult(music, result) {
+    if (!global.LXMusicLyrics) {
+      setLyricsStatus('歌词解析模块未加载。', 'fail');
+      return;
+    }
+
+    var normalized = global.LXMusicLyrics.normalize(result);
+    var lines = global.LXMusicLyrics.parseLrc(normalized.lyric);
+    lyricsState = {
+      musicKey: musicKey(music),
+      music: music,
+      source: String(music.source || '').toLowerCase(),
+      lyric: normalized.lyric,
+      lines: lines
+    };
+
+    if (lyricsTitleEl) {
+      lyricsTitleEl.innerHTML = escapeHtml(music.name || '未知歌曲') +
+        ' <span class="muted">· ' + escapeHtml(music.singer || '未知歌手') + '</span>';
+    }
+
+    if (!normalized.lyric) {
+      if (lyricsLinesEl) lyricsLinesEl.innerHTML = '<div class="muted">当前歌曲没有返回歌词内容。</div>';
+      setLyricsStatus('歌词接口已返回，但内容为空。', 'warn');
+      return;
+    }
+
+    if (!lyricsLinesEl) return;
+    lyricsLinesEl.innerHTML = '';
+
+    if (!lines.length) {
+      var rawParts = normalized.lyric.split('\n');
+      for (var r = 0; r < rawParts.length; r += 1) {
+        var rawText = rawParts[r].replace(/^\s+|\s+$/g, '');
+        if (!rawText) continue;
+        var rawLine = document.createElement('div');
+        rawLine.className = 'lyrics-line';
+        rawLine.innerHTML = escapeHtml(rawText);
+        lyricsLinesEl.appendChild(rawLine);
+      }
+      setLyricsStatus('已加载歌词（未检测到标准 LRC 时间轴）。', 'ready');
+      return;
+    }
+
+    for (var i = 0; i < lines.length; i += 1) {
+      var line = document.createElement('div');
+      line.className = 'lyrics-line';
+      line.setAttribute('data-lyric-index', String(i));
+      line.innerHTML = escapeHtml(lines[i].text);
+      lyricsLinesEl.appendChild(line);
+    }
+    setLyricsStatus('歌词已加载，可随播放进度高亮当前歌词。', 'ready');
+    syncLyrics();
+  }
+
+  function loadLyricsForState(state) {
+    if (!state || !state.music) return;
+    if (!sourceSupportsAction(state.source, 'lyric')) {
+      setLyricsStatus('当前音源未声明 lyric 接口，跳过歌词请求。', 'warn');
+      return;
+    }
+
+    setLyricsStatus('正在加载歌词……');
+    global.LXSourceManager.requestAction(state.source, 'lyric', {
+      musicInfo: buildMusicInfo(state.music, state.source)
+    }, function (err, result) {
+      if (state.token !== playbackToken || !playbackState || musicKey(playbackState.music) !== musicKey(state.music)) return;
+      if (err) {
+        setLyricsStatus('歌词加载失败：' + escapeHtml(err.message || err), 'fail');
+        return;
+      }
+      renderLyricsResult(state.music, result);
+    });
+  }
+
+  function syncLyrics() {
+    if (!lyricsState || !lyricsState.lines || !lyricsState.lines.length) return;
+    var audio = document.getElementById('audio');
+    if (!audio) return;
+    var activeIndex = global.LXMusicLyrics.getActiveLine(lyricsState.lines, audio.currentTime);
+    var children = lyricsLinesEl ? lyricsLinesEl.childNodes : [];
+    for (var i = 0; i < children.length; i += 1) {
+      if (!children[i] || !children[i].getAttribute) continue;
+      var index = Number(children[i].getAttribute('data-lyric-index'));
+      children[i].className = 'lyrics-line' + (index === activeIndex ? ' active' : '');
     }
   }
 
@@ -453,6 +563,7 @@
       ' 正在播放 · ' + escapeHtml(state.quality),
       'ready'
     );
+    loadLyricsForState(state);
   }
 
   function handleAudioError(expectedToken, expectedUrl) {
@@ -555,6 +666,10 @@
     resultsEl = document.getElementById('search-results');
     channelListEl = document.getElementById('channel-list');
     qualitySummaryEl = document.getElementById('quality-summary');
+    lyricsStatusEl = document.getElementById('lyrics-status');
+    lyricsTitleEl = document.getElementById('lyrics-title');
+    lyricsLinesEl = document.getElementById('lyrics-lines');
+    lyricsRefreshBtn = document.getElementById('lyrics-refresh-btn');
     queueListEl = document.getElementById('queue-list');
     favoriteListEl = document.getElementById('favorite-list');
     historyListEl = document.getElementById('history-list');
@@ -582,6 +697,9 @@
       };
       audio.onended = function () {
         playNextQueued();
+      };
+      audio.ontimeupdate = function () {
+        syncLyrics();
       };
     }
 
@@ -654,6 +772,16 @@
       }
     };
 
+    if (lyricsRefreshBtn) {
+      lyricsRefreshBtn.onclick = function () {
+        if (!playbackState || !playbackState.music) {
+          setLyricsStatus('请先播放一首歌曲。', 'warn');
+          return;
+        }
+        loadLyricsForState(playbackState);
+      };
+    }
+
     document.getElementById('prev-track-btn').onclick = function () {
       playQueuedOffset(-1);
     };
@@ -692,6 +820,7 @@
     };
 
     renderSources(global.LXSourceManager.getSources());
+    clearLyrics();
     renderLibrary();
     if (global.LXMusicLibrary) global.LXMusicLibrary.onChange(renderLibrary);
   }
