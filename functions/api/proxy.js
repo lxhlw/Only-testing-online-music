@@ -149,6 +149,66 @@ async function fetchFlowerResolverViaSocket(target, request) {
   });
 }
 
+async function fetchFlowerResolverViaHttpBridge(target, request) {
+  var bridges = [
+    function (targetUrl) {
+      return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl);
+    },
+    function (targetUrl) {
+      return 'https://corsproxy.io/?url=' + encodeURIComponent(targetUrl);
+    }
+  ];
+
+  var forwarded = pickForwardHeaders(request);
+  var lastError = null;
+
+  for (var bi = 0; bi < bridges.length; bi += 1) {
+    var bridgeUrl = bridges[bi](target.toString());
+    try {
+      var bridgeHeaders = new Headers();
+      forwarded.forEach(function (value, key) {
+        var lower = key.toLowerCase();
+        if (lower === 'host' || lower === 'content-length' || lower === 'connection') return;
+        try { bridgeHeaders.set(key, value); } catch (e) {}
+      });
+
+      var upstream = await fetch(bridgeUrl, {
+        method: 'GET',
+        headers: bridgeHeaders,
+        redirect: 'follow'
+      });
+
+      var body = await upstream.text();
+      if (upstream.status >= 200 && upstream.status < 300 &&
+          /^(?:https?:\/\/|\s*\{)/i.test(body)) {
+        return new Response(body, {
+          status: 200,
+          statusText: 'OK',
+          headers: new Headers({
+            'Content-Type': upstream.headers.get('Content-Type') || 'text/plain; charset=utf-8',
+            'Cache-Control': 'no-store'
+          })
+        });
+      }
+
+      lastError = new Error(
+        'Flower HTTPS bridge HTTP ' + upstream.status + ' via ' + bridgeUrl +
+        (body ? ': ' + body.slice(0, 180) : '')
+      );
+    } catch (e) {
+      lastError = e;
+    }
+  }
+
+  return new Response(JSON.stringify({
+    error: 'Flower HTTPS bridge failed',
+    message: lastError && lastError.message ? lastError.message : 'No Flower HTTPS bridge response'
+  }), {
+    status: 502,
+    headers: Object.assign({'Content-Type': 'application/json; charset=utf-8'}, corsHeaders(request))
+  });
+}
+
 function corsHeaders(request) {
   var origin = request.headers.get('Origin') || '*';
   return {
@@ -274,7 +334,17 @@ export async function onRequest(context) {
   // its resolver on this IP, so try known DNS aliases for the same origin.
   if (target.hostname.toLowerCase() === '97.64.37.235'
       && /^\/flower\/v1\/url\//.test(target.pathname)) {
-    return await fetchFlowerResolverViaSocket(target, request);
+    var flowerSocketResponse = await fetchFlowerResolverViaSocket(target, request);
+    if (flowerSocketResponse.status >= 200 && flowerSocketResponse.status < 300) {
+      return flowerSocketResponse;
+    }
+
+    var flowerBridgeResponse = await fetchFlowerResolverViaHttpBridge(target, request);
+    if (flowerBridgeResponse.status >= 200 && flowerBridgeResponse.status < 300) {
+      return flowerBridgeResponse;
+    }
+
+    return flowerSocketResponse;
   }
 
   var candidateUrls = [target.toString()];
