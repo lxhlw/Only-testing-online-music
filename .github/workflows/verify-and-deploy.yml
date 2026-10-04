@@ -54,6 +54,18 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Start local Pages server
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/wrangler.log 2>&1 &
+          for i in {1..45}; do
+            if curl --fail --silent http://127.0.0.1:8788/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/wrangler.log
+          exit 1
+
       - name: Run deterministic search and resolver tests
         run: node scripts/test-music-search-native.mjs
 
@@ -68,18 +80,6 @@ jobs:
 
       - name: Run lyrics test
         run: node scripts/test-music-lyrics.mjs
-
-      - name: Start local Pages server
-        run: |
-          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/wrangler.log 2>&1 &
-          for i in {1..45}; do
-            if curl --fail --silent http://127.0.0.1:8788/ > /dev/null; then
-              exit 0
-            fi
-            sleep 1
-          done
-          cat /tmp/wrangler.log
-          exit 1
 
       - name: Run real five-channel Flower integration test
         env:
