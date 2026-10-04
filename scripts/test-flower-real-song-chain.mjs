@@ -176,4 +176,24 @@ for (const candidate of candidates) {
       status: response.status,
       statusText: response.statusText,
       body: body.slice(0, 1000),
-    }
+    }  } catch (error) {
+    proxy = { error: String(error) }
+  }
+
+  results.push({
+    candidate,
+    generatedUrl: captured.url,
+    generatedHeaders: captured.headers,
+    direct,
+    proxy,
+  })
+}
+
+console.log(JSON.stringify({
+  searchStatus: kgResponse.status,
+  candidateCount: candidates.length,
+  results,
+}, null, 2))
+
+if (!results.length) throw new Error('No Flower test candidates were generated')
+console.log('PASS: real KG search -> Flower request -> direct/proxy comparison completed')
