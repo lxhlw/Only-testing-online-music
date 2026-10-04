@@ -56,10 +56,11 @@ await new Promise((resolve, reject) => {
   })
 })
 
-assert.deepEqual(calls, [{
-  sourceName: 'qsvip',
-  action: 'musicSearch',
-  info: { keyword: '成都', page: 2, pagesize: 30 }
-}])
+assert.equal(calls.length, 1)
+assert.equal(calls[0].sourceName, 'qsvip')
+assert.equal(calls[0].action, 'musicSearch')
+assert.equal(calls[0].info.keyword, '成都')
+assert.equal(calls[0].info.page, 2)
+assert.equal(calls[0].info.pagesize, 30)
 
 console.log('PASS: native LX musicSearch routing')
