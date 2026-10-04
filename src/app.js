@@ -200,3 +200,5 @@
     if (global.LXSourceManager.getSources().length) setCheck('check-storage', 'ok');
   });
 })(window);
+
+// CI trigger marker: no functional change.
