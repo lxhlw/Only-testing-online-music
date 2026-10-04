@@ -27,6 +27,7 @@
     <p>此页面测试浏览器与当前 Web 项目的基础能力，不依赖远端音乐服务。</p>
     <div id="summary">正在检测……</div>
     <button id="copy-btn" type="button">复制完整检测报告</button>
+    <button id="copy-short-btn" type="button">复制精简报告</button>
     <div id="copy-status"></div>
   </div>
 
@@ -535,9 +536,10 @@
       byId('report').value = buildReport();
     }
 
-    function copyReport() {
+    function copyText(textValue, successText) {
       var area = byId('report');
       var status = byId('copy-status');
+      area.value = textValue;
       area.focus();
       area.select();
       area.selectionStart = 0;
@@ -551,7 +553,7 @@
       }
 
       if (ok) {
-        status.innerHTML = '已复制完整报告，请直接粘贴回来。';
+        status.innerHTML = successText;
         status.className = 'pass';
       } else {
         status.innerHTML = '自动复制失败，请长按下面“完整报告”文本框，选择全选→复制。';
@@ -559,7 +561,41 @@
       }
     }
 
+    function copyReport() {
+      copyText(buildReport(), '已复制完整报告，请直接粘贴回来。');
+      updateReport();
+    }
+
+    function buildShortReport() {
+      var totals = getTotals();
+      var lines = [];
+      lines.push('Only-testing-online-music Android 4.4 / Via 精简报告');
+      lines.push('汇总：PASS ' + totals.passes + ' / WARN ' + totals.warns + ' / FAIL ' + totals.fails);
+      lines.push('User Agent: ' + navigator.userAgent);
+      lines.push('屏幕：' + window.screen.width + ' x ' + window.screen.height);
+      lines.push('窗口：' + window.innerWidth + ' x ' + window.innerHeight);
+      lines.push('MP3: ' + (mp3 || '—'));
+      lines.push('M4A: ' + (m4a || '—'));
+      lines.push('实际 Audio：' + playbackResult.state + ' | ' + playbackResult.detail);
+      lines.push('GitHub raw 直连：' + networkResults.direct.state + ' | ' + networkResults.direct.detail);
+      lines.push('项目代理：' + networkResults.proxy.state + ' | ' + networkResults.proxy.detail);
+      if (resourceResults.length) {
+        for (var i = 0; i < resourceResults.length; i += 1) {
+          lines.push('资源 ' + resourceResults[i].path + '：' + resourceResults[i].state + ' / ' + resourceResults[i].status);
+        }
+      } else {
+        lines.push('项目资源：尚未完成');
+      }
+      lines.push('页面：' + location.href);
+      return lines.join('\n');
+    }
+
+    function copyShortReport() {
+      copyText(buildShortReport(), '已复制精简报告，请直接粘贴回来。');
+    }
+
     byId('copy-btn').onclick = copyReport;
+    byId('copy-short-btn').onclick = copyShortReport;
     byId('network-test-btn').onclick = testNetwork;
     byId('audio-test-btn').onclick = testActualPlayback;
 
