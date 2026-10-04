@@ -372,7 +372,7 @@
 
   function searchViaPlatform(source, keyword, page, limit, callback) {
     if (source === 'kg') return searchKugou(keyword, page, limit, callback);
-    return searchViaPlatform(source, keyword, page, limit, callback);
+    return searchViaGdStudio(source, keyword, page, limit, callback);
   }
 
   function search(source, keyword, page, limit, callback) {
@@ -413,7 +413,7 @@
       });
     }
 
-    return searchViaGdStudio(source, keyword, page, limit, callback);
+    return searchViaPlatform(source, keyword, page, limit, callback);
   }
 
   global.LXMusicSearch = {
