@@ -37,7 +37,9 @@ jobs:
         run: npm install
 
       - name: Validate browser test script
-        run: node --check scripts/test-sixyin-browser.mjs
+        run: |
+          node --check scripts/test-sixyin-browser.mjs
+          node --check scripts/test-quality-fallback-browser.mjs
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
@@ -62,6 +64,14 @@ jobs:
           SIXYIN_INIT_TIMEOUT_MS: 30000
           PLAYBACK_CANDIDATES: 3
         run: node scripts/test-sixyin-browser.mjs
+
+      - name: Test automatic quality fallback
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+          INIT_TIMEOUT_MS: 30000
+          SEARCH_TIMEOUT_MS: 60000
+          PLAYBACK_TIMEOUT_MS: 12000
+        run: node scripts/test-quality-fallback-browser.mjs
 
       - name: Show local server log on failure
         if: failure()
