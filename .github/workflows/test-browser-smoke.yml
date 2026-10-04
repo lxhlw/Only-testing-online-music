@@ -10,6 +10,7 @@ on:
       - "functions/**"
       - "vendor/**"
       - "scripts/test-sixyin-browser.mjs"
+      - "scripts/test-quality-fallback-browser.mjs"
       - "package.json"
       - ".github/workflows/test-browser-smoke.yml"
   workflow_dispatch:
