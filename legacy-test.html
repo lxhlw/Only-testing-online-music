@@ -754,10 +754,10 @@
           esc(item.result.detail) + '</div>';
       }
       byId('network-tests').innerHTML =
-        '<button id="network-test-btn" type="button">重新测试 HTTPS 与项目代理</button>' + html;
+        '<button id="network-test-btn" type="button"' + (fullTestRunning ? ' disabled' : '') + '>重新测试 HTTPS 与项目代理</button>' + html;
       byId('network-test-btn').onclick = function () {
-      testNetwork();
-    };
+        testNetwork();
+      };
     }
 
     function runNetworkTest(url, onResult) {
