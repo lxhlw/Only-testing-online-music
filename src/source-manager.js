@@ -63,12 +63,20 @@
         } else {
           var pageOrigin = global.location.protocol + '//' + global.location.host;
           var absoluteTarget = target;
-          if (/^\\/\\//.test(absoluteTarget)) {
+          if (absoluteTarget.indexOf('//') === 0) {
             absoluteTarget = global.location.protocol + absoluteTarget;
           }
-          var originMatch = absoluteTarget.match(/^(https?:\\/\\/[^\\/]+)/i);
-          if (originMatch && originMatch[1].toLowerCase() !== pageOrigin.toLowerCase()) {
-            requestUrl = pageOrigin + '/api/proxy?url=' + encodeURIComponent(absoluteTarget);
+          var originMatch = null;
+          if (absoluteTarget.indexOf('http://') === 0 || absoluteTarget.indexOf('https://') === 0) {
+            var authority = absoluteTarget.split('/')[2] || '';
+            originMatch = authority ? authority : null;
+          }
+          if (originMatch && (absoluteTarget.indexOf('http://') === 0 || absoluteTarget.indexOf('https://') === 0)) {
+            var targetProtocol = absoluteTarget.split('/')[0];
+            var targetOrigin = targetProtocol + '//' + originMatch;
+            if (targetOrigin.toLowerCase() !== pageOrigin.toLowerCase()) {
+              requestUrl = pageOrigin + '/api/proxy?url=' + encodeURIComponent(absoluteTarget);
+            }
           }
         }
       } catch (e) {}
