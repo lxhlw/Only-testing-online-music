@@ -157,9 +157,19 @@
     };
   }
 
+  function detectLXEnv() {
+    var ua = '';
+    try {
+      ua = String(global.navigator && global.navigator.userAgent || '');
+    } catch (e) {}
+    return /android|iphone|ipad|ipod|mobile|windows phone/i.test(ua)
+      ? 'mobile'
+      : 'desktop';
+  }
+
   function executeSource(item, callback) {
     var runtime = global.createLXRuntime({
-      env:'web',
+      env:detectLXEnv(),
       onInited:function(data){
         item.inited=true;
         item.sources=data && data.sources ? data.sources : null;
