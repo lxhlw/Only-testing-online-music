@@ -71,6 +71,17 @@
         <div id="search-results" class="source-list" aria-live="polite"></div>
       </section>
 
+
+      <section class="card lyrics-card">
+        <div class="card-title-row">
+          <h2>歌词</h2>
+          <button id="lyrics-refresh-btn" type="button" class="secondary compact-button">刷新歌词</button>
+        </div>
+        <div id="lyrics-title" class="lyrics-title">未选择歌曲</div>
+        <div id="lyrics-status" class="lyrics-status">播放支持歌词的 LX 音源后会自动尝试加载歌词。</div>
+        <div id="lyrics-lines" class="lyrics-lines"></div>
+      </section>
+
       <section class="card library-card">
         <div class="card-title-row">
           <h2>播放库</h2>
@@ -150,6 +161,7 @@
   <script src="src/lx-runtime.js"></script>
   <script src="src/source-manager.js"></script>
   <script src="src/music-library.js"></script>
+  <script src="src/music-lyrics.js"></script>
   <script src="src/app.js"></script>
 </body>
 </html>
