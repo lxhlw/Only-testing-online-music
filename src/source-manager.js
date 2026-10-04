@@ -218,21 +218,83 @@
   }
 
   function installFromUrl(url,callback) {
-    var xhr=new XMLHttpRequest(),done=false;
-    function finish(err,code) {
-      if (done) return; done=true;
+    var originalUrl = String(url || '');
+    var finished = false;
+    var activeXhr = null;
+    var timer = null;
+    var TIMEOUT_MS = 12000;
+    var proxyUrl;
+
+    try {
+      var page = new URL(global.location.href);
+      proxyUrl = page.protocol + '//' + page.host + '/api/proxy?url=' + encodeURIComponent(originalUrl);
+    } catch (e) {
+      proxyUrl = '/api/proxy?url=' + encodeURIComponent(originalUrl);
+    }
+
+    function cleanup() {
+      if (timer) {
+        global.clearTimeout(timer);
+        timer = null;
+      }
+      activeXhr = null;
+    }
+
+    function finish(err, code) {
+      if (finished) return;
+      finished = true;
+      cleanup();
       if (err) return callback(err);
       if (!code || !String(code).replace(/\s+/g,'')) return callback(new Error('LX source code is empty'));
-      installFromCode(String(code),url,callback);
+      installFromCode(String(code), originalUrl, callback);
     }
-    xhr.onreadystatechange=function(){
-      if(xhr.readyState!==4)return;
-      if((xhr.status>=200&&xhr.status<300)||xhr.status===0)finish(null,xhr.responseText);
-      else finish(new Error('HTTP '+xhr.status));
-    };
-    xhr.onerror=function(){finish(new Error('Network request failed'));};
-    xhr.open('GET',url,true); xhr.send(null);
-    return function(){try{xhr.abort();}catch(e){}};
+
+    function request(requestUrl, allowProxyFallback) {
+      activeXhr = new XMLHttpRequest();
+
+      function succeed(code) {
+        finish(null, code);
+      }
+
+      function fail(message) {
+        if (allowProxyFallback) {
+          request(proxyUrl, false);
+          return;
+        }
+        finish(new Error(message));
+      }
+
+      activeXhr.onreadystatechange = function(){
+        if(activeXhr.readyState!==4)return;
+        if(activeXhr.status>=200&&activeXhr.status<300) {
+          succeed(activeXhr.responseText);
+        } else if (activeXhr.status === 0) {
+          fail('Network request failed (HTTP status 0)');
+        } else {
+          fail('HTTP '+activeXhr.status);
+        }
+      };
+      activeXhr.onerror=function(){fail('Network request failed');};
+      activeXhr.ontimeout=function(){fail('Request timeout after '+TIMEOUT_MS+' ms');};
+
+      timer = global.setTimeout(function () {
+        if (!finished && activeXhr) {
+          try { activeXhr.abort(); } catch (e) {}
+          fail('Request timeout after '+TIMEOUT_MS+' ms');
+        }
+      }, TIMEOUT_MS);
+
+      try {
+        activeXhr.open('GET',requestUrl,true);
+        if (activeXhr.timeout !== undefined) activeXhr.timeout = TIMEOUT_MS;
+        activeXhr.send(null);
+      } catch (e) {
+        fail(e && e.message ? e.message : String(e));
+      }
+    }
+
+    request(originalUrl, true);
+    return function(){try{finished=true;cleanup();if(activeXhr)activeXhr.abort();}catch(e){}};
   }
 
   function rehydrate(item) {
