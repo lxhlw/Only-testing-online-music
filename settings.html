@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>播放设置 - Only Testing Online Music</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="topbar-row">
+        <div>
+          <div class="brand">LX Music Web</div>
+          <div class="subtitle">播放设置</div>
+        </div>
+        <a class="topbar-link" href="./index.html">返回播放器</a>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="card">
+        <h1>播放设置</h1>
+        <p class="muted">音质设置独立保存到当前设备。默认优先当前音源支持的最高音质。</p>
+      </section>
+
+      <section class="card">
+        <h2>音质</h2>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">优先播放的音质</div>
+            <div class="setting-help">按照当前 LX 音源实际支持的音质决定最终请求的质量。</div>
+          </div>
+          <select id="quality-mode">
+            <option value="highest">最高音质</option>
+            <option value="fixed">指定音质</option>
+          </select>
+        </div>
+
+        <div id="fixed-quality-row" class="setting-row">
+          <div>
+            <div class="setting-label">指定音质</div>
+            <div class="setting-help">仅在“指定音质”模式下使用；若该音质不可用，将自动使用可用的最高音质。</div>
+          </div>
+          <select id="fixed-quality">
+            <option value="128k">128k</option>
+            <option value="192k">192k</option>
+            <option value="256k">256k</option>
+            <option value="320k">320k</option>
+            <option value="flac">FLAC</option>
+            <option value="24bit">24bit</option>
+            <option value="flac24bit">FLAC 24bit</option>
+            <option value="flac32bit">FLAC 32bit</option>
+          </select>
+        </div>
+
+        <div class="setting-row setting-row-checkbox">
+          <div>
+            <div class="setting-label">播放失败时自动切换较低音质</div>
+            <div class="setting-help">仅在 musicUrl 解析失败或音频加载失败时降级，不会因为浏览器自动播放权限而降级。</div>
+          </div>
+          <input id="auto-fallback" type="checkbox">
+        </div>
+
+        <div id="setting-status" class="status">正在读取设置……</div>
+
+        <div class="actions">
+          <button id="save-btn" type="button">保存设置</button>
+          <button id="reset-btn" type="button" class="secondary">恢复默认</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>当前默认逻辑</h2>
+        <div class="info-box">
+          <div>① 优先选择当前音源支持的最高音质</div>
+          <div>② 获取播放地址失败 → 尝试下一档较低音质</div>
+          <div>③ 播放器加载失败 → 尝试下一档较低音质</div>
+          <div>④ 当前音源只支持单一音质 → 直接使用该音质</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="src/play-settings.js"></script>
+  <script>
+  (function (global) {
+    'use strict';
+
+    var modeEl = document.getElementById('quality-mode');
+    var fixedEl = document.getElementById('fixed-quality');
+    var fallbackEl = document.getElementById('auto-fallback');
+    var statusEl = document.getElementById('setting-status');
+    var rowEl = document.getElementById('fixed-quality-row');
+
+    function render() {
+      rowEl.style.display = modeEl.value === 'fixed' ? 'flex' : 'none';
+    }
+
+    function setStatus(text, type) {
+      statusEl.className = 'status' + (type ? ' ' + type : '');
+      statusEl.innerHTML = text;
+    }
+
+    function loadForm() {
+      var settings = global.LXPlaySettings.load();
+      modeEl.value = settings.qualityMode;
+      fixedEl.value = settings.fixedQuality;
+      fallbackEl.checked = settings.autoFallback;
+      render();
+      setStatus('当前：' + global.LXPlaySettings.getLabel(settings), 'ready');
+    }
+
+    modeEl.onchange = render;
+
+    document.getElementById('save-btn').onclick = function () {
+      var settings = global.LXPlaySettings.save({
+        qualityMode: modeEl.value,
+        fixedQuality: fixedEl.value,
+        autoFallback: fallbackEl.checked
+      });
+      loadForm();
+      setStatus('已保存：' + global.LXPlaySettings.getLabel(settings), 'ready');
+    };
+
+    document.getElementById('reset-btn').onclick = function () {
+      var settings = global.LXPlaySettings.save(global.LXPlaySettings.defaults());
+      modeEl.value = settings.qualityMode;
+      fixedEl.value = settings.fixedQuality;
+      fallbackEl.checked = settings.autoFallback;
+      render();
+      setStatus('已恢复默认：' + global.LXPlaySettings.getLabel(settings), 'ready');
+    };
+
+    loadForm();
+  })(window);
+  </script>
+</body>
+</html>
