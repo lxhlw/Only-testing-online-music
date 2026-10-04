@@ -270,6 +270,18 @@
     addCheck('atob', atobOk ? 'PASS' : 'FAIL',
       atobOk ? 'Base64 解码测试通过' : 'atob 不可正常使用');
 
+    var charCodeOk = safeTest(function () {
+      if (typeof String.fromCharCode !== 'function' ||
+          typeof String.prototype.charCodeAt !== 'function') return false;
+      var textValue = String.fromCharCode(76, 88, 45, 67, 68);
+      return textValue === 'LX-CD' &&
+        textValue.charCodeAt(0) === 76 &&
+        textValue.charCodeAt(1) === 88 &&
+        textValue.charCodeAt(4) === 68;
+    });
+    addCheck('字符串字节转换', charCodeOk ? 'PASS' : 'FAIL',
+      charCodeOk ? 'fromCharCode / charCodeAt 实际测试通过' : '字符串字节转换行为异常');
+
     var uriEncodingOk = safeTest(function () {
       if (typeof window.encodeURIComponent !== 'function' ||
           typeof window.decodeURIComponent !== 'function') return false;
