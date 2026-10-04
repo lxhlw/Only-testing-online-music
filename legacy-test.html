@@ -291,6 +291,21 @@
     addCheck('Array slice/splice', arrayMethodOk ? 'PASS' : 'FAIL',
       arrayMethodOk ? 'slice / splice 实际操作测试通过' : '数组方法行为异常');
 
+    var stringCoreOk = safeTest(function () {
+      var value = 'LX-MUSIC-成都';
+      var replaced = value.replace('MUSIC', 'TEST');
+      var parts = replaced.split('-');
+      return replaced === 'LX-TEST-成都' &&
+        parts.length === 3 &&
+        parts[1] === 'TEST' &&
+        value.indexOf('MUSIC') === 3 &&
+        'HeLLo'.toLowerCase() === 'hello' &&
+        'hello'.toUpperCase() === 'HELLO' &&
+        'abcdef'.substr(2, 2) === 'cd';
+    });
+    addCheck('String 核心方法', stringCoreOk ? 'PASS' : 'FAIL',
+      stringCoreOk ? 'replace / split / indexOf / case / substr 测试通过' : '字符串核心方法行为异常');
+
     var urlOk = safeTest(function () {
       var testUrl = new window.URL('https://example.com/test?a=1');
       return testUrl.hostname === 'example.com' && testUrl.pathname === '/test' && testUrl.search === '?a=1';
