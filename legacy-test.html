@@ -218,6 +218,14 @@
     addCheck('DOM Event 创建/派发', eventFactoryOk ? 'PASS' : 'WARN',
       eventFactoryOk ? 'createEvent / initEvent / dispatchEvent 测试通过' : '旧浏览器事件创建或派发能力不可用');
 
+    var touchOk = safeTest(function () {
+      var hasTouchProperty = 'ontouchstart' in window || 'ontouchstart' in document.documentElement;
+      var touchPoints = Number(window.navigator.maxTouchPoints || window.navigator.msMaxTouchPoints || 0);
+      return hasTouchProperty || touchPoints > 0;
+    });
+    addCheck('触摸输入能力', touchOk ? 'PASS' : 'WARN',
+      touchOk ? '检测到触摸事件或触摸点能力' : '未检测到 Touch API（桌面浏览器可能属于正常情况）');
+
     var jsonOk = safeTest(function () {
       if (!window.JSON ||
           typeof window.JSON.parse !== 'function' ||
