@@ -19,21 +19,28 @@
     button,a{display:inline-block;padding:9px 12px;margin:4px 6px 4px 0;border:1px solid #bbb;border-radius:6px;background:#eee;color:#111;text-decoration:none}
     button{font:inherit}
     textarea{width:100%;min-height:180px;box-sizing:border-box;border:1px solid #bbb;border-radius:6px;padding:8px;font:13px monospace;background:#fafafa;color:#222}
-    pre{white-space:pre-wrap;word-break:break-word;background:#f7f7f7;padding:8px;border-radius:4px;font-size:13px}
   </style>
 </head>
 <body>
   <div class="card">
     <h1>Android 4.4 / Via 浏览器自检</h1>
-    <p>此页面只测试浏览器与当前 Web 项目的基础能力，不测试远端音乐服务。</p>
+    <p>此页面测试浏览器与当前 Web 项目的基础能力，不依赖远端音乐服务。</p>
     <div id="summary">正在检测……</div>
     <button id="copy-btn" type="button">复制完整检测报告</button>
-    <div id="copy-status" class="muted"></div>
+    <div id="copy-status"></div>
   </div>
 
   <div class="card">
     <h2>基础能力</h2>
     <div id="checks"></div>
+  </div>
+
+  <div class="card">
+    <h2>实际音频播放</h2>
+    <p>点击下面按钮。页面会在本机内存中生成一段很短的 WAV 测试音，不访问第三方音频服务器。</p>
+    <button id="audio-test-btn" type="button">测试实际 Audio 播放</button>
+    <div id="audio-test-status" class="warn">尚未测试</div>
+    <audio id="test-audio" controls preload="none"></audio>
   </div>
 
   <div class="card">
@@ -63,6 +70,11 @@
     var warns = 0;
     var resourceResults = [];
     var RESOURCE_TIMEOUT_MS = 10000;
+    var playbackResult = {
+      state: 'NOT_TESTED',
+      detail: '尚未进行实际 Audio 播放测试',
+      currentTime: 0
+    };
 
     function byId(id) { return document.getElementById(id); }
 
@@ -234,6 +246,117 @@
       }
     }
 
+    function writeAscii(view, offset, text) {
+      var i;
+      for (i = 0; i < text.length; i += 1) view.setUint8(offset + i, text.charCodeAt(i) & 255);
+    }
+
+    function makeWavDataUri() {
+      var sampleRate = 8000;
+      var seconds = 0.4;
+      var sampleCount = Math.floor(sampleRate * seconds);
+      var bytesPerSample = 2;
+      var buffer = new ArrayBuffer(44 + sampleCount * bytesPerSample);
+      var view = new DataView(buffer);
+      var i;
+      var sample;
+      var amplitude = 5000;
+
+      writeAscii(view, 0, 'RIFF');
+      view.setUint32(4, 36 + sampleCount * bytesPerSample, true);
+      writeAscii(view, 8, 'WAVE');
+      writeAscii(view, 12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * bytesPerSample, true);
+      view.setUint16(32, bytesPerSample, true);
+      view.setUint16(34, 16, true);
+      writeAscii(view, 36, 'data');
+      view.setUint32(40, sampleCount * bytesPerSample, true);
+
+      for (i = 0; i < sampleCount; i += 1) {
+        sample = Math.round(amplitude * Math.sin(2 * Math.PI * 440 * i / sampleRate));
+        view.setInt16(44 + i * 2, sample, true);
+      }
+
+      var binary = '';
+      for (i = 0; i < buffer.byteLength; i += 1) {
+        binary += String.fromCharCode(new Uint8Array(buffer)[i]);
+      }
+
+      if (typeof window.btoa !== 'function') return null;
+      return 'data:audio/wav;base64,' + window.btoa(binary);
+    }
+
+    function setPlaybackStatus(state, detail) {
+      playbackResult.state = state;
+      playbackResult.detail = detail;
+      playbackResult.currentTime = 0;
+
+      var cls = state === 'PASS' ? 'pass' : (state === 'FAIL' ? 'fail' : 'warn');
+      byId('audio-test-status').className = cls;
+      byId('audio-test-status').innerHTML = esc(detail);
+      updateReport();
+    }
+
+    function testActualPlayback() {
+      var target = byId('test-audio');
+      var src = makeWavDataUri();
+      var finished = false;
+      var timer;
+
+      if (!target || typeof target.play !== 'function') {
+        setPlaybackStatus('FAIL', 'Audio.play 不存在，无法进行实际播放测试。');
+        return;
+      }
+
+      if (!src) {
+        setPlaybackStatus('FAIL', '浏览器缺少 btoa，无法生成本地测试音频。');
+        return;
+      }
+
+      function finish(state, detail) {
+        if (finished) return;
+        finished = true;
+        window.clearTimeout(timer);
+        playbackResult.currentTime = Number(target.currentTime || 0);
+        setPlaybackStatus(state, detail);
+      }
+
+      target.onplaying = function () {
+        if (Number(target.currentTime || 0) > 0.05 || target.readyState >= 3) {
+          finish('PASS', '实际 Audio 播放已开始，currentTime=' + Number(target.currentTime || 0).toFixed(3) + ' 秒。');
+        }
+      };
+      target.ontimeupdate = function () {
+        if (Number(target.currentTime || 0) > 0.05) {
+          finish('PASS', '实际 Audio 播放已开始，currentTime=' + Number(target.currentTime || 0).toFixed(3) + ' 秒。');
+        }
+      };
+      target.onerror = function () {
+        finish('FAIL', '实际 Audio 播放失败，浏览器报告 media error。');
+      };
+
+      timer = window.setTimeout(function () {
+        finish('FAIL', '点击测试后 5 秒内未观察到实际播放进度。');
+      }, 5000);
+
+      try {
+        target.src = src;
+        target.load();
+        var result = target.play();
+        if (result && typeof result.catch === 'function') {
+          result.catch(function () {
+            finish('WARN', '浏览器拒绝自动播放；请直接点击播放器的播放按钮再测试。');
+          });
+        }
+      } catch (e) {
+        finish('WARN', '浏览器未能自动播放；请直接点击播放器的播放按钮再测试。');
+      }
+    }
+
     function buildReport() {
       var lines = [];
       var i;
@@ -246,6 +369,10 @@
       for (i = 0; i < checks.length; i += 1) {
         lines.push(checks[i].state + ' | ' + checks[i].name + ' | ' + checks[i].detail);
       }
+      lines.push('');
+      lines.push('[实际音频播放]');
+      lines.push(playbackResult.state + ' | ' + playbackResult.detail);
+      lines.push('currentTime: ' + playbackResult.currentTime);
       lines.push('');
       lines.push('[设备信息]');
       lines.push('User Agent: ' + navigator.userAgent);
@@ -302,6 +429,7 @@
     }
 
     byId('copy-btn').onclick = copyReport;
+    byId('audio-test-btn').onclick = testActualPlayback;
 
     if (document.readyState === 'loading') {
       window.addEventListener('DOMContentLoaded', render, false);
