@@ -62,6 +62,7 @@
     var fails = 0;
     var warns = 0;
     var resourceResults = [];
+    var RESOURCE_TIMEOUT_MS = 10000;
 
     function byId(id) { return document.getElementById(id); }
 
@@ -194,24 +195,42 @@
 
     function testResource(path) {
       if (typeof window.XMLHttpRequest !== 'function') return;
+
       var xhr = new XMLHttpRequest();
-      xhr.open('GET', path, true);
-      xhr.onreadystatechange = function () {
-        if (xhr.readyState !== 4) return;
-        var state = xhr.status >= 200 && xhr.status < 300 ? 'PASS' : 'FAIL';
-        resourceResults.push({path:path,status:xhr.status,state:state});
+      var finished = false;
+      var timer = null;
+
+      function finish(state, status) {
+        if (finished) return;
+        finished = true;
+        if (timer) window.clearTimeout(timer);
+
+        resourceResults.push({path:path,status:status,state:state});
         var existing = byId('resources').innerHTML;
         byId('resources').innerHTML = existing +
           '<div class="row"><span class="label">' + esc(path) +
-          '</span><span class="' + (state === 'PASS' ? 'pass' : 'fail') + '">' +
-          state + '</span> HTTP ' + esc(xhr.status) + '</div>';
+          '</span><span class="' + (state === 'PASS' ? 'pass' : (state === 'WARN' ? 'warn' : 'fail')) + '">' +
+          state + '</span> ' + (status === 'TIMEOUT' ? '超时（' + RESOURCE_TIMEOUT_MS + 'ms）' : 'HTTP ' + esc(status)) + '</div>';
         updateReport();
+        try { xhr.abort(); } catch (e) {}
+      }
+
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4 || finished) return;
+        if (xhr.status >= 200 && xhr.status < 300) finish('PASS', xhr.status);
+        else finish('FAIL', xhr.status);
       };
+      xhr.onerror = function () { finish('FAIL', 'network-error'); };
+
+      timer = window.setTimeout(function () {
+        finish('WARN', 'TIMEOUT');
+      }, RESOURCE_TIMEOUT_MS);
+
       try {
+        xhr.open('GET', path, true);
         xhr.send(null);
       } catch (e) {
-        resourceResults.push({path:path,status:'send-error',state:'FAIL'});
-        updateReport();
+        finish('FAIL', 'send-error');
       }
     }
 
@@ -246,7 +265,7 @@
         lines.push('检测尚未完成');
       } else {
         for (i = 0; i < resourceResults.length; i += 1) {
-          lines.push(resourceResults[i].state + ' | ' + resourceResults[i].path + ' | HTTP ' + resourceResults[i].status);
+          lines.push(resourceResults[i].state + ' | ' + resourceResults[i].path + ' | ' + resourceResults[i].status);
         }
       }
       lines.push('');
