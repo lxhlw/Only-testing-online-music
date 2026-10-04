@@ -11,6 +11,7 @@ on:
       - "vendor/**"
       - "scripts/test-sixyin-browser.mjs"
       - "scripts/test-quality-fallback-browser.mjs"
+      - "scripts/test-flower-browser.mjs"
       - "package.json"
       - ".github/workflows/test-browser-smoke.yml"
   workflow_dispatch:
@@ -41,6 +42,7 @@ jobs:
         run: |
           node --check scripts/test-sixyin-browser.mjs
           node --check scripts/test-quality-fallback-browser.mjs
+          node --check scripts/test-flower-browser.mjs
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
@@ -65,6 +67,15 @@ jobs:
           SIXYIN_INIT_TIMEOUT_MS: 30000
           PLAYBACK_CANDIDATES: 3
         run: node scripts/test-sixyin-browser.mjs
+
+      - name: Test Flower KG search and playback
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+          LX_SOURCE_URL: https://ghproxy.net/raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js
+          INIT_TIMEOUT_MS: 30000
+          SEARCH_TIMEOUT_MS: 60000
+          PLAYBACK_TIMEOUT_MS: 15000
+        run: node scripts/test-flower-browser.mjs
 
       - name: Test automatic quality fallback
         env:
