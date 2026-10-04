@@ -4,8 +4,9 @@ import vm from 'node:vm'
 
 const source = fs.readFileSync(new URL('../src/music-search.js', import.meta.url), 'utf8')
 
-function createHarness(activeSources, requestHandler, xhrResponse) {
+function createHarness(activeSources, requestHandler, xhrResponses) {
   const calls = []
+  const responses = xhrResponses || {}
   function FakeXHR() {
     this.readyState = 0
     this.status = 0
@@ -21,12 +22,17 @@ function createHarness(activeSources, requestHandler, xhrResponse) {
   FakeXHR.prototype.setRequestHeader = function (key, value) {
     this.headers[key] = value
   }
-  FakeXHR.prototype.send = function () {
+  FakeXHR.prototype.send = function (body) {
     const self = this
+    self.body = body || null
+    calls.push({ xhrMethod: self.method, xhrUrl: self.url, xhrBody: self.body, xhrHeaders: self.headers })
     setTimeout(() => {
+      const response = self.url.indexOf('/time') >= 0
+        ? (responses.time || { status: 200, body: '1791139200' })
+        : (responses.search || { status: 200, body: '[]' })
       self.readyState = 4
-      self.status = xhrResponse.status
-      self.responseText = xhrResponse.body
+      self.status = response.status
+      self.responseText = response.body
       if (self.onreadystatechange) self.onreadystatechange()
     }, 0)
   }
@@ -34,9 +40,21 @@ function createHarness(activeSources, requestHandler, xhrResponse) {
   const sandbox = {
     window: null,
     console,
+    Date,
     setTimeout,
     clearTimeout,
     XMLHttpRequest: FakeXHR,
+    createLXRuntime() {
+      return {
+        utils: {
+          crypto: {
+            md5() {
+              return '0123456789abcdef0123456789abcdefdeadbeef'
+            }
+          }
+        }
+      }
+    },
     location: {
       protocol: 'http:',
       host: 'legacy.example',
@@ -70,7 +88,7 @@ function createHarness(activeSources, requestHandler, xhrResponse) {
         isEnd: true
       })
     },
-    { status: 500, body: 'should not be used' }
+    { time: { status: 500, body: 'should not be used' }, search: { status: 500, body: 'should not be used' } }
   )
 
   const result = await new Promise((resolve, reject) => {
@@ -94,8 +112,18 @@ function createHarness(activeSources, requestHandler, xhrResponse) {
       callback(new Error('native search unavailable'))
     },
     {
-      status: 200,
-      body: JSON.stringify([{ id: 'gd-1', name: '成都', artist: '赵雷' }])
+      time: { status: 200, body: '1791139200' },
+      search: {
+        status: 200,
+        body: JSON.stringify([
+          {
+            id: 'gd-1',
+            name: '成都',
+            artist: '赵雷',
+            source: 'tencent'
+          }
+        ])
+      }
     }
   )
 
@@ -108,10 +136,42 @@ function createHarness(activeSources, requestHandler, xhrResponse) {
 
   assert.equal(result.list[0].id, 'gd-1')
   assert.equal(result.list[0].singer, '赵雷')
-  assert.equal(result.fallbackFrom, 'native')
-  assert.equal(h.calls.length, 1)
-  assert.equal(h.calls[0].sourceName, 'tx')
-  assert.equal(h.calls[0].action, 'musicSearch')
+  assert.equal(result.list[0].source, 'tx')
+  assert.equal(result.searchProvider, 'tencent')
+  assert.equal(result.fallbackSearch, false)
+
+  const apiCall = h.calls.find(call => call.xhrUrl.includes('music-api.gdstudio.xyz/api.php'))
+  assert.ok(apiCall)
+  assert.equal(apiCall.xhrMethod, 'POST')
+  assert.match(apiCall.xhrBody, /(^|&)types=search(&|$)/)
+  assert.match(apiCall.xhrBody, /(^|&)source=tencent(&|$)/)
+  assert.match(apiCall.xhrBody, /(^|&)name=%E6%88%90%E9%83%BD(&|$)/)
+  assert.match(apiCall.xhrBody, /(^|&)count=20(&|$)/)
+  assert.match(apiCall.xhrBody, /(^|&)pages=1(&|$)/)
+  assert.match(apiCall.xhrBody, /(^|&)s=DEADBEEF(&|$)/)
+
+  const h2 = createHarness(
+    {
+      kg: { actions: ['musicUrl'] }
+    },
+    () => {},
+    {
+      time: { status: 200, body: '1791139200' },
+      search: {
+        status: 400,
+        body: 'wrong platform'
+      }
+    }
+  )
+
+  await new Promise(resolve => {
+    h2.sandbox.LXMusicSearch.search('kg', '周杰伦', 1, 20, () => resolve())
+  })
+
+  const failedCalls = h2.calls.filter(call => call.xhrUrl.includes('music-api.gdstudio.xyz/api.php'))
+  assert.equal(failedCalls.length, 1)
+  assert.match(failedCalls[0].xhrBody, /(^|&)source=kugou(&|$)/)
 }
+
 
 console.log('PASS: native LX search routing and GD fallback')
