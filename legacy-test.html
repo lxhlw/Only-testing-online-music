@@ -224,6 +224,7 @@
     var promiseAvailable = typeof window.Promise === 'function';
     addCheck('Promise', promiseAvailable ? 'PASS' : 'FAIL',
       promiseAvailable ? '构造函数可用，异步执行测试随后进行' : 'Promise 不存在');
+    addPendingCheck('Promise.all', '等待 Promise.all 异步测试');
 
     var arrayBufferOk = safeTest(function () {
       if (typeof window.ArrayBuffer !== 'function') return false;
@@ -328,6 +329,45 @@
       typeof window.XMLHttpRequest === 'function' ? 'PASS' : 'FAIL',
       '使用 XHR 检查');
 
+    function testPromiseAll() {
+      if (!promiseAvailable) return;
+
+      var allOk = true;
+      try {
+        if (typeof window.Promise.all !== 'function') {
+          allOk = false;
+        } else {
+          window.Promise.all([
+            window.Promise.resolve('A'),
+            window.Promise.resolve('B')
+          ]).then(function (values) {
+            var success = values && values.length === 2 && values[0] === 'A' && values[1] === 'B';
+            replaceCheck('Promise.all', success ? 'PASS' : 'FAIL',
+              success ? 'Promise.all 异步结果测试通过' : 'Promise.all 返回结果异常');
+            renderChecksOnly();
+            updateReport();
+          }, function () {
+            replaceCheck('Promise.all', 'FAIL', 'Promise.all reject');
+            renderChecksOnly();
+            updateReport();
+          });
+          return;
+        }
+      } catch (e) {
+        allOk = false;
+      }
+
+      replaceCheck('Promise.all', allOk ? 'PASS' : 'FAIL',
+        allOk ? 'Promise.all 接口可用' : 'Promise.all 不可用');
+      renderChecksOnly();
+      updateReport();
+    }
+
+    function addPendingCheck(name, detail) {
+      checks.push({name:name,state:'WARN',detail:detail});
+      warns += 1;
+    }
+
     function testPromiseAsync() {
       if (!promiseAvailable) return;
 
@@ -431,6 +471,7 @@
         '<div class="row"><span class="label">当前页面</span>' + esc(location.href) + '</div>';
 
       testPromiseAsync();
+      testPromiseAll();
       testResource('src/lx-runtime.js');
       testResource('src/source-manager.js');
       testResource('src/music-search.js');
