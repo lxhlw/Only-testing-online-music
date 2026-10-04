@@ -11,7 +11,6 @@ The project does **not** use WhyMusic and does not modify the L101 Volume Float 
 ### Core goals
 
 - Primary real-source search test keyword: **成都**
-
 - LX Music-style search, playlists, favorites, history, lyrics, player, and settings
 - Import **original LX Music source JavaScript files directly**
 - Do not convert an LX source into another plugin protocol
@@ -36,8 +35,42 @@ It currently provides:
 - `EVENT_NAMES`, `on()`, `send()`, and the callback-style `request()` entry point
 - Initial `buffer` and `crypto` compatibility primitives
 - Source initialization reporting
+- Same-origin network proxying for source requests
+- Real Chromium source compatibility testing with actual HTML5 audio playback
 
-The same-origin network proxy and browser cryptography foundation are now present. Full zlib compatibility, complete source actions, search UI, player controls, playlists, and production deployment will be implemented in later phases.
+The current browser test does more than check JavaScript initialization: it imports the original source, searches for **成都**, requests playback URLs for the first three results, probes the returned media endpoint, and requires actual HTML5 playback to advance for at least 0.5 seconds.
+
+## Real Chromium source test findings
+
+The following results were obtained from GitHub Actions using real Chromium rather than a Node-only VM:
+
+| Source/version | Initialization | Search 成都 | Playback result |
+|---|---|---|---|
+| huibq/latest.js | PASS | PASS | **PASS — actual HTML5 playback** |
+| huibq/1.2.0.js | PASS | PASS | **PASS — actual HTML5 playback** |
+| sixyin/1.2.0.js | PASS | PASS | Source reports version closed |
+| sixyin/1.2.1.js | PASS | PASS | Source reports version closed |
+| sixyin/latest.js | PASS | PASS | Source reports version closed |
+| lx/2.js, lx/3.js, lx/4.js, lx/5.js, lx/6.js | PASS | PASS | Playback API returns 502 upstream network errors |
+| lx/latest.js | PASS | PASS | Returned QQ endpoint is not playable from the runner |
+| flower/1.js, flower/latest.js | PASS | PASS | Playback endpoint returns 404 |
+| qdy/9.3.js, qdy/latest.js | PASS | PASS | Returned QQ playback path is unavailable / not playable |
+| huanyin/3.js, huanyin/latest.js | PASS | PASS | Playback host DNS resolution fails |
+| grass/1.js, grass/latest.js | PASS | PASS | Playback endpoint returns 404 |
+| ikun/6.js, ikun/22.js, ikun/latest.js | PASS | PASS | `api.ikunshare.com` returns 502 upstream errors |
+| juhe/3.js, juhe/latest.js | PASS | PASS | Returned QQ playback path returns 404 |
+| changqing/1.3.0.js, changqing/latest.js | PASS | PASS | `yinyue.haitangw.net` returns 522 origin timeout |
+
+### Interpretation
+
+The current evidence separates **LX runtime compatibility** from **upstream playback-service availability**:
+
+- **Runtime-compatible and actually playable:** Huibq latest and Huibq 1.2.0.
+- **Runtime-compatible but upstream service unavailable:** most other tested sources.
+- **Source explicitly disabled:** SixYin 1.2.0, 1.2.1, and latest.
+- No current failure above has required changing the core LX runtime because initialization and search work for the tested sources.
+
+This distinction is important for the project's older-device goal: a source that imports and searches correctly but whose remote playback service is dead should not be misclassified as an Android 4.4 compatibility failure.
 
 ## LX compatibility target
 
