@@ -51,6 +51,9 @@ jobs:
           node --check src/source-manager.js
           node --check src/source-transpiler.js
 
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
       - name: Run deterministic search and resolver tests
         run: node scripts/test-music-search-native.mjs
 
@@ -65,9 +68,6 @@ jobs:
 
       - name: Run lyrics test
         run: node scripts/test-music-lyrics.mjs
-
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
 
       - name: Start local Pages server
         run: |
