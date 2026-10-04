@@ -1,0 +1,23 @@
+name: Check Legacy Test Page
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "legacy-test.html"
+      - "scripts/check-legacy-test.mjs"
+  workflow_dispatch:
+
+jobs:
+  legacy-test:
+    name: Validate legacy-test.html
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check inline JavaScript syntax
+        run: node scripts/check-legacy-test.mjs
