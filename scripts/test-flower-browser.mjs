@@ -194,7 +194,13 @@ try {
         }
       })
       attempts.push({ index: i + 1, result: results[i], ...attempt })
-      if (attempt.currentTime >= 0.5 && attempt.readyState >= 2 && !attempt.error) break
+      if (
+        attempt.currentTime >= 0.8 &&
+        attempt.readyState >= 2 &&
+        !attempt.error &&
+        isPlausiblePlaybackDuration(attempt.duration, parseDuration(attempt.result.interval)) &&
+        /(?:正在播放|播放中)/.test(attempt.status)
+      ) break
     }
 
     const success = attempts.find(item =>
