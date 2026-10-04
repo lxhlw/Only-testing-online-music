@@ -9,14 +9,19 @@
 <body>
   <div id="app">
     <header class="topbar">
-      <div class="brand">LX Music Web</div>
-      <div class="subtitle">Legacy Web Player</div>
+      <div class="topbar-row">
+        <div>
+          <div class="brand">LX Music Web</div>
+          <div class="subtitle">Legacy Web Player</div>
+        </div>
+        <a class="topbar-link" href="./settings.html">设置</a>
+      </div>
     </header>
 
     <main class="page">
       <section class="card">
         <h1>在线音乐测试</h1>
-        <p class="muted">第一阶段：直接导入原版 LX Music 音源脚本。</p>
+        <p class="muted">导入原版 LX Music 音源脚本后，按照音源声明显示可用渠道，并使用对应平台 MusicInfo 调用 musicUrl。</p>
 
         <label for="source-url">LX 音源 URL</label>
         <input id="source-url" type="text" autocapitalize="off" autocomplete="off"
@@ -50,7 +55,11 @@
         </div>
         <div class="channel-section">
           <div class="channel-title">音质</div>
-          <div id="quality-list" class="channel-list"></div>
+          <div id="quality-summary" class="quality-summary"></div>
+          <div class="setting-inline">
+            <span id="quality-settings-label" class="muted">音质由“设置”统一管理。</span>
+            <a class="button-link compact-link" href="./settings.html">打开音质设置</a>
+          </div>
         </div>
         <div class="actions">
           <input id="search-input" type="text" value="成都"
@@ -101,6 +110,7 @@
 
   <script src="vendor/forge.min.js"></script>
   <script src="src/sha1.js"></script>
+  <script src="src/play-settings.js"></script>
   <script src="src/music-search.js"></script>
   <script src="src/lx-runtime.js"></script>
   <script src="src/source-manager.js"></script>
