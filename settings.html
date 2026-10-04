@@ -26,39 +26,27 @@
 
       <section class="card">
         <h2>音质</h2>
-
-        <div class="setting-row">
+        <div class="setting-row quality-choice-row">
           <div>
-            <div class="setting-label">优先播放的音质</div>
-            <div class="setting-help">按照当前 LX 音源实际支持的音质决定最终请求的质量。</div>
+            <div class="setting-label">优先播放的音质（如果可用）</div>
+            <div class="setting-help">与 LX Music 的播放音质逻辑保持一致：先尝试你指定的档位；选择“最高音质”时自动使用当前音源支持的最高档位。</div>
           </div>
-          <select id="quality-mode">
-            <option value="highest">最高音质</option>
-            <option value="fixed">指定音质</option>
-          </select>
-        </div>
-
-        <div id="fixed-quality-row" class="setting-row">
-          <div>
-            <div class="setting-label">指定音质</div>
-            <div class="setting-help">仅在“指定音质”模式下使用；若该音质不可用，将自动使用可用的最高音质。</div>
+          <div id="quality-choice" class="quality-choice-group" role="radiogroup" aria-label="优先播放的音质">
+            <label class="quality-option"><input type="radio" name="play-quality" value="highest"><span>最高音质</span></label>
+            <label class="quality-option"><input type="radio" name="play-quality" value="128k"><span>128k</span></label>
+            <label class="quality-option"><input type="radio" name="play-quality" value="192k"><span>192k</span></label>
+            <label class="quality-option"><input type="radio" name="play-quality" value="256k"><span>256k</span></label>
+            <label class="quality-option"><input type="radio" name="play-quality" value="320k"><span>320k</span></label>
+            <label class="quality-option"><input type="radio" name="play-quality" value="flac"><span>FLAC</span></label>
+            <label class="quality-option"><input type="radio" name="play-quality" value="flac24bit"><span>FLAC 24bit</span></label>
+            <label class="quality-option"><input type="radio" name="play-quality" value="flac32bit"><span>FLAC 32bit</span></label>
           </div>
-          <select id="fixed-quality">
-            <option value="128k">128k</option>
-            <option value="192k">192k</option>
-            <option value="256k">256k</option>
-            <option value="320k">320k</option>
-            <option value="flac">FLAC</option>
-            <option value="24bit">24bit</option>
-            <option value="flac24bit">FLAC 24bit</option>
-            <option value="flac32bit">FLAC 32bit</option>
-          </select>
         </div>
 
         <div class="setting-row setting-row-checkbox">
           <div>
             <div class="setting-label">播放失败时自动切换较低音质</div>
-            <div class="setting-help">仅在 musicUrl 解析失败或音频加载失败时降级，不会因为浏览器自动播放权限而降级。</div>
+            <div class="setting-help">音源返回失败、播放地址无效或 HTML5 Audio 加载失败时，按高→低顺序继续尝试；仅自动播放权限被拒绝时不会降级。</div>
           </div>
           <input id="auto-fallback" type="checkbox">
         </div>
@@ -88,14 +76,29 @@
   (function (global) {
     'use strict';
 
-    var modeEl = document.getElementById('quality-mode');
-    var fixedEl = document.getElementById('fixed-quality');
+    var qualityRadios = document.querySelectorAll('input[name="play-quality"]');
     var fallbackEl = document.getElementById('auto-fallback');
     var statusEl = document.getElementById('setting-status');
-    var rowEl = document.getElementById('fixed-quality-row');
 
-    function render() {
-      rowEl.style.display = modeEl.value === 'fixed' ? 'flex' : 'none';
+    function getSelectedQuality() {
+      for (var i = 0; i < qualityRadios.length; i += 1) {
+        if (qualityRadios[i].checked) return qualityRadios[i].value;
+      }
+      return 'highest';
+    }
+
+    function setSelectedQuality(value) {
+      var target = value || 'highest';
+      var matched = false;
+      for (var i = 0; i < qualityRadios.length; i += 1) {
+        qualityRadios[i].checked = qualityRadios[i].value === target;
+        if (qualityRadios[i].checked) matched = true;
+      }
+      if (!matched) {
+        for (var j = 0; j < qualityRadios.length; j += 1) {
+          qualityRadios[j].checked = qualityRadios[j].value === 'highest';
+        }
+      }
     }
 
     function setStatus(text, type) {
@@ -105,19 +108,16 @@
 
     function loadForm() {
       var settings = global.LXPlaySettings.load();
-      modeEl.value = settings.qualityMode;
-      fixedEl.value = settings.fixedQuality;
+      setSelectedQuality(settings.qualityMode === 'fixed' ? settings.fixedQuality : 'highest');
       fallbackEl.checked = settings.autoFallback;
-      render();
       setStatus('当前：' + global.LXPlaySettings.getLabel(settings), 'ready');
     }
 
-    modeEl.onchange = render;
-
     document.getElementById('save-btn').onclick = function () {
+      var selected = getSelectedQuality();
       var settings = global.LXPlaySettings.save({
-        qualityMode: modeEl.value,
-        fixedQuality: fixedEl.value,
+        qualityMode: selected === 'highest' ? 'highest' : 'fixed',
+        fixedQuality: selected === 'highest' ? '320k' : selected,
         autoFallback: fallbackEl.checked
       });
       loadForm();
@@ -126,10 +126,8 @@
 
     document.getElementById('reset-btn').onclick = function () {
       var settings = global.LXPlaySettings.save(global.LXPlaySettings.defaults());
-      modeEl.value = settings.qualityMode;
-      fixedEl.value = settings.fixedQuality;
+      setSelectedQuality(settings.qualityMode === 'fixed' ? settings.fixedQuality : 'highest');
       fallbackEl.checked = settings.autoFallback;
-      render();
       setStatus('已恢复默认：' + global.LXPlaySettings.getLabel(settings), 'ready');
     };
 
