@@ -133,6 +133,24 @@ try {
       JSON.stringify(settings),
     )
 
+    const nativeDuration = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'duration')
+    if (!nativeDuration || typeof nativeDuration.get !== 'function') {
+      throw new Error('HTMLMediaElement.duration getter is unavailable for the false-success regression')
+    }
+    Object.defineProperty(HTMLMediaElement.prototype, 'duration', {
+      configurable: true,
+      get() {
+        const actual = nativeDuration.get.call(this)
+        if (this && this.id === 'audio' && String(this.src || '').includes('quality-error.invalid')) {
+          return 300
+        }
+        return actual
+      },
+      set(value) {
+        if (nativeDuration.set) nativeDuration.set.call(this, value)
+      },
+    })
+
     const manager = window.LXSourceManager
     window.LXMusicSearch.resolveMusicUrl = function (source, musicInfo, quality, callback) {
       callback(new Error('resolver intentionally disabled by quality-isolation test'))
@@ -193,7 +211,16 @@ try {
   await page.waitForFunction(
     () => {
       const audio = document.getElementById('audio')
-      return Boolean(audio && audio.currentTime >= 0.5 && !audio.error)
+      const calls = window.__qualityFallbackCalls || []
+      return Boolean(
+        audio &&
+        !audio.error &&
+        calls.length >= 2 &&
+        (
+          audio.currentTime >= 0.5 ||
+          audio.readyState >= 2
+        )
+      )
     },
     null,
     { timeout: PLAYBACK_TIMEOUT_MS },
@@ -218,6 +245,7 @@ try {
 
   assert.deepEqual(result.calls.slice(0, 2), ['320k', '128k'])
   assert.ok(result.status.includes('128k'), 'Final status did not report 128k playback')
+  assert.ok(result.currentTime >= 0.5, 'Fallback audio did not advance playback after the false-success candidate ended')
   assert.ok(result.readyState >= 2, 'Fallback audio did not reach a playable readyState')
   assert.ok(result.currentTime >= 0.5, 'Fallback audio did not actually advance playback')
   assert.equal(result.error, null, 'Fallback audio reported a media error')

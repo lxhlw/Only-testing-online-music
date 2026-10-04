@@ -494,6 +494,17 @@
     return actual < Math.max(8, expected * 0.30);
   }
 
+  function isSuspiciousPlaybackEnd(currentSeconds, expectedSeconds) {
+    var current = Number(currentSeconds);
+    var expected = Number(expectedSeconds);
+    if (!isFinite(current) || current <= 0) return true;
+    if (!isFinite(expected) || expected <= 0) return current < 12;
+    if (expected >= 120) return current < Math.max(30, expected * 0.45);
+    if (expected >= 60) return current < Math.max(20, expected * 0.45);
+    if (expected >= 30) return current < Math.max(15, expected * 0.40);
+    return current < Math.max(8, expected * 0.30);
+  }
+
   function useResolvedUrl(
     url,
     quality,
@@ -537,9 +548,24 @@
     };
     audio.onended = function () {
       if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
+
+      var duration = Number(audio.duration || 0);
+      var currentTime = Number(audio.currentTime || 0);
       if (playbackState.playing &&
-          isSuspiciousPlaybackDuration(Number(audio.duration || 0), playbackState.expectedDuration)) {
+          (isSuspiciousPlaybackDuration(duration, playbackState.expectedDuration) ||
+           isSuspiciousPlaybackEnd(currentTime, playbackState.expectedDuration))) {
+        setStatus(
+          '播放在 ' + Math.round(currentTime) + ' 秒提前结束，疑似为错误/短音频，正在自动更换解析器……',
+          'warn'
+        );
         handleAudioError(token, playableUrl);
+        return;
+      }
+
+      if (playbackState.playing) {
+        playbackState.playing = false;
+        playbackState.waitingForAudio = false;
+        playNextQueued();
       }
     };
     audio.preload = 'auto';
@@ -756,10 +782,12 @@
   function handleAudioError(expectedToken, expectedUrl) {
     var state = playbackState;
     var settings = getPlaySettings();
-    if (!state || !state.waitingForAudio || state.token !== playbackToken) return;
+    if (!state || state.token !== playbackToken) return;
+    if (!state.waitingForAudio && !state.playing) return;
     if (expectedToken != null && expectedToken !== state.token) return;
     if (expectedUrl && state.url !== expectedUrl) return;
     state.waitingForAudio = false;
+    state.playing = false;
 
     if (settings.autoFallback && state.resolverProvider &&
         state.resolverProvider !== 'lx-source' &&
