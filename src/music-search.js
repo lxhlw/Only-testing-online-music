@@ -37,9 +37,7 @@
     xhr.ontimeout = function () { finish(new Error('Search request timeout')); };
 
     try {
-      xhr.open('GET', requestUrl, true);
-      if (xhr.timeout !== undefined) xhr.timeout = 15000;
-      xhr.send(null);
+      xhr.open('GET', requestUrl, true);\n      xhr.setRequestHeader('X-LX-Headers', JSON.stringify({\n        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/154.0.0.0 Safari/537.36',\n        'Accept': 'application/json, text/javascript, */*; q=0.01',\n        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',\n        'Origin': global.location.origin,\n        'Referer': global.location.origin + '/',\n        'X-Requested-With': 'XMLHttpRequest'\n      }));\n      if (xhr.timeout !== undefined) xhr.timeout = 15000;\n      xhr.send(null);
     } catch (e) {
       finish(e);
     }
