@@ -67,6 +67,8 @@
       box.appendChild(buttons);
       listEl.appendChild(box);
     }
+
+    renderChannelSelectors();
   }
 
   function sourceNames(sources) {
