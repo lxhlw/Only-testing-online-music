@@ -46,7 +46,7 @@ function decodeChunkedBody(text) {
 }
 
 async function fetchFlowerResolverViaSocket(target, request) {
-  var hosts = ['ts.tempmusics.tk', 'tm.tempmusics.tk'];
+  var hosts = ['97.64.37.235', 'ts.tempmusics.tk', 'tm.tempmusics.tk'];
   var encoder = new TextEncoder();
   var decoder = new TextDecoder();
   var lastError = null;
