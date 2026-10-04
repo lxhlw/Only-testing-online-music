@@ -378,6 +378,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 }
 
 
+{
   const cases = [
     {
       source: 'tx',
