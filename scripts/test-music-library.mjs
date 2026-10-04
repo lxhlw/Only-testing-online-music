@@ -58,7 +58,7 @@ assert.equal(library.addQueue(song1), true)
 assert.equal(library.snapshot().queue.length, 1)
 
 assert.equal(library.addQueue(song2), true)
-assert.deepEqual(library.snapshot().queue.map(item => item.id), ['1', '2'])
+assert.deepEqual(Array.from(library.snapshot().queue.map(item => item.id)), ['1', '2'])
 
 assert.equal(library.isFavorite(song1), false)
 assert.equal(library.toggleFavorite(song1), true)
@@ -69,21 +69,21 @@ assert.equal(library.isFavorite(song1), false)
 assert.equal(library.toggleFavorite(song1), true)
 assert.equal(library.addHistory(song1), true)
 assert.equal(library.addHistory(song2), true)
-assert.deepEqual(library.snapshot().history.map(item => item.id), ['2', '1'])
+assert.deepEqual(Array.from(library.snapshot().history.map(item => item.id)), ['2', '1'])
 
 assert.equal(library.removeQueue(song1), true)
-assert.deepEqual(library.snapshot().queue.map(item => item.id), ['2'])
+assert.deepEqual(Array.from(library.snapshot().queue.map(item => item.id)), ['2'])
 
 const reloaded = createLibrary(storage)
 const restored = reloaded.snapshot()
-assert.deepEqual(restored.queue.map(item => item.id), ['2'])
-assert.deepEqual(restored.history.map(item => item.id), ['2', '1'])
-assert.deepEqual(restored.favorites.map(item => item.id), ['1'])
+assert.deepEqual(Array.from(restored.queue.map(item => item.id)), ['2'])
+assert.deepEqual(Array.from(restored.history.map(item => item.id)), ['2', '1'])
+assert.deepEqual(Array.from(restored.favorites.map(item => item.id)), ['1'])
 
 let changeCount = 0
 reloaded.onChange(() => { changeCount += 1 })
 reloaded.clearQueue()
 assert.equal(changeCount > 0, true)
-assert.deepEqual(reloaded.snapshot().queue, [])
+assert.equal(reloaded.snapshot().queue.length, 0)
 
 console.log('PASS: music library queue/history/favorites persistence')
