@@ -194,6 +194,13 @@
     for (key in music) {
       if (Object.prototype.hasOwnProperty.call(music, key) && key !== 'raw') musicInfo[key] = music[key];
     }
+    if (music.raw && typeof music.raw === 'object') {
+      for (key in music.raw) {
+        if (Object.prototype.hasOwnProperty.call(music.raw, key) && musicInfo[key] == null) {
+          musicInfo[key] = music.raw[key];
+        }
+      }
+    }
     musicInfo.source = source;
     musicInfo.songId = musicInfo.songId || music.id;
     musicInfo.name = musicInfo.name || '';
