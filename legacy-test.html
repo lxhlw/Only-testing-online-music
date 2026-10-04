@@ -159,9 +159,28 @@
       typeof window === 'object' && typeof document === 'object' ? 'PASS' : 'FAIL',
       'window/document 可用');
 
-    addCheck('addEventListener',
-      typeof window.addEventListener === 'function' ? 'PASS' : 'FAIL',
-      typeof window.addEventListener);
+    var eventOk = safeTest(function () {
+      if (typeof window.addEventListener !== 'function' ||
+          typeof window.removeEventListener !== 'function') return false;
+      var target = document.createElement('button');
+      var fired = false;
+      function handler() { fired = true; }
+      target.addEventListener('click', handler, false);
+      if (typeof target.click === 'function') {
+        target.click();
+      } else if (typeof document.createEvent === 'function') {
+        var event = document.createEvent('MouseEvents');
+        event.initMouseEvent('click', true, true, window, 1, 0, 0, 0, 0, false, false, false, false, 0, null);
+        target.dispatchEvent(event);
+      } else {
+        target.removeEventListener('click', handler, false);
+        return false;
+      }
+      target.removeEventListener('click', handler, false);
+      return fired;
+    });
+    addCheck('addEventListener', eventOk ? 'PASS' : 'FAIL',
+      eventOk ? '事件绑定、触发与移除测试通过' : '事件机制不可正常工作');
 
     var storageOk = safeTest(function () {
       var key = '__legacy_test__';
