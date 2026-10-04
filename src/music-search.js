@@ -11,11 +11,6 @@
     mg: 'migu'
   };
 
-  // GD Studio sources that are also playable by the LX sources used here.
-  // Keep the recovery list small because older devices must not fan out
-  // into many simultaneous requests.
-  var GD_SEARCH_FALLBACKS = ['kuwo', 'netease'];
-
   var GD_TO_LX_SOURCE = {
     kuwo: 'kw',
     kugou: 'kg',
@@ -210,6 +205,10 @@
       albumId: String((item.albumId || item.album_id || '') || ''),
       image: String((item.pic || item.image || item.img || '') || ''),
       lyricId: String((item.lyric_id || item.lyricId || '') || ''),
+      hash: String((item.hash || item.FileHash || item.fileHash || '') || ''),
+      strMediaMid: String((item.strMediaMid || item.str_media_mid || item.mediaMid || item.media_mid || '') || ''),
+      copyrightId: String((item.copyrightId || item.copyright_id || '') || ''),
+      types: item.types && Array.isArray(item.types) ? item.types : null,
       meta: item.meta || null,
       raw: item
     };
@@ -267,11 +266,113 @@
     });
   }
 
+  function formatKugouArtist(singers) {
+    if (!Array.isArray(singers)) return String(singers || '');
+    var names = [];
+    for (var i = 0; i < singers.length; i += 1) {
+      var singer = singers[i];
+      if (singer && typeof singer === 'object') singer = singer.name;
+      if (singer) names.push(String(singer));
+    }
+    return names.join('、');
+  }
+
+  function formatKugouInterval(seconds) {
+    var total = Number(seconds);
+    if (!isFinite(total) || total < 0) return '';
+    total = Math.floor(total);
+    var minutes = Math.floor(total / 60);
+    var remain = total % 60;
+    return (minutes < 10 ? '0' : '') + minutes + ':' + (remain < 10 ? '0' : '') + remain;
+  }
+
+  function searchKugou(keyword, page, limit, callback) {
+    var url = 'http://songsearch.kugou.com/song_search_v2' +
+      '?platform=AndroidFilter' +
+      '&iscorrection=1' +
+      '&keyword=' + encodeURIComponent(keyword) +
+      '&hifiquality=0' +
+      '&pagesize=' + encodeURIComponent(limit) +
+      '&PrivilegeFilter=0' +
+      '&page=' + encodeURIComponent(page);
+
+    requestViaProxy(
+      url,
+      'GET',
+      null,
+      {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
+        'Accept': 'application/json, text/javascript, */*; q=0.01'
+      },
+      true,
+      function (err, data) {
+        if (err) return callback(err);
+        if (!data || Number(data.error_code) !== 0 || !data.data) {
+          return callback(new Error(
+            'Kugou search returned error code ' + String(data && data.error_code != null ? data.error_code : 'unknown') +
+            (data && data.error ? ': ' + String(data.error) : '')
+          ));
+        }
+
+        var rawList = Array.isArray(data.data.lists) ? data.data.lists : [];
+        var list = [];
+        var seen = {};
+
+        function pushItem(item) {
+          if (!item) return;
+          var hash = String(item.FileHash || item.hash || '').toUpperCase();
+          var audioId = String(item.Audioid || item.audio_id || item.songmid || '');
+          var key = audioId + '|' + hash;
+          if (!hash || !audioId || seen[key]) return;
+          seen[key] = true;
+
+          list.push(normalizeSong({
+            id: audioId,
+            songmid: audioId,
+            hash: hash,
+            name: String(item.OriSongName || item.SongName || item.name || ''),
+            artist: formatKugouArtist(item.Singers || item.singers || item.artist),
+            album: String(item.AlbumName || item.albumName || item.album || ''),
+            albumId: String(item.AlbumID || item.albumId || ''),
+            interval: formatKugouInterval(item.Duration),
+            source: 'kugou',
+            types: []
+          }, 'kg'));
+        }
+
+        for (var i = 0; i < rawList.length; i += 1) {
+          pushItem(rawList[i]);
+          var groups = rawList[i] && Array.isArray(rawList[i].Grp) ? rawList[i].Grp : [];
+          for (var g = 0; g < groups.length; g += 1) pushItem(groups[g]);
+        }
+
+        if (!list.length) {
+          return callback(new Error('Kugou search returned no usable songs'));
+        }
+
+        callback(null, {
+          source: 'kg',
+          page: page,
+          total: data.data.total != null ? Number(data.data.total) : list.length,
+          isEnd: false,
+          list: list,
+          searchProvider: 'kugou',
+          requestedSource: 'kg',
+          fallbackSearch: false
+        });
+      }
+    );
+  }
+
   function searchViaGdStudio(source, keyword, page, limit, callback) {
-    // Never switch platforms here. A search result contains platform-specific
-    // identifiers (e.g. Kugou hash), so handing it to another LX source
-    // changes the track identity and can make musicUrl fail.
+    // GD Studio is only used for platforms it currently exposes. Never
+    // substitute another platform for the selected source.
     requestGdSearch(source, keyword, page, limit, callback);
+  }
+
+  function searchViaPlatform(source, keyword, page, limit, callback) {
+    if (source === 'kg') return searchKugou(keyword, page, limit, callback);
+    return searchViaPlatform(source, keyword, page, limit, callback);
   }
 
   function search(source, keyword, page, limit, callback) {
@@ -293,7 +394,7 @@
         if (!nativeErr) return callback(null, nativeResult);
 
         if (SOURCE_MAP[source]) {
-          return searchViaGdStudio(source, keyword, page, limit, function (fallbackErr, fallbackResult) {
+          return searchViaPlatform(source, keyword, page, limit, function (fallbackErr, fallbackResult) {
             if (fallbackErr) {
               var combined = new Error(
                 'LX musicSearch failed: ' + (nativeErr.message || nativeErr) +
