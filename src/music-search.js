@@ -394,6 +394,427 @@
     );
   }
 
+  function createLegacyCrypto() {
+    if (!global.createLXRuntime) throw new Error('LX crypto runtime is not loaded');
+    return global.createLXRuntime({ env: 'web' }).utils.crypto;
+  }
+
+  function utf8Binary(text) {
+    var encoded = unescape(encodeURIComponent(String(text)));
+    return encoded;
+  }
+
+  function bytesFromBinary(text) {
+    var binary = utf8Binary(text);
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i) & 255;
+    return bytes;
+  }
+
+  function aesEcbHex(text, key) {
+    var crypto = createLegacyCrypto();
+    var encrypted = crypto.aesEncrypt(
+      bytesFromBinary(text),
+      'aes-128-ecb',
+      key,
+      ''
+    );
+    return encrypted.toString('hex').toUpperCase();
+  }
+
+  function qqZzcSign(text) {
+    var sha1 = global.LXLegacySHA1 ? global.LXLegacySHA1(String(text)) : '';
+    if (!sha1) throw new Error('LX SHA1 helper is not loaded');
+
+    var part1Indexes = [23, 14, 6, 36, 16, 40, 7, 19];
+    var part2Indexes = [16, 1, 32, 12, 19, 27, 8, 5];
+    var scramble = [89, 39, 179, 150, 218, 82, 58, 252, 177, 52, 186, 123, 120, 64, 242, 133, 143, 161, 121, 179];
+
+    var part1 = '';
+    var part2 = '';
+    var i;
+    for (i = 0; i < part1Indexes.length; i += 1) part1 += sha1.charAt(part1Indexes[i]);
+    for (i = 0; i < part2Indexes.length; i += 1) part2 += sha1.charAt(part2Indexes[i]);
+
+    var raw = '';
+    for (i = 0; i < scramble.length; i += 1) {
+      var value = scramble[i] ^ parseInt(sha1.slice(i * 2, i * 2 + 2), 16);
+      raw += String.fromCharCode(value);
+    }
+
+    var encoded = global.btoa(raw).replace(/[\\/+=]/g, '');
+    return ('zzc' + part1 + encoded + part2).toLowerCase();
+  }
+
+  function createTencentSearchPayload(keyword, page, limit) {
+    var guid = '';
+    for (var i = 0; i < 32; i += 1) guid += Math.floor(Math.random() * 16).toString(16);
+    guid = guid.toUpperCase() + ('00000' + Math.floor(Math.random() * 100000)).slice(-5);
+
+    return {
+      comm: {
+        _channelid: '0',
+        _os_version: '6.2.9200-2',
+        ct: '19',
+        cv: '2151',
+        guid: '1F70E520B2EAA7D25E11760783C53CA9',
+        patch: '118',
+        psrf_access_token_expiresAt: 0,
+        psrf_qqaccess_token: '',
+        psrf_qqopenid: '',
+        psrf_qqunionid: '',
+        tmeAppID: 'qqmusic',
+        tmeLoginType: 0,
+        uin: '0',
+        wid: '7223299733393904640'
+      },
+      'music.search.SearchCgiService': {
+        module: 'music.search.SearchCgiService',
+        method: 'DoSearchForQQMusicDesktop',
+        param: {
+          grp: 1,
+          num_per_page: limit,
+          page_num: page,
+          query: keyword,
+          remoteplace: 'txt.newclient.top',
+          search_type: 0,
+          searchid: guid
+        }
+      }
+    };
+  }
+
+  function buildTencentList(rawList) {
+    var list = [];
+    if (!Array.isArray(rawList)) return list;
+
+    for (var i = 0; i < rawList.length; i += 1) {
+      var item = rawList[i] || {};
+      var file = item.file || {};
+      if (!file.media_mid) continue;
+
+      var types = [];
+      function addType(type, bytes) {
+        var n = Number(bytes);
+        if (!isFinite(n) || n <= 0) return;
+        types.push({
+          type: type,
+          size: String(Math.round(n / 1024 / 1024 * 10) / 10) + 'M'
+        });
+      }
+      addType('128k', file.size_128mp3);
+      addType('320k', file.size_320mp3);
+      addType('flac', file.size_flac);
+      addType('flac24bit', file.size_hires);
+
+      var singerNames = [];
+      var singers = Array.isArray(item.singer) ? item.singer : [];
+      for (var s = 0; s < singers.length; s += 1) {
+        if (singers[s] && singers[s].name) singerNames.push(String(singers[s].name));
+      }
+
+      var album = item.album || {};
+      var albumId = album.mid ? String(album.mid) : '';
+      list.push(normalizeSong({
+        id: item.id,
+        songmid: item.mid,
+        name: item.title,
+        singer: singerNames.join('、'),
+        albumName: album.name,
+        albumId: albumId,
+        interval: item.interval || '',
+        source: 'tx',
+        strMediaMid: file.media_mid,
+        types: types,
+        raw: item
+      }, 'tx'));
+    }
+    return list;
+  }
+
+  function searchTencent(keyword, page, limit, callback) {
+    var payload = createTencentSearchPayload(keyword, page, limit);
+    var text = JSON.stringify(payload);
+    var sign = qqZzcSign(text);
+    var url = 'https://u.y.qq.com/cgi-bin/musics.fcg?sign=' + encodeURIComponent(sign);
+
+    requestViaProxy(
+      url,
+      'POST',
+      text,
+      {
+        'User-Agent': 'QQMusic 14090508(android 12)',
+        'Content-Type': 'application/json'
+      },
+      true,
+      function (err, data) {
+        if (err) return callback(err);
+        var req = data && (data['music.search.SearchCgiService'] || data.req);
+        if (!req || Number(data.code) !== 0 || Number(req.code) !== 0) {
+          return callback(new Error('QQ Music search returned an invalid response'));
+        }
+
+        var payloadData = req.data || {};
+        var rawList = payloadData.body && payloadData.body.song
+          ? payloadData.body.song.list
+          : [];
+        var list = buildTencentList(rawList);
+        if (!list.length) return callback(new Error('QQ Music search returned no usable songs'));
+
+        var meta = payloadData.meta || {};
+        var total = Number(meta.sum);
+        if (!isFinite(total)) total = list.length;
+
+        callback(null, {
+          source: 'tx',
+          page: page,
+          total: total,
+          isEnd: page * limit >= total,
+          list: list,
+          searchProvider: 'qqmusic-native',
+          requestedSource: 'tx',
+          fallbackSearch: false
+        });
+      }
+    );
+  }
+
+  function eapiParams(urlPath, object) {
+    var text = JSON.stringify(object);
+    var digest = createLegacyCrypto().md5('nobody' + urlPath + 'use' + text + 'md5forencrypt');
+    var data = urlPath + '-36cd479b6b5-' + text + '-36cd479b6b5-' + digest;
+    return aesEcbHex(data, 'e82ckenh8dichen8');
+  }
+
+  function formatNeteaseTypes(item) {
+    var types = [];
+    var privilege = item && item.privilege ? item.privilege : {};
+    var maxLevel = String(privilege.maxBrLevel || '');
+    var maxbr = Number(privilege.maxbr || 0);
+
+    function add(type, size) {
+      var n = Number(size);
+      if (!isFinite(n) || n <= 0) return;
+      types.push({
+        type: type,
+        size: String(Math.round(n / 1024 / 1024 * 10) / 10) + 'M'
+      });
+    }
+
+    if (maxLevel === 'hires' && item.hr) add('flac24bit', item.hr.size);
+    if (maxbr === 999000 && item.sq) add('flac', item.sq.size);
+    if (maxbr === 320000 && item.h) add('320k', item.h.size);
+    if (maxbr === 192000 && item.l) add('128k', item.l.size);
+    if (maxbr === 128000 && item.l) add('128k', item.l.size);
+    return types;
+  }
+
+  function buildNeteaseList(resources) {
+    var list = [];
+    if (!Array.isArray(resources)) return list;
+
+    for (var i = 0; i < resources.length; i += 1) {
+      var resource = resources[i] || {};
+      var item = resource.baseInfo && resource.baseInfo.simpleSongData;
+      if (!item || item.id == null) continue;
+
+      var singers = Array.isArray(item.ar) ? item.ar : [];
+      var singerNames = [];
+      for (var s = 0; s < singers.length; s += 1) {
+        if (singers[s] && singers[s].name) singerNames.push(String(singers[s].name));
+      }
+
+      var album = item.al || {};
+      list.push(normalizeSong({
+        id: item.id,
+        songmid: item.id,
+        name: item.name,
+        singer: singerNames.join('、'),
+        albumName: album.name,
+        albumId: album.id,
+        interval: Number(item.dt || 0) > 0 ? String(Math.floor(Number(item.dt) / 60000)).padStart ? Math.floor(Number(item.dt) / 60000) : item.dt : item.dt,
+        image: album.picUrl || '',
+        types: formatNeteaseTypes(item),
+        raw: item
+      }, 'wy'));
+    }
+    return list;
+  }
+
+  function searchNetease(keyword, page, limit, callback) {
+    var urlPath = '/api/search/song/list/page';
+    var requestBody = {
+      keyword: keyword,
+      needCorrect: '1',
+      channel: 'typing',
+      offset: limit * (page - 1),
+      scene: 'normal',
+      total: page === 1,
+      limit: limit
+    };
+    var params = eapiParams(urlPath, requestBody);
+
+    requestViaProxy(
+      'http://interface.music.163.com/eapi/batch',
+      'POST',
+      encodeForm({ params: params }),
+      {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36',
+        'Origin': 'https://music.163.com',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      true,
+      function (err, data) {
+        if (err) return callback(err);
+        var listRoot = data && data.data ? data.data : data;
+        if (!listRoot || Number(listRoot.code) !== 200) {
+          return callback(new Error('Netease search returned an invalid response'));
+        }
+        var resources = listRoot.data && Array.isArray(listRoot.data.resources)
+          ? listRoot.data.resources
+          : (Array.isArray(listRoot.resources) ? listRoot.resources : []);
+        var list = buildNeteaseList(resources);
+        if (!list.length) return callback(new Error('Netease search returned no usable songs'));
+
+        var total = Number(listRoot.data && listRoot.data.totalCount != null
+          ? listRoot.data.totalCount
+          : listRoot.totalCount);
+        if (!isFinite(total)) total = list.length;
+
+        callback(null, {
+          source: 'wy',
+          page: page,
+          total: total,
+          isEnd: page * limit >= total,
+          list: list,
+          searchProvider: 'netease-native',
+          requestedSource: 'wy',
+          fallbackSearch: false
+        });
+      }
+    );
+  }
+
+  function miguCreateSignature(time, str) {
+    var deviceId = '963B7AA0D21511ED807EE5846EC87D20';
+    var base = '6cdc72a439cef99a3418d2a78aa28c73';
+    var suffix = 'yyapp2d16148780a1dcc7408e06336b98cfd50';
+    var sign = createLegacyCrypto().md5(
+      String(str) + base + suffix + deviceId + String(time)
+    );
+    return { sign: sign, deviceId: deviceId };
+  }
+
+  function buildMiguList(rawData) {
+    var list = [];
+    var seen = {};
+    if (!Array.isArray(rawData)) return list;
+
+    for (var i = 0; i < rawData.length; i += 1) {
+      var group = rawData[i];
+      if (!Array.isArray(group)) continue;
+      for (var j = 0; j < group.length; j += 1) {
+        var data = group[j] || {};
+        if (!data.songId || !data.copyrightId) continue;
+        var key = String(data.copyrightId);
+        if (seen[key]) continue;
+        seen[key] = true;
+
+        var types = [];
+        var formats = Array.isArray(data.audioFormats) ? data.audioFormats : [];
+        for (var k = 0; k < formats.length; k += 1) {
+          var format = formats[k] || {};
+          var formatType = String(format.formatType || '');
+          var sizeValue = format.asize != null ? format.asize : format.isize;
+          var size = Number(sizeValue);
+          var sizeText = isFinite(size) && size > 0
+            ? String(Math.round(size / 1024 / 1024 * 10) / 10) + 'M'
+            : '';
+          if (formatType === 'PQ') types.push({ type: '128k', size: sizeText });
+          else if (formatType === 'HQ') types.push({ type: '320k', size: sizeText });
+          else if (formatType === 'SQ') types.push({ type: 'flac', size: sizeText });
+          else if (formatType === 'ZQ24') types.push({ type: 'flac24bit', size: sizeText });
+        }
+
+        var singerList = Array.isArray(data.singerList) ? data.singerList : [];
+        var singerNames = [];
+        for (var s = 0; s < singerList.length; s += 1) {
+          if (singerList[s] && singerList[s].name) singerNames.push(String(singerList[s].name));
+        }
+
+        list.push(normalizeSong({
+          id: data.copyrightId,
+          songmid: data.songId,
+          copyrightId: data.copyrightId,
+          name: data.name,
+          singer: singerNames.join('、'),
+          albumName: data.album,
+          albumId: data.albumId,
+          interval: data.duration,
+          image: data.img3 || data.img2 || data.img1 || '',
+          lyricId: data.lrcUrl || '',
+          types: types,
+          raw: data
+        }, 'mg'));
+      }
+    }
+    return list;
+  }
+
+  function searchMigu(keyword, page, limit, callback) {
+    var time = String(Date.now ? Date.now() : new Date().getTime());
+    var signature = miguCreateSignature(time, keyword);
+    var target =
+      'https://jadeite.migu.cn/music_search/v3/search/searchAll' +
+      '?isCorrect=0' +
+      '&isCopyright=1' +
+      '&searchSwitch=%7B%22song%22%3A1%2C%22album%22%3A0%2C%22singer%22%3A0%2C%22tagSong%22%3A1%2C%22mvSong%22%3A0%2C%22bestShow%22%3A1%2C%22songlist%22%3A0%2C%22lyricSong%22%3A0%7D' +
+      '&pageSize=' + encodeURIComponent(limit) +
+      '&text=' + encodeURIComponent(keyword) +
+      '&pageNo=' + encodeURIComponent(page) +
+      '&sort=0' +
+      '&sid=USS';
+
+    requestViaProxy(
+      target,
+      'GET',
+      null,
+      {
+        'uiVersion': 'A_music_3.6.1',
+        'deviceId': signature.deviceId,
+        'timestamp': time,
+        'sign': signature.sign,
+        'channel': '0146921',
+        'User-Agent': 'Mozilla/5.0 (Linux; U; Android 11.0.0; zh-cn; MI 11 Build/OPR1.170623.032) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30',
+        'Accept': 'application/json, text/javascript, */*; q=0.01'
+      },
+      true,
+      function (err, data) {
+        if (err) return callback(err);
+        if (!data || data.code !== '000000') {
+          return callback(new Error('Migu search returned an invalid response'));
+        }
+        var resultData = data.songResultData || {};
+        var list = buildMiguList(resultData.resultList);
+        if (!list.length) return callback(new Error('Migu search returned no usable songs'));
+
+        var total = Number(resultData.totalCount);
+        if (!isFinite(total)) total = list.length;
+
+        callback(null, {
+          source: 'mg',
+          page: page,
+          total: total,
+          isEnd: page * limit >= total,
+          list: list,
+          searchProvider: 'migu-native',
+          requestedSource: 'mg',
+          fallbackSearch: false
+        });
+      }
+    );
+  }
+
   function buildKugouList(rawList) {
     var list = [];
     var seen = {};
@@ -660,6 +1081,9 @@
   function searchViaPlatform(source, keyword, page, limit, callback) {
     if (source === 'kw') return searchKuwo(keyword, page, limit, callback);
     if (source === 'kg') return searchKugou(keyword, page, limit, callback);
+    if (source === 'tx') return searchTencent(keyword, page, limit, callback);
+    if (source === 'wy') return searchNetease(keyword, page, limit, callback);
+    if (source === 'mg') return searchMigu(keyword, page, limit, callback);
     return searchViaGdStudio(source, keyword, page, limit, callback);
   }
 

@@ -1,3 +1,128 @@
+import { connect } from 'cloudflare:sockets';
+
+async function readSocketBytes(socket) {
+  var reader = socket.readable.getReader();
+  var chunks = [];
+  var total = 0;
+
+  try {
+    while (true) {
+      var result = await reader.read();
+      if (result.done) break;
+      var value = result.value;
+      if (!value) continue;
+      total += value.length;
+      if (total > 1024 * 1024) throw new Error('Flower resolver response exceeds 1 MiB');
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  var out = new Uint8Array(total);
+  var offset = 0;
+  for (var i = 0; i < chunks.length; i += 1) {
+    out.set(chunks[i], offset);
+    offset += chunks[i].length;
+  }
+  return out;
+}
+
+function decodeChunkedBody(text) {
+  var offset = 0;
+  var out = '';
+  while (offset < text.length) {
+    var end = text.indexOf('\r\n', offset);
+    if (end < 0) break;
+    var sizeText = text.slice(offset, end).split(';')[0].replace(/^\s+|\s+$/g, '');
+    var size = parseInt(sizeText, 16);
+    if (!isFinite(size) || size < 0) throw new Error('Invalid chunked Flower response');
+    offset = end + 2;
+    if (size === 0) break;
+    out += text.slice(offset, offset + size);
+    offset += size + 2;
+  }
+  return out;
+}
+
+async function fetchFlowerResolverViaSocket(target, request) {
+  var hosts = ['ts.tempmusics.tk', 'tm.tempmusics.tk'];
+  var encoder = new TextEncoder();
+  var decoder = new TextDecoder();
+  var lastError = null;
+
+  for (var hi = 0; hi < hosts.length; hi += 1) {
+    var socket = null;
+    try {
+      socket = connect({ hostname: '97.64.37.235', port: 80 });
+      await socket.opened;
+
+      var forwarded = pickForwardHeaders(request);
+      var requestLines = [
+        String(request.method || 'GET').toUpperCase() + ' ' + target.pathname + target.search + ' HTTP/1.1',
+        'Host: ' + hosts[hi],
+        'Connection: close',
+        'Accept-Encoding: identity'
+      ];
+
+      forwarded.forEach(function (value, key) {
+        var lower = key.toLowerCase();
+        if (lower === 'host' || lower === 'connection' || lower === 'content-length') return;
+        requestLines.push(key + ': ' + value);
+      });
+
+      var writer = socket.writable.getWriter();
+      await writer.write(encoder.encode(requestLines.join('\r\n') + '\r\n\r\n'));
+      await writer.close();
+
+      var bytes = await readSocketBytes(socket);
+      var text = decoder.decode(bytes);
+      var split = text.indexOf('\r\n\r\n');
+      if (split < 0) throw new Error('Flower resolver returned an invalid HTTP response');
+
+      var headerText = text.slice(0, split);
+      var bodyText = text.slice(split + 4);
+      var statusMatch = headerText.match(/^HTTP\/\d(?:\.\d)?\s+(\d{3})/i);
+      if (!statusMatch) throw new Error('Flower resolver returned an invalid HTTP status');
+      var status = Number(statusMatch[1]);
+
+      var contentTypeMatch = headerText.match(/\r\nContent-Type:\s*([^\r\n]+)/i);
+      var transferEncoding = /\r\nTransfer-Encoding:\s*chunked/i.test(headerText);
+      if (transferEncoding) bodyText = decodeChunkedBody(bodyText);
+
+      var responseHeaders = new Headers();
+      if (contentTypeMatch) responseHeaders.set('Content-Type', String(contentTypeMatch[1]).trim());
+      responseHeaders.set('Cache-Control', 'no-store');
+
+      if (status >= 200 && status < 300) {
+        return new Response(bodyText, {
+          status: status,
+          statusText: 'OK',
+          headers: responseHeaders
+        });
+      }
+
+      lastError = new Error(
+        'Flower TCP resolver HTTP ' + status + ' via Host ' + hosts[hi]
+      );
+    } catch (e) {
+      lastError = e;
+    } finally {
+      if (socket) {
+        try { await socket.close(); } catch (e) {}
+      }
+    }
+  }
+
+  return new Response(JSON.stringify({
+    error: 'Flower TCP resolver failed',
+    message: lastError && lastError.message ? lastError.message : 'No Flower TCP response'
+  }), {
+    status: 502,
+    headers: Object.assign({'Content-Type': 'application/json; charset=utf-8'}, corsHeaders(request))
+  });
+}
+
 function corsHeaders(request) {
   var origin = request.headers.get('Origin') || '*';
   return {
@@ -41,7 +166,7 @@ function pickForwardHeaders(request) {
     if (!Object.prototype.hasOwnProperty.call(data, key)) continue;
     var lower = key.toLowerCase();
     if (lower === 'host' || lower === 'content-length' || lower === 'connection'
-        || lower === 'origin' || lower === 'referer' || lower === 'cookie'
+        || lower === 'referer' || lower === 'cookie'
         || lower === 'access-control-request-method' || lower === 'access-control-request-headers') continue;
     var value = String(data[key]);
     if (value.length > 4096) continue;
@@ -121,61 +246,34 @@ export async function onRequest(context) {
 
   // Cloudflare rejects direct-IP requests with Error 1003. Flower publishes
   // its resolver on this IP, so try known DNS aliases for the same origin.
-  var candidateUrls = [target.toString()];
-  if (target.hostname.toLowerCase() === '97.64.37.235') {
-    // Flower's historical resolver is a literal-IP HTTP service. The
-    // Cloudflare Worker cannot reliably reach it, so try it once and allow
-    // the caller to fall back to the platform resolver.
-    candidateUrls = [target.toString()];
+  if (target.hostname.toLowerCase() === '97.64.37.235'
+      && /^\/flower\/v1\/url\//.test(target.pathname)) {
+    return await fetchFlowerResolverViaSocket(target, request);
   }
+
+  var candidateUrls = [target.toString()];
 
   var lastError = null;
   for (var ci = 0; ci < candidateUrls.length; ci += 1) {
-    var attempts = [null];
-    if (target.hostname.toLowerCase() === '97.64.37.235') {
-      attempts = ['ts.tempmusics.tk', 'tm.tempmusics.tk', null];
-    }
-
-    for (var hi = 0; hi < attempts.length; hi += 1) {
-      try {
-        var requestInit = {
-          method: init.method,
-          headers: new Headers(init.headers),
-          redirect: init.redirect
-        };
-        if (init.body != null) requestInit.body = init.body;
-
-        if (attempts[hi]) {
-          // Flower's resolver is hosted behind a virtual host on this IP.
-          // Keep the IP as the network destination but send the historical
-          // Host authority expected by the origin server.
-          requestInit.headers.set('Host', attempts[hi]);
-        }
-
-        var upstream = await fetch(candidateUrls[ci], requestInit);
-        if (upstream.status >= 200 && upstream.status < 300) {
-          return new Response(upstream.body, {
-            status: upstream.status,
-            statusText: upstream.statusText,
-            headers: copyResponseHeaders(upstream, request)
-          });
-        }
-
-        lastError = new Error(
-          'Upstream HTTP ' + upstream.status + ' from ' + candidateUrls[ci] +
-          (attempts[hi] ? ' Host ' + attempts[hi] : '')
-        );
-
-        if (ci === candidateUrls.length - 1 && hi === attempts.length - 1) {
-          return new Response(upstream.body, {
-            status: upstream.status,
-            statusText: upstream.statusText,
-            headers: copyResponseHeaders(upstream, request)
-          });
-        }
-      } catch (e) {
-        lastError = e;
+    try {
+      var upstream = await fetch(candidateUrls[ci], init);
+      if (upstream.status >= 200 && upstream.status < 300) {
+        return new Response(upstream.body, {
+          status: upstream.status,
+          statusText: upstream.statusText,
+          headers: copyResponseHeaders(upstream, request)
+        });
       }
+      lastError = new Error('Upstream HTTP ' + upstream.status + ' from ' + candidateUrls[ci]);
+      if (ci === candidateUrls.length - 1) {
+        return new Response(upstream.body, {
+          status: upstream.status,
+          statusText: upstream.statusText,
+          headers: copyResponseHeaders(upstream, request)
+        });
+      }
+    } catch (e) {
+      lastError = e;
     }
   }
 

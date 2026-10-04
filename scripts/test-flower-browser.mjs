@@ -184,9 +184,9 @@ try {
         /flower\/v1\/url\/kg\//.test(target) ||
         /music-api\.gdstudio\.xyz\/api\.php/.test(target) ||
         /music-dl\.sayqz\.com\/api\//.test(target)
-      if (channel === 'tx') return /gdstudio\.xyz\/api\.php/.test(target) || /flower\/v1\/url\/tx\//.test(target) || /music-dl\.sayqz\.com\/api\//.test(target)
-      if (channel === 'wy') return /gdstudio\.xyz\/api\.php/.test(target) || /flower\/v1\/url\/wy\//.test(target) || /music-dl\.sayqz\.com\/api\//.test(target)
-      return /gdstudio\.xyz\/api\.php/.test(target) || /flower\/v1\/url\/mg\//.test(target) || /music-dl\.sayqz\.com\/api\//.test(target)
+      if (channel === 'tx') return /u\.y\.qq\.com\/cgi-bin\/musics\.fcg/.test(target) || /flower\/v1\/url\/tx\//.test(target)
+      if (channel === 'wy') return /interface\.music\.163\.com\/eapi\/batch/.test(target) || /flower\/v1\/url\/wy\//.test(target)
+      return /jadeite\.migu\.cn\/music_search\/v3\/search\/searchAll/.test(target) || /flower\/v1\/url\/mg\//.test(target)
     })
     assert.ok(targetSeen, channel.toUpperCase() + ' did not produce expected platform/Flower proxy traffic')
 
