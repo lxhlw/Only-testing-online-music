@@ -22,6 +22,8 @@ jobs:
             url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/lx/2.js"
           - name: "lx-3"
             url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/lx/3.js"
+          - name: "lx-4"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/lx/4.js"
           - name: "lx-latest"
             url: "https://ghproxy.net/raw.githubusercontent.com/pdone/lx-music-source/main/lx/latest.js"
           - name: "flower-latest"
