@@ -43,6 +43,18 @@ It currently provides:
 - A local, network-independent Audio playback test using an in-memory WAV data URI
 - GitHub raw HTTPS and same-origin proxy diagnostics for the Huibq source
 
+### Player library
+
+The main player now has a lightweight persistent local library:
+
+- Playback queue with duplicate protection and manual removal
+- Favorites stored on the device
+- Recently played history stored on the device
+- Playback adds successful tracks to history automatically
+- Ending a queued track automatically starts the next queued track
+- Saved tracks can be played again after a page refresh
+- Library data stays in the browser's localStorage and does not require a framework or server database
+
 The current browser test does more than check JavaScript initialization: it imports the original source, searches for **成都**, requests playback URLs for the first three results, probes the returned media endpoint, and requires actual HTML5 playback to advance for at least 0.5 seconds.
 
 For the physical Android 4.4 device, open **`legacy-test.html` first**. It reports JavaScript, localStorage, Promise, typed-array, XHR, Audio, MP3/M4A capability, viewport, User Agent, project-resource loading results, actual local Audio playback, and separate GitHub raw / project-proxy connectivity diagnostics. Resource and network probes have bounded timeouts so a broken connection does not leave the page stuck indefinitely.
