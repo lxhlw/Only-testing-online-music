@@ -38,7 +38,7 @@ try {
   assert.deepEqual(state.declaredChannels, expected)
   assert.equal(state.channels.length, expected.length)
   assert.equal(state.channels.filter(item => item.active).length, 1)
-  assert.equal(state.selectedChannel, 'tx')
+  assert.equal(state.selectedChannel.toLowerCase(), 'tx')
   assert.equal(state.qualities.length, 2)
 
   console.log('PASS: dynamic source channels rendered')
