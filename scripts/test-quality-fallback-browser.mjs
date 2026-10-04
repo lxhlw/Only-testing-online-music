@@ -74,6 +74,15 @@ await page.route('**/api/proxy?url=*', async route => {
     return
   }
 
+  if (target === FALLBACK_AUDIO_URL) {
+    await route.fulfill({
+      status: 200,
+      contentType: 'audio/wav',
+      body: testWav,
+    })
+    return
+  }
+
   await route.continue()
 })
 
