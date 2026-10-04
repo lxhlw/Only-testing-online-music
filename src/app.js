@@ -25,6 +25,7 @@
       meta += '<div class="source-meta">URL：' + escapeHtml(item.url) + '</div>';
       meta += '<div class="source-meta">初始化：' + (item.inited ? '<span class="ready">READY</span>' : '<span class="pending">WAIT</span>') + '</div>';
       if (item.sources) meta += '<div class="source-meta">支持源：' + escapeHtml(sourceNames(item.sources)) + '</div>';
+      if (item.transport) meta += '<div class="source-meta">导入通道：' + escapeHtml(item.transport === 'proxy' ? '项目代理' : '直连') + '</div>';
       if (item.error) meta += '<div class="source-meta fail">错误：' + escapeHtml(item.error) + '</div>';
 
       var buttons = document.createElement('div');
@@ -160,7 +161,8 @@
           return;
         }
         setCheck('check-storage', 'ok');
-        setStatus('已保存原始音源代码：' + escapeHtml(item.name), 'ready');
+        var transportText = item.transport === 'proxy' ? '项目代理' : '直连';
+        setStatus('已保存原始音源代码：' + escapeHtml(item.name) + '（导入通道：' + transportText + '）', 'ready');
       });
     };
 
