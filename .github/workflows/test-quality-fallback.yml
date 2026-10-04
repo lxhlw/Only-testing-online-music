@@ -1,0 +1,65 @@
+name: Test Playback Quality Fallback
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/app.js"
+      - "src/play-settings.js"
+      - "settings.html"
+      - "index.html"
+      - "styles.css"
+      - "scripts/test-quality-fallback-browser.mjs"
+      - "package.json"
+      - ".github/workflows/test-quality-fallback.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: playback-quality-fallback
+  cancel-in-progress: true
+
+jobs:
+  quality-fallback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Validate quality fallback test
+        run: node --check scripts/test-quality-fallback-browser.mjs
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start local site
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/wrangler.log 2>&1 &
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8788/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/wrangler.log
+          exit 1
+
+      - name: Test automatic quality fallback
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+          INIT_TIMEOUT_MS: 30000
+          SEARCH_TIMEOUT_MS: 60000
+          PLAYBACK_TIMEOUT_MS: 12000
+        run: node scripts/test-quality-fallback-browser.mjs
+
+      - name: Show local server log on failure
+        if: failure()
+        run: cat /tmp/wrangler.log || true
