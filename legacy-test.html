@@ -242,9 +242,16 @@
     addCheck('crypto.getRandomValues', cryptoOk ? 'PASS' : 'WARN',
       cryptoOk ? '实际随机字节写入测试通过' : 'crypto.getRandomValues 不可正常使用或不存在');
 
-    addCheck('XMLHttpRequest',
-      typeof window.XMLHttpRequest === 'function' ? 'PASS' : 'FAIL',
-      typeof window.XMLHttpRequest);
+    var xhrOk = safeTest(function () {
+      if (typeof window.XMLHttpRequest !== 'function') return false;
+      var xhr = new window.XMLHttpRequest();
+      if (!xhr || typeof xhr.open !== 'function' || typeof xhr.abort !== 'function') return false;
+      xhr.open('GET', window.location.href, true);
+      xhr.abort();
+      return true;
+    });
+    addCheck('XMLHttpRequest', xhrOk ? 'PASS' : 'FAIL',
+      xhrOk ? '创建、open 与 abort 测试通过' : 'XMLHttpRequest 不可正常创建或操作');
 
     addCheck('fetch',
       typeof window.fetch === 'function' ? 'PASS' : 'WARN',
