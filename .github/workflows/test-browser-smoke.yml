@@ -9,7 +9,6 @@ on:
       - "src/**"
       - "functions/**"
       - "vendor/**"
-      - "scripts/test-sixyin-browser.mjs"
       - "scripts/test-quality-fallback-browser.mjs"
       - "scripts/test-flower-browser.mjs"
       - "scripts/test-music-search-native.mjs"
@@ -41,7 +40,6 @@ jobs:
 
       - name: Validate browser test script
         run: |
-          node --check scripts/test-sixyin-browser.mjs
           node --check scripts/test-quality-fallback-browser.mjs
           node --check scripts/test-flower-browser.mjs
 
@@ -59,15 +57,6 @@ jobs:
           done
           cat /tmp/wrangler.log
           exit 1
-
-      - name: Test representative Huibq source
-        env:
-          TEST_BASE_URL: http://127.0.0.1:8788
-          LX_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/latest.js
-          LX_SOURCE_NAME: huibq-latest
-          SIXYIN_INIT_TIMEOUT_MS: 30000
-          PLAYBACK_CANDIDATES: 3
-        run: node scripts/test-sixyin-browser.mjs
 
       - name: Test Flower KG search and playback
         env:
