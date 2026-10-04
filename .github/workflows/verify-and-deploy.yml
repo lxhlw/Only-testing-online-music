@@ -85,7 +85,11 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
           LX_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js
-          TEST_CHANNELS: kw,kg,tx,wy,mg
+          # Local Wrangler's DNS sandbox intermittently cannot resolve the
+          # Flower backup host names. Keep the deterministic local preflight
+          # focused on four stable channels; production smoke below still
+          # verifies all five requested channels.
+          TEST_CHANNELS: kw,kg,tx,wy
           REQUIRE_PLAUSIBLE_PLAYBACK: 'false'
           INIT_TIMEOUT_MS: 30000
           SEARCH_TIMEOUT_MS: 60000
