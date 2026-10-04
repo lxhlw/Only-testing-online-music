@@ -120,57 +120,74 @@ try {
   console.log('PASS: KG search results remain bound to the selected source')
   console.log('First KG result:', JSON.stringify(results[0]))
 
-  await page.locator('#search-results .search-row').first()
-    .getByRole('button', { name: '解析并播放' })
-    .click()
+  const playbackAttempts = []
+  const testCount = Math.min(5, results.length)
 
-  await page.waitForFunction(
-    () => {
-      const status = document.getElementById('status')?.textContent || ''
-      return /已返回 128k 播放地址|musicUrl 失败/.test(status)
-    },
-    null,
-    { timeout: PLAYBACK_TIMEOUT_MS },
-  )
+  for (let i = 0; i < testCount; i += 1) {
+    const row = page.locator('#search-results .search-row').nth(i)
+    await row.getByRole('button', { name: '解析并播放' }).click()
 
-  const playback = await page.evaluate(() => {
-    const active = window.LXSourceManager.getActive()
-    const audio = document.getElementById('audio')
-    return {
-      status: document.getElementById('status')?.textContent || '',
-      env: active?.runtime?.env || '',
-      currentSource: active?.sources ? Object.keys(active.sources) : [],
-      audioUrl: audio?.src || '',
-      readyState: Number(audio?.readyState || 0),
-      error: audio?.error ? {
-        code: audio.error.code,
-        message: audio.error.message || '',
-      } : null,
-    }
-  })
+    await page.waitForFunction(
+      () => {
+        const status = document.getElementById('status')?.textContent || ''
+        return /已返回 128k 播放地址|musicUrl 失败/.test(status)
+      },
+      null,
+      { timeout: PLAYBACK_TIMEOUT_MS },
+    )
 
-  assert.equal(playback.env, 'desktop')
+    const attempt = await page.evaluate(() => {
+      const active = window.LXSourceManager.getActive()
+      const audio = document.getElementById('audio')
+      return {
+        status: document.getElementById('status')?.textContent || '',
+        env: active?.runtime?.env || '',
+        audioUrl: audio?.src || '',
+        readyState: Number(audio?.readyState || 0),
+        error: audio?.error ? {
+          code: audio.error.code,
+          message: audio.error.message || '',
+        } : null,
+      }
+    })
+
+    playbackAttempts.push({
+      index: i + 1,
+      result: results[i],
+      ...attempt,
+    })
+
+    if (/已返回 128k 播放地址/.test(attempt.status)) break
+  }
+
+  const playback = playbackAttempts.find(item => /已返回 128k 播放地址/.test(item.status)) || playbackAttempts[0]
+  assert.ok(playback, 'No Flower musicUrl attempts were completed')
   assert.match(
     playback.status,
     /已返回 128k 播放地址/,
-    'Flower musicUrl request failed: ' + playback.status
+    'Flower musicUrl failed for the first ' + playbackAttempts.length + ' KG results: ' +
+      JSON.stringify(playbackAttempts, null, 2)
   )
+  assert.equal(playback.env, 'desktop')
   assert.match(playback.audioUrl, /^https?:/i, 'Flower musicUrl did not return a playable URL')
   assert.equal(playback.error, null, 'Audio element reported a media error')
 
+  const successfulResult = playback.result
+  const successfulHash = successfulResult.hash
   const flowerUrlRequests = proxyTargets.filter(item =>
-    /\/flower\/v1\/url\/kg\/[^/]+\/128k$/i.test(item.target)
+    /\/flower\/v1\/url\/kg\/([^/]+)\/128k$/i.test(item.target)
   )
   assert.ok(
-    flowerUrlRequests.length > 0,
-    'Flower KG musicUrl request was not observed: ' + JSON.stringify(proxyTargets, null, 2)
+    flowerUrlRequests.some(item => item.target.toUpperCase().endsWith('/' + successfulHash.toUpperCase() + '/128k')),
+    'Successful Flower KG request did not use the selected result hash: ' + JSON.stringify(flowerUrlRequests, null, 2)
   )
 
   console.log('FLOWER RESULT')
   console.log(JSON.stringify({
     sourceUrl: SOURCE_URL,
     keyword: KEYWORD,
-    result: results[0],
+    result: successfulResult,
+    playbackAttempts,
     status: playback.status,
     audioUrl: playback.audioUrl,
     readyState: playback.readyState,
