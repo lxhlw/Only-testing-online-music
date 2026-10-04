@@ -104,7 +104,7 @@
       list = data.list;
       total = data.total != null ? Number(data.total) : list.length;
       isEnd = data.isEnd === true;
-    } else if (data && data.data && data.Array.isArray(data.list)) {
+    } else if (data && data.data && Array.isArray(data.data.list)) {
       list = data.data.list;
       total = data.data.total != null ? Number(data.data.total) : list.length;
       isEnd = data.data.isEnd === true;
@@ -128,7 +128,7 @@
     };
   }
 
-  function searchNative(activeSource, source, keyword, page, limit, callback) {
+  function searchNative(source, keyword, page, limit, callback) {
     global.LXSourceManager.requestAction(source, 'musicSearch', {
       keyword: keyword,
       page: page,
@@ -175,7 +175,27 @@
     var actions = sourceInfo && sourceInfo.actions ? sourceInfo.actions : [];
 
     if (actions.indexOf('musicSearch') >= 0 && global.LXSourceManager && global.LXSourceManager.requestAction) {
-      return searchNative(active, source, keyword, page, limit, callback);
+      return searchNative(source, keyword, page, limit, function (nativeErr, nativeResult) {
+        if (!nativeErr) return callback(null, nativeResult);
+
+        if (SOURCE_MAP[source]) {
+          return searchViaGdStudio(source, keyword, page, limit, function (fallbackErr, fallbackResult) {
+            if (fallbackErr) {
+              var combined = new Error(
+                'LX musicSearch failed: ' + (nativeErr.message || nativeErr) +
+                '; GD Studio fallback failed: ' + (fallbackErr.message || fallbackErr)
+              );
+              combined.nativeError = nativeErr;
+              combined.fallbackError = fallbackErr;
+              return callback(combined);
+            }
+            fallbackResult.fallbackFrom = 'native';
+            return callback(null, fallbackResult);
+          });
+        }
+
+        return callback(nativeErr);
+      });
     }
 
     return searchViaGdStudio(source, keyword, page, limit, callback);
