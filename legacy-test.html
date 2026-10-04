@@ -181,17 +181,41 @@
     addCheck('Promise', typeof window.Promise === 'function' ? 'PASS' : 'FAIL',
       typeof window.Promise);
 
-    addCheck('Uint8Array', typeof window.Uint8Array === 'function' ? 'PASS' : 'FAIL',
-      typeof window.Uint8Array);
+    var arrayBufferOk = safeTest(function () {
+      if (typeof window.ArrayBuffer !== 'function') return false;
+      var buffer = new window.ArrayBuffer(4);
+      return buffer && buffer.byteLength === 4;
+    });
+    addCheck('ArrayBuffer', arrayBufferOk ? 'PASS' : 'FAIL',
+      arrayBufferOk ? '实例化测试通过' : 'ArrayBuffer 不可正常创建');
 
-    addCheck('ArrayBuffer', typeof window.ArrayBuffer === 'function' ? 'PASS' : 'FAIL',
-      typeof window.ArrayBuffer);
+    var uint8ArrayOk = safeTest(function () {
+      if (typeof window.Uint8Array !== 'function') return false;
+      var bytes = new window.Uint8Array(4);
+      bytes[0] = 0x12;
+      bytes[1] = 0x34;
+      return bytes.length === 4 && bytes[0] === 0x12 && bytes[1] === 0x34;
+    });
+    addCheck('Uint8Array', uint8ArrayOk ? 'PASS' : 'FAIL',
+      uint8ArrayOk ? '创建与读写测试通过' : 'Uint8Array 不可正常创建或读写');
 
-    addCheck('DataView', typeof window.DataView === 'function' ? 'PASS' : 'FAIL',
-      typeof window.DataView);
+    var dataViewOk = safeTest(function () {
+      if (typeof window.ArrayBuffer !== 'function' || typeof window.DataView !== 'function') return false;
+      var buffer = new window.ArrayBuffer(4);
+      var view = new window.DataView(buffer);
+      view.setUint16(0, 0x1234, true);
+      view.setUint16(2, 0x5678, true);
+      return view.byteLength === 4 && view.getUint16(0, true) === 0x1234 && view.getUint16(2, true) === 0x5678;
+    });
+    addCheck('DataView', dataViewOk ? 'PASS' : 'FAIL',
+      dataViewOk ? '创建与读写测试通过' : 'DataView 不可正常创建或读写');
 
-    addCheck('btoa', typeof window.btoa === 'function' ? 'PASS' : 'FAIL',
-      typeof window.btoa);
+    var btoaOk = safeTest(function () {
+      if (typeof window.btoa !== 'function') return false;
+      return window.btoa('LX') === 'TFg=';
+    });
+    addCheck('btoa', btoaOk ? 'PASS' : 'FAIL',
+      btoaOk ? 'Base64 编码测试通过' : 'btoa 不可正常使用');
 
     var urlOk = safeTest(function () {
       var testUrl = new window.URL('https://example.com/test?a=1');
