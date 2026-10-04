@@ -24,11 +24,25 @@
     migu: 'mg'
   };
 
-  function requestJson(url, callback) {
+  var GD_STUDIO_TIME_ENDPOINT = 'https://music.gdstudio.xyz/time';
+  var GD_STUDIO_API_VERSION = '2026.08.01';
+  var gdServerTime = '';
+  var gdServerTimeExpiresAt = 0;
+
+  function encodeForm(data) {
+    var parts = [];
+    for (var key in data) {
+      if (!Object.prototype.hasOwnProperty.call(data, key)) continue;
+      parts.push(encodeURIComponent(key) + '=' + encodeURIComponent(data[key] == null ? '' : data[key]));
+    }
+    return parts.join('&');
+  }
+
+  function requestViaProxy(targetUrl, method, body, headers, callback) {
     var origin = global.location && global.location.origin
       ? global.location.origin
       : (global.location.protocol + '//' + global.location.host);
-    var requestUrl = origin + '/api/proxy?url=' + encodeURIComponent(url);
+    var proxyUrl = origin + '/api/proxy?url=' + encodeURIComponent(targetUrl);
     var xhr = new XMLHttpRequest();
     var finished = false;
 
@@ -57,20 +71,107 @@
     xhr.ontimeout = function () { finish(new Error('Search request timeout')); };
 
     try {
-      xhr.open('GET', requestUrl, true);
-      xhr.setRequestHeader('X-LX-Headers', JSON.stringify({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
-        'Accept': 'application/json, text/javascript, */*; q=0.01',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'Origin': origin,
-        'Referer': origin + '/',
-        'X-Requested-With': 'XMLHttpRequest'
-      }));
+      xhr.open(method, proxyUrl, true);
+      if (headers) {
+        xhr.setRequestHeader('X-LX-Headers', JSON.stringify(headers));
+      }
       if (xhr.timeout !== undefined) xhr.timeout = 15000;
-      xhr.send(null);
+      xhr.send(body || null);
     } catch (e) {
       finish(e);
     }
+  }
+
+  function getGdServerTime(callback) {
+    var now = Date.now ? Date.now() : new Date().getTime();
+    if (gdServerTime && now < gdServerTimeExpiresAt) {
+      return callback(null, gdServerTime);
+    }
+
+    requestViaProxy(
+      GD_STUDIO_TIME_ENDPOINT,
+      'GET',
+      null,
+      {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
+        'Accept': 'text/plain, */*; q=0.01'
+      },
+      function (err, data) {
+        if (err) return callback(err);
+        var timeText = typeof data === 'string' ? data : String(data || '');
+        var match = timeText.match(/\d{9,13}/);
+        if (!match) return callback(new Error('GD Studio /time returned an invalid timestamp'));
+        gdServerTime = match[0].slice(0, 13);
+        if (gdServerTime.length > 10) {
+          gdServerTime = String(Math.floor(Number(gdServerTime) / 1000));
+        }
+        gdServerTimeExpiresAt = (Date.now ? Date.now() : new Date().getTime()) + 30000;
+        callback(null, gdServerTime);
+      }
+    );
+  }
+
+  function gdStudioMd5(input) {
+    if (global.createLXRuntime) {
+      try {
+        return global.createLXRuntime({ env: 'web' }).utils.crypto.md5(input);
+      } catch (e) {}
+    }
+    throw new Error('GD Studio search requires the LX MD5 runtime');
+  }
+
+  function gdStudioSign(encodedKeyword, serverTime) {
+    var version = GD_STUDIO_API_VERSION.replace(/\./g, '');
+    var timePrefix = String(serverTime).substring(0, 9);
+    var payload = timePrefix + '|music.gdstudio.xyz|' + version + '|' + encodedKeyword;
+    return gdStudioMd5(payload).slice(-8).toUpperCase();
+  }
+
+  function requestGdSearch(source, keyword, page, limit, callback) {
+    var mapped = SOURCE_MAP[source];
+    if (!mapped) return callback(new Error('Unsupported search source: ' + source));
+
+    getGdServerTime(function (timeErr, serverTime) {
+      if (timeErr) return callback(timeErr);
+
+      var encodedKeyword = encodeURIComponent(keyword);
+      var sign;
+      try {
+        sign = gdStudioSign(encodedKeyword, serverTime);
+      } catch (e) {
+        return callback(e);
+      }
+
+      var form = encodeForm({
+        types: 'search',
+        source: mapped,
+        name: keyword,
+        count: limit,
+        pages: page,
+        s: sign
+      });
+
+      requestViaProxy(
+        API_ENDPOINT,
+        'POST',
+        form,
+        {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
+          'Accept': 'application/json, text/javascript, */*; q=0.01',
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        },
+        function (err, data) {
+          if (err) return callback(err);
+          var normalized = normalizeResult(source, page, data);
+          if (!normalized) return callback(new Error('Search result format is invalid for ' + mapped));
+          if (!normalized.list.length) return callback(new Error('No search results from ' + mapped));
+          normalized.searchProvider = mapped;
+          normalized.requestedSource = source;
+          normalized.fallbackSearch = false;
+          return callback(null, normalized);
+        }
+      );
+    });
   }
 
   function normalizeArtist(artist) {
@@ -162,53 +263,10 @@
   }
 
   function searchViaGdStudio(source, keyword, page, limit, callback) {
-    var mapped = SOURCE_MAP[source];
-    if (!mapped) return callback(new Error('Unsupported search source: ' + source));
-
-    var providers = [mapped];
-    for (var i = 0; i < GD_SEARCH_FALLBACKS.length; i += 1) {
-      if (GD_SEARCH_FALLBACKS[i] !== mapped) providers.push(GD_SEARCH_FALLBACKS[i]);
-    }
-
-    function tryProvider(index, lastErr) {
-      if (index >= providers.length) {
-        return callback(lastErr || new Error('No GD Studio search provider is available'));
-      }
-
-      var provider = providers[index];
-      var url = API_ENDPOINT +
-        '?types=search' +
-        '&source=' + encodeURIComponent(provider) +
-        '&name=' + encodeURIComponent(keyword) +
-        '&count=' + encodeURIComponent(limit) +
-        '&pages=' + encodeURIComponent(page);
-
-      requestJson(url, function (err, data) {
-        if (err) return tryProvider(index + 1, err);
-
-        var normalized = normalizeResult(source, page, data);
-        if (!normalized) {
-          return tryProvider(
-            index + 1,
-            new Error('Search result format is invalid for ' + provider)
-          );
-        }
-
-        if (normalized.list.length) {
-          normalized.searchProvider = provider;
-          normalized.requestedSource = source;
-          normalized.fallbackSearch = provider !== mapped;
-          return callback(null, normalized);
-        }
-
-        tryProvider(
-          index + 1,
-          new Error('No search results from ' + provider)
-        );
-      });
-    }
-
-    tryProvider(0, null);
+    // Never switch platforms here. A search result contains platform-specific
+    // identifiers (e.g. Kugou hash), so handing it to another LX source
+    // changes the track identity and can make musicUrl fail.
+    requestGdSearch(source, keyword, page, limit, callback);
   }
 
   function search(source, keyword, page, limit, callback) {
@@ -234,7 +292,7 @@
             if (fallbackErr) {
               var combined = new Error(
                 'LX musicSearch failed: ' + (nativeErr.message || nativeErr) +
-                '; GD Studio fallback failed: ' + (fallbackErr.message || fallbackErr)
+                '; GD Studio same-platform fallback failed: ' + (fallbackErr.message || fallbackErr)
               );
               combined.nativeError = nativeErr;
               combined.fallbackError = fallbackErr;
