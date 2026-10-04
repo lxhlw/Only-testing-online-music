@@ -384,7 +384,7 @@
       return testUrl.hostname === 'example.com' && testUrl.pathname === '/test' && testUrl.search === '?a=1';
     });
     addCheck('URL', urlOk ? 'PASS' : 'WARN',
-      urlOk ? 'new URL() 实际构造测试通过' : 'URL 构造函数不可用或行为异常');
+      urlOk ? 'new URL() 实际构造测试通过' : 'URL 构造函数不可用；项目已提供字符串解析兼容回退');
 
     var cryptoOk = safeTest(function () {
       if (!window.crypto || typeof window.crypto.getRandomValues !== 'function') return false;
