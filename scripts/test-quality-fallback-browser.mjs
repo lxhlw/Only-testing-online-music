@@ -70,7 +70,8 @@ await page.route('**/api/proxy?url=*', async route => {
         id: 'quality-test-1',
         name: '成都',
         artist: '赵雷',
-        album: 'fallback-test'
+        album: 'fallback-test',
+        interval: ''
       }]),
     })
     return
@@ -133,25 +134,13 @@ try {
       JSON.stringify(settings),
     )
 
-    const nativeDuration = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'duration')
-    if (!nativeDuration || typeof nativeDuration.get !== 'function') {
-      throw new Error('HTMLMediaElement.duration getter is unavailable for the false-success regression')
-    }
-    Object.defineProperty(HTMLMediaElement.prototype, 'duration', {
-      configurable: true,
-      get() {
-        const actual = nativeDuration.get.call(this)
-        if (this && this.id === 'audio' && String(this.src || '').includes('quality-error.invalid')) {
-          return 300
-        }
-        return actual
-      },
-      set(value) {
-        if (nativeDuration.set) nativeDuration.set.call(this, value)
-      },
+    const manager = window.LXSourceManager
+    window.__qualityPlayingUrls = []
+    const qualityAudio = document.getElementById('audio')
+    qualityAudio.addEventListener('playing', () => {
+      window.__qualityPlayingUrls.push(qualityAudio.currentSrc || qualityAudio.src || '')
     })
 
-    const manager = window.LXSourceManager
     window.LXMusicSearch.resolveMusicUrl = function (source, musicInfo, quality, callback) {
       callback(new Error('resolver intentionally disabled by quality-isolation test'))
     }
@@ -232,6 +221,7 @@ try {
     return {
       calls,
       status,
+      playingUrls: window.__qualityPlayingUrls || [],
       currentTime: Number(audio?.currentTime || 0),
       readyState: Number(audio?.readyState || 0),
       paused: Boolean(audio?.paused),
@@ -247,6 +237,10 @@ try {
   assert.ok(result.currentTime >= 0.5, 'Fallback audio did not advance playback after the false-success candidate ended')
   assert.ok(result.readyState >= 2, 'Fallback audio did not reach a playable readyState')
   assert.ok(result.currentTime >= 0.5, 'Fallback audio did not actually advance playback')
+  assert.ok(
+    result.playingUrls.every(url => !String(url).includes('quality-error.invalid')),
+    'The 9-second error/prompt audio entered the playing state: ' + JSON.stringify(result.playingUrls)
+  )
   assert.equal(result.error, null, 'Fallback audio reported a media error')
   assert.ok(pageErrors.length === 0, 'Page errors occurred: ' + pageErrors.join('\n'))
 
@@ -255,6 +249,7 @@ try {
     sourceUrl: SOURCE_URL,
     keyword: KEYWORD,
     requestedQualityOrder: result.calls.slice(0, 2),
+    playingUrls: result.playingUrls,
     finalStatus: result.status,
     readyState: result.readyState,
     currentTime: result.currentTime,

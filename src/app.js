@@ -12,6 +12,7 @@
   var selectedChannel = null;
   var playbackState = null;
   var playbackToken = 0;
+  var MIN_UNKNOWN_MEDIA_DURATION_SECONDS = 15;
 
   var CHANNEL_NAMES = {
     kw: '酷我音乐',
@@ -487,7 +488,16 @@
   function isSuspiciousPlaybackDuration(actualSeconds, expectedSeconds) {
     var actual = Number(actualSeconds);
     var expected = Number(expectedSeconds);
-    if (!isFinite(actual) || actual <= 0 || !isFinite(expected) || expected <= 0) return false;
+    if (!isFinite(actual) || actual <= 0) return false;
+
+    // Some error/protection endpoints return a valid audio file (often a
+    // short spoken prompt) instead of an HTTP/media error. When the search
+    // result has no trusted duration, a sub-15-second file is not treated as
+    // a playable song and must go through resolver fallback first.
+    if (!isFinite(expected) || expected <= 0) {
+      return actual < MIN_UNKNOWN_MEDIA_DURATION_SECONDS;
+    }
+
     if (expected >= 120) return actual < Math.max(30, expected * 0.45);
     if (expected >= 60) return actual < Math.max(20, expected * 0.45);
     if (expected >= 30) return actual < Math.max(15, expected * 0.40);
@@ -528,6 +538,42 @@
     playbackState.resolverProvider = viaProvider || 'lx-source';
     playbackState.expectedDuration = getExpectedDurationSeconds(music);
 
+    var playRequested = false;
+
+    function startAudioPlayback() {
+      if (playRequested) return;
+      if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
+      playRequested = true;
+
+      try {
+        var playResult = audio.play();
+        if (playResult && typeof playResult.catch === 'function') {
+          playResult.catch(function () {
+            if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
+            if (audio.error && settings.autoFallback) {
+              playRequested = false;
+              handleAudioError(token, playableUrl);
+              return;
+            }
+            setStatus(
+              '已验证 ' + escapeHtml(quality) + ' 播放地址，但浏览器拒绝自动播放。可点击播放器继续播放。',
+              'warn'
+            );
+          });
+        }
+      } catch (e) {
+        if (audio.error && settings.autoFallback) {
+          playRequested = false;
+          handleAudioError(token, playableUrl);
+        } else {
+          setStatus(
+            '已验证 ' + escapeHtml(quality) + ' 播放地址，但浏览器未能自动播放。可点击播放器继续播放。',
+            'warn'
+          );
+        }
+      }
+    }
+
     audio.onerror = function () {
       handleAudioError(token, playableUrl);
     };
@@ -540,11 +586,14 @@
       if (isSuspiciousPlaybackDuration(duration, playbackState.expectedDuration)) {
         setStatus(
           '返回的 ' + escapeHtml(quality) + ' 地址疑似为错误/短音频（' +
-          Math.round(duration) + ' 秒），正在自动更换解析器……',
+          Math.round(duration) + ' 秒），尚未开始播放，正在自动更换解析器……',
           'warn'
         );
-        handleAudioError(token, playableUrl);
+        return handleAudioError(token, playableUrl);
       }
+
+      // Never start audible playback until metadata has been validated.
+      startAudioPlayback();
     };
     audio.onended = function () {
       if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
@@ -578,37 +627,9 @@
       (CHANNEL_NAMES[source] || source.toUpperCase()) +
       ' 已返回 ' + escapeHtml(quality) + ' 播放地址' +
       (viaLabel ? '（' + escapeHtml(viaLabel) + '）' : '') +
-      '，正在尝试播放。',
+      '，正在验证媒体信息。',
       'ready'
     );
-
-    try {
-      var playResult = audio.play();
-      if (playResult && typeof playResult.catch === 'function') {
-        playResult.catch(function () {
-          if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
-          if (audio.error && settings.autoFallback) {
-            handleAudioError(token, playableUrl);
-            return;
-          }
-          setStatus(
-            '已返回 ' + escapeHtml(quality) +
-            ' 播放地址，但浏览器拒绝自动播放。可点击播放器播放。',
-            'warn'
-          );
-        });
-      }
-    } catch (e) {
-      if (audio.error && settings.autoFallback) {
-        handleAudioError(token, playableUrl);
-      } else {
-        setStatus(
-          '已返回 ' + escapeHtml(quality) +
-          ' 播放地址，但浏览器未能自动播放。可点击播放器播放。',
-          'warn'
-        );
-      }
-    }
   }
 
   function requestQuality(music, source, musicInfo, plan, index, token) {
@@ -789,9 +810,18 @@
     state.waitingForAudio = false;
     state.playing = false;
 
-    if (settings.autoFallback && state.resolverProvider &&
-        state.resolverProvider !== 'lx-source' &&
-        global.LXMusicSearch && typeof global.LXMusicSearch.resolveMusicUrl === 'function') {
+    // Stop and detach the failed stream before resolving a replacement. This
+    // prevents a short prompt/error file from continuing to play while the
+    // fallback resolver is being queried.
+    var currentAudio = document.getElementById('audio');
+    if (currentAudio) {
+      try { currentAudio.pause(); } catch (e) {}
+      try { currentAudio.removeAttribute('src'); } catch (e) {}
+      try { if (typeof currentAudio.load === 'function') currentAudio.load(); } catch (e) {}
+    }
+
+    if (settings.autoFallback && global.LXMusicSearch &&
+        typeof global.LXMusicSearch.resolveMusicUrl === 'function') {
       var failedProvider = state.resolverProvider;
       var failedQuality = state.quality;
       return global.LXMusicSearch.resolveMusicUrl(
@@ -842,7 +872,7 @@
             : '';
           setStatus('当前音质无法播放，备用解析器也无法提供可用地址' + resolverErrorCode + '。', 'fail');
         },
-        { skipProvider: failedProvider }
+        { skipProvider: failedProvider === 'lx-source' ? '' : failedProvider }
       );
     }
 
