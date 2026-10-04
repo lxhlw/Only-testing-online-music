@@ -166,7 +166,7 @@ try {
 
   const flowerUrlRequests = proxyTargets.filter(item => {
     return item.target.indexOf('/flower/v1/url/kg/') >= 0 &&
-      /\\/128k$/i.test(item.target)
+      item.target.slice(-5).toLowerCase() === '/128k'
   })
   const attemptedHashSet = {}
   for (const item of playbackAttempts) attemptedHashSet[String(item.result.hash || '').toUpperCase()] = true
@@ -176,8 +176,11 @@ try {
   )
   assert.ok(
     flowerUrlRequests.every(item => {
-      const match = item.target.match(/\\/kg\\/([^/]+)\\/128k$/i)
-      return Boolean(match && attemptedHashSet[String(match[1]).toUpperCase()])
+      const parts = item.target.split('/')
+      const hash = parts[parts.length - 2] || ''
+      return parts[parts.length - 3] === 'kg' &&
+        parts[parts.length - 1].toLowerCase() === '128k' &&
+        Boolean(attemptedHashSet[String(hash).toUpperCase()])
     }),
     'Flower KG endpoint did not receive the selected search-result hashes: ' +
       JSON.stringify(flowerUrlRequests, null, 2)
