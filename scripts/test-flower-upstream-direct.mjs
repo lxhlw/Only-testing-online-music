@@ -22,5 +22,5 @@ try { data = JSON.parse(body) } catch { throw new Error('Flower direct upstream 
 assert.equal(data.source, 'kg')
 assert.equal(data.action, 'musicUrl')
 assert.equal(data.data?.type, '128k')
-assert.ok(/^https?:\\/\\//.test(String(data.data?.url || '')))
+assert.ok(String(data.data?.url || '').indexOf('http://') === 0 || String(data.data?.url || '').indexOf('https://') === 0)
 console.log('PASS: Flower direct upstream accepts LX-compatible musicUrl request')
