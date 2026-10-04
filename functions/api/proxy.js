@@ -59,7 +59,7 @@ async function fetchFlowerResolverViaSocket(target, request) {
 
       var forwarded = pickForwardHeaders(request);
       var requestLines = [
-        String(request.method || 'GET').toUpperCase() + ' ' + target.pathname + target.search + ' HTTP/1.1',
+        String(request.method || 'GET').toUpperCase() + ' ' + target.pathname + target.search + ' HTTP/1.0',
         'Host: ' + hosts[hi],
         'Connection: close',
         'Accept-Encoding: identity'
@@ -78,16 +78,42 @@ async function fetchFlowerResolverViaSocket(target, request) {
       var bytes = await readSocketBytes(socket);
       var text = decoder.decode(bytes);
       var split = text.indexOf('\r\n\r\n');
-      if (split < 0) throw new Error('Flower resolver returned an invalid HTTP response');
+      var separatorLength = 4;
+      if (split < 0) {
+        split = text.indexOf('\n\n');
+        separatorLength = 2;
+      }
+
+      if (split < 0) {
+        var bodyOnly = String(text || '').replace(/^\s+|\s+$/g, '');
+        if (/^(?:https?:\/\/|\{|\[)/i.test(bodyOnly)) {
+          return new Response(bodyOnly, {
+            status: 200,
+            statusText: 'OK',
+            headers: new Headers({
+              'Content-Type': 'text/plain; charset=utf-8',
+              'Cache-Control': 'no-store'
+            })
+          });
+        }
+        throw new Error(
+          'Flower resolver returned an invalid HTTP response: ' +
+          String(text || '').slice(0, 160)
+        );
+      }
 
       var headerText = text.slice(0, split);
-      var bodyText = text.slice(split + 4);
+      var bodyText = text.slice(split + separatorLength);
       var statusMatch = headerText.match(/^HTTP\/\d(?:\.\d)?\s+(\d{3})/i);
-      if (!statusMatch) throw new Error('Flower resolver returned an invalid HTTP status');
+      if (!statusMatch) throw new Error(
+        'Flower resolver returned an invalid HTTP status: ' +
+        headerText.slice(0, 160)
+      );
       var status = Number(statusMatch[1]);
 
-      var contentTypeMatch = headerText.match(/\r\nContent-Type:\s*([^\r\n]+)/i);
-      var transferEncoding = /\r\nTransfer-Encoding:\s*chunked/i.test(headerText);
+      var normalizedHeaders = headerText.replace(/\r/g, '');
+      var contentTypeMatch = normalizedHeaders.match(/(?:^|\n)Content-Type:\s*([^\n]+)/i);
+      var transferEncoding = /(?:^|\n)Transfer-Encoding:\s*chunked/i.test(normalizedHeaders);
       if (transferEncoding) bodyText = decodeChunkedBody(bodyText);
 
       var responseHeaders = new Headers();

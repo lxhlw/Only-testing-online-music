@@ -49,6 +49,9 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     window: null,
     console,
     Date,
+    LXLegacySHA1() {
+      return '0123456789abcdef0123456789abcdef0123456789'
+    },
     setTimeout,
     clearTimeout,
     XMLHttpRequest: FakeXHR,
