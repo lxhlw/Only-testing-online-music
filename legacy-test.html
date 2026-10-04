@@ -770,7 +770,11 @@
       xhr.onreadystatechange = function () {
         if (xhr.readyState !== 4 || finished) return;
         if (xhr.status >= 200 && xhr.status < 300) {
-          finish('PASS', 'HTTP ' + xhr.status + '，可读取。');
+          if (typeof xhr.responseText !== 'string' || !xhr.responseText.length) {
+            finish('FAIL', 'HTTP ' + xhr.status + '，但 responseText 为空。');
+          } else {
+            finish('PASS', 'HTTP ' + xhr.status + '，已读取到 ' + xhr.responseText.length + ' 个字符。');
+          }
         } else {
           finish('FAIL', 'HTTP ' + xhr.status + '。');
         }
