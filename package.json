@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "test:sixyin:browser": "node scripts/test-sixyin-browser.mjs",
-    "test:settings": "node scripts/test-settings.mjs"
+    "test:settings": "node scripts/test-settings.mjs",
+    "test:quality-fallback": "node scripts/test-quality-fallback-browser.mjs"
   },
   "devDependencies": {
     "playwright": "1.63.0",
