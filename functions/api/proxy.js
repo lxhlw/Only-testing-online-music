@@ -131,25 +131,51 @@ export async function onRequest(context) {
 
   var lastError = null;
   for (var ci = 0; ci < candidateUrls.length; ci += 1) {
-    try {
-      var upstream = await fetch(candidateUrls[ci], init);
-      if (upstream.status >= 200 && upstream.status < 300) {
-        return new Response(upstream.body, {
-          status: upstream.status,
-          statusText: upstream.statusText,
-          headers: copyResponseHeaders(upstream, request)
-        });
+    var attempts = [null];
+    if (target.hostname.toLowerCase() === '97.64.37.235') {
+      attempts = ['ts.tempmusics.tk', 'tm.tempmusics.tk', null];
+    }
+
+    for (var hi = 0; hi < attempts.length; hi += 1) {
+      try {
+        var requestInit = {
+          method: init.method,
+          headers: new Headers(init.headers),
+          redirect: init.redirect
+        };
+        if (init.body != null) requestInit.body = init.body;
+
+        if (attempts[hi]) {
+          // Flower's resolver is hosted behind a virtual host on this IP.
+          // Keep the IP as the network destination but send the historical
+          // Host authority expected by the origin server.
+          requestInit.headers.set('Host', attempts[hi]);
+        }
+
+        var upstream = await fetch(candidateUrls[ci], requestInit);
+        if (upstream.status >= 200 && upstream.status < 300) {
+          return new Response(upstream.body, {
+            status: upstream.status,
+            statusText: upstream.statusText,
+            headers: copyResponseHeaders(upstream, request)
+          });
+        }
+
+        lastError = new Error(
+          'Upstream HTTP ' + upstream.status + ' from ' + candidateUrls[ci] +
+          (attempts[hi] ? ' Host ' + attempts[hi] : '')
+        );
+
+        if (ci === candidateUrls.length - 1 && hi === attempts.length - 1) {
+          return new Response(upstream.body, {
+            status: upstream.status,
+            statusText: upstream.statusText,
+            headers: copyResponseHeaders(upstream, request)
+          });
+        }
+      } catch (e) {
+        lastError = e;
       }
-      if (ci === candidateUrls.length - 1) {
-        return new Response(upstream.body, {
-          status: upstream.status,
-          statusText: upstream.statusText,
-          headers: copyResponseHeaders(upstream, request)
-        });
-      }
-      lastError = new Error('Upstream HTTP ' + upstream.status + ' from ' + candidateUrls[ci]);
-    } catch (e) {
-      lastError = e;
     }
   }
 

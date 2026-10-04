@@ -244,7 +244,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   assert.equal(result.list.length, 1)
   assert.equal(result.list[0].id, 'tx-good')
   assert.equal(result.list[0].source, 'tx')
-  assert.equal(result.searchProvider, 'tencent')
+  assert.equal(result.searchProvider, 'gdstudio-native')
   assert.equal(result.requestedSource, 'tx')
   assert.equal(result.fallbackSearch, false)
 }
