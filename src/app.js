@@ -822,6 +822,56 @@
       });
     };
 
+
+    var versionCurrentEl = document.getElementById('version-current');
+    var versionDateEl = document.getElementById('version-release-date');
+    var versionStatusEl = document.getElementById('version-status');
+    var checkUpdateBtn = document.getElementById('check-update-btn');
+
+    if (global.OnlyTestingMusicVersion) {
+      var currentVersionText = 'v' + global.OnlyTestingMusicVersion.version;
+      if (versionCurrentEl) versionCurrentEl.innerHTML = currentVersionText;
+      var topVersionEl = document.getElementById('app-version');
+      if (topVersionEl) topVersionEl.innerHTML = currentVersionText;
+      if (versionDateEl) versionDateEl.innerHTML = global.OnlyTestingMusicVersion.releaseDate || '';
+    }
+
+    if (checkUpdateBtn && global.OnlyTestingMusicVersionCheck) {
+      checkUpdateBtn.onclick = function () {
+        checkUpdateBtn.disabled = true;
+        if (versionStatusEl) {
+          versionStatusEl.className = 'version-status';
+          versionStatusEl.innerHTML = '正在检查……';
+        }
+        global.OnlyTestingMusicVersionCheck.checkLatest(function (err, result) {
+          checkUpdateBtn.disabled = false;
+          if (err) {
+            if (versionStatusEl) {
+              versionStatusEl.className = 'version-status fail';
+              versionStatusEl.innerHTML = '无法检查：' + escapeHtml(err.message || err);
+            }
+            return;
+          }
+          if (result.compare === 0) {
+            if (versionStatusEl) {
+              versionStatusEl.className = 'version-status ready';
+              versionStatusEl.innerHTML = '已是最新版 v' + escapeHtml(result.latestVersion);
+            }
+          } else if (result.compare < 0) {
+            if (versionStatusEl) {
+              versionStatusEl.className = 'version-status update';
+              versionStatusEl.innerHTML = '发现新版本 v' + escapeHtml(result.latestVersion);
+            }
+          } else {
+            if (versionStatusEl) {
+              versionStatusEl.className = 'version-status ready';
+              versionStatusEl.innerHTML = '当前版本较新 v' + escapeHtml(result.currentVersion);
+            }
+          }
+        });
+      };
+    }
+
     renderSources(global.LXSourceManager.getSources());
     clearLyrics();
     renderLibrary();

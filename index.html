@@ -12,7 +12,7 @@
       <div class="topbar-row">
         <div>
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">Legacy Web Player</div>
+          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.1</span></div>
         </div>
         <a class="topbar-link" href="./settings.html">设置</a>
       </div>
@@ -20,6 +20,18 @@
 
     <main class="page">
       <section class="card">
+        <div class="version-panel">
+          <div>
+            <div class="version-label">当前版本</div>
+            <strong id="version-current">v0.2.1</strong>
+            <div id="version-release-date" class="version-release">2026-10-04</div>
+          </div>
+          <div class="version-actions">
+            <span id="version-status" class="version-status">尚未检查最新版</span>
+            <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
+          </div>
+        </div>
+
         <h1>在线音乐测试</h1>
         <p class="muted">导入原版 LX Music 音源脚本后，按照音源声明显示可用渠道，并使用对应平台 MusicInfo 调用 musicUrl。</p>
 
@@ -156,6 +168,8 @@
 
   <script src="vendor/forge.min.js"></script>
   <script src="src/promise-lite.js"></script>
+  <script src="src/app-version.js"></script>
+  <script src="src/version-check.js"></script>
   <script src="src/source-transpiler.js"></script>
   <script src="src/sha1.js"></script>
   <script src="src/play-settings.js"></script>

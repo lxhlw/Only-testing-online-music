@@ -165,3 +165,16 @@ code{word-break:break-all}
 .lyrics-line.active {
   font-weight: bold;
 }
+
+.version-panel{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;margin-bottom:14px;border:1px solid #dfe1e5;border-radius:7px;background:#f8f9fa}
+.version-label{font-size:12px;color:#70757a}
+.version-release{font-size:12px;color:#9aa0a6;margin-top:3px}
+.version-actions{display:flex;align-items:center;gap:9px}
+.version-status{font-size:13px;color:#5f6368}
+.version-status.ready{color:#168038}
+.version-status.update{color:#b06000}
+.version-status.fail{color:#b31412}
+@media(max-width:600px){
+  .version-panel{align-items:flex-start;flex-direction:column}
+  .version-actions{width:100%;align-items:stretch;flex-direction:column}
+}

@@ -109,6 +109,8 @@ try {
 
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 })
   assert.equal(await page.locator('#install-btn').isVisible(), true, 'App did not load')
+  assert.equal(await page.locator('#app-version').isVisible(), true, 'App version is not visible')
+  assert.match(await page.locator('#app-version').textContent(), /^v\\d+\\.\\d+\\.\\d+$/)
 
   await page.locator('#source-url').fill(SOURCE_URL)
   await page.locator('#install-btn').click()
