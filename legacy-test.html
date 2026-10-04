@@ -709,8 +709,13 @@
 
       xhr.onreadystatechange = function () {
         if (xhr.readyState !== 4 || finished) return;
-        if (xhr.status >= 200 && xhr.status < 300) finish('PASS', xhr.status);
-        else finish('FAIL', xhr.status);
+        if (xhr.status >= 200 && xhr.status < 300) {
+          if (typeof xhr.responseText !== 'string' || !xhr.responseText.length) {
+            finish('FAIL', 'EMPTY_RESPONSE');
+          } else {
+            finish('PASS', xhr.status);
+          }
+        } else finish('FAIL', xhr.status);
       };
       xhr.onerror = function () { finish('FAIL', 'network-error'); };
 
