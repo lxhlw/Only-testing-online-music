@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 
 const settingsHtml = fs.readFileSync(new URL('../settings.html', import.meta.url), 'utf8');
 
-assert.equal((settingsHtml.match(/<input[^>]+name="play-quality"[^>]+type="radio"/g) || []).length, 8);
+assert.equal((settingsHtml.match(/<input[^>]+type="radio"[^>]+name="play-quality"/g) || []).length, 8);
 assert.ok(settingsHtml.includes('value="highest"'));
 assert.ok(settingsHtml.includes('id="auto-fallback"'));
 assert.ok(settingsHtml.includes('renderQualityChoices'));
