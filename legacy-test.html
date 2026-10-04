@@ -282,6 +282,22 @@
     addCheck('字符串字节转换', charCodeOk ? 'PASS' : 'FAIL',
       charCodeOk ? 'fromCharCode / charCodeAt 实际测试通过' : '字符串字节转换行为异常');
 
+    var mathParseOk = safeTest(function () {
+      if (!window.Math ||
+          typeof window.Math.floor !== 'function' ||
+          typeof window.Math.max !== 'function' ||
+          typeof window.Math.random !== 'function' ||
+          typeof window.parseInt !== 'function') return false;
+      var randomValue = window.Math.random();
+      return window.Math.floor(3.9) === 3 &&
+        window.Math.max(2, 7, 4) === 7 &&
+        randomValue >= 0 &&
+        randomValue < 1 &&
+        window.parseInt('7f', 16) === 127;
+    });
+    addCheck('Math / parseInt', mathParseOk ? 'PASS' : 'FAIL',
+      mathParseOk ? 'floor / max / random / parseInt 测试通过' : 'Math 或 parseInt 行为异常');
+
     var uriEncodingOk = safeTest(function () {
       if (typeof window.encodeURIComponent !== 'function' ||
           typeof window.decodeURIComponent !== 'function') return false;
