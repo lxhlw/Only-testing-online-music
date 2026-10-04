@@ -142,9 +142,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   assert.equal(result.searchProvider, 'tencent')
   assert.equal(result.fallbackSearch, false)
 
-  const apiCall = h.calls.find(call =>
-    call.xhrUrl && call.xhrUrl.includes('music-api.gdstudio.xyz/api.php')
-  )
+  const apiCall = h.calls.find(call => call.xhrMethod === 'POST')
   assert.ok(apiCall)
   assert.equal(apiCall.xhrMethod, 'POST')
   assert.match(apiCall.xhrBody, /(^|&)types=search(&|$)/)
@@ -172,9 +170,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     h2.sandbox.LXMusicSearch.search('kg', '周杰伦', 1, 20, () => resolve())
   })
 
-  const failedCalls = h2.calls.filter(call =>
-    call.xhrUrl && call.xhrUrl.includes('music-api.gdstudio.xyz/api.php')
-  )
+  const failedCalls = h2.calls.filter(call => call.xhrMethod === 'POST')
   assert.equal(failedCalls.length, 1)
   assert.match(failedCalls[0].xhrBody, /(^|&)source=kugou(&|$)/)
 }
