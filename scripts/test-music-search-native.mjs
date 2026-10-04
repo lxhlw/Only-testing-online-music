@@ -342,8 +342,14 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       expectedProvider: 'netease-native',
       response: {
         result: {
-          songCount: 0,
-          songs: []
+          songCount: 1,
+          songs: [{
+            id: 2001,
+            name: '晴天',
+            duration: 269000,
+            artists: [{ name: '周杰伦', id: 1 }],
+            album: { id: 2, name: '叶惠美', picUrl: 'https://img.example/2.jpg' }
+          }]
         }
       }
     },
