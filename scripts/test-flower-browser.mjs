@@ -110,6 +110,10 @@ try {
 
   assert.ok(results.length > 0, 'KG search returned no results')
   assert.ok(
+    results.every(item => item.source === 'kg' && item.hash),
+    'KG search results must contain a Kugou hash and remain bound to KG: ' + JSON.stringify(results)
+  )
+  assert.ok(
     results.every(item => item.source === 'kg'),
     'KG search returned results not bound to the KG source: ' + JSON.stringify(results)
   )
@@ -153,6 +157,14 @@ try {
   )
   assert.match(playback.audioUrl, /^https?:/i, 'Flower musicUrl did not return a playable URL')
   assert.equal(playback.error, null, 'Audio element reported a media error')
+
+  const flowerUrlRequests = proxyTargets.filter(item =>
+    /\/flower\/v1\/url\/kg\/[^/]+\/128k$/i.test(item.target)
+  )
+  assert.ok(
+    flowerUrlRequests.length > 0,
+    'Flower KG musicUrl request was not observed: ' + JSON.stringify(proxyTargets, null, 2)
+  )
 
   console.log('FLOWER RESULT')
   console.log(JSON.stringify({
