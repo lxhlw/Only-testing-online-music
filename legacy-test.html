@@ -1011,6 +1011,7 @@
 
     function copyShortReport() {
       copyText(buildShortReport(), '已复制精简报告，请直接粘贴回来。');
+      updateReport();
     }
 
     byId('copy-btn').onclick = copyReport;
