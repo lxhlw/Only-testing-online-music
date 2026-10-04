@@ -37,8 +37,11 @@ It currently provides:
 - Source initialization reporting
 - Same-origin network proxying for source requests
 - Real Chromium source compatibility testing with actual HTML5 audio playback
+- A standalone `legacy-test.html` page for Android 4.4 / Via browser capability checks
 
 The current browser test does more than check JavaScript initialization: it imports the original source, searches for **成都**, requests playback URLs for the first three results, probes the returned media endpoint, and requires actual HTML5 playback to advance for at least 0.5 seconds.
+
+For the physical Android 4.4 device, open **`legacy-test.html` first**. It reports JavaScript, localStorage, Promise, typed-array, XHR, Audio, MP3/M4A capability, viewport, User Agent, and project-resource loading results without depending on modern browser APIs.
 
 ## Real Chromium source test findings
 
