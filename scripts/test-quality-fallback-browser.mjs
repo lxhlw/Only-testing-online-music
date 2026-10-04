@@ -157,21 +157,21 @@ try {
     null,
   )
 
-  assert.deepEqual(result.value.calls.slice(0, 2), ['320k', '128k'])
-  assert.ok(result.value.status.includes('128k'), 'Final status did not report 128k playback')
-  assert.ok(result.value.readyState >= 2, 'Fallback audio did not reach a playable readyState')
-  assert.ok(result.value.currentTime >= 0.5, 'Fallback audio did not actually advance playback')
-  assert.equal(result.value.error, null, 'Fallback audio reported a media error')
+  assert.deepEqual(result.calls.slice(0, 2), ['320k', '128k'])
+  assert.ok(result.status.includes('128k'), 'Final status did not report 128k playback')
+  assert.ok(result.readyState >= 2, 'Fallback audio did not reach a playable readyState')
+  assert.ok(result.currentTime >= 0.5, 'Fallback audio did not actually advance playback')
+  assert.equal(result.error, null, 'Fallback audio reported a media error')
   assert.ok(pageErrors.length === 0, 'Page errors occurred: ' + pageErrors.join('\n'))
 
   console.log('QUALITY FALLBACK RESULT')
   console.log(JSON.stringify({
     sourceUrl: SOURCE_URL,
     keyword: KEYWORD,
-    requestedQualityOrder: result.value.calls.slice(0, 2),
-    finalStatus: result.value.status,
-    readyState: result.value.readyState,
-    currentTime: result.value.currentTime,
+    requestedQualityOrder: result.calls.slice(0, 2),
+    finalStatus: result.status,
+    readyState: result.readyState,
+    currentTime: result.currentTime,
     paused: result.value.paused,
   }, null, 2))
   console.log('PASS: 320k failure automatically downgraded to 128k and reached real HTML5 playback')
