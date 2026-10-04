@@ -157,7 +157,7 @@
     };
   }
 
-  function executeSource(item) {
+  function executeSource(item, callback) {
     var runtime = global.createLXRuntime({
       env:'web',
       onInited:function(data){
@@ -181,6 +181,7 @@
     item.inited=false;
     item.sources=null;
     item.error=null;
+    item.transpiled=false;
 
     var meta=parseMeta(item.code,item.url);
     runtime.currentScriptInfo={
@@ -188,26 +189,35 @@
       author:meta.author,homepage:meta.homepage,rawScript:item.code
     };
 
-    var previousLX=global.lx;
-    var previousGlobal=global.globalThis && global.globalThis.lx;
+    global.LXSourceTranspiler.prepare(item.code,item.url,function(transpileErr, executionCode, transpiled){
+      if (transpileErr) {
+        item.error=transpileErr && transpileErr.message ? transpileErr.message : String(transpileErr);
+        if (callback) callback(transpileErr,item);
+        return;
+      }
 
-    try {
-      if (!global.globalThis) global.globalThis=global;
-      global.lx=runtime;
-      global.globalThis.lx=runtime;
-      var fn=new Function(
-        'globalThis','window','console','setTimeout','clearTimeout',
-        item.code+'\n//# sourceURL='+item.url
-      );
-      fn(global,global,global.console,global.setTimeout,global.clearTimeout);
-    } catch (e) {
-      item.error=e && e.message ? e.message : String(e);
-      throw e;
-    } finally {
-      global.lx=previousLX;
-      if (global.globalThis) global.globalThis.lx=previousGlobal;
-    }
+      var previousLX=global.lx;
+      var previousGlobal=global.globalThis && global.globalThis.lx;
 
+      try {
+        if (!global.globalThis) global.globalThis=global;
+        global.lx=runtime;
+        global.globalThis.lx=runtime;
+        var fn=new Function(
+          'globalThis','window','console','setTimeout','clearTimeout',
+          executionCode+'\n//# sourceURL='+item.url
+        );
+        fn(global,global,global.console,global.setTimeout,global.clearTimeout);
+        item.transpiled=!!transpiled;
+        if (callback) callback(null,item);
+      } catch (e) {
+        item.error=e && e.message ? e.message : String(e);
+        if (callback) callback(e,item);
+      } finally {
+        global.lx=previousLX;
+        if (global.globalThis) global.globalThis.lx=previousGlobal;
+      }
+    });
     return item;
   }
 
@@ -226,16 +236,18 @@
       id:String(Date.now())+'-'+Math.floor(Math.random()*100000),
       url:url,name:meta.name,description:meta.description,version:meta.version,
       author:meta.author,homepage:meta.homepage,code:String(code),inited:false,
-      sources:null,initInfo:null,error:null,runtime:null,transport:null
+      sources:null,initInfo:null,error:null,runtime:null,transport:null,transpiled:false
     };
-    try {
-      executeSource(item);
+
+    executeSource(item,function(err){
+      if (err) {
+        persist();
+        if (callback) callback(err,item);
+        return;
+      }
       addOrReplace(item);
       if (callback) callback(null,item);
-    } catch (e) {
-      persist();
-      if (callback) callback(e,item);
-    }
+    });
   }
 
   function installFromUrl(url,callback) {
@@ -331,16 +343,32 @@
     };
   }
 
-  function rehydrate(item) {
-    if (!item || typeof item.code!=='string') return;
-    try { executeSource(item); } catch (e) { item.inited=false; }
+  function rehydrate(item, callback) {
+    if (!item || typeof item.code!=='string') {
+      if (callback) callback();
+      return;
+    }
+    executeSource(item,function(){
+      if (callback) callback();
+    });
   }
 
   function init() {
     sources=loadRaw();
-    for(var i=0;i<sources.length;i+=1)rehydrate(sources[i]);
     active=sources.length?sources[0]:null;
     persist(); notify();
+
+    function next(index) {
+      if (index >= sources.length) {
+        persist(); notify();
+        return;
+      }
+      rehydrate(sources[index],function(){
+        next(index + 1);
+      });
+    }
+
+    next(0);
   }
 
   function remove(id) {
