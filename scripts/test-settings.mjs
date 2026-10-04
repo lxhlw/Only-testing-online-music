@@ -2,6 +2,15 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
+const settingsHtml = fs.readFileSync(new URL('../settings.html', import.meta.url), 'utf8');
+
+assert.equal((settingsHtml.match(/name="play-quality"/g) || []).length, 8);
+assert.ok(settingsHtml.includes('value="highest"'));
+assert.ok(settingsHtml.includes('id="auto-fallback"'));
+assert.ok(settingsHtml.includes('renderQualityChoices'));
+assert.equal(settingsHtml.includes('id="quality-mode"'), false);
+assert.equal(settingsHtml.includes(':has('), false);
+
 const code = fs.readFileSync(new URL('../src/play-settings.js', import.meta.url), 'utf8');
 const storage = {};
 const window = {
