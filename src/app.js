@@ -126,6 +126,12 @@
       });
     };
 
+    document.getElementById('verified-install-btn').onclick = function () {
+      document.getElementById('source-url').value =
+        'https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/latest.js';
+      document.getElementById('install-btn').click();
+    };
+
     document.getElementById('clear-btn').onclick = function () {
       global.LXSourceManager.clear();
       setCheck('check-storage', 'pending');
