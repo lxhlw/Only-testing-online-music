@@ -11,6 +11,19 @@
     mg: 'migu'
   };
 
+  // GD Studio sources that are also playable by the LX sources used here.
+  // Keep the recovery list small because older devices must not fan out
+  // into many simultaneous requests.
+  var GD_SEARCH_FALLBACKS = ['kuwo', 'netease'];
+
+  var GD_TO_LX_SOURCE = {
+    kuwo: 'kw',
+    kugou: 'kg',
+    tencent: 'tx',
+    netease: 'wy',
+    migu: 'mg'
+  };
+
   function requestJson(url, callback) {
     var origin = global.location && global.location.origin
       ? global.location.origin
@@ -28,7 +41,11 @@
     xhr.onreadystatechange = function () {
       if (xhr.readyState !== 4) return;
       if (xhr.status < 200 || xhr.status >= 300) {
-        return finish(new Error('Search API HTTP ' + xhr.status));
+        var detail = String(xhr.responseText || '').replace(/^\s+|\s+$/g, '');
+        if (detail.length > 240) detail = detail.slice(0, 240) + '…';
+        return finish(new Error(
+          'Search API HTTP ' + xhr.status + (detail ? ': ' + detail : '')
+        ));
       }
       try {
         finish(null, JSON.parse(xhr.responseText));
@@ -114,7 +131,10 @@
 
     var result = [];
     for (var i = 0; i < list.length; i += 1) {
-      var song = normalizeSong(list[i], source);
+      var item = list[i] || {};
+      var itemSource = String(item.source || '').toLowerCase();
+      var normalizedSource = GD_TO_LX_SOURCE[itemSource] || source;
+      var song = normalizeSong(item, normalizedSource);
       if (!song.id || !song.name) continue;
       result.push(song);
     }
@@ -145,19 +165,50 @@
     var mapped = SOURCE_MAP[source];
     if (!mapped) return callback(new Error('Unsupported search source: ' + source));
 
-    var url = API_ENDPOINT +
-      '?types=search' +
-      '&source=' + encodeURIComponent(mapped) +
-      '&name=' + encodeURIComponent(keyword) +
-      '&count=' + encodeURIComponent(limit) +
-      '&pages=' + encodeURIComponent(page);
+    var providers = [mapped];
+    for (var i = 0; i < GD_SEARCH_FALLBACKS.length; i += 1) {
+      if (GD_SEARCH_FALLBACKS[i] !== mapped) providers.push(GD_SEARCH_FALLBACKS[i]);
+    }
 
-    requestJson(url, function (err, data) {
-      if (err) return callback(err);
-      var normalized = normalizeResult(source, page, data);
-      if (!normalized) return callback(new Error('Search result format is invalid'));
-      callback(null, normalized);
-    });
+    function tryProvider(index, lastErr) {
+      if (index >= providers.length) {
+        return callback(lastErr || new Error('No GD Studio search provider is available'));
+      }
+
+      var provider = providers[index];
+      var url = API_ENDPOINT +
+        '?types=search' +
+        '&source=' + encodeURIComponent(provider) +
+        '&name=' + encodeURIComponent(keyword) +
+        '&count=' + encodeURIComponent(limit) +
+        '&pages=' + encodeURIComponent(page);
+
+      requestJson(url, function (err, data) {
+        if (err) return tryProvider(index + 1, err);
+
+        var normalized = normalizeResult(source, page, data);
+        if (!normalized) {
+          return tryProvider(
+            index + 1,
+            new Error('Search result format is invalid for ' + provider)
+          );
+        }
+
+        if (normalized.list.length) {
+          normalized.searchProvider = provider;
+          normalized.requestedSource = source;
+          normalized.fallbackSearch = provider !== mapped;
+          return callback(null, normalized);
+        }
+
+        tryProvider(
+          index + 1,
+          new Error('No search results from ' + provider)
+        );
+      });
+    }
+
+    tryProvider(0, null);
   }
 
   function search(source, keyword, page, limit, callback) {
