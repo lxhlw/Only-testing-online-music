@@ -274,6 +274,13 @@
     addCheck('URL 编码/解码', uriEncodingOk ? 'PASS' : 'FAIL',
       uriEncodingOk ? 'encodeURIComponent / decodeURIComponent 测试通过' : 'URL 编码函数不可正常使用');
 
+    var objectToStringOk = safeTest(function () {
+      var value = [1, 2, 3];
+      return Object.prototype.toString.call(value) === '[object Array]';
+    });
+    addCheck('Array 类型识别', objectToStringOk ? 'PASS' : 'FAIL',
+      objectToStringOk ? 'Object.prototype.toString 数组识别测试通过' : '数组类型识别异常');
+
     var urlOk = safeTest(function () {
       var testUrl = new window.URL('https://example.com/test?a=1');
       return testUrl.hostname === 'example.com' && testUrl.pathname === '/test' && testUrl.search === '?a=1';
