@@ -810,10 +810,12 @@
       runNetworkTest(HUibq_SOURCE_URL, function (state, detail) {
         networkResults.direct = {state:state, detail:detail};
         renderNetwork();
+        renderSummary();
         updateReport();
         runNetworkTest('/api/proxy?url=' + encodeURIComponent(HUibq_SOURCE_URL), function (proxyState, proxyDetail) {
           networkResults.proxy = {state:proxyState, detail:proxyDetail};
           renderNetwork();
+          renderSummary();
           updateReport();
         });
       });
