@@ -281,6 +281,16 @@
     addCheck('Array 类型识别', objectToStringOk ? 'PASS' : 'FAIL',
       objectToStringOk ? 'Object.prototype.toString 数组识别测试通过' : '数组类型识别异常');
 
+    var arrayMethodOk = safeTest(function () {
+      var source = [1, 2, 3];
+      var sliced = source.slice(1);
+      if (sliced.length !== 2 || sliced[0] !== 2 || sliced[1] !== 3) return false;
+      source.splice(1, 1);
+      return source.length === 2 && source[0] === 1 && source[1] === 3;
+    });
+    addCheck('Array slice/splice', arrayMethodOk ? 'PASS' : 'FAIL',
+      arrayMethodOk ? 'slice / splice 实际操作测试通过' : '数组方法行为异常');
+
     var urlOk = safeTest(function () {
       var testUrl = new window.URL('https://example.com/test?a=1');
       return testUrl.hostname === 'example.com' && testUrl.pathname === '/test' && testUrl.search === '?a=1';
