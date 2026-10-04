@@ -1,22 +1,7 @@
 name: Core Validation
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "index.html"
-      - "settings.html"
-      - "legacy-test.html"
-      - "styles.css"
-      - "src/**"
-      - "scripts/**"
-      - "package.json"
-      - ".github/workflows/test-core.yml"
   workflow_dispatch:
-
-concurrency:
-  group: core-validation
-  cancel-in-progress: true
 
 jobs:
   core:

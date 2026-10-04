@@ -21,6 +21,29 @@
     'master': '320k'
   };
 
+  var TUNEFREE_API_ENDPOINT = 'https://music-dl.sayqz.com/api/';
+  var TUNEFREE_SOURCE_MAP = {
+    kw: 'kuwo',
+    tx: 'qq',
+    wy: 'netease'
+  };
+  var TUNEFREE_QUALITY_MAP = {
+    '128k': '128k',
+    '192k': '192k',
+    '256k': '320k',
+    '320k': '320k',
+    'flac': 'flac',
+    'flac24bit': 'flac24bit',
+    'flac32bit': 'flac24bit',
+    '24bit': 'flac24bit',
+    'wav': 'flac',
+    'ape': 'flac',
+    'hires': 'flac24bit',
+    'atmos': 'flac24bit',
+    'atmos_plus': 'flac24bit',
+    'master': 'flac24bit'
+  };
+
   var SOURCE_MAP = {
     kw: 'kuwo',
     kg: 'kugou',
@@ -1134,6 +1157,102 @@
     );
   }
 
+  function getTuneFreePlaybackIds(source, musicInfo) {
+    var info = musicInfo || {};
+    var ids = [];
+
+    function add(value) {
+      var id = String(value == null ? '' : value).replace(/^\\s+|\\s+$/g, '');
+      if (!id) return;
+      for (var i = 0; i < ids.length; i += 1) {
+        if (ids[i] === id) return;
+      }
+      ids.push(id);
+    }
+
+    if (source === 'kw' || source === 'tx' || source === 'wy') {
+      add(info.songmid);
+      add(info.mediaMid);
+      add(info.mid);
+      add(info.id);
+    }
+
+    return ids;
+  }
+
+  function resolveTuneFreeUrl(source, musicInfo, quality, callback) {
+    source = String(source || '').toLowerCase();
+    var platform = TUNEFREE_SOURCE_MAP[source];
+    if (!platform) return callback(new Error('Unsupported TuneHub source: ' + source));
+
+    var ids = getTuneFreePlaybackIds(source, musicInfo);
+    if (!ids.length) return callback(new Error('No platform track id for TuneHub playback: ' + source));
+
+    var br = TUNEFREE_QUALITY_MAP[String(quality || '').toLowerCase()] || '128k';
+    var lastError = null;
+
+    function tryId(index) {
+      if (index >= ids.length) {
+        return callback(lastError || new Error('TuneHub returned no playable URL for ' + platform));
+      }
+
+      var url = TUNEFREE_API_ENDPOINT +
+        '?source=' + encodeURIComponent(platform) +
+        '&id=' + encodeURIComponent(ids[index]) +
+        '&type=url' +
+        '&br=' + encodeURIComponent(br);
+
+      requestViaProxy(
+        url,
+        'GET',
+        null,
+        {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
+          'Accept': 'application/json, audio/mpeg, audio/*, */*; q=0.01'
+        },
+        false,
+        function (err, data) {
+          if (err) {
+            lastError = err;
+            return tryId(index + 1);
+          }
+
+          var text = String(data || '').replace(/^\\s+|\\s+$/g, '');
+          var returnedUrl = '';
+          try {
+            var parsed = JSON.parse(text);
+            returnedUrl = parsed && (parsed.url || (parsed.data && parsed.data.url) || '') || '';
+          } catch (e) {}
+
+          if (!returnedUrl && /^https?:/i.test(text)) returnedUrl = text;
+          if (!returnedUrl || !/^https?:/i.test(returnedUrl)) {
+            lastError = new Error('TuneHub returned no playable URL for ' + platform + ' (' + br + ')');
+            return tryId(index + 1);
+          }
+
+          var actualBr = '';
+          try {
+            var parsedMeta = JSON.parse(text);
+            actualBr = parsedMeta && parsedMeta.br != null ? parsedMeta.br :
+              (parsedMeta && parsedMeta.data && parsedMeta.data.br != null ? parsedMeta.data.br : '');
+          } catch (e2) {}
+
+          callback(null, {
+            url: String(returnedUrl).replace(/^\\s+|\\s+$/g, ''),
+            source: source,
+            provider: 'tune-free',
+            requestedQuality: String(quality || ''),
+            requestedBr: br,
+            actualBr: String(actualBr || br),
+            id: ids[index]
+          });
+        }
+      );
+    }
+
+    tryId(0);
+  }
+
   function resolveGdStudioUrl(source, musicInfo, quality, callback) {
     source = String(source || '').toLowerCase();
     var mapped = SOURCE_MAP[source];
@@ -1256,19 +1375,56 @@
   }
 
 
-  function resolveMusicUrl(source, musicInfo, quality, callback) {
-    resolveHuibqUrl(source, musicInfo, quality, function (huibqErr, huibqResult) {
-      if (!huibqErr && huibqResult && huibqResult.url) return callback(null, huibqResult);
+  function resolveMusicUrl(source, musicInfo, quality, callback, options) {
+    source = String(source || '').toLowerCase();
+    options = options || {};
+    var skipProvider = String(options.skipProvider || '').toLowerCase();
+    var huibqErr = null;
+    var tuneErr = null;
+    var gdErr = null;
 
-      resolveGdStudioUrl(source, musicInfo, quality, function (gdErr, gdResult) {
-        if (!gdErr && gdResult && gdResult.url) return callback(null, gdResult);
+    function finishGd() {
+      if (skipProvider === 'gd-studio') {
+        var message = 'No alternate playback provider remains for ' + source;
+        if (huibqErr && huibqErr.message) message += '；Huibq: ' + huibqErr.message;
+        if (tuneErr && tuneErr.message) message += '；TuneHub: ' + tuneErr.message;
+        return callback(new Error(message));
+      }
 
-        var message = 'Huibq playback failed';
-        if (huibqErr && huibqErr.message) message += ': ' + huibqErr.message;
-        if (gdErr && gdErr.message) message += '；GD Studio playback failed: ' + gdErr.message;
+      resolveGdStudioUrl(source, musicInfo, quality, function (err, result) {
+        gdErr = err || null;
+        if (!gdErr && result && result.url) return callback(null, result);
+
+        var message = 'Playback fallback failed for ' + source;
+        if (huibqErr && huibqErr.message) message += '；Huibq: ' + huibqErr.message;
+        if (tuneErr && tuneErr.message) message += '；TuneHub: ' + tuneErr.message;
+        if (gdErr && gdErr.message) message += '；GD Studio: ' + gdErr.message;
         callback(new Error(message));
       });
-    });
+    }
+
+    function afterTuneHub() {
+      if (TUNEFREE_SOURCE_MAP[source] && skipProvider !== 'tune-free') {
+        resolveTuneFreeUrl(source, musicInfo, quality, function (err, result) {
+          tuneErr = err || null;
+          if (!tuneErr && result && result.url) return callback(null, result);
+          finishGd();
+        });
+        return;
+      }
+      finishGd();
+    }
+
+    if (skipProvider !== 'huibq') {
+      resolveHuibqUrl(source, musicInfo, quality, function (err, result) {
+        huibqErr = err || null;
+        if (!huibqErr && result && result.url) return callback(null, result);
+        afterTuneHub();
+      });
+      return;
+    }
+
+    afterTuneHub();
   }
 
   global.LXMusicSearch = {

@@ -448,7 +448,8 @@
     source,
     musicInfo,
     settings,
-    viaLabel
+    viaLabel,
+    viaProvider
   ) {
     if (token !== playbackToken) return;
 
@@ -459,6 +460,7 @@
     playbackState.url = playableUrl;
     playbackState.sourceUrl = url;
     playbackState.resolver = viaLabel || 'LX source';
+    playbackState.resolverProvider = viaProvider || 'lx-source';
 
     audio.onerror = function () {
       handleAudioError(token, playableUrl);
@@ -605,7 +607,8 @@
         source,
         musicInfo,
         settings,
-        null
+        null,
+        'lx-source'
       );
     });
   }
@@ -670,6 +673,63 @@
     if (expectedToken != null && expectedToken !== state.token) return;
     if (expectedUrl && state.url !== expectedUrl) return;
     state.waitingForAudio = false;
+
+    if (settings.autoFallback && state.resolverProvider &&
+        state.resolverProvider !== 'lx-source' &&
+        global.LXMusicSearch && typeof global.LXMusicSearch.resolveMusicUrl === 'function') {
+      var failedProvider = state.resolverProvider;
+      var failedQuality = state.quality;
+      return global.LXMusicSearch.resolveMusicUrl(
+        state.source,
+        buildMusicInfo(state.music, state.source),
+        failedQuality,
+        function (resolverErr, resolverResult) {
+          if (state.token !== playbackToken) return;
+          if (!resolverErr && resolverResult && resolverResult.url &&
+              String(resolverResult.provider || '') !== failedProvider) {
+            var resolverLabel = resolverResult.provider === 'huibq'
+              ? 'Huibq 平台兜底'
+              : (resolverResult.provider === 'tune-free' ? 'TuneHub 平台兜底' : 'GD Studio 平台兜底');
+            return useResolvedUrl(
+              resolverResult.url,
+              failedQuality,
+              state.token,
+              state.music,
+              state.source,
+              buildMusicInfo(state.music, state.source),
+              settings,
+              resolverLabel,
+              resolverResult.provider
+            );
+          }
+
+          if (settings.autoFallback && state.index + 1 < state.plan.length) {
+            var nextIndex = state.index + 1;
+            setStatus(
+              '当前音质 ' + escapeHtml(state.quality) +
+              ' 无法播放，自动切换到 ' + escapeHtml(state.plan[nextIndex]) + '……',
+              'warn'
+            );
+            requestQuality(
+              state.music,
+              state.source,
+              buildMusicInfo(state.music, state.source),
+              state.plan,
+              nextIndex,
+              state.token
+            );
+            return;
+          }
+
+          var resolverAudio = document.getElementById('audio');
+          var resolverErrorCode = resolverAudio && resolverAudio.error && resolverAudio.error.code
+            ? '（错误码 ' + resolverAudio.error.code + '）'
+            : '';
+          setStatus('当前音质无法播放，备用解析器也无法提供可用地址' + resolverErrorCode + '。', 'fail');
+        },
+        { skipProvider: failedProvider }
+      );
+    }
 
     if (settings.autoFallback && state.index + 1 < state.plan.length) {
       var nextIndex = state.index + 1;

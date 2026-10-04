@@ -463,4 +463,39 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   assert.equal(fallbackTarget.searchParams.get('source'), 'netease')
 }
 
+{
+  const h = createHarness(
+    { kw: { actions: ['musicUrl'] } },
+    () => {},
+    {
+      search: [
+        { status: 200, body: JSON.stringify({ code: 1, msg: 'Huibq unavailable' }) },
+        { status: 200, body: JSON.stringify({ url: 'https://cdn.example.test/tunehub.mp3', br: '128k' }) }
+      ]
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.resolveMusicUrl(
+      'kw',
+      { songmid: '62355680' },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value)
+    )
+  })
+
+  assert.equal(result.provider, 'tune-free')
+  assert.equal(result.url, 'https://cdn.example.test/tunehub.mp3')
+  assert.equal(result.id, '62355680')
+  assert.equal(h.calls.length, 2)
+  const target = new URL(h.calls[1].xhrUrl).searchParams.get('url')
+  const requestUrl = new URL(target)
+  assert.equal(requestUrl.origin, 'https://music-dl.sayqz.com')
+  assert.equal(requestUrl.pathname, '/api/')
+  assert.equal(requestUrl.searchParams.get('source'), 'kuwo')
+  assert.equal(requestUrl.searchParams.get('id'), '62355680')
+  assert.equal(requestUrl.searchParams.get('type'), 'url')
+  assert.equal(requestUrl.searchParams.get('br'), '128k')
+}
+
 console.log('PASS: LX search routing stays channel-bound and never mixes providers')

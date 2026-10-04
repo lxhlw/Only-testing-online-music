@@ -1,17 +1,6 @@
 name: Deploy Only-testing-online-music
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "index.html"
-      - "settings.html"
-      - "legacy-test.html"
-      - "styles.css"
-      - "src/**"
-      - "functions/**"
-      - "vendor/**"
-      - "package.json"
   workflow_dispatch:
 
 jobs:

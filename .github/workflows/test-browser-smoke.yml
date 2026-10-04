@@ -1,24 +1,7 @@
 name: Representative Browser Smoke
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "index.html"
-      - "styles.css"
-      - "src/**"
-      - "functions/**"
-      - "vendor/**"
-      - "scripts/test-quality-fallback-browser.mjs"
-      - "scripts/test-flower-browser.mjs"
-      - "scripts/test-music-search-native.mjs"
-      - "package.json"
-      - ".github/workflows/test-browser-smoke.yml"
   workflow_dispatch:
-
-concurrency:
-  group: representative-browser-smoke
-  cancel-in-progress: true
 
 jobs:
   huibq:
