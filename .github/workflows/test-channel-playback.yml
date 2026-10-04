@@ -5,10 +5,20 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: source-channel-playback-matrix
+  cancel-in-progress: true
+
 jobs:
   channel-playback:
+    name: Channel ${{ matrix.channel }}
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [kw, kg, tx, wy, mg]
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,9 +49,13 @@ jobs:
           cat /tmp/wrangler.log
           exit 1
 
-      - name: Test every declared channel
+      - name: Test channel
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
+          TEST_CHANNEL: ${{ matrix.channel }}
+          SEARCH_TIMEOUT_MS: 20000
+          URL_TIMEOUT_MS: 20000
+          PLAYBACK_TIMEOUT_MS: 12000
         run: node scripts/test-channel-playback.mjs
 
       - name: Show local server log on failure
