@@ -47,3 +47,17 @@ audio{width:230px;max-width:48vw}
   .player{padding:7px}
   audio{width:48vw}
 }
+
+.channel-section{margin-top:12px}
+.channel-title{font-size:13px;font-weight:bold;color:#5f6368;margin-bottom:7px}
+.channel-list{display:flex;flex-wrap:wrap;gap:8px}
+.channel-button{min-height:38px;padding:0 13px;border:1px solid #c7c9cc;border-radius:18px;background:#fff;color:#202124}
+.channel-button.active{background:#3f51b5;color:#fff;border-color:#3f51b5}
+.search-row{border:1px solid #e0e0e0;border-radius:6px;padding:10px;margin-top:8px}
+.search-row>span{margin-left:6px;color:#5f6368}
+.search-source{display:inline-block;margin-left:8px;color:#70757a;font-size:12px}
+.search-row button{display:block;margin-top:8px}
+code{word-break:break-all}
+@media(max-width:600px){
+  .channel-button{width:auto;min-width:92px}
+}
