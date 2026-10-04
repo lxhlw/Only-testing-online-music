@@ -137,25 +137,31 @@ try {
     { timeout: 10000 },
   )
 
-  const result = await page.waitForFunction(
+  await page.waitForFunction(
     () => {
       const audio = document.getElementById('audio')
-      const calls = window.__qualityFallbackCalls || []
-      const status = document.getElementById('status')?.textContent || ''
-      return {
-        calls,
-        status,
-        currentTime: Number(audio?.currentTime || 0),
-        readyState: Number(audio?.readyState || 0),
-        paused: Boolean(audio?.paused),
-        error: audio?.error ? {
-          code: audio.error.code,
-          message: audio.error.message || '',
-        } : null,
-      }
+      return Boolean(audio && audio.currentTime >= 0.5 && !audio.error)
     },
     null,
+    { timeout: PLAYBACK_TIMEOUT_MS },
   )
+
+  const result = await page.evaluate(() => {
+    const audio = document.getElementById('audio')
+    const calls = window.__qualityFallbackCalls || []
+    const status = document.getElementById('status')?.textContent || ''
+    return {
+      calls,
+      status,
+      currentTime: Number(audio?.currentTime || 0),
+      readyState: Number(audio?.readyState || 0),
+      paused: Boolean(audio?.paused),
+      error: audio?.error ? {
+        code: audio.error.code,
+        message: audio.error.message || '',
+      } : null,
+    }
+  })
 
   assert.deepEqual(result.calls.slice(0, 2), ['320k', '128k'])
   assert.ok(result.status.includes('128k'), 'Final status did not report 128k playback')
@@ -172,7 +178,7 @@ try {
     finalStatus: result.status,
     readyState: result.readyState,
     currentTime: result.currentTime,
-    paused: result.value.paused,
+    paused: result.paused,
   }, null, 2))
   console.log('PASS: 320k failure automatically downgraded to 128k and reached real HTML5 playback')
 } catch (error) {
