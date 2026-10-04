@@ -53,6 +53,30 @@ page.on('pageerror', error => {
   pageErrors.push(String(error))
 })
 
+await page.route('**/api/proxy?url=*', async route => {
+  const requestUrl = route.request().url()
+  let target = ''
+  try {
+    target = new URL(requestUrl).searchParams.get('url') || ''
+  } catch {}
+
+  if (target.includes('music-api.gdstudio.xyz/api.php')) {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([{
+        id: 'quality-test-1',
+        name: '成都',
+        artist: '赵雷',
+        album: 'fallback-test'
+      }]),
+    })
+    return
+  }
+
+  await route.continue()
+})
+
 await page.route(FALLBACK_AUDIO_URL, async route => {
   await route.fulfill({
     status: 200,
