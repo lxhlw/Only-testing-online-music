@@ -36,12 +36,16 @@ It currently provides:
 - Initial `buffer` and `crypto` compatibility primitives
 - Source initialization reporting
 - Same-origin network proxying for source requests
+- Automatic source-import fallback: direct URL first, then same-origin `/api/proxy` when direct access fails or times out
+- Import transport reporting so the UI identifies whether a source was loaded directly or through the project proxy
 - Real Chromium source compatibility testing with actual HTML5 audio playback
 - A standalone `legacy-test.html` page for Android 4.4 / Via browser capability checks
+- A local, network-independent Audio playback test using an in-memory WAV data URI
+- GitHub raw HTTPS and same-origin proxy diagnostics for the Huibq source
 
 The current browser test does more than check JavaScript initialization: it imports the original source, searches for **成都**, requests playback URLs for the first three results, probes the returned media endpoint, and requires actual HTML5 playback to advance for at least 0.5 seconds.
 
-For the physical Android 4.4 device, open **`legacy-test.html` first**. It reports JavaScript, localStorage, Promise, typed-array, XHR, Audio, MP3/M4A capability, viewport, User Agent, and project-resource loading results without depending on modern browser APIs.
+For the physical Android 4.4 device, open **`legacy-test.html` first**. It reports JavaScript, localStorage, Promise, typed-array, XHR, Audio, MP3/M4A capability, viewport, User Agent, project-resource loading results, actual local Audio playback, and separate GitHub raw / project-proxy connectivity diagnostics. Resource and network probes have bounded timeouts so a broken connection does not leave the page stuck indefinitely.
 
 ## Real Chromium source test findings
 
