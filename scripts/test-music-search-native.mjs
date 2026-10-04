@@ -456,7 +456,8 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   assert.equal(result.list[0].id, 'wy-good')
   assert.match(decodeURIComponent(h.calls[0].xhrUrl), /music\.163\.com\/api\/search\/get\/web/)
   assert.match(decodeURIComponent(h.calls[1].xhrUrl), /music-api\.gdstudio\.xyz\/api\.php/)
-  assert.equal(new URL(h.calls[1].xhrUrl).searchParams.get('source'), 'netease')
+  const fallbackTarget = new URL(new URL(h.calls[1].xhrUrl).searchParams.get('url'))
+  assert.equal(fallbackTarget.searchParams.get('source'), 'netease')
 }
 
 console.log('PASS: LX search routing stays channel-bound and never mixes providers')
