@@ -305,8 +305,7 @@
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/\\+/g, function (match) { return match; });
+      .replace(/&#39;/g, "'");
   }
 
   function formatKuwoInterval(seconds) {
@@ -325,7 +324,7 @@
 
     var pieces = text.split(';');
     for (var i = 0; i < pieces.length; i += 1) {
-      var match = pieces[i].match(/level:(\\w+),bitrate:(\\d+),format:(\\w+),size:([\\w.]+)/);
+      var match = pieces[i].match(/level:(\w+),bitrate:(\d+),format:(\w+),size:([\w.]+)/);
       if (!match) continue;
 
       var bitrate = match[2];
@@ -336,7 +335,7 @@
       else if (bitrate === '128') types.push({ type: '128k', size: match[4] });
     }
 
-    return types;
+    return types.reverse();
   }
 
   function searchKuwo(keyword, page, limit, callback) {
@@ -518,40 +517,3 @@
 
     var active = global.LXSourceManager && global.LXSourceManager.getActive
       ? global.LXSourceManager.getActive()
-      : null;
-    var sourceInfo = active && active.sources ? active.sources[source] : null;
-    var actions = sourceInfo && sourceInfo.actions ? sourceInfo.actions : [];
-
-    // LX Music separates platform search from user-source playback:
-    // a custom LX source such as Flower normally declares musicUrl only.
-    // When musicSearch is declared, it is authoritative and must never be
-    // replaced with another provider on failure. Otherwise use the native
-    // platform search path for the selected channel.
-    if (actions.indexOf('musicSearch') >= 0 && global.LXSourceManager && global.LXSourceManager.requestAction) {
-      return searchNative(source, keyword, page, limit, function (nativeErr, nativeResult) {
-        if (nativeErr) return callback(nativeErr);
-        nativeResult.searchProvider = 'lx-native';
-        nativeResult.requestedSource = source;
-        nativeResult.fallbackSearch = false;
-        return callback(null, nativeResult);
-      });
-    }
-
-    if (!SOURCE_MAP[source]) {
-      return callback(new Error('当前 LX 音源未提供 musicSearch，且该渠道没有可用的平台搜索适配：' + source));
-    }
-
-    return searchViaPlatform(source, keyword, page, limit, function (err, result) {
-      if (err) return callback(err);
-      result.requestedSource = source;
-      result.fallbackSearch = false;
-      return callback(null, result);
-    });
-  }
-
-  global.LXMusicSearch = {
-    search: search,
-    sourceMap: SOURCE_MAP,
-    normalizeSong: normalizeSong
-  };
-})(window);
