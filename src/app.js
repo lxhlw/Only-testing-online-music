@@ -216,9 +216,12 @@
     var quality = plan[index];
     playbackState.index = index;
     playbackState.quality = quality;
+    playbackState.waitingForAudio = false;
+    playbackState.playing = false;
+    playbackState.url = '';
 
     setStatus(
-      (index === 0 ? '正在请求' : '高音质失败，正在自动切换') +
+      (index === 0 ? '正在请求' : '当前音质失败，正在自动切换') +
       ' ' + escapeHtml(quality) + '：' + escapeHtml(music.name) + '……'
     );
 
@@ -247,7 +250,22 @@
       var audio = document.getElementById('audio');
       playbackState.waitingForAudio = true;
       playbackState.quality = quality;
+      playbackState.url = url;
+
+      // Drop handlers for the previous media attempt before assigning a new
+      // URL. Legacy browsers can dispatch a late error event after src changes.
+      audio.onerror = null;
+      audio.onplaying = null;
       audio.src = url;
+      if (typeof audio.load === 'function') audio.load();
+
+      audio.onerror = function () {
+        handleAudioError(token, url);
+      };
+      audio.onplaying = function () {
+        handleAudioPlaying(token, url);
+      };
+
       document.getElementById('player-title').innerHTML = escapeHtml(music.name);
       document.getElementById('player-artist').innerHTML = escapeHtml(music.singer);
       setStatus(
@@ -260,12 +278,33 @@
         var playResult = audio.play();
         if (playResult && typeof playResult.catch === 'function') {
           playResult.catch(function () {
-            if (token !== playbackToken) return;
-            setStatus('已返回 ' + escapeHtml(quality) + ' 播放地址，但浏览器拒绝自动播放。可点击播放器播放。', 'warn');
+            if (token !== playbackToken || !playbackState || playbackState.url !== url) return;
+
+            // Decode/not-supported failures can reject play() and may also
+            // provide audio.error. Feed those into the same downgrade path.
+            if (audio.error && settings.autoFallback) {
+              handleAudioError(token, url);
+              return;
+            }
+
+            // Browser autoplay policy is not a media-quality failure.
+            setStatus(
+              '已返回 ' + escapeHtml(quality) +
+              ' 播放地址，但浏览器拒绝自动播放。可点击播放器播放。',
+              'warn'
+            );
           });
         }
       } catch (e) {
-        setStatus('已返回 ' + escapeHtml(quality) + ' 播放地址，但浏览器未能自动播放。可点击播放器播放。', 'warn');
+        if (audio.error && settings.autoFallback) {
+          handleAudioError(token, url);
+        } else {
+          setStatus(
+            '已返回 ' + escapeHtml(quality) +
+            ' 播放地址，但浏览器未能自动播放。可点击播放器播放。',
+            'warn'
+          );
+        }
       }
     });
   }
