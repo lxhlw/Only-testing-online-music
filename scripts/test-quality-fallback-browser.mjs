@@ -47,7 +47,7 @@ const browser = await chromium.launch({
 })
 
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
-const testWav = createTestWav(130)
+const testWav = createTestWav(300)
 const shortErrorWav = createTestWav(9)
 const pageErrors = []
 
