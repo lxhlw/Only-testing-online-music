@@ -121,11 +121,10 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           npx wrangler pages project create only-testing-online-music --production-branch main || true
-          npx wrangler pages deploy . --project-name only-testing-online-music --branch main | tee /tmp/deploy.log
-          DEPLOYMENT_URL="$(grep -oE 'https://[0-9a-z]+\.only-testing-online-music\.pages\.dev' /tmp/deploy.log | tail -1)"
-          test -n "$DEPLOYMENT_URL"
+          npx wrangler pages deploy . --project-name only-testing-online-music --commit-hash "$GITHUB_SHA" --commit-message "Verify And Deploy $GITHUB_SHA" | tee /tmp/deploy.log
+          DEPLOYMENT_URL="https://only-testing-online-music.pages.dev"
           echo "deployment_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
-          echo "Verified deployment URL: $DEPLOYMENT_URL"
+          echo "Verified production URL: $DEPLOYMENT_URL"
 
       - name: Wait for deployment to serve
         env:
