@@ -1,4 +1,4 @@
-name: Test LX 6 In Chromium
+name: Test SixYin Latest In Chromium
 
 on:
   push:
@@ -11,8 +11,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  lx6-browser:
-    name: LX source browser lx-6
+  sixyin-latest-browser:
+    name: LX source browser sixyin-latest
     runs-on: ubuntu-latest
     timeout-minutes: 6
 
@@ -46,11 +46,11 @@ jobs:
           cat /tmp/wrangler.log
           exit 1
 
-      - name: Test LX 6 in real Chromium
+      - name: Test SixYin latest in real Chromium
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
-          LX_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/lx/6.js
-          LX_SOURCE_NAME: lx-6
+          LX_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/latest.js
+          LX_SOURCE_NAME: sixyin-latest
           SIXYIN_INIT_TIMEOUT_MS: 30000
           PLAYBACK_CANDIDATES: 3
         run: node scripts/test-sixyin-browser.mjs
