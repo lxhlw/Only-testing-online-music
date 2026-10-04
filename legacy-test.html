@@ -93,6 +93,7 @@
       detail: '尚未进行实际 Audio 播放测试',
       currentTime: 0
     };
+    var fullTestRunning = false;
 
     function byId(id) { return document.getElementById(id); }
 
@@ -754,7 +755,9 @@
       }
       byId('network-tests').innerHTML =
         '<button id="network-test-btn" type="button">重新测试 HTTPS 与项目代理</button>' + html;
-      byId('network-test-btn').onclick = testNetwork;
+      byId('network-test-btn').onclick = function () {
+      testNetwork();
+    };
     }
 
     function runNetworkTest(url, onResult) {
@@ -801,7 +804,9 @@
       }
     }
 
-    function testNetwork() {
+    function testNetwork(done) {
+      if (fullTestRunning && !done) return;
+
       networkResults.direct = {state:'WARN', detail:'正在测试 GitHub raw 直连……'};
       networkResults.proxy = {state:'WARN', detail:'正在测试项目代理……'};
       renderNetwork();
@@ -817,6 +822,7 @@
           renderNetwork();
           renderSummary();
           updateReport();
+          if (done) done();
         });
       });
     }
@@ -878,20 +884,39 @@
       updateReport();
     }
 
-    function runFullLegacyTest() {
-      var button = byId('full-test-btn');
-      if (button) {
-        button.disabled = true;
-        button.innerHTML = '完整自检进行中……';
+    function setFullTestLock(locked) {
+      fullTestRunning = locked;
+      var fullButton = byId('full-test-btn');
+      var audioButton = byId('audio-test-btn');
+      var networkButton = byId('network-test-btn');
+      if (fullButton) {
+        fullButton.disabled = locked;
+        fullButton.innerHTML = locked ? '完整自检进行中……' : '重新进行一键完整自检';
       }
+      if (audioButton) audioButton.disabled = locked;
+      if (networkButton) networkButton.disabled = locked;
+    }
 
+    function finishFullLegacyTest() {
+      setFullTestLock(false);
+      renderSummary();
+      updateReport();
+    }
+
+    function runFullLegacyTest() {
+      if (fullTestRunning) return;
+      setFullTestLock(true);
       setPlaybackStatus('WARN', '正在进行一键完整自检……');
       testActualPlayback(function () {
-        testNetwork();
+        testNetwork(function () {
+          finishFullLegacyTest();
+        });
       });
     }
 
     function testActualPlayback(done) {
+      if (fullTestRunning && !done) return;
+
       var target = byId('test-audio');
       var src = makeWavDataUri();
       var finished = false;
@@ -1065,7 +1090,9 @@
     byId('copy-short-btn').onclick = copyShortReport;
     byId('full-test-btn').onclick = runFullLegacyTest;
     byId('network-test-btn').onclick = testNetwork;
-    byId('audio-test-btn').onclick = testActualPlayback;
+    byId('audio-test-btn').onclick = function () {
+      testActualPlayback();
+    };
 
     if (document.readyState === 'loading') {
       window.addEventListener('DOMContentLoaded', render, false);
