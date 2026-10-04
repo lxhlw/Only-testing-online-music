@@ -24,6 +24,8 @@ jobs:
             url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js"
           - name: "qdy-latest"
             url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/qdy/latest.js"
+          - name: "qdy-9.3"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/qdy/9.3.js"
           - name: "huanyin-latest"
             url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/huanyin/latest.js"
           - name: "grass-latest"
