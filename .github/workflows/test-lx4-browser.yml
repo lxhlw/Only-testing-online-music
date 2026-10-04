@@ -1,4 +1,4 @@
-name: Test Changqing Latest In Chromium
+name: Test Ikun 6 In Chromium
 
 on:
   push:
@@ -11,8 +11,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  changqing-browser:
-    name: LX source browser changqing-latest
+  ikun-browser:
+    name: LX source browser ikun-6
     runs-on: ubuntu-latest
     timeout-minutes: 6
 
@@ -46,11 +46,11 @@ jobs:
           cat /tmp/wrangler.log
           exit 1
 
-      - name: Test Changqing Latest in real Chromium
+      - name: Test Ikun 6 in real Chromium
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
-          LX_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/changqing/latest.js
-          LX_SOURCE_NAME: changqing-latest
+          LX_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/ikun/6.js
+          LX_SOURCE_NAME: ikun-6
           SIXYIN_INIT_TIMEOUT_MS: 30000
           PLAYBACK_CANDIDATES: 3
         run: node scripts/test-sixyin-browser.mjs
