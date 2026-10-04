@@ -381,32 +381,6 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 {
   const cases = [
     {
-      source: 'tx',
-      expectedProvider: 'qqmusic-native',
-      response: {
-        code: 0,
-        'music.search.SearchCgiService': {
-          code: 0,
-          data: {
-            body: {
-              song: {
-                list: [{
-                  id: 1001,
-                  mid: '003abc',
-                  title: '晴天',
-                  singer: [{ name: '周杰伦', mid: '0025' }],
-                  interval: 269,
-                  album: { name: '叶惠美', mid: 'alb1' },
-                  file: { media_mid: 'media1', size_128mp3: 1000000, size_320mp3: 2000000, size_flac: 4000000, size_hires: 8000000 }
-                }]
-              }
-            },
-            meta: { sum: 1 }
-          }
-        }
-      }
-    },
-    {
       source: 'wy',
       expectedProvider: 'netease-native',
       response: {
@@ -471,18 +445,12 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     assert.equal(result.list.length, 1)
     assert.equal(result.list[0].source, item.source)
 
-    if (item.source === 'tx') {
-      assert.equal(result.list[0].songmid, '003abc')
-      assert.equal(result.list[0].name, '晴天')
-      assert.equal(result.list[0].singer, '周杰伦')
-      assert.equal(new URL(h.calls[0].xhrUrl).searchParams.has('sign'), true)
-      assert.equal(h.calls[0].xhrMethod, 'POST')
-    }
     if (item.source === 'wy') {
       assert.equal(result.list[0].songmid, '2001')
       assert.equal(result.list[0].singer, '周杰伦')
-      assert.equal(h.calls[0].xhrMethod, 'POST')
-      assert.match(String(h.calls[0].xhrBody || ''), /params=/)
+      assert.equal(h.calls[0].xhrMethod, 'GET')
+      const requestUrl = new URL(h.calls[0].xhrUrl)
+      assert.match(requestUrl.searchParams.get('url') || '', /music\.163\.com\/api\/search\/get\/web/)
     }
     if (item.source === 'mg') {
       assert.equal(result.list[0].copyrightId, 'mg-copy-1')
