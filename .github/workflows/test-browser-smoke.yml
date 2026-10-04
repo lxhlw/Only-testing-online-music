@@ -12,6 +12,7 @@ on:
       - "scripts/test-sixyin-browser.mjs"
       - "scripts/test-quality-fallback-browser.mjs"
       - "scripts/test-flower-browser.mjs"
+      - "scripts/test-music-search-native.mjs"
       - "package.json"
       - ".github/workflows/test-browser-smoke.yml"
   workflow_dispatch:
