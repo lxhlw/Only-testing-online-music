@@ -124,7 +124,20 @@ export async function onRequest(context) {
   var candidateUrls = [target.toString()];
   if (target.hostname.toLowerCase() === '97.64.37.235') {
     candidateUrls = [];
-    var flowerAliases = ['ts.tempmusics.tk', 'tm.tempmusics.tk', 'ts.tempmusic.tk', 'tm.tempmusic.tk'];
+    var flowerAliases = [
+      'ts.tempmusics.tk',
+      'tm.tempmusics.tk',
+      'ts.tempmusic.tk',
+      'tm.tempmusic.tk',
+      // Wildcard DNS maps these hostnames back to the Flower IP while the
+      // URL authority is no longer a literal IP. This avoids Cloudflare 1003
+      // on direct-IP access and is also useful when the historical domain DNS
+      // record is unavailable.
+      '97-64-37-235.sslip.io',
+      '97.64.37.235.sslip.io',
+      '97-64-37-235.nip.io',
+      '97.64.37.235.nip.io'
+    ];
     for (var fi = 0; fi < flowerAliases.length; fi += 1) {
       try {
         var alias = new URL(target.toString());
