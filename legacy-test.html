@@ -226,6 +226,22 @@
     addCheck('触摸输入能力', touchOk ? 'PASS' : 'WARN',
       touchOk ? '检测到触摸事件或触摸点能力' : '未检测到 Touch API（桌面浏览器可能属于正常情况）');
 
+    var inputEventOk = safeTest(function () {
+      if (typeof document.createEvent !== 'function') return false;
+      var input = document.createElement('input');
+      var fired = false;
+      input.addEventListener('input', function () {
+        fired = true;
+      }, false);
+      input.value = '成都';
+      var event = document.createEvent('Event');
+      event.initEvent('input', true, true);
+      input.dispatchEvent(event);
+      return fired && input.value === '成都';
+    });
+    addCheck('input 事件', inputEventOk ? 'PASS' : 'WARN',
+      inputEventOk ? '输入事件绑定与触发测试通过' : 'input 事件能力不可用或未触发');
+
     var jsonOk = safeTest(function () {
       if (!window.JSON ||
           typeof window.JSON.parse !== 'function' ||
