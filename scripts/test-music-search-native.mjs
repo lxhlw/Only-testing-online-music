@@ -410,27 +410,15 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       source: 'wy',
       expectedProvider: 'netease-native',
       response: {
-        data: {
-          code: 200,
-          data: {
-            totalCount: 1,
-            resources: [{
-              baseInfo: {
-                simpleSongData: {
-                  id: 2001,
-                  name: '晴天',
-                  dt: 269000,
-                  ar: [{ name: '周杰伦', id: 1 }],
-                  al: { id: 2, name: '叶惠美', picUrl: 'https://img.example/2.jpg' },
-                  privilege: { maxBrLevel: 'hires', maxbr: 999000 },
-                  hr: { size: 8000000 },
-                  sq: { size: 4000000 },
-                  h: { size: 2000000 },
-                  l: { size: 1000000 }
-                }
-              }
-            }]
-          }
+        result: {
+          songCount: 1,
+          songs: [{
+            id: 2001,
+            name: '晴天',
+            duration: 269000,
+            artists: [{ name: '周杰伦', id: 1 }],
+            album: { id: 2, name: '叶惠美', picUrl: 'https://img.example/2.jpg' }
+          }]
         }
       }
     },

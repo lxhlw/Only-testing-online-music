@@ -660,43 +660,54 @@
   }
 
   function searchNetease(keyword, page, limit, callback) {
-    var urlPath = '/api/search/song/list/page';
-    var requestBody = {
-      keyword: keyword,
-      needCorrect: '1',
-      channel: 'typing',
-      offset: limit * (page - 1),
-      scene: 'normal',
-      total: page === 1,
-      limit: limit
-    };
-    var params = eapiParams(urlPath, requestBody);
+    var offset = limit * (page - 1);
+    var url = 'https://music.163.com/api/search/get/web' +
+      '?s=' + encodeURIComponent(keyword) +
+      '&type=1' +
+      '&offset=' + encodeURIComponent(offset) +
+      '&total=' + encodeURIComponent(page === 1 ? 'true' : 'false') +
+      '&limit=' + encodeURIComponent(limit);
 
     requestViaProxy(
-      'http://interface.music.163.com/eapi/batch',
-      'POST',
-      encodeForm({ params: params }),
+      url,
+      'GET',
+      null,
       {
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36',
-        'Origin': 'https://music.163.com',
-        'Content-Type': 'application/x-www-form-urlencoded'
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'Referer': 'https://music.163.com/',
+        'Accept': 'application/json, text/plain, */*'
       },
       true,
       function (err, data) {
         if (err) return callback(err);
-        var listRoot = data && data.data ? data.data : data;
-        if (!listRoot || Number(listRoot.code) !== 200) {
-          return callback(new Error('Netease search returned an invalid response'));
+
+        var root = data && data.result ? data.result : data;
+        var songs = root && Array.isArray(root.songs) ? root.songs : [];
+        if (!songs.length) return callback(new Error('Netease search returned no usable songs'));
+
+        var resources = [];
+        for (var i = 0; i < songs.length; i += 1) {
+          var song = songs[i] || {};
+          if (song.id == null || !song.name) continue;
+
+          resources.push({
+            baseInfo: {
+              simpleSongData: {
+                id: song.id,
+                name: song.name,
+                dt: song.duration || 0,
+                ar: Array.isArray(song.artists) ? song.artists : [],
+                al: song.album || {},
+                privilege: {}
+              }
+            }
+          });
         }
-        var resources = listRoot.data && Array.isArray(listRoot.data.resources)
-          ? listRoot.data.resources
-          : (Array.isArray(listRoot.resources) ? listRoot.resources : []);
+
         var list = buildNeteaseList(resources);
         if (!list.length) return callback(new Error('Netease search returned no usable songs'));
 
-        var total = Number(listRoot.data && listRoot.data.totalCount != null
-          ? listRoot.data.totalCount
-          : listRoot.totalCount);
+        var total = Number(root.songCount);
         if (!isFinite(total)) total = list.length;
 
         callback(null, {
