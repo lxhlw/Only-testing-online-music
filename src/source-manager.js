@@ -250,6 +250,10 @@
     }
 
     function request(requestUrl, allowProxyFallback) {
+      if (timer) {
+        global.clearTimeout(timer);
+        timer = null;
+      }
       activeXhr = new XMLHttpRequest();
 
       function succeed(code) {
@@ -294,7 +298,12 @@
     }
 
     request(originalUrl, true);
-    return function(){try{finished=true;cleanup();if(activeXhr)activeXhr.abort();}catch(e){}};
+    return function(){
+      var xhr = activeXhr;
+      finished = true;
+      cleanup();
+      try { if (xhr) xhr.abort(); } catch (e) {}
+    };
   }
 
   function rehydrate(item) {
