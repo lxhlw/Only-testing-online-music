@@ -62,7 +62,7 @@
   }
 
   function normalizeQualityList(list) {
-    var input = list instanceof Array ? list : [];
+    var input = Array.isArray(list) ? list : [];
     var result = [];
     var seen = {};
     for (var i = 0; i < input.length; i += 1) {
