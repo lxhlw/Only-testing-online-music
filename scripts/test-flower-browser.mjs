@@ -178,10 +178,11 @@ try {
 
     const targetSeen = proxyTargets.some(item => {
       const target = item.target
-      if (channel === 'kw') return /search\.kuwo\.cn\/r\.s/.test(target) || /flower\/v1\/url\/kw\//.test(target)
+      if (channel === 'kw') return /search\.kuwo\.cn\/r\.s/.test(target) || /flower\/v1\/url\/kw\//.test(target) || /music-api\.gdstudio\.xyz\/api\.php/.test(target)
       if (channel === 'kg') return /songsearch\.kugou\.com\/song_search_v2/.test(target) ||
         /mobilecdn\.kugou\.com\/api\/v3\/search\/song/.test(target) ||
-        /flower\/v1\/url\/kg\//.test(target)
+        /flower\/v1\/url\/kg\//.test(target) ||
+        /music-api\.gdstudio\.xyz\/api\.php/.test(target)
       if (channel === 'tx') return /gdstudio\.xyz\/api\.php/.test(target) || /flower\/v1\/url\/tx\//.test(target)
       if (channel === 'wy') return /gdstudio\.xyz\/api\.php/.test(target) || /flower\/v1\/url\/wy\//.test(target)
       return /gdstudio\.xyz\/api\.php/.test(target) || /flower\/v1\/url\/mg\//.test(target)

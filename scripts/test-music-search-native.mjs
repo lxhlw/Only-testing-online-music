@@ -308,4 +308,58 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 }
 
 
+
+{
+  const h = createHarness(
+    {
+      kw: { actions: ['musicUrl'] },
+      kg: { actions: ['musicUrl'] },
+      tx: { actions: ['musicUrl'] },
+      wy: { actions: ['musicUrl'] },
+      mg: { actions: ['musicUrl'] }
+    },
+    () => {},
+    {
+      time: { status: 200, body: '1791139200' },
+      search: {
+        status: 200,
+        body: JSON.stringify({
+          url: 'https://cdn.example.test/audio.mp3',
+          br: 128,
+          size: 1234
+        })
+      }
+    }
+  )
+
+  const cases = [
+    { source: 'kw', info: { songmid: '62355680' }, quality: '128k', expected: 'kuwo', id: '62355680', br: '128' },
+    { source: 'kg', info: { hash: 'ABCDEF0123456789' }, quality: '320k', expected: 'kugou', id: 'ABCDEF0123456789', br: '320' },
+    { source: 'tx', info: { songmid: '00112233' }, quality: 'flac', expected: 'tencent', id: '00112233', br: '740' },
+    { source: 'wy', info: { songmid: '99887766' }, quality: '320k', expected: 'netease', id: '99887766', br: '320' },
+    { source: 'mg', info: { copyrightId: '55667788' }, quality: 'flac24bit', expected: 'migu', id: '55667788', br: '999' }
+  ]
+
+  for (const item of cases) {
+    const result = await new Promise((resolve, reject) => {
+      h.sandbox.LXMusicSearch.resolveMusicUrl(
+        item.source,
+        item.info,
+        item.quality,
+        (err, value) => err ? reject(err) : resolve(value)
+      )
+    })
+    assert.equal(result.provider, 'gd-studio')
+    assert.equal(result.url, 'https://cdn.example.test/audio.mp3')
+
+    const call = h.calls[h.calls.length - 1]
+    const body = new URLSearchParams(call.xhrBody)
+    assert.equal(body.get('types'), 'url')
+    assert.equal(body.get('source'), item.expected)
+    assert.equal(body.get('id'), item.id)
+    assert.equal(body.get('br'), item.br)
+    assert.ok(body.get('s'))
+  }
+}
+
 console.log('PASS: LX search routing stays channel-bound and never mixes providers')

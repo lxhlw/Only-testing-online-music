@@ -123,29 +123,10 @@ export async function onRequest(context) {
   // its resolver on this IP, so try known DNS aliases for the same origin.
   var candidateUrls = [target.toString()];
   if (target.hostname.toLowerCase() === '97.64.37.235') {
-    candidateUrls = [];
-    var flowerAliases = [
-      'ts.tempmusics.tk',
-      'tm.tempmusics.tk',
-      'ts.tempmusic.tk',
-      'tm.tempmusic.tk',
-      // Wildcard DNS maps these hostnames back to the Flower IP while the
-      // URL authority is no longer a literal IP. This avoids Cloudflare 1003
-      // on direct-IP access and is also useful when the historical domain DNS
-      // record is unavailable.
-      '97-64-37-235.sslip.io',
-      '97.64.37.235.sslip.io',
-      '97-64-37-235.nip.io',
-      '97.64.37.235.nip.io'
-    ];
-    for (var fi = 0; fi < flowerAliases.length; fi += 1) {
-      try {
-        var alias = new URL(target.toString());
-        alias.hostname = flowerAliases[fi];
-        candidateUrls.push(alias.toString());
-      } catch (e) {}
-    }
-    candidateUrls.push(target.toString());
+    // Flower's historical resolver is a literal-IP HTTP service. The
+    // Cloudflare Worker cannot reliably reach it, so try it once and allow
+    // the caller to fall back to the platform resolver.
+    candidateUrls = [target.toString()];
   }
 
   var lastError = null;

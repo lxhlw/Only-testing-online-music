@@ -440,6 +440,75 @@
     return musicInfo;
   }
 
+  function useResolvedUrl(
+    url,
+    quality,
+    token,
+    music,
+    source,
+    musicInfo,
+    settings,
+    viaLabel
+  ) {
+    if (token !== playbackToken) return;
+
+    var audio = document.getElementById('audio');
+    var playableUrl = buildPlayableUrl(url);
+    playbackState.waitingForAudio = true;
+    playbackState.quality = quality;
+    playbackState.url = playableUrl;
+    playbackState.sourceUrl = url;
+    playbackState.resolver = viaLabel || 'LX source';
+
+    audio.onerror = function () {
+      handleAudioError(token, playableUrl);
+    };
+    audio.onplaying = function () {
+      handleAudioPlaying(token, playableUrl);
+    };
+    audio.preload = 'auto';
+    audio.src = playableUrl;
+    if (typeof audio.load === 'function') audio.load();
+
+    document.getElementById('player-title').innerHTML = escapeHtml(music.name);
+    document.getElementById('player-artist').innerHTML = escapeHtml(music.singer);
+    setStatus(
+      (CHANNEL_NAMES[source] || source.toUpperCase()) +
+      ' 已返回 ' + escapeHtml(quality) + ' 播放地址' +
+      (viaLabel ? '（' + escapeHtml(viaLabel) + '）' : '') +
+      '，正在尝试播放。',
+      'ready'
+    );
+
+    try {
+      var playResult = audio.play();
+      if (playResult && typeof playResult.catch === 'function') {
+        playResult.catch(function () {
+          if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
+          if (audio.error && settings.autoFallback) {
+            handleAudioError(token, playableUrl);
+            return;
+          }
+          setStatus(
+            '已返回 ' + escapeHtml(quality) +
+            ' 播放地址，但浏览器拒绝自动播放。可点击播放器播放。',
+            'warn'
+          );
+        });
+      }
+    } catch (e) {
+      if (audio.error && settings.autoFallback) {
+        handleAudioError(token, playableUrl);
+      } else {
+        setStatus(
+          '已返回 ' + escapeHtml(quality) +
+          ' 播放地址，但浏览器未能自动播放。可点击播放器播放。',
+          'warn'
+        );
+      }
+    }
+  }
+
   function requestQuality(music, source, musicInfo, plan, index, token) {
     var active = global.LXSourceManager.getActive();
     var settings = getPlaySettings();
@@ -464,81 +533,80 @@
       if (token !== playbackToken) return;
 
       if (err) {
+        if (global.LXMusicSearch && typeof global.LXMusicSearch.resolveMusicUrl === 'function') {
+          return global.LXMusicSearch.resolveMusicUrl(source, musicInfo, quality, function (fallbackErr, fallbackResult) {
+            if (token !== playbackToken) return;
+            if (!fallbackErr && fallbackResult && fallbackResult.url) {
+              return useResolvedUrl(
+                fallbackResult.url,
+                quality,
+                token,
+                music,
+                source,
+                musicInfo,
+                settings,
+                'GD Studio 平台兜底'
+              );
+            }
+            if (settings.autoFallback && index + 1 < plan.length) {
+              return requestQuality(music, source, musicInfo, plan, index + 1, token);
+            }
+            return setStatus('musicUrl 失败（' + escapeHtml(quality) + '）：'
+              + escapeHtml(err.message || err)
+              + (fallbackErr ? '；平台兜底也失败：' + escapeHtml(fallbackErr.message || fallbackErr) : ''),
+              'fail');
+          });
+        }
+
         if (settings.autoFallback && index + 1 < plan.length) {
           return requestQuality(music, source, musicInfo, plan, index + 1, token);
         }
-        return setStatus('musicUrl 失败（' + escapeHtml(quality) + '）：' +
-          escapeHtml(err.message || err), 'fail');
+        return setStatus('musicUrl 失败（' + escapeHtml(quality) + '）：'
+          + escapeHtml(err.message || err), 'fail');
       }
 
       var url = typeof result === 'string' ? result : (result && (result.url || result.result));
       if (url != null) url = String(url).replace(/^\s+|\s+$/g, '');
       if (!url || !/^https?:/i.test(url)) {
+        if (global.LXMusicSearch && typeof global.LXMusicSearch.resolveMusicUrl === 'function') {
+          return global.LXMusicSearch.resolveMusicUrl(source, musicInfo, quality, function (fallbackErr, fallbackResult) {
+            if (token !== playbackToken) return;
+            if (!fallbackErr && fallbackResult && fallbackResult.url) {
+              return useResolvedUrl(
+                fallbackResult.url,
+                quality,
+                token,
+                music,
+                source,
+                musicInfo,
+                settings,
+                'GD Studio 平台兜底'
+              );
+            }
+            if (settings.autoFallback && index + 1 < plan.length) {
+              return requestQuality(music, source, musicInfo, plan, index + 1, token);
+            }
+            return setStatus('musicUrl 在 ' + escapeHtml(quality) + ' 下返回了无效结果。'
+              + (fallbackErr ? '；平台兜底也失败：' + escapeHtml(fallbackErr.message || fallbackErr) : ''),
+              'fail');
+          });
+        }
         if (settings.autoFallback && index + 1 < plan.length) {
           return requestQuality(music, source, musicInfo, plan, index + 1, token);
         }
         return setStatus('musicUrl 在 ' + escapeHtml(quality) + ' 下返回了无效结果。', 'fail');
       }
 
-      var audio = document.getElementById('audio');
-      var playableUrl = buildPlayableUrl(url);
-      playbackState.waitingForAudio = true;
-      playbackState.quality = quality;
-      playbackState.url = playableUrl;
-      playbackState.sourceUrl = url;
-
-      // Drop handlers for the previous media attempt before assigning a new
-      // URL. Legacy browsers can dispatch a late error event after src changes.
-      audio.onerror = function () {
-        handleAudioError(token, playableUrl);
-      };
-      audio.onplaying = function () {
-        handleAudioPlaying(token, playableUrl);
-      };
-      audio.preload = 'auto';
-      audio.src = playableUrl;
-      if (typeof audio.load === 'function') audio.load();
-
-      document.getElementById('player-title').innerHTML = escapeHtml(music.name);
-      document.getElementById('player-artist').innerHTML = escapeHtml(music.singer);
-      setStatus(
-        (CHANNEL_NAMES[source] || source.toUpperCase()) +
-        ' 已返回 ' + escapeHtml(quality) + ' 播放地址，正在尝试播放。',
-        'ready'
+      return useResolvedUrl(
+        url,
+        quality,
+        token,
+        music,
+        source,
+        musicInfo,
+        settings,
+        null
       );
-
-      try {
-        var playResult = audio.play();
-        if (playResult && typeof playResult.catch === 'function') {
-          playResult.catch(function () {
-            if (token !== playbackToken || !playbackState || playbackState.url !== url) return;
-
-            // Decode/not-supported failures can reject play() and may also
-            // provide audio.error. Feed those into the same downgrade path.
-            if (audio.error && settings.autoFallback) {
-              handleAudioError(token, url);
-              return;
-            }
-
-            // Browser autoplay policy is not a media-quality failure.
-            setStatus(
-              '已返回 ' + escapeHtml(quality) +
-              ' 播放地址，但浏览器拒绝自动播放。可点击播放器播放。',
-              'warn'
-            );
-          });
-        }
-      } catch (e) {
-        if (audio.error && settings.autoFallback) {
-          handleAudioError(token, url);
-        } else {
-          setStatus(
-            '已返回 ' + escapeHtml(quality) +
-            ' 播放地址，但浏览器未能自动播放。可点击播放器播放。',
-            'warn'
-          );
-        }
-      }
     });
   }
 

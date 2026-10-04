@@ -58,7 +58,7 @@ jobs:
           cat /tmp/wrangler.log
           exit 1
 
-      - name: Test Flower KG search and playback
+      - name: Test Flower five-channel search and playback
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
           LX_SOURCE_URL: https://ghproxy.net/raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js

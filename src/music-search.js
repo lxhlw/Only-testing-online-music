@@ -552,6 +552,99 @@
     );
   }
 
+  var QUALITY_TO_BR = {
+    '128k': '128',
+    '192k': '192',
+    '256k': '192',
+    '320k': '320',
+    'flac': '740',
+    'flac24bit': '999',
+    'flac32bit': '999',
+    '24bit': '999',
+    'wav': '740',
+    'ape': '740',
+    'hires': '999',
+    'atmos': '999',
+    'atmos_plus': '999',
+    'master': '999'
+  };
+
+  function getGdPlaybackId(source, musicInfo) {
+    var info = musicInfo || {};
+    if (source === 'kg') {
+      return String(info.hash || info.fileHash || info.songmid || info.id || '').replace(/^\s+|\s+$/g, '');
+    }
+    if (source === 'mg') {
+      return String(info.copyrightId || info.copyright_id || info.songmid || info.id || '').replace(/^\s+|\s+$/g, '');
+    }
+    return String(info.songmid || info.mediaMid || info.mid || info.id || '').replace(/^\s+|\s+$/g, '');
+  }
+
+  function resolveGdStudioUrl(source, musicInfo, quality, callback) {
+    source = String(source || '').toLowerCase();
+    var mapped = SOURCE_MAP[source];
+    if (!mapped) return callback(new Error('Unsupported playback source: ' + source));
+
+    var songId = getGdPlaybackId(source, musicInfo);
+    if (!songId) return callback(new Error('No platform track id for ' + source));
+
+    getGdServerTime(function (timeErr, serverTime) {
+      if (timeErr) return callback(timeErr);
+
+      var br = QUALITY_TO_BR[String(quality || '').toLowerCase()] || '128';
+      var encodedId = encodeURIComponent(songId);
+      var sign;
+      try {
+        sign = gdStudioSign(encodedId, serverTime);
+      } catch (e) {
+        return callback(e);
+      }
+
+      var form = encodeForm({
+        types: 'url',
+        source: mapped,
+        id: songId,
+        br: br,
+        s: sign
+      });
+
+      requestViaProxy(
+        API_ENDPOINT,
+        'POST',
+        form,
+        {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
+          'Accept': 'application/json, text/javascript, */*; q=0.01',
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        },
+        true,
+        function (err, data) {
+          if (err) return callback(err);
+
+          var url = data && typeof data.url === 'string' ? data.url :
+            (data && data.data && typeof data.data.url === 'string' ? data.data.url : '');
+          if (!url || !/^https?:/i.test(url)) {
+            return callback(new Error(
+              'GD Studio returned no playable URL for ' + mapped + ' (' + br + ')'
+            ));
+          }
+
+          var actualBr = data && data.br != null ? data.br :
+            (data && data.data && data.data.br != null ? data.data.br : br);
+
+          callback(null, {
+            url: String(url).replace(/^\s+|\s+$/g, ''),
+            source: source,
+            provider: 'gd-studio',
+            requestedQuality: String(quality || ''),
+            requestedBr: br,
+            actualBr: String(actualBr || br)
+          });
+        }
+      );
+    });
+  }
+
   function searchViaGdStudio(source, keyword, page, limit, callback) {
     // GD Studio is only used for platforms it currently exposes. Never
     // substitute another platform for the selected source.
@@ -608,6 +701,7 @@
   global.LXMusicSearch = {
     search: search,
     sourceMap: SOURCE_MAP,
-    normalizeSong: normalizeSong
+    normalizeSong: normalizeSong,
+    resolveMusicUrl: resolveGdStudioUrl
   };
 })(window);
