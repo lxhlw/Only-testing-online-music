@@ -8,6 +8,7 @@ const KEYWORD = '成都'
 const INIT_TIMEOUT = Number(process.env.SIXYIN_INIT_TIMEOUT_MS || 30000)
 const CANDIDATE_COUNT = Number(process.env.PLAYBACK_CANDIDATES || 5)
 const MIN_PLAYBACK_SECONDS = Number(process.env.MIN_PLAYBACK_SECONDS || 0.5)
+const DISABLE_URL_API = /^(1|true|yes)$/i.test(process.env.TEST_DISABLE_URL_API || '')
 
 const browser = await chromium.launch({
   headless: true,
@@ -15,6 +16,20 @@ const browser = await chromium.launch({
 })
 
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+
+if (DISABLE_URL_API) {
+  await page.addInitScript(() => {
+    try {
+      Object.defineProperty(window, 'URL', {
+        configurable: true,
+        value: undefined,
+      })
+    } catch {
+      try { window.URL = undefined } catch {}
+    }
+  })
+  console.log('Compatibility mode: window.URL disabled before page scripts')
+}
 const pageErrors = []
 const failedResponses = []
 const proxyTargets = []
