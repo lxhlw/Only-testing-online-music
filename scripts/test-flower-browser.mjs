@@ -19,13 +19,18 @@ function parseDuration(value) {
   const text = String(value).trim()
   if (!text) return 0
   if (text.includes(':')) {
-    return text.split(':').reduce((total, part) => {
+    const parts = text.split(':')
+    let total = 0
+    for (const part of parts) {
       const n = Number(part)
-      return Number.isFinite(n) && n >= 0 ? total * 60 + n : NaN
-    }, 0)
+      if (!Number.isFinite(n) || n < 0) return 0
+      total = total * 60 + n
+    }
+    return total
   }
   const n = Number(text)
-  return Number.isFinite(n) && n > 0 ? (n > 10000 ? n / 1000 : n) : 0
+  if (!Number.isFinite(n) || n <= 0) return 0
+  return n > 10000 ? n / 1000 : n
 }
 
 function isPlausiblePlaybackDuration(actual, expected) {
@@ -241,3 +246,37 @@ try {
       )
       return (
         /jadeite\.migu\.cn\/music_search\/v3\/search\/searchAll/.test(target) ||
+        /flower\/v1\/url\/mg\//.test(target) ||
+        /lxmusicapi\.onrender\.com\/url\/mg\//.test(target) ||
+        /music-dl\.sayqz\.com\/api\//.test(target)
+      )
+    })
+    assert.ok(targetSeen, channel.toUpperCase() + ' did not produce expected platform/Flower proxy traffic')
+
+    summary.push({ channel, result: results[0], playback: success, attempts, expectedDuration: parseDuration(results[0].interval) })
+    console.log('PASS:', channel.toUpperCase(), 'search + playback')
+  }
+
+  console.log('FLOWER CHANNEL MATRIX')
+  console.log(JSON.stringify({
+    sourceUrl: SOURCE_URL,
+    keyword: KEYWORD,
+    channels: CHANNELS,
+    summary,
+    flowerTargets: proxyTargets.filter(item => /flower\/v1\/url\/(kw|kg|tx|wy|mg)\//.test(item.target)),
+    failedResponses,
+    pageErrors,
+  }, null, 2))
+  console.log('PASS: Flower source search + playback matrix succeeded for all requested channels')
+
+} catch (error) {
+  console.error('FLOWER BROWSER TEST FAILED')
+  console.error(error?.stack || String(error))
+  console.error('Page status:', await page.locator('#status').textContent().catch(() => 'unavailable'))
+  console.error('Proxy targets:', JSON.stringify(proxyTargets, null, 2))
+  console.error('Failed responses:', failedResponses.join('\n') || 'none')
+  console.error('Page errors:', pageErrors.join('\n') || 'none')
+  process.exitCode = 1
+} finally {
+  await browser.close()
+}
