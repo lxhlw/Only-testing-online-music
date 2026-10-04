@@ -18,6 +18,8 @@ jobs:
             url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/1.2.0.js"
           - name: "sixyin-1.2.1"
             url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/1.2.1.js"
+          - name: "lx-2"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/lx/2.js"
           - name: "lx-latest"
             url: "https://ghproxy.net/raw.githubusercontent.com/pdone/lx-music-source/main/lx/latest.js"
           - name: "flower-latest"
