@@ -56,10 +56,10 @@ jobs:
         run: node scripts/test-promise-lite.mjs
 
       - name: Test source transpilation
+        run: node scripts/test-source-transpiler.mjs
+
       - name: Test native LX search
         run: node scripts/test-music-search-native.mjs
-
-        run: node scripts/test-source-transpiler.mjs
 
       - name: Test playback settings
         run: node scripts/test-settings.mjs
