@@ -193,8 +193,12 @@
     addCheck('btoa', typeof window.btoa === 'function' ? 'PASS' : 'FAIL',
       typeof window.btoa);
 
-    addCheck('URL', typeof window.URL === 'function' ? 'PASS' : 'WARN',
-      typeof window.URL);
+    var urlOk = safeTest(function () {
+      var testUrl = new window.URL('https://example.com/test?a=1');
+      return testUrl.hostname === 'example.com' && testUrl.pathname === '/test' && testUrl.search === '?a=1';
+    });
+    addCheck('URL', urlOk ? 'PASS' : 'WARN',
+      urlOk ? 'new URL() 实际构造测试通过' : 'URL 构造函数不可用或行为异常');
 
     addCheck('crypto.getRandomValues',
       window.crypto && typeof window.crypto.getRandomValues === 'function' ? 'PASS' : 'WARN',
