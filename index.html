@@ -71,6 +71,37 @@
         <div id="search-results" class="source-list" aria-live="polite"></div>
       </section>
 
+      <section class="card library-card">
+        <div class="card-title-row">
+          <h2>播放库</h2>
+          <span class="muted">本机保存</span>
+        </div>
+
+        <div class="library-section">
+          <div class="library-heading">
+            <strong>播放队列</strong>
+            <button id="clear-queue-btn" type="button" class="secondary compact-button">清空</button>
+          </div>
+          <div id="queue-list" class="library-list"></div>
+        </div>
+
+        <div class="library-section">
+          <div class="library-heading">
+            <strong>收藏</strong>
+            <button id="clear-favorites-btn" type="button" class="secondary compact-button">清空</button>
+          </div>
+          <div id="favorite-list" class="library-list"></div>
+        </div>
+
+        <div class="library-section">
+          <div class="library-heading">
+            <strong>最近播放</strong>
+            <button id="clear-history-btn" type="button" class="secondary compact-button">清空</button>
+          </div>
+          <div id="history-list" class="library-list"></div>
+        </div>
+      </section>
+
       <section class="card">
         <h2>Android 4.4 / Via 真机测试</h2>
         <p class="muted">先在旧设备上运行浏览器能力自检，再进入音乐测试页。</p>
@@ -114,6 +145,7 @@
   <script src="src/music-search.js"></script>
   <script src="src/lx-runtime.js"></script>
   <script src="src/source-manager.js"></script>
+  <script src="src/music-library.js"></script>
   <script src="src/app.js"></script>
 </body>
 </html>
