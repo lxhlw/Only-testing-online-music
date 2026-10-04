@@ -9,15 +9,40 @@
     autoFallback: true
   };
 
+  // Keep the canonical LX Music quality order and add common custom-source
+  // extensions used by newer/third-party sources.
   var QUALITY_RANK = {
-    'flac32bit': 700,
-    'flac24bit': 650,
-    '24bit': 650,
-    'flac': 600,
+    'master': 900,
+    'atmos_plus': 850,
+    'atmos': 840,
+    'hires': 820,
+    'flac32bit': 800,
+    'flac24bit': 750,
+    '24bit': 740,
+    'flac': 700,
+    'wav': 650,
+    'ape': 640,
     '320k': 500,
     '256k': 400,
     '192k': 300,
     '128k': 100
+  };
+
+  var QUALITY_LABELS = {
+    '128k': '128k',
+    '192k': '192k',
+    '256k': '256k',
+    '320k': '320k',
+    'flac': 'FLAC',
+    'flac24bit': 'FLAC 24bit',
+    'flac32bit': 'FLAC 32bit',
+    '24bit': '24bit',
+    'wav': 'WAV',
+    'ape': 'APE',
+    'hires': 'Hi-Res',
+    'atmos': 'Atmos',
+    'atmos_plus': 'Atmos+',
+    'master': 'Master'
   };
 
   function cloneDefaults() {
@@ -31,11 +56,18 @@
   function sanitize(value) {
     var result = cloneDefaults();
     if (!value || typeof value !== 'object') return result;
+
+    // New UI writes qualityMode/fixedQuality. Keep this permissive so older
+    // stored settings remain usable after future UI changes.
     if (value.qualityMode === 'highest' || value.qualityMode === 'fixed') {
       result.qualityMode = value.qualityMode;
     }
-    if (value.fixedQuality) result.fixedQuality = String(value.fixedQuality);
-    if (value.autoFallback !== undefined) result.autoFallback = value.autoFallback !== false;
+    if (value.fixedQuality != null && String(value.fixedQuality)) {
+      result.fixedQuality = String(value.fixedQuality);
+    }
+    if (value.autoFallback !== undefined) {
+      result.autoFallback = value.autoFallback !== false;
+    }
     return result;
   }
 
@@ -56,27 +88,48 @@
     return next;
   }
 
+  function getQualityKey(value) {
+    return String(value || '').toLowerCase();
+  }
+
   function getQualityRank(value) {
-    var key = String(value || '').toLowerCase();
+    var key = getQualityKey(value);
     return QUALITY_RANK[key] || 0;
+  }
+
+  function getQualityLabel(value) {
+    var key = getQualityKey(value);
+    return QUALITY_LABELS[key] || String(value || '');
   }
 
   function normalizeQualityList(list) {
     var input = Array.isArray(list) ? list : [];
     var result = [];
     var seen = {};
+
     for (var i = 0; i < input.length; i += 1) {
       var value = String(input[i] || '');
-      if (!value || seen[value]) continue;
-      seen[value] = true;
-      result.push(value);
+      var key = getQualityKey(value);
+      if (!key || seen[key]) continue;
+      seen[key] = true;
+      result.push({
+        value: value,
+        rank: getQualityRank(value),
+        sourceIndex: i
+      });
     }
+
     result.sort(function (a, b) {
-      var rankDiff = getQualityRank(b) - getQualityRank(a);
+      var rankDiff = b.rank - a.rank;
       if (rankDiff) return rankDiff;
-      return a.localeCompare(b);
+      return a.sourceIndex - b.sourceIndex;
     });
-    return result;
+
+    var normalized = [];
+    for (var j = 0; j < result.length; j += 1) {
+      normalized.push(result[j].value);
+    }
+    return normalized;
   }
 
   function buildPlan(available, settings) {
@@ -84,22 +137,26 @@
     if (!list.length) return [];
 
     var config = settings || load();
-    if (config.qualityMode !== 'fixed') return list;
 
-    var preferred = String(config.fixedQuality || '');
-    var plan = [];
-    if (list.indexOf(preferred) >= 0) {
-      plan.push(preferred);
-      for (var i = 0; i < list.length; i += 1) {
-        if (list[i] === preferred) continue;
-        if (getQualityRank(list[i]) < getQualityRank(preferred)) plan.push(list[i]);
-      }
-      if (!config.autoFallback) return [preferred];
-      return plan;
+    // Highest means: choose the best quality the current source declares.
+    // With fallback disabled, request only that quality.
+    if (config.qualityMode !== 'fixed') {
+      return config.autoFallback ? list : [list[0]];
     }
 
-    if (!config.autoFallback) return [list[0]];
-    return list;
+    var preferred = String(config.fixedQuality || '');
+    var preferredIndex = list.indexOf(preferred);
+
+    // Requested quality is unavailable. The safest fallback is the current
+    // source's highest available quality, not a guessed quality key.
+    if (preferredIndex < 0) {
+      return config.autoFallback ? list : [list[0]];
+    }
+
+    // LX Music-style behavior: selected quality first, then only lower
+    // quality levels. This avoids accidentally jumping back upward.
+    if (!config.autoFallback) return [preferred];
+    return list.slice(preferredIndex);
   }
 
   function getPreferredQuality(available, settings) {
@@ -110,7 +167,8 @@
   function getLabel(settings) {
     var config = settings || load();
     if (config.qualityMode === 'fixed') {
-      return '固定音质：' + config.fixedQuality + (config.autoFallback ? '（失败自动降级）' : '');
+      return '固定音质：' + getQualityLabel(config.fixedQuality) +
+        (config.autoFallback ? '（失败自动降级）' : '');
     }
     return '最高音质优先' + (config.autoFallback ? '（失败自动降级）' : '');
   }
@@ -120,6 +178,7 @@
     load: load,
     save: save,
     qualityRank: getQualityRank,
+    qualityLabel: getQualityLabel,
     normalizeQualityList: normalizeQualityList,
     buildPlan: buildPlan,
     getPreferredQuality: getPreferredQuality,
