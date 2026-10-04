@@ -40,7 +40,11 @@ try {
 
   const declared = await page.evaluate(() => Object.keys(window.LXSourceManager.getActive().sources || {}))
   assert.ok(declared.includes(CHANNEL), 'Channel not declared by source: ' + CHANNEL)
-  await page.locator('#channel-list .channel-button[title="' + CHANNEL + '"]').click()
+  await page.locator('#channel-list .channel-button').evaluateAll((buttons, channel) => {
+    const target = buttons.find(button => String(button.title || '').toLowerCase() === String(channel).toLowerCase())
+    if (!target) throw new Error('Channel button not found: ' + channel)
+    target.click()
+  }, CHANNEL)
   await page.locator('#search-input').fill(KEYWORD)
   await page.locator('#search-btn').click()
 
