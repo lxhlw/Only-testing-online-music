@@ -27,7 +27,9 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     self.body = body || null
     calls.push({ xhrMethod: self.method, xhrUrl: self.url, xhrBody: self.body, xhrHeaders: self.headers })
     setTimeout(() => {
-      const response = self.url.indexOf('/time') >= 0
+      let targetUrl = self.url
+      try { targetUrl = decodeURIComponent(self.url) } catch {}
+      const response = targetUrl.indexOf('/time') >= 0
         ? (responses.time || { status: 200, body: '1791139200' })
         : (responses.search || { status: 200, body: '[]' })
       self.readyState = 4
