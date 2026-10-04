@@ -119,3 +119,49 @@ code{word-break:break-all}
   .player-controls{gap:4px}
   .player-nav{padding:0 7px;font-size:12px}
 }
+
+.lyrics-card {
+  min-height: 180px;
+}
+
+.lyrics-title {
+  font-size: 16px;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.lyrics-status {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.lyrics-status.ready {
+  color: #176b36;
+}
+
+.lyrics-status.warn {
+  color: #8a5a00;
+}
+
+.lyrics-status.fail {
+  color: #a52222;
+}
+
+.lyrics-lines {
+  min-height: 100px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 8px 4px;
+}
+
+.lyrics-line {
+  padding: 6px 8px;
+  font-size: 15px;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.lyrics-line.active {
+  font-weight: bold;
+}
