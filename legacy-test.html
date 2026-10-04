@@ -298,6 +298,18 @@
     addCheck('Math / parseInt', mathParseOk ? 'PASS' : 'FAIL',
       mathParseOk ? 'floor / max / random / parseInt 测试通过' : 'Math 或 parseInt 行为异常');
 
+    var numberOk = safeTest(function () {
+      if (typeof window.Number !== 'function') return false;
+      var value = window.Number('128');
+      var decimal = window.Number('3.5');
+      return value === 128 &&
+        decimal === 3.5 &&
+        window.Number('') === 0 &&
+        window.isNaN(window.Number('not-a-number')) === true;
+    });
+    addCheck('Number 数值转换', numberOk ? 'PASS' : 'FAIL',
+      numberOk ? 'Number 字符串/小数/NaN 实际测试通过' : 'Number 数值转换行为异常');
+
     var uriEncodingOk = safeTest(function () {
       if (typeof window.encodeURIComponent !== 'function' ||
           typeof window.decodeURIComponent !== 'function') return false;
