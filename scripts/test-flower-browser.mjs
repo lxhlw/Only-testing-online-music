@@ -198,7 +198,7 @@ try {
         attempt.currentTime >= 0.8 &&
         attempt.readyState >= 2 &&
         !attempt.error &&
-        isPlausiblePlaybackDuration(attempt.duration, parseDuration(attempt.result.interval)) &&
+        isPlausiblePlaybackDuration(attempt.duration, parseDuration(results[i]?.interval)) &&
         /(?:正在播放|播放中)/.test(attempt.status)
       ) break
     }
@@ -207,7 +207,7 @@ try {
       item.currentTime >= 0.8 &&
       item.readyState >= 2 &&
       !item.error &&
-      isPlausiblePlaybackDuration(item.duration, parseDuration(item.result.interval))
+      isPlausiblePlaybackDuration(item.duration, parseDuration(item.result?.interval))
     )
     assert.ok(
       success,
