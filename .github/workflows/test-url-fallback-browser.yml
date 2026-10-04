@@ -1,5 +1,6 @@
 name: Test URL API Fallback In Chromium
 
+# Regression workflow: keep URL-less legacy browser compatibility covered.
 on:
   push:
     branches: [main]
