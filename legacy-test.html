@@ -261,6 +261,17 @@
     addCheck('btoa', btoaOk ? 'PASS' : 'FAIL',
       btoaOk ? 'Base64 编码测试通过' : 'btoa 不可正常使用');
 
+    var uriEncodingOk = safeTest(function () {
+      if (typeof window.encodeURIComponent !== 'function' ||
+          typeof window.decodeURIComponent !== 'function') return false;
+      var original = 'https://example.com/api?keyword=成都&level=128k';
+      var encoded = window.encodeURIComponent(original);
+      var decoded = window.decodeURIComponent(encoded);
+      return decoded === original && encoded.indexOf('%') !== -1;
+    });
+    addCheck('URL 编码/解码', uriEncodingOk ? 'PASS' : 'FAIL',
+      uriEncodingOk ? 'encodeURIComponent / decodeURIComponent 测试通过' : 'URL 编码函数不可正常使用');
+
     var urlOk = safeTest(function () {
       var testUrl = new window.URL('https://example.com/test?a=1');
       return testUrl.hostname === 'example.com' && testUrl.pathname === '/test' && testUrl.search === '?a=1';
