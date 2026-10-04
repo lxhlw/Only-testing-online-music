@@ -42,14 +42,22 @@
       </section>
 
       <section class="card">
-        <h2>搜索与 musicUrl 测试</h2>
-        <p class="muted">使用网页搜索接口获取「成都」结果，再把歌曲信息交给当前 LX 音源解析 musicUrl。</p>
+        <h2>搜索与播放渠道</h2>
+        <p class="muted">下面的渠道完全按照当前 LX 音源的 sources 声明动态显示。先选择渠道，再搜索和播放。</p>
+        <div class="channel-section">
+          <div class="channel-title">支持渠道</div>
+          <div id="channel-list" class="channel-list"></div>
+        </div>
+        <div class="channel-section">
+          <div class="channel-title">音质</div>
+          <div id="quality-list" class="channel-list"></div>
+        </div>
         <div class="actions">
           <input id="search-input" type="text" value="成都"
             autocapitalize="off" autocomplete="off" spellcheck="false"
             aria-label="搜索关键词">
-          <button id="search-btn" type="button">搜索</button>
-          <button id="quick-test-btn" type="button">一键测试「成都」</button>
+          <button id="search-btn" type="button">按当前渠道搜索</button>
+          <button id="quick-test-btn" type="button">一键测试当前渠道</button>
         </div>
         <div id="search-results" class="source-list" aria-live="polite"></div>
       </section>
