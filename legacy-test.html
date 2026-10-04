@@ -172,11 +172,18 @@
     });
     addCheck('localStorage', storageOk ? 'PASS' : 'FAIL', '读写测试');
 
-    addCheck('JSON',
-      typeof window.JSON === 'object' &&
-      typeof window.JSON.parse === 'function' &&
-      typeof window.JSON.stringify === 'function' ? 'PASS' : 'FAIL',
-      typeof window.JSON);
+    var jsonOk = safeTest(function () {
+      if (!window.JSON ||
+          typeof window.JSON.parse !== 'function' ||
+          typeof window.JSON.stringify !== 'function') return false;
+      var original = {source:'huibq', keyword:'成都', count:3};
+      var textValue = window.JSON.stringify(original);
+      var parsed = window.JSON.parse(textValue);
+      return parsed && parsed.source === 'huibq' &&
+        parsed.keyword === '成都' && parsed.count === 3;
+    });
+    addCheck('JSON', jsonOk ? 'PASS' : 'FAIL',
+      jsonOk ? 'parse / stringify 实际测试通过' : 'JSON 解析或序列化异常');
 
     var promiseAvailable = typeof window.Promise === 'function';
     addCheck('Promise', promiseAvailable ? 'PASS' : 'FAIL',
