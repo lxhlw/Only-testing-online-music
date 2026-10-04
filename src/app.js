@@ -254,17 +254,15 @@
 
       // Drop handlers for the previous media attempt before assigning a new
       // URL. Legacy browsers can dispatch a late error event after src changes.
-      audio.onerror = null;
-      audio.onplaying = null;
-      audio.src = url;
-      if (typeof audio.load === 'function') audio.load();
-
       audio.onerror = function () {
         handleAudioError(token, url);
       };
       audio.onplaying = function () {
         handleAudioPlaying(token, url);
       };
+      audio.preload = 'auto';
+      audio.src = url;
+      if (typeof audio.load === 'function') audio.load();
 
       document.getElementById('player-title').innerHTML = escapeHtml(music.name);
       document.getElementById('player-artist').innerHTML = escapeHtml(music.singer);
