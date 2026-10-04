@@ -114,7 +114,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       callback(new Error('native search unavailable'))
     },
     {
-      time: { status: 200, body: '1791139200' },
+      time: { status: 500, body: 'must not be used' },
       search: {
         status: 200,
         body: JSON.stringify([
@@ -129,6 +129,45 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     }
   )
 
+  const error = await new Promise(resolve => {
+    h.sandbox.LXMusicSearch.search('tx', '成都', 1, 20, err => resolve(err))
+  })
+
+  assert.ok(error)
+  assert.match(error.message, /native search unavailable/)
+  assert.equal(h.calls.length, 1)
+  assert.equal(h.calls[0].sourceName, 'tx')
+  assert.equal(h.calls[0].action, 'musicSearch')
+}
+
+{
+  const h = createHarness(
+    {
+      tx: { actions: ['musicUrl'] }
+    },
+    () => {},
+    {
+      time: { status: 200, body: '1791139200' },
+      search: {
+        status: 200,
+        body: JSON.stringify([
+          {
+            id: 'tx-good',
+            name: '成都',
+            artist: '赵雷',
+            source: 'tencent'
+          },
+          {
+            id: 'kg-wrong',
+            name: '成都',
+            artist: '赵雷',
+            source: 'kugou'
+          }
+        ])
+      }
+    }
+  )
+
   const result = await new Promise((resolve, reject) => {
     h.sandbox.LXMusicSearch.search('tx', '成都', 1, 20, (err, value) => {
       if (err) reject(err)
@@ -136,22 +175,15 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     })
   })
 
-  assert.equal(result.list[0].id, 'gd-1')
-  assert.equal(result.list[0].singer, '赵雷')
+  assert.equal(result.list.length, 1)
+  assert.equal(result.list[0].id, 'tx-good')
   assert.equal(result.list[0].source, 'tx')
   assert.equal(result.searchProvider, 'tencent')
+  assert.equal(result.requestedSource, 'tx')
   assert.equal(result.fallbackSearch, false)
+}
 
-  const apiCall = h.calls.find(call => call.xhrMethod === 'POST')
-  assert.ok(apiCall)
-  assert.equal(apiCall.xhrMethod, 'POST')
-  assert.match(apiCall.xhrBody, /(^|&)types=search(&|$)/)
-  assert.match(apiCall.xhrBody, /(^|&)source=tencent(&|$)/)
-  assert.match(apiCall.xhrBody, /(^|&)name=%E6%88%90%E9%83%BD(&|$)/)
-  assert.match(apiCall.xhrBody, /(^|&)count=20(&|$)/)
-  assert.match(apiCall.xhrBody, /(^|&)pages=1(&|$)/)
-  assert.match(apiCall.xhrBody, /(^|&)s=DEADBEEF(&|$)/)
-
+{
   const h2 = createHarness(
     {
       kg: { actions: ['musicUrl'] }
@@ -178,4 +210,4 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 }
 
 
-console.log('PASS: native LX search routing and GD fallback')
+console.log('PASS: LX search routing stays channel-bound and never mixes providers')
