@@ -93,6 +93,36 @@
       else warns += 1;
     }
 
+    function getTotals() {
+      var totalPasses = passes;
+      var totalFails = fails;
+      var totalWarns = warns;
+
+      if (playbackResult.state === 'PASS') totalPasses += 1;
+      else if (playbackResult.state === 'FAIL') totalFails += 1;
+      else if (playbackResult.state === 'WARN') totalWarns += 1;
+
+      return {
+        passes: totalPasses,
+        warns: totalWarns,
+        fails: totalFails
+      };
+    }
+
+    function renderSummary() {
+      var totals = getTotals();
+      var summaryClass = totals.fails ? 'fail' : (totals.warns ? 'warn' : 'pass');
+      var suffix = playbackResult.state === 'NOT_TESTED' ? '（实际音频播放尚未测试）' : '';
+
+      byId('summary').innerHTML =
+        '<span class="' + summaryClass + '">' +
+        'PASS ' + totals.passes + ' / WARN ' + totals.warns + ' / FAIL ' + totals.fails +
+        '</span>' + suffix +
+        (totals.fails ? '：存在需要优先处理的浏览器兼容问题。' :
+          (totals.warns ? '：基础能力基本可用，但有部分能力需要真机确认。' :
+            '：当前已测试项目全部通过。'));
+    }
+
     function safeTest(fn) {
       try { return fn(); }
       catch (e) { return false; }
@@ -176,15 +206,6 @@
       }
       byId('checks').innerHTML = html;
 
-      var summaryClass = fails ? 'fail' : (warns ? 'warn' : 'pass');
-      byId('summary').innerHTML =
-        '<span class="' + summaryClass + '">' +
-        'PASS ' + passes + ' / WARN ' + warns + ' / FAIL ' + fails +
-        '</span>' +
-        (fails ? '：存在需要优先处理的浏览器兼容问题。' :
-          (warns ? '：基础能力基本可用，但有部分能力需要真机确认。' :
-            '：基础能力全部通过。'));
-
       byId('device').innerHTML =
         '<div class="row"><span class="label">User Agent</span>' + esc(navigator.userAgent) + '</div>' +
         '<div class="row"><span class="label">窗口尺寸</span>' + esc(window.innerWidth) + ' × ' + esc(window.innerHeight) + '</div>' +
@@ -202,6 +223,7 @@
       testResource('src/lx-runtime.js');
       testResource('src/source-manager.js');
       testResource('src/music-search.js');
+      renderSummary();
       updateReport();
     }
 
@@ -282,8 +304,9 @@
       }
 
       var binary = '';
-      for (i = 0; i < buffer.byteLength; i += 1) {
-        binary += String.fromCharCode(new Uint8Array(buffer)[i]);
+      var bytes = new Uint8Array(buffer);
+      for (i = 0; i < bytes.length; i += 1) {
+        binary += String.fromCharCode(bytes[i]);
       }
 
       if (typeof window.btoa !== 'function') return null;
@@ -298,6 +321,7 @@
       var cls = state === 'PASS' ? 'pass' : (state === 'FAIL' ? 'fail' : 'warn');
       byId('audio-test-status').className = cls;
       byId('audio-test-status').innerHTML = esc(detail);
+      renderSummary();
       updateReport();
     }
 
@@ -353,17 +377,18 @@
           });
         }
       } catch (e) {
-        finish('WARN', '浏览器未能自动播放；请直接点击播放器的播放按钮再测试。');
+        setPlaybackStatus('WARN', '浏览器未能自动播放；请直接点击播放器的播放按钮再测试。');
       }
     }
 
     function buildReport() {
       var lines = [];
       var i;
+      var totals = getTotals();
       lines.push('Only-testing-online-music Android 4.4 / Via 自检报告');
       lines.push('时间：' + new Date().toString());
       lines.push('');
-      lines.push('汇总：PASS ' + passes + ' / WARN ' + warns + ' / FAIL ' + fails);
+      lines.push('汇总：PASS ' + totals.passes + ' / WARN ' + totals.warns + ' / FAIL ' + totals.fails);
       lines.push('');
       lines.push('[基础能力]');
       for (i = 0; i < checks.length; i += 1) {
