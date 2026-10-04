@@ -12,7 +12,10 @@
   };
 
   function requestJson(url, callback) {
-    var requestUrl = global.location.origin + '/api/proxy?url=' + encodeURIComponent(url);
+    var origin = global.location && global.location.origin
+      ? global.location.origin
+      : (global.location.protocol + '//' + global.location.host);
+    var requestUrl = origin + '/api/proxy?url=' + encodeURIComponent(url);
     var xhr = new XMLHttpRequest();
     var finished = false;
 
@@ -39,11 +42,11 @@
     try {
       xhr.open('GET', requestUrl, true);
       xhr.setRequestHeader('X-LX-Headers', JSON.stringify({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/154.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
         'Accept': 'application/json, text/javascript, */*; q=0.01',
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'Origin': global.location.origin,
-        'Referer': global.location.origin + '/',
+        'Origin': origin,
+        'Referer': origin + '/',
         'X-Requested-With': 'XMLHttpRequest'
       }));
       if (xhr.timeout !== undefined) xhr.timeout = 15000;
@@ -63,35 +66,84 @@
   }
 
   function normalizeSong(item, source) {
-    var rawArtist = item && (item.artist != null ? item.artist : item.artists);
-    var albumName = item && (item.album != null ? item.album : item.albumName);
+    item = item || {};
+    var rawArtist = item.artist != null ? item.artist : item.artists;
+    var albumName = item.album != null ? item.album : item.albumName;
+    var id = item.id != null ? item.id :
+      (item.songmid != null ? item.songmid :
+      (item.mid != null ? item.mid :
+      (item.hash != null ? item.hash : '')));
 
     return {
-      id: String(item && item.id != null ? item.id : ''),
-      name: String(item && item.name != null ? item.name : ''),
-      singer: normalizeArtist(rawArtist),
+      id: String(id || ''),
+      name: String(item.name != null ? item.name : ''),
+      singer: normalizeArtist(rawArtist != null ? rawArtist : item.singer),
       source: source,
       albumName: String(albumName || ''),
-      interval: item && item.interval != null ? item.interval : '',
-      songmid: String(item && (item.songmid || item.mid || item.id || '') || ''),
-      mediaMid: String(item && (item.mediaMid || item.media_mid || '') || ''),
-      albumId: String(item && (item.albumId || item.album_id || '') || ''),
-      image: String(item && (item.pic || item.image || item.img || '') || ''),
-      lyricId: String(item && (item.lyric_id || item.lyricId || '') || ''),
-      meta: item && item.meta ? item.meta : null,
-      raw: item || {}
+      interval: item.interval != null ? item.interval :
+        (item.duration != null ? item.duration : ''),
+      songmid: String((item.songmid || item.mid || item.id || item.hash || '') || ''),
+      mediaMid: String((item.mediaMid || item.media_mid || '') || ''),
+      albumId: String((item.albumId || item.album_id || '') || ''),
+      image: String((item.pic || item.image || item.img || '') || ''),
+      lyricId: String((item.lyric_id || item.lyricId || '') || ''),
+      meta: item.meta || null,
+      raw: item
     };
   }
 
-  function search(source, keyword, page, limit, callback) {
-    source = String(source || '').toLowerCase();
-    keyword = String(keyword || '');
-    page = page || 1;
-    limit = limit || 20;
+  function normalizeResult(source, page, data) {
+    var list;
+    var total;
+    var isEnd = false;
 
+    if (data instanceof Array) {
+      list = data;
+      total = list.length;
+    } else if (data && data.list instanceof Array) {
+      list = data.list;
+      total = data.total != null ? Number(data.total) : list.length;
+      isEnd = data.isEnd === true;
+    } else if (data && data.data && data.data.list instanceof Array) {
+      list = data.data.list;
+      total = data.data.total != null ? Number(data.data.total) : list.length;
+      isEnd = data.data.isEnd === true;
+    } else {
+      return null;
+    }
+
+    var result = [];
+    for (var i = 0; i < list.length; i += 1) {
+      var song = normalizeSong(list[i], source);
+      if (!song.id || !song.name) continue;
+      result.push(song);
+    }
+
+    return {
+      source: source,
+      page: page,
+      total: isNaN(total) ? result.length : total,
+      isEnd: isEnd,
+      list: result
+    };
+  }
+
+  function searchNative(activeSource, source, keyword, page, limit, callback) {
+    global.LXSourceManager.requestAction(source, 'musicSearch', {
+      keyword: keyword,
+      page: page,
+      pagesize: limit
+    }, function (err, data) {
+      if (err) return callback(err);
+      var normalized = normalizeResult(source, page, data);
+      if (!normalized) return callback(new Error('LX musicSearch result format is invalid'));
+      callback(null, normalized);
+    });
+  }
+
+  function searchViaGdStudio(source, keyword, page, limit, callback) {
     var mapped = SOURCE_MAP[source];
     if (!mapped) return callback(new Error('Unsupported search source: ' + source));
-    if (!keyword) return callback(new Error('Search keyword is empty'));
 
     var url = API_ENDPOINT +
       '?types=search' +
@@ -102,28 +154,36 @@
 
     requestJson(url, function (err, data) {
       if (err) return callback(err);
-      if (!(data instanceof Array)) {
-        return callback(new Error('Search result format is invalid'));
-      }
-
-      var result = [];
-      for (var i = 0; i < data.length; i += 1) {
-        var song = normalizeSong(data[i], source);
-        if (!song.id || !song.name) continue;
-        result.push(song);
-      }
-
-      callback(null, {
-        source: source,
-        page: page,
-        total: result.length,
-        list: result
-      });
+      var normalized = normalizeResult(source, page, data);
+      if (!normalized) return callback(new Error('Search result format is invalid'));
+      callback(null, normalized);
     });
+  }
+
+  function search(source, keyword, page, limit, callback) {
+    source = String(source || '').toLowerCase();
+    keyword = String(keyword || '');
+    page = page || 1;
+    limit = limit || 20;
+
+    if (!keyword) return callback(new Error('Search keyword is empty'));
+
+    var active = global.LXSourceManager && global.LXSourceManager.getActive
+      ? global.LXSourceManager.getActive()
+      : null;
+    var sourceInfo = active && active.sources ? active.sources[source] : null;
+    var actions = sourceInfo && sourceInfo.actions ? sourceInfo.actions : [];
+
+    if (actions.indexOf('musicSearch') >= 0 && global.LXSourceManager && global.LXSourceManager.requestAction) {
+      return searchNative(active, source, keyword, page, limit, callback);
+    }
+
+    return searchViaGdStudio(source, keyword, page, limit, callback);
   }
 
   global.LXMusicSearch = {
     search: search,
-    sourceMap: SOURCE_MAP
+    sourceMap: SOURCE_MAP,
+    normalizeSong: normalizeSong
   };
 })(window);
