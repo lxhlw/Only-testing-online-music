@@ -1,0 +1,63 @@
+name: Test URL API Fallback In Chromium
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/test-url-fallback-browser.yml"
+      - "scripts/test-sixyin-browser.mjs"
+      - "src/**"
+      - "functions/**"
+      - "index.html"
+      - "styles.css"
+  workflow_dispatch:
+
+jobs:
+  url-fallback-browser:
+    name: URL API disabled browser regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Validate browser test script
+        run: node --check scripts/test-sixyin-browser.mjs
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start local site
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/wrangler.log 2>&1 &
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8788/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/wrangler.log
+          exit 1
+
+      - name: Test Huibq with URL API disabled
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+          LX_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/latest.js
+          LX_SOURCE_NAME: huibq-url-disabled
+          TEST_DISABLE_URL_API: "1"
+          SIXYIN_INIT_TIMEOUT_MS: 30000
+          PLAYBACK_CANDIDATES: 3
+        run: node scripts/test-sixyin-browser.mjs
+
+      - name: Show local server log on failure
+        if: failure()
+        run: cat /tmp/wrangler.log || true
