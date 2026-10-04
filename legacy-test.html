@@ -178,8 +178,22 @@
       typeof window.JSON.stringify === 'function' ? 'PASS' : 'FAIL',
       typeof window.JSON);
 
-    addCheck('Promise', typeof window.Promise === 'function' ? 'PASS' : 'FAIL',
-      typeof window.Promise);
+    var promiseOk = safeTest(function () {
+      if (typeof window.Promise !== 'function') return false;
+      var settled = false;
+      var value = null;
+      var promise = new window.Promise(function (resolve) {
+        resolve('LX');
+      });
+      if (!promise || typeof promise.then !== 'function') return false;
+      promise.then(function (result) {
+        value = result;
+        settled = true;
+      });
+      return typeof promise.catch === 'function' && value === 'LX' && settled === true;
+    });
+    addCheck('Promise', promiseOk ? 'PASS' : 'FAIL',
+      promiseOk ? '创建、resolve 与 then 测试通过' : 'Promise 不可正常创建或执行');
 
     var arrayBufferOk = safeTest(function () {
       if (typeof window.ArrayBuffer !== 'function') return false;
