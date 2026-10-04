@@ -15,41 +15,43 @@ vm.runInNewContext(code, { window });
 const api = window.LXPlaySettings;
 assert.ok(api, 'LXPlaySettings must be exposed');
 
-assert.deepEqual(api.normalizeQualityList(['128k', 'flac', '320k', '192k']), ['flac', '320k', '192k', '128k']);
-assert.deepEqual(api.buildPlan(['128k', '320k', 'flac'], {
+assert.deepEqual(Array.from(api.normalizeQualityList(['128k', 'flac', '320k', '192k'])), ['flac', '320k', '192k', '128k']);
+assert.deepEqual(Array.from(api.buildPlan(['128k', '320k', 'flac'], {
   qualityMode: 'highest',
   fixedQuality: '128k',
   autoFallback: true
-}), ['flac', '320k', '128k']);
+})), ['flac', '320k', '128k']);
 
-assert.deepEqual(api.buildPlan(['128k', '320k', 'flac'], {
+assert.deepEqual(Array.from(api.buildPlan(['128k', '320k', 'flac'], {
   qualityMode: 'fixed',
   fixedQuality: '320k',
   autoFallback: true
-}), ['320k', '128k']);
+})), ['320k', '128k']);
 
-assert.deepEqual(api.buildPlan(['128k', '320k', 'flac'], {
+assert.deepEqual(Array.from(api.buildPlan(['128k', '320k', 'flac'], {
   qualityMode: 'fixed',
   fixedQuality: '320k',
   autoFallback: false
-}), ['320k']);
+})), ['320k']);
 
-assert.deepEqual(api.save({
-  qualityMode: 'highest',
-  fixedQuality: '320k',
-  autoFallback: true
-}), {
+const saved = api.save({
   qualityMode: 'highest',
   fixedQuality: '320k',
   autoFallback: true
 });
-assert.equal(api.load().qualityMode, 'highest');
-assert.equal(api.load().autoFallback, true);
+assert.equal(saved.qualityMode, 'highest');
+assert.equal(saved.fixedQuality, '320k');
+assert.equal(saved.autoFallback, true);
+
+const loaded = api.load();
+assert.equal(loaded.qualityMode, 'highest');
+assert.equal(loaded.fixedQuality, '320k');
+assert.equal(loaded.autoFallback, true);
 
 console.log('Playback settings test: PASS');
-console.log('Highest quality order: ' + api.normalizeQualityList(['128k', '320k', 'flac']).join(' -> '));
-console.log('Fixed 320k fallback order: ' + api.buildPlan(['128k', '320k', 'flac'], {
+console.log('Highest quality order: ' + Array.from(api.normalizeQualityList(['128k', '320k', 'flac'])).join(' -> '));
+console.log('Fixed 320k fallback order: ' + Array.from(api.buildPlan(['128k', '320k', 'flac'], {
   qualityMode: 'fixed',
   fixedQuality: '320k',
   autoFallback: true
-}).join(' -> '));
+})).join(' -> '));
