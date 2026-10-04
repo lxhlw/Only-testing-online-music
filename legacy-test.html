@@ -28,6 +28,7 @@
     <div id="summary">正在检测……</div>
     <button id="copy-btn" type="button">复制完整检测报告</button>
     <button id="copy-short-btn" type="button">复制精简报告</button>
+    <button id="full-test-btn" type="button">一键完整自检</button>
     <div id="copy-status"></div>
   </div>
 
@@ -140,6 +141,13 @@
       var suffix = [];
       if (playbackResult.state === 'NOT_TESTED') suffix.push('实际音频');
       if (networkResults.direct.state === 'NOT_TESTED' || networkResults.proxy.state === 'NOT_TESTED') suffix.push('网络层');
+
+      if (byId('full-test-btn') && playbackResult.state !== 'NOT_TESTED' &&
+          networkResults.direct.state !== 'NOT_TESTED' &&
+          networkResults.proxy.state !== 'NOT_TESTED') {
+        byId('full-test-btn').disabled = false;
+        byId('full-test-btn').innerHTML = '重新进行一键完整自检';
+      }
 
       byId('summary').innerHTML =
         '<span class="' + summaryClass + '">' +
@@ -868,6 +876,21 @@
       updateReport();
     }
 
+    function runFullLegacyTest() {
+      var button = byId('full-test-btn');
+      if (button) {
+        button.disabled = true;
+        button.innerHTML = '完整自检进行中……';
+      }
+
+      setPlaybackStatus('WARN', '正在进行一键完整自检……');
+      testActualPlayback();
+
+      window.setTimeout(function () {
+        testNetwork();
+      }, 120);
+    }
+
     function testActualPlayback() {
       var target = byId('test-audio');
       var src = makeWavDataUri();
@@ -1037,6 +1060,7 @@
 
     byId('copy-btn').onclick = copyReport;
     byId('copy-short-btn').onclick = copyShortReport;
+    byId('full-test-btn').onclick = runFullLegacyTest;
     byId('network-test-btn').onclick = testNetwork;
     byId('audio-test-btn').onclick = testActualPlayback;
 
