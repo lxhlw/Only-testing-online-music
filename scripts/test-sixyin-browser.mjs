@@ -224,11 +224,11 @@ try {
         { timeout: 12000 }
       )
       await page.waitForFunction(
-        () => {
+        minSeconds => {
           const audio = document.getElementById('audio')
-          return Boolean(audio && audio.currentTime >= MIN_PLAYBACK_SECONDS)
+          return Boolean(audio && audio.currentTime >= minSeconds)
         },
-        null,
+        MIN_PLAYBACK_SECONDS,
         { timeout: 12000 }
       )
 
