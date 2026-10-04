@@ -32,7 +32,8 @@
         clean.push({
           id:x.id,url:x.url,name:x.name,description:x.description,version:x.version,
           author:x.author,homepage:x.homepage,code:x.code,inited:!!x.inited,
-          sources:x.sources || null,initInfo:x.initInfo || null,error:x.error || null
+          sources:x.sources || null,initInfo:x.initInfo || null,error:x.error || null,
+          transport:x.transport || null
         });
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
@@ -205,7 +206,7 @@
       id:String(Date.now())+'-'+Math.floor(Math.random()*100000),
       url:url,name:meta.name,description:meta.description,version:meta.version,
       author:meta.author,homepage:meta.homepage,code:String(code),inited:false,
-      sources:null,initInfo:null,error:null,runtime:null
+      sources:null,initInfo:null,error:null,runtime:null,transport:null
     };
     try {
       executeSource(item);
@@ -240,16 +241,20 @@
       activeXhr = null;
     }
 
-    function finish(err, code) {
+    function finish(err, code, transport) {
       if (finished) return;
       finished = true;
       cleanup();
       if (err) return callback(err);
       if (!code || !String(code).replace(/\s+/g,'')) return callback(new Error('LX source code is empty'));
-      installFromCode(String(code), originalUrl, callback);
+      installFromCode(String(code), originalUrl, function (installErr, item) {
+        if (item) item.transport = transport || null;
+        if (!installErr) persist();
+        callback(installErr, item);
+      });
     }
 
-    function request(requestUrl, allowProxyFallback) {
+    function request(requestUrl, allowProxyFallback, transport) {
       if (timer) {
         global.clearTimeout(timer);
         timer = null;
@@ -257,12 +262,12 @@
       activeXhr = new XMLHttpRequest();
 
       function succeed(code) {
-        finish(null, code);
+        finish(null, code, transport);
       }
 
       function fail(message) {
         if (allowProxyFallback) {
-          request(proxyUrl, false);
+          request(proxyUrl, false, 'proxy');
           return;
         }
         finish(new Error(message));
@@ -297,7 +302,7 @@
       }
     }
 
-    request(originalUrl, true);
+    request(originalUrl, true, 'direct');
     return function(){
       var xhr = activeXhr;
       finished = true;
