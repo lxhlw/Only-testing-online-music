@@ -88,3 +88,20 @@ code{word-break:break-all}
   .quality-choice-group{justify-content:flex-start;max-width:none;margin-top:10px}
   .quality-option{flex:0 0 auto}
 }
+
+.library-section{margin-top:12px;padding-top:12px;border-top:1px solid #eee}
+.library-section:first-of-type{border-top:0;padding-top:0}
+.library-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
+.compact-button{min-height:34px;padding:0 11px;font-size:13px}
+.library-list:empty:after{content:"暂无内容";display:block;color:#9aa0a6;padding:7px 0}
+.library-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #e0e0e0;border-radius:6px;padding:9px;margin-top:7px}
+.library-main{min-width:0;flex:1}
+.library-title{font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.library-meta{font-size:12px;color:#70757a;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.library-actions{display:flex;gap:6px;flex:0 0 auto}
+.library-actions button{min-height:34px;padding:0 10px;font-size:13px}
+@media(max-width:600px){
+  .library-row{align-items:flex-start;flex-direction:column}
+  .library-actions{width:100%}
+  .library-actions button{flex:1}
+}
