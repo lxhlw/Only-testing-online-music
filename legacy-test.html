@@ -309,6 +309,16 @@
     addCheck('URL 编码/解码', uriEncodingOk ? 'PASS' : 'FAIL',
       uriEncodingOk ? 'encodeURIComponent / decodeURIComponent 测试通过' : 'URL 编码函数不可正常使用');
 
+    var legacyEscapeOk = safeTest(function () {
+      if (typeof window.escape !== 'function' || typeof window.unescape !== 'function') return false;
+      var original = 'LX-成都';
+      var encoded = window.escape(original);
+      var decoded = window.unescape(encoded);
+      return decoded === original && encoded.indexOf('%u') !== -1;
+    });
+    addCheck('escape / unescape', legacyEscapeOk ? 'PASS' : 'FAIL',
+      legacyEscapeOk ? 'escape / unescape 中文往返测试通过' : '旧式字符串编码函数不可正常使用');
+
     var objectToStringOk = safeTest(function () {
       var value = [1, 2, 3];
       return Object.prototype.toString.call(value) === '[object Array]';
