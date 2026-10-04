@@ -12,11 +12,11 @@ assert.ok(lyrics);
 const normalizedString = lyrics.normalize('[00:01.50]测试');
 assert.equal(normalizedString.lyric, '[00:01.50]测试');
 
-const normalizedObject = lyrics.normalize({ data: { lyric: '[00:00.00]成都\\n[00:02.50]你好', tlyric: 'translation' } });
-assert.equal(normalizedObject.lyric, '[00:00.00]成都\\n[00:02.50]你好');
+const normalizedObject = lyrics.normalize({ data: { lyric: '[00:00.00]成都\n[00:02.50]你好', tlyric: 'translation' } });
+assert.equal(normalizedObject.lyric, '[00:00.00]成都\n[00:02.50]你好');
 assert.equal(normalizedObject.tlyric, 'translation');
 
-const lines = lyrics.parseLrc('[00:02.50]第二句\\n[00:00.00][00:01.00]第一句\\n无时间轴');
+const lines = lyrics.parseLrc('[00:02.50]第二句\n[00:00.00][00:01.00]第一句\n无时间轴');
 assert.equal(lines.length, 3);
 assert.equal(lines[0].time, 0);
 assert.equal(lines[1].time, 1);
