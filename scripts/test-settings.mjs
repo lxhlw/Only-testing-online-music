@@ -107,8 +107,8 @@ assert.equal(loaded.qualityMode, 'highest');
 assert.equal(loaded.fixedQuality, '320k');
 assert.equal(loaded.autoFallback, true);
 
-assert.equal(api.getQualityLabel('flac24bit'), 'FLAC 24bit');
-assert.equal(api.getQualityLabel('unknown'), 'unknown');
+assert.equal(api.qualityLabel('flac24bit'), 'FLAC 24bit');
+assert.equal(api.qualityLabel('unknown'), 'unknown');
 
 console.log('Playback settings test: PASS');
 console.log('Highest quality order: ' + Array.from(api.normalizeQualityList(['128k', '320k', 'flac'])).join(' -> '));
