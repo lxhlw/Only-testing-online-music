@@ -1105,6 +1105,10 @@
         return done(new Error('Migu legacy listenSong.do requires copyrightId and contentId'));
       }
 
+      // This endpoint is itself a playable media URL (or a redirect to one).
+      // Do not prefetch it as JSON: doing so consumes the endpoint response and
+      // loses the actual media target. Return it directly to the normal media
+      // proxy/player path, matching the current Migu client implementation.
       var api =
         'https://app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do' +
         '?channel=mx' +
@@ -1115,24 +1119,7 @@
         '&userId=15548614588710179085069' +
         '&netType=00';
 
-      requestViaProxy(
-        api,
-        'GET',
-        null,
-        {
-          'Accept': 'application/json, text/plain, */*',
-          'Referer': 'https://y.migu.cn/',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/148.0.0.0 Safari/537.36',
-          'channel': '014021I'
-        },
-        true,
-        function (apiErr, data) {
-          if (apiErr) return done(apiErr);
-          var returned = extractUrl(data, 0);
-          if (!returned) return done(new Error('Migu legacy listenSong.do returned no URL'));
-          finish(returned, 'migu-native-listenSong', data);
-        }
-      );
+      finish(api, 'migu-native-listenSong', null);
     }
 
     // Native priority:

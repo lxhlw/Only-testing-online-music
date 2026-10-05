@@ -313,10 +313,6 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       miguListenUrl: {
         status: 200,
         body: JSON.stringify({ code: '000000', data: {} })
-      },
-      miguLegacyListenSong: {
-        status: 200,
-        body: JSON.stringify({ data: { url: 'https://audio.example.test/mg-legacy.mp3' } })
       }
     }
   )
@@ -331,21 +327,20 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   })
 
   assert.equal(result.provider, 'migu-native-listenSong')
-  assert.equal(result.url, 'https://audio.example.test/mg-legacy.mp3')
-  const legacyCalls = hLegacy.calls.filter(call => {
-    if (call.xhrMethod !== 'GET') return false
-    let url = String(call.xhrUrl || '')
-    try { url = decodeURIComponent(url) } catch {}
-    return url.includes('app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do')
-  })
-  assert.equal(legacyCalls.length, 1)
-  const legacyTarget = new URL(legacyCalls[0].xhrUrl).searchParams.get('url')
-  const legacyUrl = new URL(legacyTarget)
+  assert.equal(result.url.startsWith('https://app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do'), true)
+  const legacyUrl = new URL(result.url)
   assert.equal(legacyUrl.searchParams.get('copyrightId'), 'mg-copy-legacy')
   assert.equal(legacyUrl.searchParams.get('contentId'), 'mg-content-legacy')
   assert.equal(legacyUrl.searchParams.get('toneFlag'), 'PQ')
   assert.equal(legacyUrl.searchParams.get('resourceType'), '2')
   assert.equal(legacyUrl.searchParams.get('netType'), '00')
+  const legacyProxyCalls = hLegacy.calls.filter(call => {
+    if (call.xhrMethod !== 'GET') return false
+    let url = String(call.xhrUrl || '')
+    try { url = decodeURIComponent(url) } catch {}
+    return url.includes('app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do')
+  })
+  assert.equal(legacyProxyCalls.length, 0)
 }
 
 {
