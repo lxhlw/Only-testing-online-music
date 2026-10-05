@@ -1788,33 +1788,61 @@
     var qMap = { '128k': '8', '192k': '8', '320k': '9', 'flac': '10', 'flac24bit': '16', 'hires': '14', 'atmos': '13', 'atmos_plus': '12', 'master': '11' };
     var vkeysQuality = qMap[requestedQuality] || '8';
 
+    function parseTencentLooseJson(data) {
+      if (data && typeof data === 'object') return data;
+      var text = String(data == null ? '' : data).replace(/^\s+|\s+$/g, '');
+      if (!text) return null;
+
+      try {
+        return JSON.parse(text);
+      } catch (e) {}
+
+      var wrapped = text.match(/^[A-Za-z_$][\w$]*\((\{[\s\S]*\}|\[[\s\S]*\])\)\s*;?$/);
+      if (wrapped) {
+        try {
+          return JSON.parse(wrapped[1]);
+        } catch (e) {}
+      }
+
+      return null;
+    }
+
     function extractUrl(data) {
       if (data == null) return '';
-      if (typeof data === 'string') {
-        var text = data.replace(/^\s+|\s+$/g, '');
-        return /^https?:\/\//i.test(text) ? text : '';
+
+      var root = parseTencentLooseJson(data);
+      if (!root) {
+        var directText = String(data).replace(/^\s+|\s+$/g, '');
+        return /^https?:\/\//i.test(directText) ? directText : '';
       }
+
       var candidates = [
-        data.url,
-        data.play_url,
-        data.playUrl,
-        data.music,
-        data.data && data.data.url,
-        data.data && data.data.play_url,
-        data.data && data.data.playUrl,
-        data.data && data.data.music,
-        data.req_0 && data.req_0.data && data.req_0.data.midurlinfo &&
-          data.req_0.data.midurlinfo[0] && data.req_0.data.midurlinfo[0].purl
-          ? 'https://isure.stream.qqmusic.qq.com/' + data.req_0.data.midurlinfo[0].purl
-          : '',
-        data.req_0 && data.req_0.data && data.req_0.data.midurlinfo &&
-          data.req_0.data.midurlinfo[0] && data.req_0.data.midurlinfo[0].wifiurl
-          ? data.req_0.data.midurlinfo[0].wifiurl
-          : ''
+        root.url,
+        root.play_url,
+        root.playUrl,
+        root.music,
+        root.data && root.data.url,
+        root.data && root.data.play_url,
+        root.data && root.data.playUrl,
+        root.data && root.data.music
       ];
+
+      var midurlinfo = root.req_0 && root.req_0.data && root.req_0.data.midurlinfo;
+      var mid = Array.isArray(midurlinfo) && midurlinfo[0] ? midurlinfo[0] : null;
+      if (mid) {
+        if (mid.purl && /^https?:\/\//i.test(String(mid.purl).trim())) {
+          candidates.push(String(mid.purl).trim());
+        } else if (mid.purl) {
+          candidates.push('https://isure.stream.qqmusic.qq.com/' + String(mid.purl).replace(/^\/+/, ''));
+        }
+        if (mid.wifiurl) candidates.push(mid.wifiurl);
+      }
+
       for (var i = 0; i < candidates.length; i += 1) {
         var value = candidates[i];
-        if (typeof value === 'string' && /^https?:\/\//i.test(value.trim())) return value.trim();
+        if (typeof value === 'string' && /^https?:\/\//i.test(value.trim())) {
+          return value.trim();
+        }
       }
       return '';
     }
@@ -1904,21 +1932,35 @@
         url: 'https://c.y.qq.com/base/fcgi-bin/fcg_music_express_mobile3.fcg' +
           '?g_tk=0&loginUin=0&hostUin=0&format=json&inCharset=utf8&outCharset=utf-8' +
           '&notice=0&platform=yqq&needNewCode=0&cid=205361747&uin=0' +
+          '&jsonpCallback=MusicJsonCallback' + encodeURIComponent(expressGuid) +
+          '&callback=MusicJsonCallback' + encodeURIComponent(expressGuid) +
           '&songmid=' + encodeURIComponent(songmid) +
           '&filename=' + encodeURIComponent(expressFileName) +
           '&guid=' + encodeURIComponent(expressGuid),
         headers: {
           'User-Agent': 'Mozilla/5.0',
           'Referer': 'https://y.qq.com/portal/player.html',
-          'Accept': 'application/json'
+          'Accept': 'application/json, text/javascript, */*'
         },
+        parseJson: false,
         extractUrl: function (data) {
-          var item = data && data.data && data.data.items && data.data.items[0];
-          var vkey = item && item.vkey ? String(item.vkey).trim() : '';
+          var root = parseTencentLooseJson(data);
+          var item = root && root.data && root.data.items && root.data.items[0];
+          if (!item) return '';
+
+          var vkey = item.vkey ? String(item.vkey).trim() : '';
+          var purl = item.purl ? String(item.purl).trim() : '';
+          if (purl && /^https?:\/\//i.test(purl)) return purl;
+          if (purl) {
+            var sip = Array.isArray(item.sip) && item.sip.length ? String(item.sip[0] || '').trim() : '';
+            if (sip && /^https?:\/\//i.test(sip)) return sip + purl.replace(/^\/+/, '');
+          }
+
           if (!vkey) return '';
-          return 'http://ws.stream.qqmusic.qq.com/' + expressFileName +
-            '?guid=' + encodeURIComponent(expressGuid) +
-            '&vkey=' + encodeURIComponent(vkey) +
+          var filename = item.filename ? String(item.filename).trim() : expressFileName;
+          return 'http://dl.stream.qqmusic.qq.com/' + filename +
+            '?vkey=' + encodeURIComponent(vkey) +
+            '&guid=' + encodeURIComponent(expressGuid) +
             '&uin=0&fromtag=66';
         }
       },
@@ -1955,7 +1997,13 @@
       if (skipProvider && String(backend.provider || '').toLowerCase() === skipProvider) {
         return tryBackend(index + 1);
       }
-      requestViaProxy(backend.url, backend.method, backend.body || null, backend.headers, true, function (err, data) {
+      requestViaProxy(
+        backend.url,
+        backend.method,
+        backend.body || null,
+        backend.headers,
+        backend.parseJson !== false,
+        function (err, data) {
         if (!err) {
           var directUrl = backend.extractUrl ? backend.extractUrl(data) : extractUrl(data);
           if (directUrl) {

@@ -730,6 +730,37 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       time: { status: 500, body: 'must not be used' },
       search: [
         { status: 200, body: '{}' },
+        {
+          status: 200,
+          body: 'MusicJsonCallback1234567890({"data":{"items":[{"filename":"C400MEDIA-MID-TEST.m4a","vkey":"LIVE_VKEY_123"}]}});'
+        }
+      ]
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.resolveMusicUrl(
+      'tx',
+      { songmid: '0039MnNATIVE', mediaMid: 'MEDIA-MID-TEST' },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value),
+      { skipProvider: 'gd-studio' }
+    )
+  })
+
+  assert.equal(result.provider, 'tencent-aggregate-express-vkey')
+  assert.match(result.url, /^http:\/\/dl\.stream\.qqmusic\.qq\.com\/C400MEDIA-MID-TEST\.m4a\?/)
+  assert.equal(new URL(result.url).searchParams.get('vkey'), 'LIVE_VKEY_123')
+}
+
+{
+  const h = createHarness(
+    { tx: { actions: ['musicUrl'] } },
+    () => {},
+    {
+      time: { status: 500, body: 'must not be used' },
+      search: [
+        { status: 200, body: '{}' },
         { status: 200, body: '{}' },
         { status: 200, body: '{}' },
         { status: 200, body: '{}' },
