@@ -74,60 +74,115 @@
     return parts.join('&');
   }
 
+  function parseBrowserResponse(xhr, parseJson, callback) {
+    if (xhr.status < 200 || xhr.status >= 300) {
+      var detail = String(xhr.responseText || '').replace(/^\s+|\s+$/g, '');
+      if (detail.length > 240) detail = detail.slice(0, 240) + '…';
+      callback(new Error(
+        'Search API HTTP ' + xhr.status + (detail ? ': ' + detail : '')
+      ));
+      return;
+    }
+    if (!parseJson) {
+      callback(null, xhr.responseText);
+      return;
+    }
+    try {
+      var responseText = String(xhr.responseText || '').replace(/^\uFEFF/, '').replace(/^\s+|\s+$/g, '');
+      var parsedJson = null;
+      try {
+        parsedJson = JSON.parse(responseText);
+      } catch (jsonError) {
+        var wrapped = responseText.match(/^[A-Za-z_$][\w$]*\(([\s\S]*)\)\s*;?$/);
+        if (!wrapped) throw jsonError;
+        parsedJson = JSON.parse(wrapped[1]);
+      }
+      callback(null, parsedJson);
+    } catch (e) {
+      callback(new Error('Search API response is not JSON'));
+    }
+  }
+
+  function requestBrowserXhr(requestUrl, method, body, headers, parseJson, callback, timeoutMs) {
+    var xhr = new XMLHttpRequest();
+    var finished = false;
+    var timer = null;
+    var requestTimeout = Number(timeoutMs || 16000);
+
+    function cleanup() {
+      if (timer) {
+        global.clearTimeout(timer);
+        timer = null;
+      }
+    }
+
+    function finish(err, data) {
+      if (finished) return;
+      finished = true;
+      cleanup();
+      callback(err, data);
+    }
+
+    function handleDone() {
+      if (xhr.readyState !== 4) return;
+      try {
+        parseBrowserResponse(xhr, parseJson, finish);
+      } catch (e) {
+        finish(e);
+      }
+    }
+
+    xhr.onreadystatechange = handleDone;
+    xhr.onload = handleDone;
+    xhr.onerror = function () {
+      finish(new Error('Search network request failed'));
+    };
+    xhr.ontimeout = function () {
+      finish(new Error('Search request timeout after ' + requestTimeout + ' ms'));
+    };
+
+    timer = global.setTimeout(function () {
+      if (finished) return;
+      try { xhr.abort(); } catch (e) {}
+      finish(new Error('Search request timeout after ' + requestTimeout + ' ms'));
+    }, requestTimeout);
+
+    try {
+      xhr.open(method, requestUrl, true);
+      for (var key in (headers || {})) {
+        if (!Object.prototype.hasOwnProperty.call(headers, key)) continue;
+        xhr.setRequestHeader(key, headers[key]);
+      }
+      if (xhr.timeout !== undefined) xhr.timeout = requestTimeout;
+      xhr.send(body || null);
+    } catch (e) {
+      finish(e);
+    }
+
+    return function () {
+      if (finished) return;
+      finished = true;
+      cleanup();
+      try { xhr.abort(); } catch (e) {}
+    };
+  }
+
   function requestViaProxy(targetUrl, method, body, headers, parseJson, callback) {
     var origin = global.location && global.location.origin
       ? global.location.origin
       : (global.location.protocol + '//' + global.location.host);
     var proxyUrl = origin + '/api/proxy?url=' + encodeURIComponent(targetUrl);
-    var xhr = new XMLHttpRequest();
-    var finished = false;
+    return requestBrowserXhr(proxyUrl, method, body, headers, parseJson, callback, 16000);
+  }
 
-    function finish(err, data) {
-      if (finished) return;
-      finished = true;
-      callback(err, data);
-    }
-
-    xhr.onreadystatechange = function () {
-      if (xhr.readyState !== 4) return;
-      if (xhr.status < 200 || xhr.status >= 300) {
-        var detail = String(xhr.responseText || '').replace(/^\s+|\s+$/g, '');
-        if (detail.length > 240) detail = detail.slice(0, 240) + '…';
-        return finish(new Error(
-          'Search API HTTP ' + xhr.status + (detail ? ': ' + detail : '')
-        ));
-      }
-      if (!parseJson) {
-        return finish(null, xhr.responseText);
-      }
-      try {
-        var responseText = String(xhr.responseText || '').replace(/^\uFEFF/, '').replace(/^\s+|\s+$/g, '');
-        var parsedJson = null;
-        try {
-          parsedJson = JSON.parse(responseText);
-        } catch (jsonError) {
-          var wrapped = responseText.match(/^[A-Za-z_$][\w$]*\(([\s\S]*)\)\s*;?$/);
-          if (!wrapped) throw jsonError;
-          parsedJson = JSON.parse(wrapped[1]);
-        }
-        finish(null, parsedJson);
-      } catch (e) {
-        finish(new Error('Search API response is not JSON'));
-      }
-    };
-    xhr.onerror = function () { finish(new Error('Search network request failed')); };
-    xhr.ontimeout = function () { finish(new Error('Search request timeout')); };
-
-    try {
-      xhr.open(method, proxyUrl, true);
-      if (headers) {
-        xhr.setRequestHeader('X-LX-Headers', JSON.stringify(headers));
-      }
-      if (xhr.timeout !== undefined) xhr.timeout = 15000;
-      xhr.send(body || null);
-    } catch (e) {
-      finish(e);
-    }
+  function requestSameOrigin(path, method, body, headers, parseJson, callback) {
+    var origin = global.location && global.location.origin
+      ? global.location.origin
+      : (global.location.protocol + '//' + global.location.host);
+    var requestUrl = /^https?:\/\//i.test(String(path || ''))
+      ? String(path)
+      : origin + '/' + String(path || '').replace(/^\/+/, '');
+    return requestBrowserXhr(requestUrl, method, body, headers, parseJson, callback, 12000);
   }
 
   function getGdServerTime(callback) {
@@ -695,7 +750,7 @@
         singer: singerNames.join('、'),
         albumName: album.name,
         albumId: album.id,
-        interval: Number(item.dt || 0) > 0 ? String(Math.floor(Number(item.dt) / 60000)).padStart ? Math.floor(Number(item.dt) / 60000) : item.dt : item.dt,
+        interval: Number(item.dt || 0) > 0 ? Math.floor(Number(item.dt) / 60000) : item.dt,
         image: album.picUrl || '',
         types: formatNeteaseTypes(item),
         raw: item
@@ -720,69 +775,105 @@
       });
     }
 
-    var offset = limit * (page - 1);
-    var target = 'https://music.163.com/api/cloudsearch/pc';
-    var body = encodeForm({
-      s: keyword,
-      type: 1,
-      offset: offset,
-      limit: limit,
-      total: page === 1 ? 'true' : 'false'
-    });
+    function normalizeNeteaseResponse(data, provider) {
+      var root = data && data.result ? data.result : data;
+      var songs = root && Array.isArray(root.songs) ? root.songs : [];
+      if (!songs.length) {
+        return new Error('Netease cloudsearch returned no usable songs');
+      }
 
-    requestViaProxy(
-      target,
-      'POST',
-      body,
-      {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
-        'Referer': 'https://music.163.com/',
-        'Accept': 'application/json, text/plain, */*'
-      },
+      var resources = [];
+      for (var i = 0; i < songs.length; i += 1) {
+        var song = songs[i] || {};
+        if (song.id == null || !song.name) continue;
+
+        resources.push({
+          baseInfo: {
+            simpleSongData: {
+              id: song.id,
+              name: song.name,
+              dt: song.duration || 0,
+              ar: Array.isArray(song.artists) ? song.artists : [],
+              al: song.album || {},
+              privilege: song.privilege || {}
+            }
+          }
+        });
+      }
+
+      var list = buildNeteaseList(resources);
+      if (!list.length) {
+        return new Error('Netease cloudsearch returned no usable songs');
+      }
+
+      var total = Number(root.songCount);
+      if (!isFinite(total)) total = list.length;
+
+      return {
+        source: 'wy',
+        page: page,
+        total: total,
+        isEnd: page * limit >= total,
+        list: list,
+        searchProvider: provider || 'netease-native',
+        requestedSource: 'wy',
+        fallbackSearch: false
+      };
+    }
+
+    var offset = limit * (page - 1);
+    var query = 's=' + encodeURIComponent(keyword) +
+      '&offset=' + encodeURIComponent(offset) +
+      '&limit=' + encodeURIComponent(limit);
+
+    // Legacy-browser path: use a dedicated same-origin endpoint which buffers
+    // the upstream NetEase response before returning it. This avoids the old
+    // Android 4.4/XHR combination getting stuck on a streamed proxy response.
+    requestSameOrigin(
+      '/api/netease-search?' + query,
+      'GET',
+      null,
+      { 'Accept': 'application/json, text/plain, */*' },
       true,
       function (err, data) {
-        if (err) return fallbackToGd(err);
-
-        var root = data && data.result ? data.result : data;
-        var songs = root && Array.isArray(root.songs) ? root.songs : [];
-        if (!songs.length) return fallbackToGd(new Error('Netease cloudsearch returned no usable songs'));
-
-        var resources = [];
-        for (var i = 0; i < songs.length; i += 1) {
-          var song = songs[i] || {};
-          if (song.id == null || !song.name) continue;
-
-          resources.push({
-            baseInfo: {
-              simpleSongData: {
-                id: song.id,
-                name: song.name,
-                dt: song.duration || 0,
-                ar: Array.isArray(song.artists) ? song.artists : [],
-                al: song.album || {},
-                privilege: song.privilege || {}
-              }
-            }
-          });
+        if (!err) {
+          var result = normalizeNeteaseResponse(data, 'netease-native');
+          if (!(result instanceof Error)) return callback(null, result);
+          err = result;
         }
 
-        var list = buildNeteaseList(resources);
-        if (!list.length) return fallbackToGd(new Error('Netease cloudsearch returned no usable songs'));
-
-        var total = Number(root.songCount);
-        if (!isFinite(total)) total = list.length;
-
-        callback(null, {
-          source: 'wy',
-          page: page,
-          total: total,
-          isEnd: page * limit >= total,
-          list: list,
-          searchProvider: 'netease-native',
-          requestedSource: 'wy',
-          fallbackSearch: false
+        // Keep the existing general proxy as a secondary path for transient
+        // dedicated-endpoint failures, then use GD Studio as the final search
+        // fallback. All paths are bounded by browser-side timeouts.
+        var target = 'https://music.163.com/api/cloudsearch/pc';
+        var body = encodeForm({
+          s: keyword,
+          type: 1,
+          offset: offset,
+          limit: limit,
+          total: page === 1 ? 'true' : 'false'
         });
+
+        requestViaProxy(
+          target,
+          'POST',
+          body,
+          {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+            'Referer': 'https://music.163.com/',
+            'Accept': 'application/json, text/plain, */*'
+          },
+          true,
+          function (proxyErr, proxyData) {
+            if (!proxyErr) {
+              var proxyResult = normalizeNeteaseResponse(proxyData, 'netease-native-proxy');
+              if (!(proxyResult instanceof Error)) return callback(null, proxyResult);
+              proxyErr = proxyResult;
+            }
+            fallbackToGd(err || proxyErr);
+          }
+        );
       }
     );
   }
