@@ -9,7 +9,8 @@
     "test:settings": "node scripts/test-settings.mjs",
     "test:quality-fallback": "node scripts/test-quality-fallback-browser.mjs",
     "test:library": "node scripts/test-music-library.mjs",
-    "test:lyrics": "node scripts/test-music-lyrics.mjs"
+    "test:lyrics": "node scripts/test-music-lyrics.mjs",
+    "test:import-ui": "node scripts/test-import-ui.mjs"
   },
   "devDependencies": {
     "playwright": "1.63.0",

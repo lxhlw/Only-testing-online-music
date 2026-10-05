@@ -89,6 +89,9 @@ jobs:
           node scripts/test-source-transpiler.mjs
           node scripts/check-legacy-test.mjs
 
+      - name: Run legacy import button test
+        run: node scripts/test-import-ui.mjs
+
       - name: Show Pages server log on failure
         if: failure()
         run: cat /tmp/wrangler.log || true

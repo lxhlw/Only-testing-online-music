@@ -1182,7 +1182,37 @@
     playQueuedOffset(1);
   }
 
+  function bindInstallButton() {
+    var installButton = document.getElementById('install-btn');
+    if (!installButton) return;
+    installButton.onclick = function () {
+      var urlInput = document.getElementById('source-url');
+      var url = urlInput ? urlInput.value.replace(/^\s+|\s+$/g, '') : '';
+      if (!/^https?:\/\//i.test(url)) {
+        setStatus('请输入 HTTP / HTTPS 的 LX 音源地址。', 'fail');
+        return;
+      }
+
+      setStatus('正在读取原始 LX 音源……');
+      installButton.disabled = true;
+      setCheck('check-inited', 'pending');
+
+      global.LXSourceManager.installFromUrl(url, function (err, item) {
+        installButton.disabled = false;
+        if (err) {
+          setStatus('导入失败：' + escapeHtml(err.message || err), 'fail');
+          setCheck('check-inited', 'fail');
+          return;
+        }
+        setCheck('check-storage', 'ok');
+        var transportText = item.transport === 'proxy' ? '项目代理' : '直连';
+        setStatus('已保存原始音源代码：' + escapeHtml(item.name) + '（导入通道：' + transportText + '）', 'ready');
+      });
+    };
+  }
+
   function bind() {
+    bindInstallButton();
     statusEl = document.getElementById('status');
     listEl = document.getElementById('source-list');
     countEl = document.getElementById('source-count');
@@ -1226,30 +1256,6 @@
         syncLyrics();
       };
     }
-
-    document.getElementById('install-btn').onclick = function () {
-      var url = document.getElementById('source-url').value.replace(/^\s+|\s+$/g, '');
-      if (!/^https?:\/\//i.test(url)) {
-        setStatus('请输入 HTTP / HTTPS 的 LX 音源地址。', 'fail');
-        return;
-      }
-
-      setStatus('正在读取原始 LX 音源……');
-      document.getElementById('install-btn').disabled = true;
-      setCheck('check-inited', 'pending');
-
-      global.LXSourceManager.installFromUrl(url, function (err, item) {
-        document.getElementById('install-btn').disabled = false;
-        if (err) {
-          setStatus('导入失败：' + escapeHtml(err.message || err), 'fail');
-          setCheck('check-inited', 'fail');
-          return;
-        }
-        setCheck('check-storage', 'ok');
-        var transportText = item.transport === 'proxy' ? '项目代理' : '直连';
-        setStatus('已保存原始音源代码：' + escapeHtml(item.name) + '（导入通道：' + transportText + '）', 'ready');
-      });
-    };
 
     document.getElementById('verified-install-btn').onclick = function () {
       document.getElementById('source-url').value =
@@ -1478,11 +1484,25 @@
     onSourceInited: onSourceInited
   };
 
-  global.addEventListener('load', function () {
+  var appStarted = false;
+
+  function startApp() {
+    if (appStarted) return;
+    appStarted = true;
     bind();
     global.LXSourceManager.init();
     if (global.LXSourceManager.getSources().length) setCheck('check-storage', 'ok');
-  });
+  }
+
+  // app.js is loaded after the page controls, so initialize immediately.
+  // This avoids a window.load race on slow legacy browsers where the user can
+  // see and tap the import button before its handler has been bound.
+  if (document.getElementById('install-btn')) {
+    startApp();
+  } else {
+    global.addEventListener('DOMContentLoaded', startApp);
+    global.addEventListener('load', startApp);
+  }
 })(window);
 
 // CI trigger marker: no functional change.
