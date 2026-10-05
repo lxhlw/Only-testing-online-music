@@ -9,6 +9,7 @@ const INIT_TIMEOUT_MS = Number(process.env.INIT_TIMEOUT_MS || 30000)
 const SEARCH_TIMEOUT_MS = Number(process.env.SEARCH_TIMEOUT_MS || 60000)
 const PLAYBACK_TIMEOUT_MS = Number(process.env.PLAYBACK_TIMEOUT_MS || 15000)
 const REQUIRE_PLAUSIBLE_PLAYBACK = process.env.REQUIRE_PLAUSIBLE_PLAYBACK !== 'false'
+const REAL_PLAYBACK_PROGRESS_S = Number(process.env.REAL_PLAYBACK_PROGRESS_S || 0.25)
 
 function parseDuration(value) {
   if (value == null || value === '') return 0
@@ -253,7 +254,7 @@ try {
             const events = Array.isArray(window.__audioEvents) ? window.__audioEvents.slice(markerIndex) : []
             if (!audio) return false
             if (events.some(event => ['playing', 'error', 'ended'].includes(event.name))) return true
-            return Number(audio.currentTime || 0) >= 0.8
+            return Number(audio.currentTime || 0) >= REAL_PLAYBACK_PROGRESS_S
           },
           { markerIndex: baseline.eventIndex },
           { timeout: PLAYBACK_TIMEOUT_MS },
@@ -339,8 +340,8 @@ try {
 
       if (
         REQUIRE_PLAUSIBLE_PLAYBACK &&
-        (hadPlayingEvent || attempt.currentTime >= 0.8) &&
-        attempt.currentTime >= 0.8 &&
+        (hadPlayingEvent || attempt.currentTime >= REAL_PLAYBACK_PROGRESS_S) &&
+        attempt.currentTime >= REAL_PLAYBACK_PROGRESS_S &&
         attempt.readyState >= 2 &&
         !attempt.error &&
         (validatedDuration || validatedProgress) &&
