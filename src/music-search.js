@@ -137,10 +137,20 @@
       },
       false,
       function (err, data) {
-        if (err) return callback(err);
+        if (err) {
+          gdServerTime = String(Math.floor((Date.now ? Date.now() : new Date().getTime()) / 1000));
+          gdServerTimeExpiresAt = (Date.now ? Date.now() : new Date().getTime()) + 10000;
+          return callback(null, gdServerTime);
+        }
+
         var timeText = typeof data === 'string' ? data : String(data || '');
         var match = timeText.match(/\d{9,13}/);
-        if (!match) return callback(new Error('GD Studio /time returned an invalid timestamp'));
+        if (!match) {
+          gdServerTime = String(Math.floor((Date.now ? Date.now() : new Date().getTime()) / 1000));
+          gdServerTimeExpiresAt = (Date.now ? Date.now() : new Date().getTime()) + 10000;
+          return callback(null, gdServerTime);
+        }
+
         gdServerTime = match[0].slice(0, 13);
         if (gdServerTime.length > 10) {
           gdServerTime = String(Math.floor(Number(gdServerTime) / 1000));

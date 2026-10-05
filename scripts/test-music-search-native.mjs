@@ -797,6 +797,36 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     { tx: { actions: ['musicUrl'] } },
     () => {},
     {
+      time: { status: 403, body: 'forbidden' },
+      search: [{
+        status: 200,
+        body: JSON.stringify({ url: 'https://media.example.test/tx-gd-local-time.mp3', br: 128 })
+      }]
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.resolveMusicUrl(
+      'tx',
+      { songmid: '0039MnQn', id: '200790315' },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value)
+    )
+  })
+
+  assert.equal(result.provider, 'gd-studio')
+  assert.equal(result.url, 'https://media.example.test/tx-gd-local-time.mp3')
+  assert.equal(h.calls[0].xhrMethod, 'GET')
+  assert.equal(new URL(h.calls[0].xhrUrl).searchParams.get('url'), 'https://music.gdstudio.xyz/time')
+  assert.equal(h.calls[1].xhrMethod, 'POST')
+  assert.equal(new URL(h.calls[1].xhrUrl).searchParams.get('url'), 'https://music-api.gdstudio.xyz/api.php')
+}
+
+{
+  const h = createHarness(
+    { tx: { actions: ['musicUrl'] } },
+    () => {},
+    {
       time: { status: 200, body: '1791180000' },
       search: [{
         status: 200,
