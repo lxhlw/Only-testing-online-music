@@ -1759,6 +1759,21 @@
     });
   }
 
+  function normalizeTencentPlaybackUrl(value) {
+    var clean = String(value || '').replace(/^\s+|\s+$/g, '');
+    if (!clean || !/^https?:\/\//i.test(clean)) return clean;
+    try {
+      var target = new URL(clean);
+      var host = String(target.hostname || '').toLowerCase();
+      if (host === 'ws.stream.qqmusic.qq.com' || host === 'stream.qqmusic.qq.com') {
+        target.protocol = 'https:';
+        target.hostname = 'isure.stream.qqmusic.qq.com';
+        return target.toString();
+      }
+    } catch (e) {}
+    return clean;
+  }
+
   function resolveTencentAggregateUrl(musicInfo, quality, callback) {
     var info = musicInfo || {};
     var songmid = String(info.songmid || info.id || info.mediaMid || '').replace(/^\s+|\s+$/g, '');
@@ -1784,12 +1799,7 @@
         data.data && data.data.music,
         data.req_0 && data.req_0.data && data.req_0.data.midurlinfo &&
           data.req_0.data.midurlinfo[0] && data.req_0.data.midurlinfo[0].purl
-          ? (
-              (Array.isArray(data.req_0.data.sip) && data.req_0.data.sip[0]
-                ? data.req_0.data.sip[0]
-                : 'https://isure.stream.qqmusic.qq.com/') +
-              data.req_0.data.midurlinfo[0].purl
-            )
+          ? 'https://isure.stream.qqmusic.qq.com/' + data.req_0.data.midurlinfo[0].purl
           : '',
         data.req_0 && data.req_0.data && data.req_0.data.midurlinfo &&
           data.req_0.data.midurlinfo[0] && data.req_0.data.midurlinfo[0].wifiurl
@@ -1804,7 +1814,7 @@
     }
 
     function acceptUrl(url, provider, raw, done) {
-      var clean = String(url || '').replace(/^\s+|\s+$/g, '');
+      var clean = normalizeTencentPlaybackUrl(url);
       if (!/^https?:\/\//i.test(clean)) return done(new Error(provider + ' returned no playable URL'));
       if (isCrossPlatformPlaybackUrl('tx', clean)) return done(new Error(provider + ' returned a cross-platform URL'));
       done(null, {

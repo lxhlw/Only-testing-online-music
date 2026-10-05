@@ -767,4 +767,37 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   assert.equal(payload.req_0.param.loginflag, 0)
 }
 
+{
+  const h = createHarness(
+    { tx: { actions: ['musicUrl'] } },
+    () => {},
+    {
+      time: { status: 500, body: 'must not be used' },
+      search: [{
+        status: 200,
+        body: JSON.stringify({
+          req_0: {
+            data: {
+              midurlinfo: [{ purl: 'M5000039MnQn.mp3?guid=123&vkey=abc&uin=0&fromtag=66' }],
+              sip: ['http://ws.stream.qqmusic.qq.com/', 'http://isure.stream.qqmusic.qq.com/']
+            }
+          }
+        })
+      }]
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.resolveMusicUrl(
+      'tx',
+      { songmid: '0039MnQn' },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value)
+    )
+  })
+
+  assert.equal(result.provider, 'tencent-aggregate-official')
+  assert.equal(result.url, 'https://isure.stream.qqmusic.qq.com/M5000039MnQn.mp3?guid=123&vkey=abc&uin=0&fromtag=66')
+}
+
 console.log('PASS: LX search routing stays channel-bound and never mixes providers')
