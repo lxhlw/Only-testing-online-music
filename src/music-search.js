@@ -1882,7 +1882,7 @@
     function tryBackend(index) {
       if (index >= backends.length) return callback(lastError || new Error('All Tencent aggregate backends failed'));
       var backend = backends[index];
-      requestViaProxy(backend.url, backend.method, null, backend.headers, true, function (err, data) {
+      requestViaProxy(backend.url, backend.method, backend.body || null, backend.headers, true, function (err, data) {
         if (!err) {
           var directUrl = extractUrl(data);
           if (directUrl) {
