@@ -32,7 +32,7 @@
       loadError = null;
     } else {
       loadState = -1;
-      loadError = err || new Error('Babel standalone did not expose a transform API');
+      loadError = err || new Error('Unable to load the legacy JavaScript transpiler');
     }
 
     var queue = loadQueue.slice();
@@ -42,57 +42,168 @@
     }
   }
 
+  function evaluateScriptText(code) {
+    var script = global.document.createElement('script');
+    var parent = global.document.getElementsByTagName('head')[0] || global.document.documentElement;
+    if (!parent) throw new Error('Document head is unavailable for legacy transpiler');
+
+    script.type = 'text/javascript';
+    script.async = false;
+
+    if (typeof script.text !== 'undefined') {
+      script.text = String(code || '');
+    } else if (global.document.createTextNode) {
+      script.appendChild(global.document.createTextNode(String(code || '')));
+    } else {
+      script.innerHTML = String(code || '');
+    }
+
+    parent.appendChild(script);
+
+    try {
+      if (script.parentNode) script.parentNode.removeChild(script);
+    } catch (e) {}
+
+    if (!global.Babel || typeof global.Babel.transform !== 'function') {
+      throw new Error('Legacy transpiler bundle did not initialize Babel');
+    }
+  }
+
+  function loadViaXhr(src, done) {
+    if (typeof global.XMLHttpRequest !== 'function') {
+      done(false, new Error('XMLHttpRequest is unavailable'));
+      return;
+    }
+
+    var xhr = null;
+    var settled = false;
+    var xhrTimer = null;
+
+    function finish(ok, err) {
+      if (settled) return;
+      settled = true;
+      if (xhrTimer && global.clearTimeout) {
+        global.clearTimeout(xhrTimer);
+        xhrTimer = null;
+      }
+      done(ok, err || null);
+    }
+
+    function fail(err) {
+      finish(false, err || new Error('Legacy transpiler request failed'));
+    }
+
+    function success() {
+      var status = Number(xhr.status || 0);
+      if (!((status >= 200 && status < 300) || status === 0)) {
+        fail(new Error('Legacy transpiler HTTP ' + status));
+        return;
+      }
+
+      var body = String(xhr.responseText || '');
+      if (!body) {
+        fail(new Error('Legacy transpiler response was empty'));
+        return;
+      }
+
+      try {
+        evaluateScriptText(body);
+        finish(true, null);
+      } catch (e) {
+        fail(new Error('Legacy transpiler execution failed: ' + (e && e.message ? e.message : String(e))));
+      }
+    }
+
+    try {
+      xhr = new global.XMLHttpRequest();
+      xhr.open('GET', src, true);
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) success();
+      };
+      xhr.onerror = function () {
+        fail(new Error('Legacy transpiler XHR failed'));
+      };
+      xhr.ontimeout = function () {
+        fail(new Error('Legacy transpiler XHR timed out'));
+      };
+
+      xhrTimer = global.setTimeout(function () {
+        xhrTimer = null;
+        try { xhr.abort(); } catch (e) {}
+        fail(new Error('Legacy transpiler XHR timed out'));
+      }, LOAD_TIMEOUT_MS);
+
+      xhr.send(null);
+    } catch (e) {
+      fail(new Error('Legacy transpiler XHR failed: ' + (e && e.message ? e.message : String(e))));
+    }
+  }
+
+  function loadViaScript(src, done) {
+    var script = global.document.createElement('script');
+    script.type = 'text/javascript';
+    script.async = true;
+    script.src = src;
+
+    function failed(message) {
+      try {
+        if (script.parentNode) script.parentNode.removeChild(script);
+      } catch (e) {}
+      done(false, new Error(message || 'Legacy transpiler script load failed'));
+    }
+
+    script.onload = function () {
+      if (global.Babel && typeof global.Babel.transform === 'function') {
+        done(true, null);
+      } else {
+        failed('Legacy transpiler script loaded without Babel');
+      }
+    };
+    script.onreadystatechange = function () {
+      if ((script.readyState === 'loaded' || script.readyState === 'complete') &&
+          global.Babel && typeof global.Babel.transform === 'function') {
+        done(true, null);
+      }
+    };
+    script.onerror = function () {
+      failed('Legacy transpiler script request failed');
+    };
+
+    try {
+      var parent = global.document.getElementsByTagName('head')[0] || global.document.documentElement;
+      parent.appendChild(script);
+    } catch (e) {
+      failed('Legacy transpiler script insertion failed: ' + (e && e.message ? e.message : String(e)));
+    }
+  }
+
   function loadNext() {
     if (loadIndex >= CDN_URLS.length) {
       finishLoad(new Error('Unable to load the legacy JavaScript transpiler'));
       return;
     }
 
-    var script = global.document.createElement('script');
     var src = CDN_URLS[loadIndex];
     loadIndex += 1;
-    script.type = 'text/javascript';
-    script.async = true;
-    script.src = src;
 
-    function failed() {
-      try {
-        if (script.parentNode) script.parentNode.removeChild(script);
-      } catch (e) {}
-      if (loadIndex >= CDN_URLS.length) {
-        finishLoad(new Error('Unable to load the legacy JavaScript transpiler'));
-      } else {
-        loadNext();
-      }
-    }
-
-    script.onload = function () {
-      if (global.Babel && typeof global.Babel.transform === 'function') {
-        finishLoad(null);
-      } else {
-        failed();
-      }
-    };
-    script.onreadystatechange = function () {
-      if ((script.readyState === 'loaded' || script.readyState === 'complete') &&
-          global.Babel && typeof global.Babel.transform === 'function') {
-        finishLoad(null);
-      }
-    };
-    script.onerror = failed;
-
-    try {
-      var parent = global.document.getElementsByTagName('head')[0] || global.document.documentElement;
-      parent.appendChild(script);
-    } catch (e) {
-      failed();
+    if (src === '/api/babel') {
+      loadViaXhr(src, function (ok) {
+        if (ok) {
+          finishLoad(null);
+        } else {
+          loadNext();
+        }
+      });
       return;
     }
 
-    timer = global.setTimeout(function () {
-      timer = null;
-      failed();
-    }, LOAD_TIMEOUT_MS);
+    loadViaScript(src, function (ok) {
+      if (ok) {
+        finishLoad(null);
+      } else {
+        loadNext();
+      }
+    });
   }
 
   function loadBabel(callback) {

@@ -3,7 +3,8 @@ import fs from 'node:fs'
 import vm from 'node:vm'
 
 const source = fs.readFileSync('src/source-transpiler.js', 'utf8')
-const requestedScripts = []
+const requestedXhrs = []
+const insertedScripts = []
 
 const fakeContext = {
   window: null,
@@ -12,31 +13,48 @@ const fakeContext = {
   setTimeout,
   clearTimeout,
   Babel: null,
+  XMLHttpRequest: function () {
+    this.readyState = 0
+    this.status = 200
+    this.responseText = '/* fake Babel bundle */'
+    this.open = (method, url) => {
+      assert.equal(method, 'GET')
+      requestedXhrs.push(url)
+    }
+    this.abort = () => {}
+    this.send = () => {
+      this.readyState = 4
+      if (typeof this.onreadystatechange === 'function') this.onreadystatechange()
+    }
+  },
   document: {
     createElement(type) {
       assert.equal(type, 'script')
       return {
         type: '',
-        async: true,
+        async: false,
         src: '',
+        text: '',
         parentNode: null,
-        onload: null,
-        onerror: null,
-        onreadystatechange: null,
+        appendChild() {},
       }
+    },
+    createTextNode(text) {
+      return { text }
     },
     getElementsByTagName() {
       return [{
         appendChild(script) {
-          requestedScripts.push(script.src)
+          insertedScripts.push(script)
           script.parentNode = this
           fakeContext.Babel = {
             transform(code) {
-              return { code: '/* transformed */\n' + code }
+              return { code: '/* transformed */\\n' + code }
             },
           }
-          script.readyState = 'complete'
-          if (typeof script.onload === 'function') script.onload()
+        },
+        removeChild(script) {
+          if (script) script.parentNode = null
         },
       }]
     },
@@ -62,9 +80,10 @@ const result = await new Promise((resolve, reject) => {
   })
 })
 
-assert.equal(requestedScripts.length, 1)
-assert.equal(requestedScripts[0], '/api/babel')
+assert.equal(requestedXhrs.length, 1)
+assert.equal(requestedXhrs[0], '/api/babel')
+assert.equal(insertedScripts.length, 1)
 assert.equal(result.transpiled, true)
 assert.match(result.code, /transformed/)
 
-console.log('PASS: legacy transpiler prefers same-origin Babel before external CDN')
+console.log('PASS: legacy transpiler loads same-origin Babel through XHR and executes it inline')
