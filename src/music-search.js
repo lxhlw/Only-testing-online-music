@@ -834,6 +834,8 @@
           image: data.img3 || data.img2 || data.img1 || '',
           lyricId: data.lrcUrl || '',
           types: types,
+          contentId: String(data.contentId || data.contentid || ''),
+          resourceType: String(data.resourceType || data.resource_type || '2'),
           raw: data
         }, 'mg'));
       }
@@ -893,6 +895,176 @@
         });
       }
     );
+  }
+
+  function resolveMiguNativeUrl(musicInfo, quality, callback) {
+    var info = musicInfo || {};
+    var requested = String(quality || '').toLowerCase() || '128k';
+    var toneFlag = 'PQ';
+    var resourceType = '2';
+
+    if (requested === '320k' || requested === '192k' || requested === '256k') {
+      toneFlag = 'HQ';
+      resourceType = '2';
+    } else if (
+      requested.indexOf('flac') === 0 ||
+      requested === 'wav' ||
+      requested === 'ape' ||
+      requested === 'hires' ||
+      requested === 'master' ||
+      requested === 'atmos' ||
+      requested === 'atmos_plus'
+    ) {
+      toneFlag = 'SQ';
+      resourceType = 'E';
+    }
+
+    var copyrightId = String(
+      info.copyrightId ||
+      info.copyright_id ||
+      (info.raw && (info.raw.copyrightId || info.raw.copyright_id)) ||
+      ''
+    ).replace(/^\s+|\s+$/g, '');
+
+    var contentId = String(
+      info.contentId ||
+      info.content_id ||
+      (info.raw && (info.raw.contentId || info.raw.content_id)) ||
+      (info.raw && info.raw.raw && (info.raw.raw.contentId || info.raw.raw.content_id)) ||
+      ''
+    ).replace(/^\s+|\s+$/g, '');
+
+    if (!copyrightId && !contentId) {
+      return callback(new Error('No Migu copyrightId/contentId for native playback'));
+    }
+
+    function extractUrl(value, depth) {
+      if (depth > 7 || value == null) return '';
+      if (typeof value === 'string') {
+        var text = value.replace(/^\s+|\s+$/g, '');
+        if (/^https?:\/\//i.test(text)) return text;
+        var matches = text.match(/https?:\/\/[^\s"'<>]+/ig) || [];
+        return matches.length ? matches[0].replace(/[),.;]+$/g, '') : '';
+      }
+      if (Array.isArray(value)) {
+        for (var i = 0; i < value.length; i += 1) {
+          var foundArray = extractUrl(value[i], depth + 1);
+          if (foundArray) return foundArray;
+        }
+        return '';
+      }
+      if (typeof value === 'object') {
+        var preferred = [
+          'url', 'playUrl', 'play_url', 'musicUrl', 'music_url',
+          'audioUrl', 'audio_url', 'listenUrl', 'listen_url',
+          'playurl', 'mediaUrl', 'media_url'
+        ];
+        for (var p = 0; p < preferred.length; p += 1) {
+          if (!Object.prototype.hasOwnProperty.call(value, preferred[p])) continue;
+          var preferredUrl = extractUrl(value[preferred[p]], depth + 1);
+          if (preferredUrl) return preferredUrl;
+        }
+        for (var key in value) {
+          if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+          var nested = extractUrl(value[key], depth + 1);
+          if (nested) return nested;
+        }
+      }
+      return '';
+    }
+
+    function finish(url, provider, raw) {
+      var clean = String(url || '').replace(/^\s+|\s+$/g, '');
+      if (!/^https?:\/\//i.test(clean) || isCrossPlatformPlaybackUrl('mg', clean)) {
+        return callback(new Error(provider + ' returned no usable Migu media URL'));
+      }
+      callback(null, {
+        url: clean,
+        source: 'mg',
+        provider: provider,
+        requestedQuality: requested,
+        actualBr: requested,
+        id: String(info.songmid || info.id || contentId || copyrightId || ''),
+        raw: raw || null
+      });
+    }
+
+    var listenUrlApi =
+      'https://app.c.nf.migu.cn/MIGUM2.0/v2.0/content/listen-url' +
+      '?copyrightId=' + encodeURIComponent(copyrightId) +
+      '&netType=01' +
+      '&toneFlag=' + encodeURIComponent(toneFlag);
+
+    // Prefer Migu's API that returns the actual URL for the requested tone.
+    // Keep the response recursive so minor response-shape changes do not
+    // break playback.
+    if (copyrightId) {
+      requestViaProxy(
+        listenUrlApi,
+        'GET',
+        null,
+        {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/148.0.0.0 Safari/537.36',
+          'Referer': 'https://music.migu.cn/',
+          'Accept': 'application/json, text/plain, */*'
+        },
+        true,
+        function (apiErr, data) {
+          if (!apiErr) {
+            var returned = extractUrl(data, 0);
+            if (returned) return finish(returned, 'migu-native-listen-url', data);
+          }
+
+          if (!contentId) {
+            return callback(apiErr || new Error('Migu listen-url returned no playable URL'));
+          }
+
+          // Older Migu clients use listenSong.do. This endpoint redirects to
+          // the actual media CDN and can be loaded by <audio> directly.
+          var directUrl =
+            'https://app.pd.nf.migu.cn/MIGUM2.0/v1.0/content/sub/listenSong.do' +
+            '?toneFlag=' + encodeURIComponent(toneFlag) +
+            '&netType=00' +
+            '&userId=15548614588710179085069' +
+            '&ua=Android_migu' +
+            '&version=5.1' +
+            '&copyrightId=0' +
+            '&contentId=' + encodeURIComponent(contentId) +
+            '&resourceType=' + encodeURIComponent(resourceType) +
+            '&channel=0';
+
+          finish(directUrl, 'migu-native-listenSong', {
+            listenUrlError: apiErr ? String(apiErr.message || apiErr) : '',
+            contentId: contentId,
+            resourceType: resourceType,
+            toneFlag: toneFlag
+          });
+        }
+      );
+      return;
+    }
+
+    if (!contentId) {
+      return callback(new Error('Migu native playback requires copyrightId or contentId'));
+    }
+
+    var directUrlOnly =
+      'https://app.pd.nf.migu.cn/MIGUM2.0/v1.0/content/sub/listenSong.do' +
+      '?toneFlag=' + encodeURIComponent(toneFlag) +
+      '&netType=00' +
+      '&userId=15548614588710179085069' +
+      '&ua=Android_migu' +
+      '&version=5.1' +
+      '&copyrightId=0' +
+      '&contentId=' + encodeURIComponent(contentId) +
+      '&resourceType=' + encodeURIComponent(resourceType) +
+      '&channel=0';
+
+    finish(directUrlOnly, 'migu-native-listenSong', {
+      contentId: contentId,
+      resourceType: resourceType,
+      toneFlag: toneFlag
+    });
   }
 
   function buildKugouList(rawList) {
@@ -2674,6 +2846,13 @@
 
     if (source === 'wy' && skipProvider !== 'netease-native') {
       return resolveNeteaseNativeUrl(musicInfo, quality, function (nativeErr, nativeResult) {
+        if (!nativeErr && nativeResult && nativeResult.url) return callback(null, nativeResult);
+        afterHuibq();
+      });
+    }
+
+    if (source === 'mg' && skipProvider !== 'migu-native') {
+      return resolveMiguNativeUrl(musicInfo, quality, function (nativeErr, nativeResult) {
         if (!nativeErr && nativeResult && nativeResult.url) return callback(null, nativeResult);
         afterHuibq();
       });
