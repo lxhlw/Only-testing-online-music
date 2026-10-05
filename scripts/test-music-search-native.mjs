@@ -360,7 +360,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     if (item.source === 'kg') {
       assert.equal(result.provider, 'kugou-native')
       assert.equal(result.url, 'https://audio.example.test/kg-tracker.mp3')
-      assert.equal(result.id, 'ABCDEF0123456789')
+      assert.equal(result.id, 'abcdef0123456789')
       const kgCalls = h.calls.filter(call => call.xhrMethod === 'GET' && String(call.xhrUrl || '').includes('tracker.kugou.com'))
       assert.equal(kgCalls.length, 1)
       const target = new URL(kgCalls[0].xhrUrl).searchParams.get('url')
