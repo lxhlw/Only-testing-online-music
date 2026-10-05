@@ -672,7 +672,8 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       'kw',
       { songmid: '62355680' },
       '128k',
-      (err, value) => err ? reject(err) : resolve(value)
+      (err, value) => err ? reject(err) : resolve(value),
+      { skipProvider: 'kuwo-native' }
     )
   })
 
