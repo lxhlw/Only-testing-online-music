@@ -1985,12 +1985,71 @@
             }
           },
           loginUin: '0',
-          comm: { uin: '0', format: 'json', ct: 24, cv: 0 }
+          comm: {
+            ct: 24,
+            cv: 4747474,
+            platform: 'yqq.json',
+            uin: '0',
+            g_tk: 5381,
+            g_tk_new_20200303: 5381,
+            format: 'json',
+            inCharset: 'utf-8',
+            outCharset: 'utf-8',
+            notice: 0,
+            needNewCode: 1
+          }
         }),
         headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'QQMusic 14090508(android 12)',
+          'Content-Type': 'application/json; charset=utf-8',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/148.0.0.0 Safari/537.36',
+          'Referer': 'https://y.qq.com/',
           'Accept': 'application/json'
+        }
+      },
+      {
+        provider: 'tencent-aggregate-queryvkey',
+        method: 'POST',
+        url: 'https://u.y.qq.com/cgi-bin/musicu.fcg',
+        body: JSON.stringify({
+          queryvkey: {
+            module: 'vkey.GetVkeyServer',
+            method: 'CgiGetVkey',
+            param: {
+              uin: '0',
+              guid: officialGuid,
+              referer: 'y.qq.com',
+              songtype: [0],
+              filename: [expressFileName],
+              songmid: [songmid]
+            }
+          }
+        }),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/148.0.0.0 Safari/537.36',
+          'Referer': 'https://y.qq.com/'
+        },
+        extractUrl: function (data) {
+          var root = parseTencentLooseJson(data);
+          var block = root && root.queryvkey;
+          var midurlinfo = block && block.data && block.data.midurlinfo;
+          if (!Array.isArray(midurlinfo)) return '';
+          for (var i = 0; i < midurlinfo.length; i += 1) {
+            var item = midurlinfo[i] || {};
+            if (item.purl && /^https?:\\/\\//i.test(String(item.purl).trim())) {
+              return String(item.purl).trim();
+            }
+            if (item.purl) {
+              var sip = Array.isArray(item.sip) && item.sip.length ? String(item.sip[0] || '').trim() : '';
+              if (sip && /^https?:\\/\\//i.test(sip)) {
+                return sip + String(item.purl).replace(/^\\/+/, '');
+              }
+            }
+            if (item.wifiurl && /^https?:\\/\\//i.test(String(item.wifiurl).trim())) {
+              return String(item.wifiurl).trim();
+            }
+          }
+          return '';
         }
       },
       {
@@ -2042,6 +2101,60 @@
         method: 'GET',
         url: 'https://zrcdy.dpdns.org/lx/api/api.php?source=qq&songmid=' + encodeURIComponent(songmid) + '&quality=' + encodeURIComponent(requestedQuality),
         headers: { 'User-Agent': 'Mozilla/5.0' }
+      },
+      {
+        provider: 'tencent-aggregate-xunhuisi',
+        method: 'GET',
+        url: 'https://api.xunhuisi.store/API/QQMusic/Song.php?mid=' + encodeURIComponent(songmid) + '&type=json',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
+          'Accept': 'application/json'
+        },
+        extractUrl: function (data) {
+          var root = parseTencentLooseJson(data);
+          if (!root) return '';
+          var candidates = [
+            root.music_url,
+            root.url,
+            root.data && root.data.music_url,
+            root.data && root.data.url
+          ];
+          for (var i = 0; i < candidates.length; i += 1) {
+            if (typeof candidates[i] === 'string' && /^https?:\\/\\//i.test(candidates[i].trim())) {
+              return candidates[i].trim();
+            }
+          }
+          return '';
+        }
+      },
+      {
+        provider: 'tencent-aggregate-hk0cc',
+        method: 'GET',
+        url: 'https://api.hk0.cc/api/qqmusic?mid=' + encodeURIComponent(songmid),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/148.0.0.0 Safari/537.36',
+          'Accept': 'application/json'
+        },
+        extractUrl: function (data) {
+          var root = parseTencentLooseJson(data);
+          if (!root) return '';
+          var candidates = [
+            root.song_play_url_sq,
+            root.song_play_url_pq,
+            root.song_play_url_hq,
+            root.song_play_url,
+            root.song_play_url_standard,
+            root.data && root.data.song_play_url_sq,
+            root.data && root.data.song_play_url_pq,
+            root.data && root.data.song_play_url
+          ];
+          for (var i = 0; i < candidates.length; i += 1) {
+            if (typeof candidates[i] === 'string' && /^https?:\\/\\//i.test(candidates[i].trim())) {
+              return candidates[i].trim();
+            }
+          }
+          return '';
+        }
       },
       {
         provider: 'tencent-aggregate-vkeys',
