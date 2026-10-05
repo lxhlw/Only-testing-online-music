@@ -202,20 +202,29 @@ async function fetchFlowerResolverViaSocket(target, request) {
 }
 
 async function fetchFlowerResolverViaHttpBridge(target, request) {
+  var targetCandidates = [
+    target.toString(),
+    'http://ts.tempmusic.tk' + target.pathname + target.search,
+    'http://tm.tempmusic.tk' + target.pathname + target.search
+  ];
   var bridges = [
     function (targetUrl) {
       return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl);
     },
     function (targetUrl) {
       return 'https://corsproxy.io/?url=' + encodeURIComponent(targetUrl);
+    },
+    function (targetUrl) {
+      return 'https://r.jina.ai/' + targetUrl;
     }
   ];
 
   var forwarded = pickForwardHeaders(request);
   var lastError = null;
 
-  for (var bi = 0; bi < bridges.length; bi += 1) {
-    var bridgeUrl = bridges[bi](target.toString());
+  for (var ti = 0; ti < targetCandidates.length; ti += 1) {
+    for (var bi = 0; bi < bridges.length; bi += 1) {
+      var bridgeUrl = bridges[bi](targetCandidates[ti]);
     try {
       var bridgeHeaders = new Headers();
       forwarded.forEach(function (value, key) {
