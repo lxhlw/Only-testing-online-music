@@ -823,9 +823,6 @@
       // running. This prevents stale media URLs from appearing as a new
       // channel's playback attempt.
       try { audio.removeAttribute('src'); } catch (e) {}
-      // Explicit empty assignment avoids Chromium retaining the prior
-      // currentSrc while a new channel is resolving.
-      try { audio.src = ''; } catch (e) {}
       try { if (typeof audio.load === 'function') audio.load(); } catch (e) {}
     }
 
@@ -892,7 +889,6 @@
     if (currentAudio) {
       try { currentAudio.pause(); } catch (e) {}
       try { currentAudio.removeAttribute('src'); } catch (e) {}
-      try { currentAudio.src = ''; } catch (e) {}
       try { if (typeof currentAudio.load === 'function') currentAudio.load(); } catch (e) {}
     }
 
