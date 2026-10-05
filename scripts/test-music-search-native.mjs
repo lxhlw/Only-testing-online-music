@@ -51,6 +51,8 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
         response = responses.miguStrategyListenUrl
       } else if (targetUrl.indexOf('app.c.nf.migu.cn/MIGUM2.0/v2.0/content/listen-url') >= 0 && responses.miguListenUrl) {
         response = responses.miguListenUrl
+      } else if (targetUrl.indexOf('app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do') >= 0 && responses.miguLegacyListenSong) {
+        response = responses.miguLegacyListenSong
       } else if (targetUrl.indexOf('lxmusicapi.onrender.com/url/') >= 0 && responses.huibq) {
         const provider = targetUrl.split('/url/')[1]?.split('/')[0] || 'unknown'
         response = responses.huibq[provider] || { status: 200, body: '[]' }
@@ -297,6 +299,54 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 }
 
 
+
+
+{
+  const hLegacy = createHarness(
+    { mg: { actions: ['musicUrl'] } },
+    () => {},
+    {
+      miguStrategyListenUrl: {
+        status: 200,
+        body: JSON.stringify({ code: '000000', data: { url: '' } })
+      },
+      miguListenUrl: {
+        status: 200,
+        body: JSON.stringify({ code: '000000', data: {} })
+      },
+      miguLegacyListenSong: {
+        status: 200,
+        body: JSON.stringify({ data: { url: 'https://audio.example.test/mg-legacy.mp3' } })
+      }
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    hLegacy.sandbox.LXMusicSearch.resolveMusicUrl(
+      'mg',
+      { id: 'mg-copy-legacy', songmid: 'mg-song-legacy', copyrightId: 'mg-copy-legacy', contentId: 'mg-content-legacy', resourceType: '2' },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value)
+    )
+  })
+
+  assert.equal(result.provider, 'migu-native-listenSong')
+  assert.equal(result.url, 'https://audio.example.test/mg-legacy.mp3')
+  const legacyCalls = hLegacy.calls.filter(call => {
+    if (call.xhrMethod !== 'GET') return false
+    let url = String(call.xhrUrl || '')
+    try { url = decodeURIComponent(url) } catch {}
+    return url.includes('app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do')
+  })
+  assert.equal(legacyCalls.length, 1)
+  const legacyTarget = new URL(legacyCalls[0].xhrUrl).searchParams.get('url')
+  const legacyUrl = new URL(legacyTarget)
+  assert.equal(legacyUrl.searchParams.get('copyrightId'), 'mg-copy-legacy')
+  assert.equal(legacyUrl.searchParams.get('contentId'), 'mg-content-legacy')
+  assert.equal(legacyUrl.searchParams.get('toneFlag'), 'PQ')
+  assert.equal(legacyUrl.searchParams.get('resourceType'), '2')
+  assert.equal(legacyUrl.searchParams.get('netType'), '00')
+}
 
 {
   const hJson = createHarness(

@@ -1100,21 +1100,61 @@
       );
     }
 
+    function requestLegacyListenSongUrl(done) {
+      if (!copyrightId || !contentId) {
+        return done(new Error('Migu legacy listenSong.do requires copyrightId and contentId'));
+      }
+
+      var api =
+        'https://app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do' +
+        '?channel=mx' +
+        '&copyrightId=' + encodeURIComponent(copyrightId) +
+        '&contentId=' + encodeURIComponent(contentId) +
+        '&toneFlag=' + encodeURIComponent(toneFlag) +
+        '&resourceType=' + encodeURIComponent(resourceType || '2') +
+        '&userId=15548614588710179085069' +
+        '&netType=00';
+
+      requestViaProxy(
+        api,
+        'GET',
+        null,
+        {
+          'Accept': 'application/json, text/plain, */*',
+          'Referer': 'https://y.migu.cn/',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/148.0.0.0 Safari/537.36',
+          'channel': '014021I'
+        },
+        true,
+        function (apiErr, data) {
+          if (apiErr) return done(apiErr);
+          var returned = extractUrl(data, 0);
+          if (!returned) return done(new Error('Migu legacy listenSong.do returned no URL'));
+          finish(returned, 'migu-native-listenSong', data);
+        }
+      );
+    }
+
     // Native priority:
     // 1) v2.4 strategy endpoint keyed by songId (the field exposed as songmid).
     // 2) v2.0 copyrightId endpoint as a second official source.
-    // 3) Legacy listenSong.do only as the last fallback; it may return JSON.
+    // 3) Legacy listenSong.do as the last fallback when both official listen-url
+    // endpoints return no usable media URL.
     requestOfficialListenUrl(function (officialErr) {
       if (!officialErr) return;
       requestCopyrightListenUrl(function (copyrightErr) {
         if (!copyrightErr) return;
-        if (!contentId) return callback(copyrightErr || officialErr);
+        requestLegacyListenSongUrl(function (legacyErr) {
+          if (!legacyErr) return;
+          if (!contentId) return callback(copyrightErr || officialErr || legacyErr);
 
-        return callback(new Error(
-          'Migu official playback endpoints returned no playable media URL' +
-          '；strategy: ' + String(officialErr && officialErr.message || officialErr || 'failed') +
-          '；copyright: ' + String(copyrightErr && copyrightErr.message || copyrightErr || 'failed')
-        ));
+          return callback(new Error(
+            'Migu official and legacy playback endpoints returned no playable media URL' +
+            '；strategy: ' + String(officialErr && officialErr.message || officialErr || 'failed') +
+            '；copyright: ' + String(copyrightErr && copyrightErr.message || copyrightErr || 'failed') +
+            '；legacy: ' + String(legacyErr && legacyErr.message || legacyErr || 'failed')
+          ));
+        });
       });
     });
   }
