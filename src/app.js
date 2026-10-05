@@ -16,6 +16,7 @@
   var MIN_UNKNOWN_MEDIA_DURATION_SECONDS = 15;
   var MIN_CONFIRMED_PLAYBACK_PROGRESS_SECONDS = 0.25;
   var PLAYBACK_CONFIRM_TIMEOUT_MS = 3500;
+  var PLAYBACK_CONNECT_TIMEOUT_MS = 7000;
 
   var CHANNEL_NAMES = {
     kw: '酷我音乐',
@@ -660,6 +661,30 @@
     audio.preload = 'auto';
     audio.src = playableUrl;
     if (typeof audio.load === 'function') audio.load();
+
+    // Start the real-media connection timeout when the URL is attached, not
+    // only after a "playing" event. A stalled CDN can stop at loadstart forever
+    // and otherwise bypass the fallback path completely.
+    clearPlaybackConfirmTimer(playbackState);
+    playbackState.confirmTimer = global.setTimeout(function () {
+      if (
+        token !== playbackToken ||
+        !playbackState ||
+        playbackState.token !== token ||
+        playbackState.url !== playableUrl ||
+        !playbackState.waitingForAudio
+      ) return;
+
+      playbackState.confirmTimer = null;
+      if (confirmAudioPlayback(token, playableUrl)) return;
+
+      setStatus(
+        '媒体连接超过 ' + Math.round(PLAYBACK_CONNECT_TIMEOUT_MS / 1000) +
+        ' 秒仍未产生真实播放进度，正在自动更换解析器……',
+        'warn'
+      );
+      handleAudioError(token, playableUrl);
+    }, PLAYBACK_CONNECT_TIMEOUT_MS);
 
     document.getElementById('player-title').innerHTML = escapeHtml(music.name);
     document.getElementById('player-artist').innerHTML = escapeHtml(music.singer);
