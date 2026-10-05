@@ -745,6 +745,41 @@
       + ' ' + escapeHtml(quality) + '：' + escapeHtml(music.name) + '……'
     );
 
+    // Flower's kw musicUrl resolver is currently hosted on an HTTP
+    // origin that can stall behind Cloudflare. Warm the existing native
+    // Kuwo resolver in parallel for Flower only; whichever valid playback
+    // URL settles first wins, and stale source callbacks are ignored.
+    if (
+      source === 'kw' &&
+      active.url &&
+      /flower\/latest\.js/i.test(String(active.url)) &&
+      global.LXMusicSearch &&
+      typeof global.LXMusicSearch.resolveMusicUrl === 'function'
+    ) {
+      global.LXMusicSearch.resolveMusicUrl(
+        source,
+        musicInfo,
+        quality,
+        function (warmErr, warmResult) {
+          if (!isCurrentAttempt() || settled) return;
+          if (!warmErr && warmResult && warmResult.url) {
+            finishAttempt();
+            return useResolvedUrl(
+              warmResult.url,
+              quality,
+              token,
+              music,
+              source,
+              musicInfo,
+              settings,
+              providerLabel(warmResult.provider),
+              warmResult.provider
+            );
+          }
+        }
+      );
+    }
+
     sourceTimer = global.setTimeout(function () {
       if (!isCurrentAttempt() || settled) return;
       runFallback(
