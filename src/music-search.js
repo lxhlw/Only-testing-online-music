@@ -2534,6 +2534,9 @@
     search: search,
     sourceMap: SOURCE_MAP,
     normalizeSong: normalizeSong,
-    resolveMusicUrl: resolveMusicUrl
+    resolveMusicUrl: resolveMusicUrl,
+    isPlayableUrlForSource: function (source, url) {
+      return !isCrossPlatformPlaybackUrl(source, url);
+    }
   };
 })(window);

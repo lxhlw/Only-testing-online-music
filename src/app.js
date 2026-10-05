@@ -780,6 +780,16 @@
           );
         }
 
+        if (
+          global.LXMusicSearch &&
+          typeof global.LXMusicSearch.isPlayableUrlForSource === 'function' &&
+          !global.LXMusicSearch.isPlayableUrlForSource(source, url)
+        ) {
+          return runFallback(
+            '原始音源返回了其他渠道的播放地址，正在使用当前渠道解析器……'
+          );
+        }
+
         if (!finishAttempt()) return;
 
         return useResolvedUrl(
