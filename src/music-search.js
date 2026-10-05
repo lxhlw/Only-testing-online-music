@@ -245,6 +245,8 @@
       hash: String((item.hash || item.FileHash || item.fileHash || '') || ''),
       strMediaMid: String((item.strMediaMid || item.str_media_mid || item.mediaMid || item.media_mid || '') || ''),
       copyrightId: String((item.copyrightId || item.copyright_id || '') || ''),
+      contentId: String((item.contentId || item.content_id || '') || ''),
+      resourceType: String((item.resourceType || item.resource_type || '') || ''),
       types: item.types && Array.isArray(item.types) ? item.types : null,
       meta: item.meta || null,
       raw: item
