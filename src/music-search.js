@@ -1789,7 +1789,50 @@
       false,
       function (err, data) {
         if (err) return callback(err);
-        var returnedUrl = String(data || '').replace(/^\s+|\s+$/g, '');
+        function extractKuwoNativeUrl(value, depth) {
+          if (depth > 6 || value == null) return '';
+
+          if (typeof value === 'string') {
+            var text = value.replace(/^\s+|\s+$/g, '');
+            if (/^https?:\/\//i.test(text)) return text;
+            var matches = text.match(/https?:\/\/[^\s"'<>]+/ig) || [];
+            for (var mi = 0; mi < matches.length; mi += 1) {
+              var candidate = matches[mi].replace(/[),.;]+$/g, '');
+              if (/^https?:\/\//i.test(candidate)) return candidate;
+            }
+            return '';
+          }
+
+          if (Array.isArray(value)) {
+            for (var ai = 0; ai < value.length; ai += 1) {
+              var arrayUrl = extractKuwoNativeUrl(value[ai], depth + 1);
+              if (arrayUrl) return arrayUrl;
+            }
+            return '';
+          }
+
+          if (typeof value === 'object') {
+            var preferred = [
+              'url', 'play_url', 'playUrl', 'music_url', 'musicUrl',
+              'audioUrl', 'audio', 'src', 'link'
+            ];
+            for (var pi = 0; pi < preferred.length; pi += 1) {
+              if (Object.prototype.hasOwnProperty.call(value, preferred[pi])) {
+                var preferredUrl = extractKuwoNativeUrl(value[preferred[pi]], depth + 1);
+                if (preferredUrl) return preferredUrl;
+              }
+            }
+            for (var key in value) {
+              if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+              var nestedUrl = extractKuwoNativeUrl(value[key], depth + 1);
+              if (nestedUrl) return nestedUrl;
+            }
+          }
+
+          return '';
+        }
+
+        var returnedUrl = extractKuwoNativeUrl(data, 0);
         if (!/^https?:\/\//i.test(returnedUrl) || isCrossPlatformPlaybackUrl('kw', returnedUrl)) {
           return callback(new Error('Kuwo native API returned no playable URL'));
         }

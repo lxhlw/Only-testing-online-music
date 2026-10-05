@@ -292,6 +292,39 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 
 
 {
+  const hJson = createHarness(
+    {
+      kw: { actions: ['musicUrl'] }
+    },
+    () => {},
+    {
+      kuwo: {
+        status: 200,
+        body: JSON.stringify({
+          code: 200,
+          data: {
+            url: 'https://audio.example.test/kw-json-native.mp3'
+          }
+        })
+      }
+    }
+  )
+
+  const resultJson = await new Promise((resolve, reject) => {
+    hJson.sandbox.LXMusicSearch.resolveMusicUrl(
+      'kw',
+      { songmid: '62355680' },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value)
+    )
+  })
+
+  assert.equal(resultJson.provider, 'kuwo-native')
+  assert.equal(resultJson.url, 'https://audio.example.test/kw-json-native.mp3')
+  assert.equal(resultJson.id, '62355680')
+}
+
+{
   const h = createHarness(
     {
       kw: { actions: ['musicUrl'] },
