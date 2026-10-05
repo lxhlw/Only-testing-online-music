@@ -1775,7 +1775,7 @@
     if (!rid) return callback(new Error('No Kuwo rid for native playback'));
 
     var target =
-      'http://antiserver.kuwo.cn/anti.s?type=convert_url' +
+      'https://antiserver.kuwo.cn/anti.s?type=convert_url' +
       '&format=aac|mp3&response=url&rid=' + encodeURIComponent(rid);
 
     requestViaProxy(
