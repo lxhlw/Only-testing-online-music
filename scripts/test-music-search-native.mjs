@@ -690,6 +690,85 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     () => {},
     {
       time: { status: 500, body: 'must not be used' },
+      search: [{
+        status: 200,
+        body: JSON.stringify({
+          req_0: {
+            data: {
+              midurlinfo: [{ purl: 'C400MEDIA-MID-TEST.m4a' }]
+            }
+          }
+        })
+      }]
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.resolveMusicUrl(
+      'tx',
+      { songmid: '0039MnNATIVE', mediaMid: 'MEDIA-MID-TEST' },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value),
+      { skipProvider: 'gd-studio' }
+    )
+  })
+
+  assert.equal(result.provider, 'tencent-aggregate-official')
+  assert.equal(result.url, 'https://isure.stream.qqmusic.qq.com/C400MEDIA-MID-TEST.m4a')
+  const target = new URL(h.calls[0].xhrUrl).searchParams.get('url')
+  assert.equal(target, 'https://u.y.qq.com/cgi-bin/musicu.fcg')
+  const payload = JSON.parse(h.calls[0].xhrBody)
+  assert.equal(payload.req_0.param.songmid[0], '0039MnNATIVE')
+  assert.equal(payload.req_0.param.filename[0], 'C400MEDIA-MID-TEST.m4a')
+}
+
+{
+  const h = createHarness(
+    { tx: { actions: ['musicUrl'] } },
+    () => {},
+    {
+      time: { status: 500, body: 'must not be used' },
+      search: [
+        { status: 200, body: '{}' },
+        { status: 200, body: '{}' },
+        { status: 200, body: '{}' },
+        { status: 200, body: '{}' },
+        {
+          status: 200,
+          body: JSON.stringify({
+            url: 'http://ws.stream.qqmusic.qq.com/RS0200039MnNATIVE.mp3?guid=api.vkeys.cn&vkey=abc'
+          })
+        },
+        {
+          status: 200,
+          body: JSON.stringify({
+            url: 'https://audio.example.test/tx-after-rs02-rejected.mp3'
+          })
+        }
+      ]
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.resolveMusicUrl(
+      'tx',
+      { songmid: '0039MnNATIVE' },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value),
+      { skipProvider: 'gd-studio' }
+    )
+  })
+
+  assert.equal(result.provider, 'tencent-aggregate-lxmusic88')
+  assert.equal(result.url, 'https://audio.example.test/tx-after-rs02-rejected.mp3')
+}
+
+{
+  const h = createHarness(
+    { tx: { actions: ['musicUrl'] } },
+    () => {},
+    {
+      time: { status: 500, body: 'must not be used' },
       search: [
         { status: 200, body: '{}' },
         { status: 200, body: JSON.stringify({ code: 200, url: 'https://audio.example.test/tx-aggregate.mp3' }) }

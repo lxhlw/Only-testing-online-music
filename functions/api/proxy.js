@@ -99,9 +99,15 @@ async function fetchFlowerResolverViaHost(target, request) {
 
   for (var bi = 0; bi < bases.length; bi += 1) {
     var base = bases[bi];
-    var paths = [target.pathname];
+    var paths = [];
     if (/^\/flower\/v1\/url\//.test(target.pathname)) {
+      // Prefer the legacy LX resolver route exposed by tempmusics.tk.
+      // Cloudflare cannot reliably fetch the raw Flower IP, while the
+      // hostname-routed /url endpoint remains the compatible HTTP entrypoint.
       paths.push(target.pathname.replace(/^\/flower\/v1\/url\//, '/url/'));
+      paths.push(target.pathname);
+    } else {
+      paths.push(target.pathname);
     }
 
     for (var pi = 0; pi < paths.length; pi += 1) {
@@ -506,19 +512,16 @@ export async function onRequest(context) {
   // its resolver on this IP, so try known DNS aliases for the same origin.
   if (target.hostname.toLowerCase() === '97.64.37.235'
       && /^\/flower\/v1\/url\//.test(target.pathname)) {
-    var flowerDirectResponse = await fetchFlowerResolverViaDirectFetch(target, request);
-    if (flowerDirectResponse.status >= 200 && flowerDirectResponse.status < 300) {
-      return flowerDirectResponse;
-    }
-
+    // Route through a DNS hostname first. Cloudflare's raw-IP fetch can hit
+    // Error 1003 even though the same resolver is reachable by Host routing.
     var flowerHostResponse = await fetchFlowerResolverViaHost(target, request);
     if (flowerHostResponse.status >= 200 && flowerHostResponse.status < 300) {
       return flowerHostResponse;
     }
 
-    var flowerSocketResponse = await fetchFlowerResolverViaSocket(target, request);
-    if (flowerSocketResponse.status >= 200 && flowerSocketResponse.status < 300) {
-      return flowerSocketResponse;
+    var flowerDirectResponse = await fetchFlowerResolverViaDirectFetch(target, request);
+    if (flowerDirectResponse.status >= 200 && flowerDirectResponse.status < 300) {
+      return flowerDirectResponse;
     }
 
     var flowerBridgeResponse = await fetchFlowerResolverViaHttpBridge(target, request);
@@ -526,6 +529,7 @@ export async function onRequest(context) {
       return flowerBridgeResponse;
     }
 
+    var flowerSocketResponse = await fetchFlowerResolverViaSocket(target, request);
     return flowerSocketResponse;
   }
 

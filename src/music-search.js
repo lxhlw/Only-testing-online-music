@@ -1780,6 +1780,9 @@
     options = options || {};
     var skipProvider = String(options.skipProvider || '').toLowerCase();
     var songmid = String(info.songmid || info.id || info.mediaMid || '').replace(/^\s+|\s+$/g, '');
+    var mediaMid = String(
+      info.mediaMid || info.strMediaMid || info.media_mid || info.str_media_mid || ''
+    ).replace(/^\s+|\s+$/g, '');
     if (!songmid) return callback(new Error('No Tencent songmid for aggregate playback'));
     var requestedQuality = String(quality || '').toLowerCase() || '128k';
     var qMap = { '128k': '8', '192k': '8', '320k': '9', 'flac': '10', 'flac24bit': '16', 'hires': '14', 'atmos': '13', 'atmos_plus': '12', 'master': '11' };
@@ -1816,10 +1819,35 @@
       return '';
     }
 
+    function isUsableTencentUrl(value) {
+      var text = String(value || '').trim();
+      if (!/^https?:\/\//i.test(text)) return false;
+      if (isCrossPlatformPlaybackUrl('tx', text)) return false;
+
+      // api.vkeys.cn can return stale RS02... URLs for a 128k request.
+      // Reject them before they reach the audio element; a resolver result
+      // is not a success unless its URL belongs to a known QQ media pattern.
+      var path = '';
+      try { path = new URL(text).pathname.toLowerCase(); } catch (e) { return false; }
+      if (/\/rs0?2[^/]*\.(?:mp3|m4a)$/i.test(path)) return false;
+
+      if (requestedQuality === '128k' || requestedQuality === '192k') {
+        if (mediaMid) {
+          return /\/(?:c400|m500)[^/]+\.(?:mp3|m4a)$/i.test(path);
+        }
+        return /\/(?:c400|m500)[^/]+\.(?:mp3|m4a)$/i.test(path) || /\/rs0?2/i.test(path) === false;
+      }
+      if (requestedQuality === '320k') {
+        return /\/(?:m800|c600)[^/]+\.(?:mp3|m4a)$/i.test(path) || !/\/rs0?2/i.test(path);
+      }
+      return !/\/rs0?2/i.test(path);
+    }
+
     function acceptUrl(url, provider, raw, done) {
       var clean = normalizeTencentPlaybackUrl(url);
-      if (!/^https?:\/\//i.test(clean)) return done(new Error(provider + ' returned no playable URL'));
-      if (isCrossPlatformPlaybackUrl('tx', clean)) return done(new Error(provider + ' returned a cross-platform URL'));
+      if (!isUsableTencentUrl(clean)) {
+        return done(new Error(provider + ' returned a non-playable Tencent URL'));
+      }
       done(null, {
         url: clean,
         source: 'tx',
@@ -1832,14 +1860,21 @@
     }
 
     var officialGuid = 'lxweb' + String(Date.now ? Date.now() : new Date().getTime());
-    var officialFilePrefix = requestedQuality === '128k' || requestedQuality === '192k' ? 'M500' :
-      (requestedQuality === '320k' ? 'M800' :
+    // QQ's classic 128/192 kbps vkey flow is MediaMid-based (C400/*.m4a).
+    // Keep the legacy M500/songmid path only when MediaMid is unavailable.
+    var officialFilePrefix = requestedQuality === '128k' || requestedQuality === '192k'
+      ? (mediaMid ? 'C400' : 'M500')
+      : (requestedQuality === '320k' ? 'M800' :
       (requestedQuality.indexOf('flac') === 0 || requestedQuality.indexOf('hires') === 0 ? 'F000' : 'M500'));
-    var officialFileExt = officialFilePrefix === 'F000' ? '.flac' : '.mp3';
+    var officialFileId = ((requestedQuality === '128k' || requestedQuality === '192k') && mediaMid)
+      ? mediaMid
+      : songmid;
+    var officialFileExt = officialFilePrefix === 'F000' ? '.flac' :
+      (officialFilePrefix === 'C400' ? '.m4a' : '.mp3');
     var expressGuid = String(
       Math.floor((Date.now ? Date.now() : new Date().getTime()) % 10000000000)
     );
-    var expressFileName = officialFilePrefix + songmid + officialFileExt;
+    var expressFileName = officialFilePrefix + officialFileId + officialFileExt;
 
     var backends = [
       {
@@ -1851,7 +1886,7 @@
             module: 'vkey.GetVkeyServer',
             method: 'CgiGetVkey',
             param: {
-              filename: [officialFilePrefix + songmid + officialFileExt],
+              filename: [officialFilePrefix + officialFileId + officialFileExt],
               guid: officialGuid,
               songmid: [songmid],
               songtype: [0],
