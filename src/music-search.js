@@ -1105,19 +1105,21 @@
         return done(new Error('Migu legacy listenSong.do requires copyrightId and contentId'));
       }
 
-      // This endpoint is itself a playable media URL (or a redirect to one).
-      // Do not prefetch it as JSON: doing so consumes the endpoint response and
-      // loses the actual media target. Return it directly to the normal media
-      // proxy/player path, matching the current Migu client implementation.
+      // The legacy endpoint is a direct media URL, not a JSON resolver. The
+      // currently interoperable Migu form uses the MIGUM2.0 v1.0 endpoint with
+      // copyrightId=0, channel=0, and the Android client identity in the query.
+      // Return it directly to the normal media proxy/player path.
       var api =
-        'https://app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do' +
-        '?channel=mx' +
-        '&copyrightId=' + encodeURIComponent(copyrightId) +
-        '&contentId=' + encodeURIComponent(contentId) +
-        '&toneFlag=' + encodeURIComponent(toneFlag) +
-        '&resourceType=' + encodeURIComponent(resourceType || '2') +
+        'https://app.pd.nf.migu.cn/MIGUM2.0/v1.0/content/sub/listenSong.do' +
+        '?toneFlag=' + encodeURIComponent(toneFlag) +
+        '&netType=00' +
         '&userId=15548614588710179085069' +
-        '&netType=00';
+        '&ua=Android_migu' +
+        '&version=5.1' +
+        '&copyrightId=0' +
+        '&contentId=' + encodeURIComponent(contentId) +
+        '&resourceType=' + encodeURIComponent(resourceType || '2') +
+        '&channel=0';
 
       finish(api, 'migu-native-listenSong', null);
     }

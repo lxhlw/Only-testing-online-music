@@ -327,18 +327,21 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   })
 
   assert.equal(result.provider, 'migu-native-listenSong')
-  assert.equal(result.url.startsWith('https://app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do'), true)
+  assert.equal(result.url.startsWith('https://app.pd.nf.migu.cn/MIGUM2.0/v1.0/content/sub/listenSong.do'), true)
   const legacyUrl = new URL(result.url)
-  assert.equal(legacyUrl.searchParams.get('copyrightId'), 'mg-copy-legacy')
+  assert.equal(legacyUrl.searchParams.get('copyrightId'), '0')
   assert.equal(legacyUrl.searchParams.get('contentId'), 'mg-content-legacy')
   assert.equal(legacyUrl.searchParams.get('toneFlag'), 'PQ')
   assert.equal(legacyUrl.searchParams.get('resourceType'), '2')
   assert.equal(legacyUrl.searchParams.get('netType'), '00')
+  assert.equal(legacyUrl.searchParams.get('channel'), '0')
+  assert.equal(legacyUrl.searchParams.get('ua'), 'Android_migu')
+  assert.equal(legacyUrl.searchParams.get('version'), '5.1')
   const legacyProxyCalls = hLegacy.calls.filter(call => {
     if (call.xhrMethod !== 'GET') return false
     let url = String(call.xhrUrl || '')
     try { url = decodeURIComponent(url) } catch {}
-    return url.includes('app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do')
+    return url.includes('app.pd.nf.migu.cn/MIGUM2.0/v1.0/content/sub/listenSong.do')
   })
   assert.equal(legacyProxyCalls.length, 0)
 }
