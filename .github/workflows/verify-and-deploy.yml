@@ -92,6 +92,12 @@ jobs:
       - name: Run legacy import button test
         run: node scripts/test-import-ui.mjs
 
+      - name: Run same-origin Babel proxy test
+        run: node scripts/test-babel-proxy.mjs
+
+      - name: Run legacy transpiler routing test
+        run: node scripts/test-legacy-transpiler.mjs
+
       - name: Show Pages server log on failure
         if: failure()
         run: cat /tmp/wrangler.log || true

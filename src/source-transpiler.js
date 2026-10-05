@@ -1,15 +1,18 @@
 (function (global) {
   'use strict';
 
+  var BABEL_VERSION = '7.29.9';
   var CDN_URLS = [
-    'https://cdn.jsdelivr.net/npm/@babel/standalone@7.29.9/babel.min.js',
-    'https://unpkg.com/@babel/standalone@7.29.9/babel.min.js'
+    '/api/babel',
+    'https://cdn.jsdelivr.net/npm/@babel/standalone@' + BABEL_VERSION + '/babel.min.js',
+    'https://unpkg.com/@babel/standalone@' + BABEL_VERSION + '/babel.min.js'
   ];
   var loadState = 0;
   var loadQueue = [];
   var loadError = null;
   var loadIndex = 0;
   var timer = null;
+  var LOAD_TIMEOUT_MS = 15000;
 
   function schedule(fn) {
     if (typeof global.setTimeout === 'function') {
@@ -56,7 +59,11 @@
       try {
         if (script.parentNode) script.parentNode.removeChild(script);
       } catch (e) {}
-      loadNext();
+      if (loadIndex >= CDN_URLS.length) {
+        finishLoad(new Error('Unable to load the legacy JavaScript transpiler'));
+      } else {
+        loadNext();
+      }
     }
 
     script.onload = function () {
@@ -85,7 +92,7 @@
     timer = global.setTimeout(function () {
       timer = null;
       failed();
-    }, 20000);
+    }, LOAD_TIMEOUT_MS);
   }
 
   function loadBabel(callback) {
@@ -168,7 +175,7 @@
     prepare: prepare,
     loadBabel: loadBabel,
     isLoaded: function () { return loadState === 2; },
-    version: '7.29.9',
+    version: BABEL_VERSION,
     urls: CDN_URLS.slice()
   };
 })(window);
