@@ -45,6 +45,48 @@ function decodeChunkedBody(text) {
   return out;
 }
 
+async function fetchFlowerResolverViaDirectFetch(target, request) {
+  try {
+    var forwarded = pickForwardHeaders(request);
+    var upstream = await fetch(target.toString(), {
+      method: String(request.method || 'GET').toUpperCase(),
+      headers: forwarded,
+      redirect: 'follow'
+    });
+
+    var body = await upstream.text();
+    var trimmed = String(body || '').replace(/^\s+|\s+$/g, '');
+
+    if (upstream.status >= 200 && upstream.status < 300 &&
+        /^(?:https?:\/\/|\{|\[)/i.test(trimmed)) {
+      return new Response(trimmed, {
+        status: upstream.status,
+        statusText: upstream.statusText || 'OK',
+        headers: new Headers({
+          'Content-Type': upstream.headers.get('Content-Type') || 'text/plain; charset=utf-8',
+          'Cache-Control': 'no-store'
+        })
+      });
+    }
+
+    return new Response(JSON.stringify({
+      error: 'Flower direct fetch returned no resolver data',
+      message: 'HTTP ' + upstream.status + (trimmed ? ': ' + trimmed.slice(0, 180) : '')
+    }), {
+      status: 502,
+      headers: Object.assign({'Content-Type': 'application/json; charset=utf-8'}, corsHeaders(request))
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({
+      error: 'Flower direct fetch failed',
+      message: e && e.message ? e.message : 'Unknown fetch error'
+    }), {
+      status: 502,
+      headers: Object.assign({'Content-Type': 'application/json; charset=utf-8'}, corsHeaders(request))
+    });
+  }
+}
+
 async function fetchFlowerResolverViaHost(target, request) {
   var bases = [
     'http://ts.tempmusics.tk',
@@ -464,6 +506,11 @@ export async function onRequest(context) {
   // its resolver on this IP, so try known DNS aliases for the same origin.
   if (target.hostname.toLowerCase() === '97.64.37.235'
       && /^\/flower\/v1\/url\//.test(target.pathname)) {
+    var flowerDirectResponse = await fetchFlowerResolverViaDirectFetch(target, request);
+    if (flowerDirectResponse.status >= 200 && flowerDirectResponse.status < 300) {
+      return flowerDirectResponse;
+    }
+
     var flowerHostResponse = await fetchFlowerResolverViaHost(target, request);
     if (flowerHostResponse.status >= 200 && flowerHostResponse.status < 300) {
       return flowerHostResponse;
