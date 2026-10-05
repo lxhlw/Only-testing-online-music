@@ -120,6 +120,8 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
         response = responses.miguLegacyListenSong
       } else if (targetUrl.indexOf('music.163.com/api/song/enhance/player/url/v1') >= 0 && responses.neteasePlayerUrl) {
         response = responses.neteasePlayerUrl
+      } else if (targetUrl.indexOf('interface3.music.163.com/eapi/song/enhance/player/url/v1') >= 0 && responses.neteaseEapiUrl) {
+        response = responses.neteaseEapiUrl
       } else if (targetUrl.indexOf('lxmusicapi.onrender.com/url/') >= 0 && responses.huibq) {
         const provider = targetUrl.split('/url/')[1]?.split('/')[0] || 'unknown'
         response = responses.huibq[provider] || { status: 200, body: '[]' }
@@ -1466,3 +1468,48 @@ console.log('PASS: LX search routing stays channel-bound and never mixes provide
   assert.equal(target, 'https://lxmusicapi.onrender.com/url/mg/6005861N71E/128k')
 }
 
+
+{
+  const hEapi = createHarness(
+    { wy: { actions: ['musicUrl'] } },
+    () => {},
+    {
+      neteasePlayerUrl: {
+        status: 200,
+        body: JSON.stringify({
+          code: 200,
+          data: [{ code: 0, url: null }]
+        })
+      },
+      neteaseEapiUrl: {
+        status: 200,
+        body: '\ufeff' + JSON.stringify({
+          code: 200,
+          data: [{
+            url: 'https://audio.example.test/wy-eapi.mp3',
+            br: 128000
+          }]
+        })
+      }
+    }
+  )
+
+  const eapiResult = await new Promise((resolve, reject) => {
+    hEapi.sandbox.LXMusicSearch.resolveMusicUrl(
+      'wy',
+      { songmid: '55667788' },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value)
+    )
+  })
+
+  assert.equal(eapiResult.provider, 'netease-native-eapi')
+  assert.equal(eapiResult.url, 'https://audio.example.test/wy-eapi.mp3')
+  assert.equal(eapiResult.actualBr, '128k')
+  assert.equal(hEapi.calls.length, 2)
+  const v1Target = new URL(hEapi.calls[0].xhrUrl).searchParams.get('url')
+  assert.match(v1Target, /music\.163\.com\/api\/song\/enhance\/player\/url\/v1/)
+  const eapiTarget = new URL(hEapi.calls[1].xhrUrl).searchParams.get('url')
+  assert.match(eapiTarget, /interface3\.music\.163\.com\/eapi\/song\/enhance\/player\/url\/v1/)
+  assert.match(hEapi.calls[1].xhrBody || '', /^params=/)
+}

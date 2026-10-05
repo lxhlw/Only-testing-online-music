@@ -101,7 +101,16 @@
         return finish(null, xhr.responseText);
       }
       try {
-        finish(null, JSON.parse(xhr.responseText));
+        var responseText = String(xhr.responseText || '').replace(/^\uFEFF/, '').replace(/^\s+|\s+$/g, '');
+        var parsedJson = null;
+        try {
+          parsedJson = JSON.parse(responseText);
+        } catch (jsonError) {
+          var wrapped = responseText.match(/^[A-Za-z_$][\w$]*\(([\s\S]*)\)\s*;?$/);
+          if (!wrapped) throw jsonError;
+          parsedJson = JSON.parse(wrapped[1]);
+        }
+        finish(null, parsedJson);
       } catch (e) {
         finish(new Error('Search API response is not JSON'));
       }
@@ -2178,6 +2187,37 @@
       'master': 'jymaster'
     };
     var level = levelMap[requested] || 'standard';
+
+    function finishFromData(data, provider, done) {
+      var rows = data && Array.isArray(data.data) ? data.data : [];
+      var row = rows.length ? rows[0] : null;
+      var returnedUrl = row && typeof row.url === 'string'
+        ? row.url.replace(/^\s+|\s+$/g, '')
+        : '';
+
+      if (!/^https?:\/\//i.test(returnedUrl)) {
+        return done(new Error(provider + ' returned no playable URL for ' + songId));
+      }
+      if (isCrossPlatformPlaybackUrl('wy', returnedUrl)) {
+        return done(new Error(provider + ' returned a cross-platform URL'));
+      }
+
+      var br = Number(row && row.br);
+      var actualBr = isFinite(br) && br > 0
+        ? String(Math.round(br / 1000)) + 'k'
+        : requested;
+
+      done(null, {
+        url: returnedUrl,
+        source: 'wy',
+        provider: provider,
+        requestedQuality: requested,
+        actualBr: actualBr,
+        id: songId,
+        raw: row || null
+      });
+    }
+
     var target =
       'https://music.163.com/api/song/enhance/player/url/v1' +
       '?ids=' + encodeURIComponent('[' + songId + ']') +
@@ -2195,37 +2235,78 @@
       },
       true,
       function (err, data) {
-        if (err) return callback(err);
-
-        var rows = data && Array.isArray(data.data) ? data.data : [];
-        var row = rows.length ? rows[0] : null;
-        var returnedUrl = row && typeof row.url === 'string'
-          ? row.url.replace(/^\s+|\s+$/g, '')
-          : '';
-
-        if (!/^https?:\/\//i.test(returnedUrl)) {
-          return callback(new Error('Netease player URL API returned no playable URL for ' + songId));
+        if (!err) {
+          return finishFromData(data, 'netease-native-v1', function (v1Err, result) {
+            if (!v1Err) return callback(null, result);
+            tryEapi(v1Err);
+          });
         }
-        if (isCrossPlatformPlaybackUrl('wy', returnedUrl)) {
-          return callback(new Error('Netease player URL API returned a cross-platform URL'));
-        }
-
-        var br = Number(row && row.br);
-        var actualBr = isFinite(br) && br > 0
-          ? String(Math.round(br / 1000)) + 'k'
-          : requested;
-
-        callback(null, {
-          url: returnedUrl,
-          source: 'wy',
-          provider: 'netease-native-v1',
-          requestedQuality: requested,
-          actualBr: actualBr,
-          id: songId,
-          raw: row || null
-        });
+        tryEapi(err);
       }
     );
+
+    function tryEapi(previousError) {
+      var cookies = {
+        osver: 'undefined',
+        deviceId: 'undefined',
+        appver: '8.0.0',
+        versioncode: '140',
+        mobilename: 'undefined',
+        buildver: '1623435496',
+        resolution: '1920x1080',
+        __csrf: '',
+        os: 'pc',
+        channel: 'undefined',
+        requestId: String(Date.now ? Date.now() : new Date().getTime()) + '_0000'
+      };
+      var requestText = JSON.stringify({
+        ids: '[' + songId + ']',
+        level: level,
+        encodeType: 'mp3',
+        header: cookies
+      });
+      var crypto = null;
+      try {
+        crypto = createLegacyCrypto();
+      } catch (e) {
+        return callback(previousError || e);
+      }
+
+      var digest = crypto.md5(
+        'nobody/api/song/enhance/player/url/v1use' +
+        requestText +
+        'md5forencrypt'
+      );
+      var encryptText =
+        '/api/song/enhance/player/url/v1-36cd479b6b5-' +
+        requestText +
+        '-36cd479b6b5-' +
+        digest;
+      var params = aesEcbHex(encryptText, 'e82ckenh8dichen8');
+
+      requestViaProxy(
+        'https://interface3.music.163.com/eapi/song/enhance/player/url/v1',
+        'POST',
+        'params=' + params,
+        {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+          'Referer': 'https://music.163.com',
+          'Cookie': Object.keys(cookies).map(function (key) {
+            return key + '=' + cookies[key];
+          }).join('; '),
+          'Accept': 'application/json, text/plain, */*'
+        },
+        true,
+        function (eapiErr, data) {
+          if (eapiErr) return callback(previousError || eapiErr);
+          finishFromData(data, 'netease-native-eapi', function (finishErr, result) {
+            if (!finishErr) return callback(null, result);
+            callback(previousError || finishErr);
+          });
+        }
+      );
+    }
   }
 
   function normalizeTencentPlaybackUrl(value) {
