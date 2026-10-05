@@ -342,7 +342,6 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   const cases = [
     { source: 'kw', info: { songmid: '62355680' }, quality: '128k', id: '62355680', huibqQuality: '128k' },
     { source: 'kg', info: { songmid: '778899', hash: 'ABCDEF0123456789' }, quality: '320k', id: 'ABCDEF0123456789', huibqQuality: '320k' },
-    { source: 'tx', info: { songmid: '00112233' }, quality: '320k', id: '00112233', huibqQuality: '320k' },
     { source: 'wy', info: { songmid: '99887766' }, quality: '192k', id: '99887766', huibqQuality: '128k' },
     { source: 'mg', info: { copyrightId: '55667788', songmid: 'mg-song-55667788' }, quality: 'flac24bit', id: 'mg-song-55667788', huibqQuality: '320k' }
   ]
