@@ -806,48 +806,11 @@
       + ' ' + escapeHtml(quality) + '：' + escapeHtml(music.name) + '……'
     );
 
-    // Flower's musicUrl resolver is hosted on an HTTP origin that can
-    // stall behind Cloudflare. For every supported Flower channel, start the
-    // project's same-channel fallback resolver in parallel. A valid fallback
-    // URL may win before the source request settles; stale callbacks are ignored.
-    var flowerParallelFallback = {
-      kw: true,
-      kg: true,
-      tx: true,
-      wy: true,
-      mg: true
-    };
-    if (
-      active.url &&
-      /flower\/latest\.js/i.test(String(active.url)) &&
-      flowerParallelFallback[source] &&
-      global.LXMusicSearch &&
-      typeof global.LXMusicSearch.resolveMusicUrl === 'function'
-    ) {
-      global.LXMusicSearch.resolveMusicUrl(
-        source,
-        musicInfo,
-        quality,
-        function (warmErr, warmResult) {
-          if (!isCurrentAttempt() || settled) return;
-          if (!warmErr && warmResult && warmResult.url) {
-            finishAttempt();
-            return useResolvedUrl(
-              warmResult.url,
-              quality,
-              token,
-              music,
-              source,
-              musicInfo,
-              settings,
-              providerLabel(warmResult.provider),
-              warmResult.provider
-            );
-          }
-        }
-      );
-    }
-
+    // Flower's imported LX source is authoritative for a Flower track.
+    // Do not race native/aggregate resolvers against it: an independently
+    // resolved URL can be stale or protected even when the exact Flower result
+    // is playable in LX Music. The timeout below still falls back to the same
+    // channel's native resolver when the Flower source cannot respond.
     sourceTimer = global.setTimeout(function () {
       if (!isCurrentAttempt() || settled) return;
       runFallback(

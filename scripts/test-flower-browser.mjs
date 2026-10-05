@@ -367,6 +367,21 @@ try {
         resolverDataUrls.includes(audioTarget) ||
         recentMedia.some(item => item.target === audioTarget)
 
+      const successfulFlowerResolverUrls = recentResolver
+        .filter(item => item.status >= 200 && item.status < 300)
+        .map(item => {
+          try {
+            const json = JSON.parse(item.body || '')
+            const data = json?.data ?? json?.body?.data
+            return typeof data === 'string' && /^https?:\/\//i.test(data.trim())
+              ? data.trim()
+              : ''
+          } catch {
+            return ''
+          }
+        })
+        .filter(Boolean)
+
       if (
         REQUIRE_PLAUSIBLE_PLAYBACK &&
         (hadPlayingEvent || attempt.currentTime >= REAL_PLAYBACK_PROGRESS_S) &&
@@ -467,6 +482,20 @@ try {
       channel.toUpperCase() + ' playback did not produce a usable HTTP(S) media URL: ' +
       JSON.stringify(success, null, 2)
     )
+
+    if (successfulFlowerResolverUrls.length > 0) {
+      assert.ok(
+        successfulFlowerResolverUrls.includes(success.audioTarget || '') ||
+        successfulFlowerResolverUrls.includes(
+          String(success.audioTarget || '').replace(/^http:/i, 'https:')
+        ),
+        channel.toUpperCase() + ' ignored a successful Flower musicUrl resolver response and played a different URL: ' +
+        JSON.stringify({
+          audioTarget: success.audioTarget,
+          successfulFlowerResolverUrls
+        }, null, 2)
+      )
+    }
 
     summary.push({ channel, result: results[0], playback: success, attempts, expectedDuration: parseDuration(results[0].interval) })
     console.log('PASS:', channel.toUpperCase(), 'search + playback')
