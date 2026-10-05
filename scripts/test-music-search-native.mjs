@@ -425,7 +425,12 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     { source: 'kw', info: { songmid: '62355680' }, quality: '128k', id: '62355680', huibqQuality: '128k' },
     { source: 'kg', info: { songmid: '778899', hash: 'ABCDEF0123456789' }, quality: '320k', id: 'ABCDEF0123456789', huibqQuality: '320k' },
     { source: 'wy', info: { songmid: '99887766' }, quality: '192k', id: '99887766', huibqQuality: '128k' },
-    { source: 'mg', info: { copyrightId: '55667788', songmid: 'mg-song-55667788' }, quality: 'flac24bit', id: 'mg-song-55667788', huibqQuality: '320k' }
+    { source: 'mg', info: {
+      copyrightId: '55667788',
+      songmid: 'mg-song-55667788',
+      albumId: 'mg-album-55667788',
+      lowerQualityContentId: 'mg-lower-55667788'
+    }, quality: 'flac24bit', id: 'mg-song-55667788', huibqQuality: '320k' }
   ]
 
   for (const item of cases) {
@@ -480,6 +485,8 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       assert.equal(mgCalls.length, 1)
       const target = new URL(mgCalls[0].xhrUrl).searchParams.get('url')
       const requestUrl = new URL(target)
+      assert.equal(requestUrl.searchParams.get('albumId'), 'mg-album-55667788')
+      assert.equal(requestUrl.searchParams.get('lowerQualityContentId'), 'mg-lower-55667788')
       assert.equal(requestUrl.searchParams.get('songId'), 'mg-song-55667788')
       assert.equal(requestUrl.searchParams.get('resourceType'), '2')
       assert.equal(requestUrl.searchParams.get('toneFlag'), 'SQ')
@@ -624,6 +631,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
             name: '晴天',
             album: '叶惠美',
             albumId: 'mg-alb',
+            lowerQualityContentId: 'mg-lower-1',
             duration: '269',
             singerList: [{ name: '周杰伦' }],
             audioFormats: [
@@ -675,6 +683,8 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       assert.equal(result.list[0].songmid, 'mg-song-1')
       assert.equal(result.list[0].contentId, 'mg-content-1')
       assert.equal(result.list[0].resourceType, '2')
+      assert.equal(result.list[0].albumId, 'mg-alb')
+      assert.equal(result.list[0].lowerQualityContentId, 'mg-lower-1')
       assert.equal(result.list[0].songmid, 'mg-song-1')
       assert.equal(result.list[0].singer, '周杰伦')
       assert.equal(h.calls[0].xhrMethod, 'GET')

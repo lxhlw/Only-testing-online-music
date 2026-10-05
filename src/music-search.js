@@ -240,6 +240,7 @@
       songmid: String((item.songmid || item.mid || item.id || item.hash || '') || ''),
       mediaMid: String((item.mediaMid || item.media_mid || '') || ''),
       albumId: String((item.albumId || item.album_id || '') || ''),
+      lowerQualityContentId: String((item.lowerQualityContentId || item.lower_quality_content_id || '') || ''),
       image: String((item.pic || item.image || item.img || '') || ''),
       lyricId: String((item.lyric_id || item.lyricId || '') || ''),
       hash: String((item.hash || item.FileHash || item.fileHash || '') || ''),
@@ -832,6 +833,7 @@
           singer: singerNames.join('、'),
           albumName: data.album,
           albumId: data.albumId,
+          lowerQualityContentId: String(data.lowerQualityContentId || data.lower_quality_content_id || ''),
           interval: data.duration,
           image: data.img3 || data.img2 || data.img1 || '',
           lyricId: data.lrcUrl || '',
@@ -935,6 +937,20 @@
       ''
     ).replace(/^\s+|\s+$/g, '');
 
+    var albumId = String(
+      info.albumId ||
+      info.album_id ||
+      (info.raw && (info.raw.albumId || info.raw.album_id)) ||
+      ''
+    ).replace(/^\s+|\s+$/g, '');
+
+    var lowerQualityContentId = String(
+      info.lowerQualityContentId ||
+      info.lower_quality_content_id ||
+      (info.raw && (info.raw.lowerQualityContentId || info.raw.lower_quality_content_id)) ||
+      ''
+    ).replace(/^\s+|\s+$/g, '');
+
     var contentId = String(
       info.contentId ||
       info.content_id ||
@@ -1003,7 +1019,10 @@
 
       var api =
         'https://app.c.nf.migu.cn/MIGUM2.0/strategy/listen-url/v2.4' +
-        '?netType=01' +
+        '?' +
+        (albumId ? 'albumId=' + encodeURIComponent(albumId) + '&' : '') +
+        (lowerQualityContentId ? 'lowerQualityContentId=' + encodeURIComponent(lowerQualityContentId) + '&' : '') +
+        'netType=01' +
         '&resourceType=' + encodeURIComponent(resourceType || '2') +
         '&songId=' + encodeURIComponent(songId) +
         '&toneFlag=' + encodeURIComponent(toneFlag);
