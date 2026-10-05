@@ -375,7 +375,11 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       assert.equal(result.provider, 'kuwo-native')
       assert.equal(result.url, 'https://audio.example.test/kw-native.mp3')
       assert.equal(result.id, '62355680')
-      const kwCalls = h.calls.filter(call => String(call.xhrUrl || '').includes('antiserver.kuwo.cn/anti.s'))
+      const kwCalls = h.calls.filter(call => {
+        let url = String(call.xhrUrl || '')
+        try { url = decodeURIComponent(url) } catch {}
+        return url.includes('antiserver.kuwo.cn/anti.s')
+      })
       assert.equal(kwCalls.length, 1)
       const target = new URL(kwCalls[0].xhrUrl).searchParams.get('url')
       const requestUrl = new URL(target)
