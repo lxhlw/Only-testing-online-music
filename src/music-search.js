@@ -1078,6 +1078,186 @@
   }
 
 
+  function kugouV5Sign(params, md5Fn) {
+    var keys = Object.keys(params || {}).sort();
+    var raw = '';
+    for (var i = 0; i < keys.length; i += 1) {
+      raw += keys[i] + '=' + String(params[keys[i]] == null ? '' : params[keys[i]]);
+    }
+    return String(md5Fn('OIlwieks28dk2k092lksi2UIkp' + raw + 'OIlwieks28dk2k092lksi2UIkp'));
+  }
+
+  function resolveKugouV5Url(hash, musicInfo, quality, callback) {
+    hash = String(hash || '').replace(/^\s+|\s+$/g, '').toLowerCase();
+    if (!hash) return callback(new Error('No Kugou hash for V5 playback'));
+
+    var info = musicInfo || {};
+    var md5Fn = null;
+    try {
+      md5Fn = global.createLXRuntime({ env: 'web' }).utils.crypto.md5;
+    } catch (e) {}
+    if (typeof md5Fn !== 'function') {
+      return callback(new Error('LX MD5 runtime unavailable for Kugou V5'));
+    }
+
+    var requested = String(quality || '').toLowerCase();
+    var qualityMap = {
+      '128k': '128',
+      '192k': '320',
+      '256k': '320',
+      '320k': '320',
+      'flac': 'flac',
+      'flac24bit': 'high',
+      'flac32bit': 'high',
+      '24bit': 'high',
+      'wav': 'flac',
+      'ape': 'flac',
+      'hires': 'high',
+      'atmos': 'viper_atmos',
+      'atmos_plus': 'viper_atmos',
+      'master': 'viper_clear'
+    };
+    var requestedPlatformQuality = qualityMap[requested] || '128';
+
+    function extractUrl(data) {
+      if (!data || typeof data !== 'object') return '';
+      var candidates = [
+        data.url,
+        data.play_url,
+        data.playUrl,
+        data.data && data.data.url,
+        data.data && data.data.play_url,
+        data.data && data.data.playUrl
+      ];
+      for (var i = 0; i < candidates.length; i += 1) {
+        var value = candidates[i];
+        if (typeof value === 'string' && /^https?:\/\//i.test(value.trim())) return value.trim();
+        if (Array.isArray(value)) {
+          for (var j = 0; j < value.length; j += 1) {
+            if (typeof value[j] === 'string' && /^https?:\/\//i.test(value[j].trim())) {
+              return value[j].trim();
+            }
+          }
+        }
+      }
+      return '';
+    }
+
+    function requestV5(albumId, albumAudioId) {
+      var clientTime = Math.floor((Date.now ? Date.now() : new Date().getTime()) / 1000);
+      var params = {
+        album_id: String(albumId || ''),
+        userid: '0',
+        area_code: '1',
+        hash: hash,
+        mid: 'musicapi',
+        appid: '1005',
+        ssa_flag: 'is_fromtrack',
+        clientver: '20349',
+        token: '',
+        album_audio_id: String(albumAudioId == null ? '0' : albumAudioId),
+        behavior: 'play',
+        clienttime: String(clientTime),
+        pid: '2',
+        key: String(md5Fn(
+          hash +
+          '57ae12eb6890223e355ccfcb74edf70d' +
+          '1005' +
+          'musicapi' +
+          '0'
+        )),
+        quality: requestedPlatformQuality,
+        version: '20349',
+        dfid: '-',
+        pidversion: '3001'
+      };
+      params.signature = kugouV5Sign(params, md5Fn);
+
+      requestViaProxy(
+        'https://tracker.kugou.com/v5/url?' + encodeForm(params),
+        'GET',
+        null,
+        {
+          'KG-THash': '255d751',
+          'KG-Rec': '1',
+          'KG-RC': '1',
+          'User-Agent': 'Android12-AndroidCar-20089-46-0-NetMusic-wifi',
+          'Accept': 'application/json, text/plain, */*'
+        },
+        true,
+        function (err, data) {
+          if (err) return callback(err);
+
+          var directUrl = extractUrl(data);
+          if (!directUrl || isCrossPlatformPlaybackUrl('kg', directUrl)) {
+            var status = data && data.status != null ? String(data.status) : '';
+            return callback(new Error(
+              'Kugou V5 returned no playable URL' + (status ? ' (status ' + status + ')' : '')
+            ));
+          }
+
+          var actualBr = data && data.br != null
+            ? String(data.br)
+            : (data && data.data && data.data.br != null ? String(data.data.br) : requestedPlatformQuality);
+
+          callback(null, {
+            url: directUrl,
+            source: 'kg',
+            provider: 'kugou-native',
+            resolver: 'kugou-v5',
+            requestedQuality: requested,
+            requestedBr: requestedPlatformQuality,
+            actualBr: actualBr,
+            id: hash,
+            raw: data
+          });
+        }
+      );
+    }
+
+    function requestMetadata() {
+      requestViaProxy(
+        'https://gateway.kugou.com/v3/album_audio/audio',
+        'POST',
+        JSON.stringify({
+          area_code: '1',
+          show_privilege: '1',
+          show_album_info: '1',
+          is_publish: '',
+          appid: 1005,
+          clientver: 11451,
+          mid: '114514',
+          dfid: '-',
+          clienttime: Math.floor((Date.now ? Date.now() : new Date().getTime()) / 1000),
+          key: 'OIlwlieks28dk2k092lksi2UIkp',
+          data: [{ hash: hash }]
+        }),
+        {
+          'Content-Type': 'application/json',
+          'KG-THash': '13a3164',
+          'KG-RC': '1',
+          'KG-Fake': '0',
+          'KG-RF': '00869891',
+          'User-Agent': 'Android712-AndroidPhone-11451-376-0-FeeCacheUpdate-wifi',
+          'x-router': 'kmr.service.kugou.com',
+          'Accept': 'application/json, text/plain, */*'
+        },
+        true,
+        function (err, data) {
+          if (err) return callback(err);
+          var item = data && data.data && Array.isArray(data.data[0]) ? data.data[0][0] : null;
+          var resolvedAlbumId = item && item.album_info ? item.album_info.album_id : '';
+          var resolvedAlbumAudioId = item ? (item.album_audio_id || '') : '';
+          if (!resolvedAlbumId && item) resolvedAlbumId = item.album_id || '';
+          if (!resolvedAlbumId) return callback(new Error('Kugou V5 metadata returned no album id'));
+          requestV5(resolvedAlbumId, resolvedAlbumAudioId || '0');
+        }
+      );
+    }
+
+    requestMetadata();
+  }
+
   function resolveKugouGatewayUrl(hash, musicInfo, quality, callback) {
     hash = String(hash || '').replace(/^\s+|\s+$/g, '');
     if (!hash) return callback(new Error('No Kugou hash for gateway playback'));
@@ -1394,15 +1574,20 @@
       );
     }
 
-    resolveKugouGatewayUrl(baseHash, info, quality, function (gatewayErr, gatewayResult) {
-      if (!gatewayErr && gatewayResult && gatewayResult.url) {
-        return callback(null, gatewayResult);
+    resolveKugouV5Url(baseHash, info, quality, function (v5Err, v5Result) {
+      if (!v5Err && v5Result && v5Result.url) {
+        return callback(null, v5Result);
       }
-      resolveKugouTrackerUrl(baseHash, quality, function (trackerErr, trackerResult) {
-      if (!trackerErr && trackerResult && trackerResult.url) {
-        return callback(null, trackerResult);
-      }
-      fallbackAfterTracker(trackerErr || gatewayErr);
+      resolveKugouGatewayUrl(baseHash, info, quality, function (gatewayErr, gatewayResult) {
+        if (!gatewayErr && gatewayResult && gatewayResult.url) {
+          return callback(null, gatewayResult);
+        }
+        resolveKugouTrackerUrl(baseHash, quality, function (trackerErr, trackerResult) {
+          if (!trackerErr && trackerResult && trackerResult.url) {
+            return callback(null, trackerResult);
+          }
+          fallbackAfterTracker(trackerErr || gatewayErr || v5Err);
+        });
       });
     });
   }
