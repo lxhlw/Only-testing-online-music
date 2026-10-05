@@ -90,7 +90,9 @@ async function fetchFlowerResolverViaDirectFetch(target, request) {
 async function fetchFlowerResolverViaHost(target, request) {
   var bases = [
     'http://97-64-37-235.sslip.io',
-    'http://97-64-37-235.nip.io'
+    'http://97-64-37-235.nip.io',
+    'https://97-64-37-235.sslip.io',
+    'https://97-64-37-235.nip.io'
   ];
   var forwarded = pickForwardHeaders(request);
   var lastError = null;
@@ -244,13 +246,21 @@ function extractFlowerResolverPayload(body) {
 async function fetchFlowerResolverViaHttpBridge(target, request) {
   var targets = flowerResolverTargets(target);
   var bridges = [
-    // Server-side CORS bridge for the raw Flower endpoint.
+    // Public CORS relay for small resolver responses.
     function (targetUrl) {
       return 'https://cors.io/?url=' + encodeURIComponent(targetUrl);
     },
     // Secondary server-side reader bridge.
     function (targetUrl) {
       return 'https://r.jina.ai/' + targetUrl;
+    },
+    // Thingproxy explicitly supports forwarding HTTP APIs through HTTPS.
+    function (targetUrl) {
+      return 'https://thingproxy.freeboard.io/fetch/' + targetUrl;
+    },
+    // Independent URL-parameter relay for small text/JSON responses.
+    function (targetUrl) {
+      return 'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(targetUrl);
     }
   ];
 
