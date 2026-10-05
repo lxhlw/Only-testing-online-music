@@ -1819,48 +1819,27 @@
       return '';
     }
 
-    function isUsableTencentUrl(value) {
+    function isRejectedTencentUrl(value, provider) {
       var text = String(value || '').trim();
-      if (!/^https?:\/\//i.test(text)) return false;
-      if (isCrossPlatformPlaybackUrl('tx', text)) return false;
+      if (!/^https?:\/\//i.test(text)) return true;
+      if (isCrossPlatformPlaybackUrl('tx', text)) return true;
 
-      var parsed;
-      try {
-        parsed = new URL(text);
-      } catch (e) {
-        return false;
+      // api.vkeys.cn is currently observed returning stale RS02... paths.
+      // Reject that known-bad family at the provider boundary, while leaving
+      // other Tencent-compatible aggregate URLs untouched.
+      if (String(provider || '').toLowerCase() === 'tencent-aggregate-vkeys') {
+        try {
+          return /\/rs0?2[^/]*\.(?:mp3|m4a)$/i.test(new URL(text).pathname);
+        } catch (e) {
+          return true;
+        }
       }
-
-      var path = parsed.pathname.toLowerCase();
-      // api.vkeys.cn can return stale RS02... URLs for a 128k request. These
-      // are rejected before the audio element sees them, while third-party
-      // resolver CDNs remain valid candidates when they return real media.
-      if (/\/rs0?2[^/]*\.(?:mp3|m4a)$/i.test(path)) return false;
-
-      var host = String(parsed.hostname || '').toLowerCase();
-      var isQqCdn = host === 'ws.stream.qqmusic.qq.com' ||
-        host === 'stream.qqmusic.qq.com' ||
-        host === 'isure.stream.qqmusic.qq.com' ||
-        host === 'dl.stream.qqmusic.qq.com' ||
-        host === 'streamoc.music.tc.qq.com' ||
-        host === 'mobileoc.music.tc.qq.com' ||
-        host === 'aqqmusic.tc.qq.com' ||
-        host === 'amobile.music.tc.qq.com';
-
-      if (!isQqCdn) return true;
-
-      if (requestedQuality === '128k' || requestedQuality === '192k') {
-        return /\/(?:c400|m500)[^/]+\.(?:mp3|m4a)$/i.test(path);
-      }
-      if (requestedQuality === '320k') {
-        return /\/(?:m800|c600)[^/]+\.(?:mp3|m4a)$/i.test(path);
-      }
-      return /\/(?:c400|m500|m800|c600|f000)[^/]+\.(?:mp3|m4a|flac)$/i.test(path);
+      return false;
     }
 
     function acceptUrl(url, provider, raw, done) {
       var clean = normalizeTencentPlaybackUrl(url);
-      if (!isUsableTencentUrl(clean)) {
+      if (isRejectedTencentUrl(clean, provider)) {
         return done(new Error(provider + ' returned a non-playable Tencent URL'));
       }
       done(null, {
