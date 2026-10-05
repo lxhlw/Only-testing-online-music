@@ -110,6 +110,9 @@ jobs:
       - name: Run HUIBQ ES5 adapter test
         run: node scripts/test-huibq-legacy.mjs
 
+      - name: Run Huibq import and WY search browser test
+        run: node scripts/test-huibq-browser.mjs
+
       - name: Show Pages server log on failure
         if: failure()
         run: cat /tmp/wrangler.log || true

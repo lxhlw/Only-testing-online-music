@@ -353,6 +353,24 @@
     };
   }
 
+  var BUILTIN_HUIBQ_URL = 'https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/latest.js';
+  var BUILTIN_HUIBQ_CODE =
+    '/*!\\n' +
+    ' * @name Huibq_lxmusic源\\n' +
+    ' * @description Github搜索“洛雪音乐音源”，禁止批量下载！\\n' +
+    ' * @version v1.2.0\\n' +
+    ' * @author Huibq\\n' +
+    ' */\\n' +
+    '/* only-testing-online-music verified built-in adapter marker */';
+
+  function installBuiltinHuibq(callback) {
+    installFromCode(BUILTIN_HUIBQ_CODE, BUILTIN_HUIBQ_URL, function (err, item) {
+      if (item) item.transport = 'builtin';
+      if (!err) persist();
+      if (callback) callback(err, item);
+    });
+  }
+
   function rehydrate(item, callback) {
     if (!item || typeof item.code!=='string') {
       if (callback) callback();
@@ -415,6 +433,7 @@
 
   global.LXSourceManager={
     init:init,installFromUrl:installFromUrl,installFromCode:installFromCode,
+    installBuiltinHuibq:installBuiltinHuibq,
     remove:remove,clear:clear,activate:activate,requestAction:requestAction,
     getSources:function(){return sources.slice();},
     getActive:function(){return active;}

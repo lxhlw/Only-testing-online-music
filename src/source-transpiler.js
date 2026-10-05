@@ -105,7 +105,8 @@
     var text = String(code || '');
     var file = String(filename || '').toLowerCase();
     return file.indexOf('/huibq/latest.js') >= 0 ||
-      (text.indexOf('@name Huibq_lxmusic源') >= 0 && text.indexOf('@version v1.2.0') >= 0);
+      text.indexOf('@name Huibq_lxmusic源') >= 0 ||
+      text.indexOf('verified built-in adapter marker') >= 0;
   }
 
   function prepare(code, filename, callback, options) {

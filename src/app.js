@@ -1260,7 +1260,21 @@
     document.getElementById('verified-install-btn').onclick = function () {
       document.getElementById('source-url').value =
         'https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/latest.js';
-      document.getElementById('install-btn').click();
+      setStatus('正在载入内置已验证 Huibq v1.2.0……');
+      var button = document.getElementById('verified-install-btn');
+      button.disabled = true;
+      setCheck('check-inited', 'pending');
+      global.LXSourceManager.installBuiltinHuibq(function (err, item) {
+        button.disabled = false;
+        if (err) {
+          setStatus('Huibq 导入失败：' + escapeHtml(err.message || err), 'fail');
+          setCheck('check-inited', 'fail');
+          return;
+        }
+        setCheck('check-storage', 'ok');
+        setStatus('已导入并初始化 Huibq：' + escapeHtml(item.name) + ' v' +
+          escapeHtml(item.version || '1.2.0') + '（内置 ES5 适配器）', 'ready');
+      });
     };
 
     document.getElementById('sixyin-install-btn').onclick = function () {
