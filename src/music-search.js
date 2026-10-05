@@ -1983,6 +1983,11 @@
     var text = String(value || '').toLowerCase();
     if (text.indexOf('http://') !== 0 && text.indexOf('https://') !== 0) return true;
 
+    if (String(source || '').toLowerCase() === 'tx' &&
+        /^https?:\/\/(ws\.stream\.qqmusic\.qq\.com|stream\.qqmusic\.qq\.com|isure\.stream\.qqmusic\.qq\.com|dl\.stream\.qqmusic\.qq\.com|streamoc\.music\.tc\.qq\.com|mobileoc\.music\.tc\.qq\.com|aqqmusic\.tc\.qq\.com|amobile\.music\.tc\.qq\.com)\//.test(text)) {
+      return false;
+    }
+
     var blocked = {
       kg: ['kuwo.cn', 'panspace.kuwo.cn', 'bd-er.kuwo.cn', 'qq.com', 'y.qq.com', 'm.music.migu.cn', '163.com', 'music.163.com'],
       kw: ['kugou.com', 'webfs.kugou.com', 'qq.com', 'y.qq.com', 'music.163.com', 'm.music.migu.cn'],
