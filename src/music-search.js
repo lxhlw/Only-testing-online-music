@@ -1155,21 +1155,20 @@
         return done(new Error('Migu legacy listenSong.do requires copyrightId and contentId'));
       }
 
-      // The legacy endpoint is a direct media URL, not a JSON resolver. The
-      // currently interoperable Migu form uses the MIGUM2.0 v1.0 endpoint with
-      // copyrightId=0, channel=0, and the Android client identity in the query.
-      // Return it directly to the normal media proxy/player path.
+      // Current interoperable Migu playback falls back to the MIGUM3.0
+      // listenSong endpoint. MIGUM2.0 may return JSON/protection metadata rather
+      // than audio, which the HTML audio element correctly rejects as media.
+      // Keep the actual copyrightId and use the MX channel identity expected by
+      // the current Migu endpoint.
       var api =
-        'https://app.pd.nf.migu.cn/MIGUM2.0/v1.0/content/sub/listenSong.do' +
-        '?toneFlag=' + encodeURIComponent(toneFlag) +
-        '&netType=00' +
-        '&userId=15548614588710179085069' +
-        '&ua=Android_migu' +
-        '&version=5.1' +
-        '&copyrightId=0' +
+        'https://app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do' +
+        '?channel=mx' +
+        '&copyrightId=' + encodeURIComponent(copyrightId) +
         '&contentId=' + encodeURIComponent(contentId) +
+        '&toneFlag=' + encodeURIComponent(toneFlag) +
         '&resourceType=' + encodeURIComponent(resourceType || '2') +
-        '&channel=0';
+        '&userId=15548614588710179085069' +
+        '&netType=00';
 
       finish(api, 'migu-native-listenSong', null);
     }
@@ -1177,8 +1176,8 @@
     // Native priority:
     // 1) v2.4 strategy endpoint keyed by songId (the field exposed as songmid).
     // 2) v2.0 copyrightId endpoint as a second official source.
-    // 3) Legacy listenSong.do as the last fallback when both official listen-url
-    // endpoints return no usable media URL.
+    // 3) MIGUM3.0 listenSong.do as the final native fallback when the
+    // official strategy endpoints return no usable media URL.
     requestOfficialListenUrl(function (officialErr) {
       if (!officialErr) return;
       requestOfficialPcListenUrl(function (pcErr) {

@@ -416,11 +416,15 @@
           hostname === 'bd-er.kuwo.cn' ||
           hostname === 'kwcdn.kuwo.cn';
 
+        var miguM3MediaUrl =
+          hostname === 'app.pd.nf.migu.cn' &&
+          target.pathname.indexOf('/MIGUM3.0/') === 0;
         // Signed Kuwo CDN URLs should stay direct. The same applies to other
         // HTTPS media URLs: <audio> can request them without the JSON proxy.
         // HTTP media still goes through the same-origin proxy to avoid mixed
         // content on the HTTPS Pages site.
-        if (!forceProxy && (trustedKuwoMediaHost || target.protocol === 'https:')) {
+        if (!forceProxy && !miguM3MediaUrl &&
+            (trustedKuwoMediaHost || target.protocol === 'https:')) {
           return target.href;
         }
 

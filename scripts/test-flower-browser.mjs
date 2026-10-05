@@ -224,6 +224,9 @@ try {
         singer: item.singer || '',
         source: item.source || '',
         rawSource: item.raw?.source || '',
+        copyrightId: item.copyrightId || item.raw?.copyrightId || item.raw?.copyright_id || '',
+        contentId: item.contentId || item.raw?.contentId || item.raw?.content_id || '',
+        resourceType: item.resourceType || item.raw?.resourceType || item.raw?.resource_type || '',
         interval: item.interval ?? item.duration ?? item.raw?.interval ?? item.raw?.duration ?? 0,
       }))
     })
@@ -426,6 +429,7 @@ try {
       )
       return (
         /jadeite\.migu\.cn\/music_search\/v3\/search\/searchAll/.test(target) ||
+        target.indexOf('app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do') >= 0 ||
         /flower\/v1\/url\/mg\//.test(target) ||
         /lxmusicapi\.onrender\.com\/url\/mg\//.test(target) ||
         /music-dl\.sayqz\.com\/api\//.test(target)
