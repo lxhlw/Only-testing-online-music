@@ -93,8 +93,8 @@ async function fetchFlowerResolverViaSocket(target, request) {
     var encoder = new TextEncoder();
     var path = target.pathname + target.search;
     await writer.write(encoder.encode(
-      method + ' ' + path + ' HTTP/1.1\\r\\n' +
-      requestHeaders.join('\\r\\n') + '\\r\\n\\r\\n'
+      method + ' ' + path + ' HTTP/1.1\r\n' +
+      requestHeaders.join('\r\n') + '\r\n\r\n'
     ));
     await writer.close();
     writer = null;
@@ -113,21 +113,21 @@ async function fetchFlowerResolverViaSocket(target, request) {
     }
 
     var text = new TextDecoder('utf-8').decode(bytes);
-    var headerEnd = text.indexOf('\\r\\n\\r\\n');
+    var headerEnd = text.indexOf('\r\n\r\n');
     if (headerEnd < 0) throw new Error('Flower socket response missing HTTP headers');
 
     var head = text.slice(0, headerEnd);
     var body = text.slice(headerEnd + 4);
-    var lines = head.split('\\r\\n');
-    var statusMatch = lines[0].match(/^HTTP\\/\\d(?:\\.\\d)?\\s+(\\d{3})\\b/i);
+    var lines = head.split('\r\n');
+    var statusMatch = lines[0].match(/^HTTP\/\d(?:\.\d)?\s+(\d{3})\b/i);
     var status = statusMatch ? Number(statusMatch[1]) : 0;
 
     var responseHeaders = {};
     for (var hi = 1; hi < lines.length; hi += 1) {
       var separator = lines[hi].indexOf(':');
       if (separator < 0) continue;
-      var headerName = lines[hi].slice(0, separator).replace(/^\\s+|\\s+$/g, '');
-      var headerValue = lines[hi].slice(separator + 1).replace(/^\\s+|\\s+$/g, '');
+      var headerName = lines[hi].slice(0, separator).replace(/^\s+|\s+$/g, '');
+      var headerValue = lines[hi].slice(separator + 1).replace(/^\s+|\s+$/g, '');
       if (headerName) responseHeaders[headerName.toLowerCase()] = headerValue;
     }
 
