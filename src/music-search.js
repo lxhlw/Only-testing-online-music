@@ -2123,49 +2123,67 @@
         return callback(lastError || new Error('GD Studio returned no playable URL for ' + mapped));
       }
 
-      var url = API_ENDPOINT +
-        '?types=url' +
-        '&source=' + encodeURIComponent(mapped) +
-        '&id=' + encodeURIComponent(ids[index]) +
-        '&br=' + encodeURIComponent(br);
-
-      requestViaProxy(
-        url,
-        'GET',
-        null,
-        {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
-          'Accept': 'application/json, text/javascript, */*; q=0.01'
-        },
-        true,
-        function (err, data) {
-          if (err) {
-            lastError = err;
-            return tryId(index + 1);
-          }
-
-          var returnedUrl = data && typeof data.url === 'string'
-            ? data.url
-            : (data && data.data && typeof data.data.url === 'string' ? data.data.url : '');
-          if (!returnedUrl || !/^https?:/i.test(returnedUrl)) {
-            lastError = new Error('GD Studio returned no playable URL for ' + mapped + ' (' + br + ')');
-            return tryId(index + 1);
-          }
-
-          var actualBr = data && data.br != null ? data.br :
-            (data && data.data && data.data.br != null ? data.data.br : br);
-
-          callback(null, {
-            url: String(returnedUrl).replace(/^\s+|\s+$/g, ''),
-            source: source,
-            provider: 'gd-studio',
-            requestedQuality: String(quality || ''),
-            requestedBr: br,
-            actualBr: String(actualBr || br),
-            id: ids[index]
-          });
+      getGdServerTime(function (timeErr, serverTime) {
+        if (timeErr) {
+          lastError = timeErr;
+          return tryId(index + 1);
         }
-      );
+
+        var encodedId = encodeURIComponent(ids[index]);
+        var sign = gdStudioSign(encodedId, serverTime);
+        var body = encodeForm({
+          types: 'url',
+          id: ids[index],
+          source: mapped,
+          br: br,
+          s: sign
+        });
+
+        requestViaProxy(
+          API_ENDPOINT,
+          'POST',
+          body,
+          {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/149.0.0.0 Safari/537.36',
+            'Referer': 'https://music.gdstudio.xyz/',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json, text/javascript, */*; q=0.01',
+            'Origin': 'https://music.gdstudio.xyz'
+          },
+          true,
+          function (err, data) {
+            if (err) {
+              lastError = err;
+              return tryId(index + 1);
+            }
+
+            var returnedUrl = data && typeof data.url === 'string'
+              ? data.url
+              : (data && data.data && typeof data.data.url === 'string' ? data.data.url : '');
+            if (returnedUrl && !/^https?:/i.test(returnedUrl)) {
+              returnedUrl = 'https://music.gdstudio.xyz/' + String(returnedUrl).replace(/^\/+/, '');
+            }
+            if (!returnedUrl || !/^https?:/i.test(returnedUrl)) {
+              lastError = new Error('GD Studio returned no playable URL for ' + mapped + ' (' + br + ')');
+              return tryId(index + 1);
+            }
+
+            var actualBr = data && data.br != null ? data.br :
+              (data && data.data && data.data.br != null ? data.data.br : br);
+
+            callback(null, {
+              url: String(returnedUrl).replace(/^\s+|\s+$/g, ''),
+              source: source,
+              provider: 'gd-studio',
+              requestedQuality: String(quality || ''),
+              requestedBr: br,
+              actualBr: String(actualBr || br),
+              id: ids[index]
+            });
+          }
+        );
+      });
     }
 
     tryId(0);
@@ -2265,6 +2283,16 @@
     }
 
     function afterHuibq() {
+      if (source === 'tx' && skipProvider !== 'gd-studio') {
+        return resolveGdStudioUrl(source, musicInfo, quality, function (gdErr, gdResult) {
+          if (!gdErr && gdResult && gdResult.url) return callback(null, gdResult);
+          afterTencentAggregate(gdErr);
+        });
+      }
+      afterTencentAggregate(null);
+    }
+
+    function afterTencentAggregate(preferredGdError) {
       if (source === 'tx' && skipProvider !== 'tencent-aggregate') {
         return resolveTencentAggregateUrl(musicInfo, quality, function (aggregateErr, aggregateResult) {
           if (!aggregateErr && aggregateResult && aggregateResult.url) return callback(null, aggregateResult);

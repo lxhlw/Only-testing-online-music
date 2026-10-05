@@ -800,4 +800,39 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   assert.equal(result.url, 'https://isure.stream.qqmusic.qq.com/M5000039MnQn.mp3?guid=123&vkey=abc&uin=0&fromtag=66')
 }
 
+{
+  const h = createHarness(
+    { tx: { actions: ['musicUrl'] } },
+    () => {},
+    {
+      time: { status: 200, body: '1791180000' },
+      search: [{
+        status: 200,
+        body: JSON.stringify({ url: 'https://media.example.test/tx-gd.mp3', br: 128 })
+      }]
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.resolveMusicUrl(
+      'tx',
+      { songmid: '0039MnQn', id: '200790315' },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value)
+    )
+  })
+
+  assert.equal(result.provider, 'gd-studio')
+  assert.equal(result.url, 'https://media.example.test/tx-gd.mp3')
+  assert.equal(h.calls.length, 2)
+  assert.equal(h.calls[0].xhrMethod, 'GET')
+  assert.equal(new URL(h.calls[0].xhrUrl).searchParams.get('url'), 'https://music.gdstudio.xyz/time')
+  assert.equal(h.calls[1].xhrMethod, 'POST')
+  assert.equal(new URL(h.calls[1].xhrUrl).searchParams.get('url'), 'https://music-api.gdstudio.xyz/api.php')
+  assert.match(h.calls[1].xhrBody, /types=url/)
+  assert.match(h.calls[1].xhrBody, /source=tencent/)
+  assert.match(h.calls[1].xhrBody, /id=0039MnQn/)
+  assert.match(h.calls[1].xhrBody, /(^|&)s=[A-F0-9]{8}(&|$)/)
+}
+
 console.log('PASS: LX search routing stays channel-bound and never mixes providers')
