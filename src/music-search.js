@@ -2122,7 +2122,9 @@
             root.data && root.data.url
           ];
           for (var i = 0; i < candidates.length; i += 1) {
-            if (typeof candidates[i] === 'string' && /^https?:\/\/i.test(candidates[i].trim())) {
+            var candidateText = typeof candidates[i] === 'string' ? candidates[i].trim() : '';
+            if (typeof candidates[i] === 'string' &&
+                (candidateText.indexOf('http://') === 0 || candidateText.indexOf('https://') === 0)) {
               return candidates[i].trim();
             }
           }
@@ -2151,7 +2153,9 @@
             root.data && root.data.song_play_url
           ];
           for (var i = 0; i < candidates.length; i += 1) {
-            if (typeof candidates[i] === 'string' && /^https?:\/\/i.test(candidates[i].trim())) {
+            var candidateText = typeof candidates[i] === 'string' ? candidates[i].trim() : '';
+            if (typeof candidates[i] === 'string' &&
+                (candidateText.indexOf('http://') === 0 || candidateText.indexOf('https://') === 0)) {
               return candidates[i].trim();
             }
           }
