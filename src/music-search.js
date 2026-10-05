@@ -1759,6 +1759,104 @@
     });
   }
 
+  function resolveTencentAggregateUrl(musicInfo, quality, callback) {
+    var info = musicInfo || {};
+    var songmid = String(info.songmid || info.id || info.mediaMid || '').replace(/^\s+|\s+$/g, '');
+    if (!songmid) return callback(new Error('No Tencent songmid for aggregate playback'));
+    var requestedQuality = String(quality || '').toLowerCase() || '128k';
+    var qMap = { '128k': '8', '192k': '8', '320k': '9', 'flac': '10', 'flac24bit': '16', 'hires': '14', 'atmos': '13', 'atmos_plus': '12', 'master': '11' };
+    var vkeysQuality = qMap[requestedQuality] || '8';
+
+    function extractUrl(data) {
+      if (data == null) return '';
+      if (typeof data === 'string') {
+        var text = data.replace(/^\s+|\s+$/g, '');
+        return /^https?:\/\//i.test(text) ? text : '';
+      }
+      var candidates = [
+        data.url,
+        data.play_url,
+        data.playUrl,
+        data.music,
+        data.data && data.data.url,
+        data.data && data.data.play_url,
+        data.data && data.data.playUrl,
+        data.data && data.data.music
+      ];
+      for (var i = 0; i < candidates.length; i += 1) {
+        var value = candidates[i];
+        if (typeof value === 'string' && /^https?:\/\//i.test(value.trim())) return value.trim();
+      }
+      return '';
+    }
+
+    function acceptUrl(url, provider, raw, done) {
+      var clean = String(url || '').replace(/^\s+|\s+$/g, '');
+      if (!/^https?:\/\//i.test(clean)) return done(new Error(provider + ' returned no playable URL'));
+      if (isCrossPlatformPlaybackUrl('tx', clean)) return done(new Error(provider + ' returned a cross-platform URL'));
+      done(null, {
+        url: clean,
+        source: 'tx',
+        provider: provider,
+        requestedQuality: requestedQuality,
+        actualBr: requestedQuality,
+        id: songmid,
+        raw: raw
+      });
+    }
+
+    var backends = [
+      {
+        provider: 'tencent-aggregate-xinghai',
+        method: 'GET',
+        url: 'https://yy.zddyr.top/lx/api/?source=qq&songmid=' + encodeURIComponent(songmid) + '&quality=' + encodeURIComponent(requestedQuality),
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      },
+      {
+        provider: 'tencent-aggregate-zrcdy',
+        method: 'GET',
+        url: 'https://zrcdy.dpdns.org/lx/api/api.php?source=qq&songmid=' + encodeURIComponent(songmid) + '&quality=' + encodeURIComponent(requestedQuality),
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      },
+      {
+        provider: 'tencent-aggregate-vkeys',
+        method: 'GET',
+        url: 'https://api.vkeys.cn/v2/music/tencent/geturl?mid=' + encodeURIComponent(songmid) + '&quality=' + encodeURIComponent(vkeysQuality),
+        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }
+      },
+      {
+        provider: 'tencent-aggregate-lxmusic88',
+        method: 'GET',
+        url: 'https://88.lxmusic.xn--fiqs8s/lxmusicv4/url/tx/' + encodeURIComponent(songmid) + '/' + encodeURIComponent(requestedQuality),
+        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'x-request-key': 'lxmusic' }
+      }
+    ];
+
+    var lastError = null;
+    function tryBackend(index) {
+      if (index >= backends.length) return callback(lastError || new Error('All Tencent aggregate backends failed'));
+      var backend = backends[index];
+      requestViaProxy(backend.url, backend.method, null, backend.headers, true, function (err, data) {
+        if (!err) {
+          var directUrl = extractUrl(data);
+          if (directUrl) {
+            return acceptUrl(directUrl, backend.provider, data, function (acceptErr, result) {
+              if (!acceptErr) return callback(null, result);
+              lastError = acceptErr;
+              tryBackend(index + 1);
+            });
+          }
+          lastError = new Error(backend.provider + ' returned no playable URL');
+        } else {
+          lastError = err;
+        }
+        tryBackend(index + 1);
+      });
+    }
+    tryBackend(0);
+  }
+
+
   function getHuibqPlaybackId(source, musicInfo) {
     var info = musicInfo || {};
     var candidates = [];
@@ -2111,6 +2209,16 @@
     }
 
     function afterHuibq() {
+      if (source === 'tx' && skipProvider !== 'tencent-aggregate') {
+        return resolveTencentAggregateUrl(musicInfo, quality, function (aggregateErr, aggregateResult) {
+          if (!aggregateErr && aggregateResult && aggregateResult.url) return callback(null, aggregateResult);
+          var aggregateFailure = aggregateErr;
+          resolveHuibqUrl(source, musicInfo, quality, function (huibqErr, result) {
+            if (!huibqErr && result && result.url) return callback(null, result);
+            afterTuneHub(aggregateFailure || huibqErr);
+          });
+        });
+      }
       if (skipProvider === 'huibq') return afterTuneHub(null);
 
       resolveHuibqUrl(source, musicInfo, quality, function (huibqErr, result) {
@@ -2118,6 +2226,7 @@
         afterTuneHub(huibqErr);
       });
     }
+
 
     if (source === 'kg' && skipProvider !== 'kugou-native') {
       return resolveKugouNativeUrl(musicInfo, quality, function (nativeErr, nativeResult) {

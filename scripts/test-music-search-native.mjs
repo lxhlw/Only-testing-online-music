@@ -691,4 +691,35 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   assert.match(aggregateTarget, /musicserver\.haitangw\.cc\/v1\/music\/resolve-url/)
 }
 
+{
+  const h = createHarness(
+    { tx: { actions: ['musicUrl'] } },
+    () => {},
+    {
+      time: { status: 500, body: 'must not be used' },
+      search: [
+        { status: 200, body: JSON.stringify({ code: 200, url: 'https://audio.example.test/tx-aggregate.mp3' }) }
+      ]
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.resolveMusicUrl(
+      'tx',
+      { songmid: '0039MnYb0qxYhV' },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value)
+    )
+  })
+
+  assert.equal(result.provider, 'tencent-aggregate-xinghai')
+  assert.equal(result.url, 'https://audio.example.test/tx-aggregate.mp3')
+  assert.equal(h.calls.length, 1)
+  const target = new URL(h.calls[0].xhrUrl).searchParams.get('url')
+  assert.match(target, /yy\.zddyr\.top\/lx\/api/)
+  assert.equal(new URL(target).searchParams.get('source'), 'qq')
+  assert.equal(new URL(target).searchParams.get('songmid'), '0039MnYb0qxYhV')
+  assert.equal(new URL(target).searchParams.get('quality'), '128k')
+}
+
 console.log('PASS: LX search routing stays channel-bound and never mixes providers')
