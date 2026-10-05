@@ -1679,45 +1679,215 @@
       }
 
       var backends = [
-        {
-          provider: 'kugou-aggregate-haitang',
-          method: 'POST',
-          url: 'https://musicserver.haitangw.cc/v1/music/resolve-url',
-          body: JSON.stringify({ source: 'kg', rid: hash || songmid, level: level }),
-          headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' }
-        },
-        {
-          provider: 'kugou-aggregate-xinghai',
-          method: 'GET',
-          url: 'https://yy.zddyr.top/lx/api/?source=kg' +
-            '&quality=' + encodeURIComponent(requestedQuality) +
-            '&songmid=' + encodeURIComponent(songmid || hash) +
-            '&albumId=' + encodeURIComponent(albumId) +
-            '&mainHash=' + encodeURIComponent(hash || songmid) +
-            '&hash=' + encodeURIComponent(hash || songmid),
-          headers: { 'User-Agent': 'Mozilla/5.0' }
-        },
-        {
-          provider: 'kugou-aggregate-zrcdy',
-          method: 'GET',
-          url: 'https://zrcdy.dpdns.org/lx/api/api.php?source=kg' +
-            '&songmid=' + encodeURIComponent(songmid || hash) +
-            '&quality=' + encodeURIComponent(requestedQuality),
-          headers: { 'User-Agent': 'Mozilla/5.0' }
-        },
-        {
-          provider: 'kugou-aggregate-lerd',
-          method: 'POST',
-          url: 'https://api.music.lerd.dpdns.org/kg',
-          body: JSON.stringify({
-            musicInfo: { songmid: songmid || hash, hash: hash || undefined, albumId: albumId || undefined },
-            type: requestedQuality
-          }),
-          headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' }
+      {
+        provider: 'tencent-aggregate-official',
+        method: 'POST',
+        url: 'https://u.y.qq.com/cgi-bin/musicu.fcg',
+        body: JSON.stringify({
+          req_0: {
+            module: 'vkey.GetVkeyServer',
+            method: 'CgiGetVkey',
+            param: {
+              filename: [officialFilePrefix + officialFileId + officialFileExt],
+              guid: officialGuid,
+              songmid: [songmid],
+              songtype: [0],
+              uin: '0',
+              loginflag: 0,
+              platform: '20'
+            }
+          },
+          loginUin: '0',
+          comm: {
+            ct: 24,
+            cv: 4747474,
+            platform: 'yqq.json',
+            uin: '0',
+            g_tk: 5381,
+            g_tk_new_20200303: 5381,
+            format: 'json',
+            inCharset: 'utf-8',
+            outCharset: 'utf-8',
+            notice: 0,
+            needNewCode: 1
+          }
+        }),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/148.0.0.0 Safari/537.36',
+          'Referer': 'https://y.qq.com/',
+          'Accept': 'application/json'
         }
-      ];
+      },
+      {
+        provider: 'tencent-aggregate-express-vkey',
+        method: 'GET',
+        url: 'https://c.y.qq.com/base/fcgi-bin/fcg_music_express_mobile3.fcg' +
+          '?g_tk=0&loginUin=0&hostUin=0&format=json&inCharset=utf8&outCharset=utf-8' +
+          '&notice=0&platform=yqq&needNewCode=0&cid=205361747&uin=0' +
+          '&jsonpCallback=MusicJsonCallback' + encodeURIComponent(expressGuid) +
+          '&callback=MusicJsonCallback' + encodeURIComponent(expressGuid) +
+          '&songmid=' + encodeURIComponent(songmid) +
+          '&filename=' + encodeURIComponent(expressFileName) +
+          '&guid=' + encodeURIComponent(expressGuid),
+        headers: {
+          'User-Agent': 'Mozilla/5.0',
+          'Referer': 'https://y.qq.com/portal/player.html',
+          'Accept': 'application/json, text/javascript, */*'
+        },
+        parseJson: false,
+        extractUrl: function (data) {
+          var root = parseTencentLooseJson(data);
+          var item = root && root.data && root.data.items && root.data.items[0];
+          if (!item) return '';
 
-      var lastError = null;
+          var vkey = item.vkey ? String(item.vkey).trim() : '';
+          var purl = item.purl ? String(item.purl).trim() : '';
+          if (purl && /^https?:\/\//i.test(purl)) return purl;
+          if (purl) {
+            var sip = Array.isArray(item.sip) && item.sip.length ? String(item.sip[0] || '').trim() : '';
+            if (sip && /^https?:\/\//i.test(sip)) return sip + purl.replace(/^\/+/, '');
+          }
+
+          if (!vkey) return '';
+          var filename = item.filename ? String(item.filename).trim() : expressFileName;
+          return 'http://dl.stream.qqmusic.qq.com/' + filename +
+            '?vkey=' + encodeURIComponent(vkey) +
+            '&guid=' + encodeURIComponent(expressGuid) +
+            '&uin=0&fromtag=66';
+        }
+      },
+      {
+        provider: 'tencent-aggregate-xinghai',
+        method: 'GET',
+        url: 'https://yy.zddyr.top/lx/api/?source=qq&songmid=' + encodeURIComponent(songmid) + '&quality=' + encodeURIComponent(requestedQuality),
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      },
+      {
+        provider: 'tencent-aggregate-zrcdy',
+        method: 'GET',
+        url: 'https://zrcdy.dpdns.org/lx/api/api.php?source=qq&songmid=' + encodeURIComponent(songmid) + '&quality=' + encodeURIComponent(requestedQuality),
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      },
+      {
+        provider: 'tencent-aggregate-vkeys',
+        method: 'GET',
+        url: 'https://api.vkeys.cn/v2/music/tencent/geturl?mid=' + encodeURIComponent(songmid) + '&quality=' + encodeURIComponent(vkeysQuality),
+        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }
+      },
+      {
+        provider: 'tencent-aggregate-lxmusic88',
+        method: 'GET',
+        url: 'https://88.lxmusic.xn--fiqs8s/lxmusicv4/url/tx/' + encodeURIComponent(songmid) + '/' + encodeURIComponent(requestedQuality),
+        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'x-request-key': 'lxmusic' }
+      },
+      {
+        provider: 'tencent-aggregate-queryvkey',
+        method: 'POST',
+        url: 'https://u.y.qq.com/cgi-bin/musicu.fcg',
+        body: JSON.stringify({
+          queryvkey: {
+            module: 'vkey.GetVkeyServer',
+            method: 'CgiGetVkey',
+            param: {
+              uin: '0',
+              guid: officialGuid,
+              referer: 'y.qq.com',
+              songtype: [0],
+              filename: [expressFileName],
+              songmid: [songmid]
+            }
+          }
+        }),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/148.0.0.0 Safari/537.36',
+          'Referer': 'https://y.qq.com/'
+        },
+        extractUrl: function (data) {
+          var root = parseTencentLooseJson(data);
+          var block = root && root.queryvkey;
+          var midurlinfo = block && block.data && block.data.midurlinfo;
+          if (!Array.isArray(midurlinfo)) return '';
+          for (var i = 0; i < midurlinfo.length; i += 1) {
+            var item = midurlinfo[i] || {};
+            var purlText = String(item.purl || '').trim();
+            if (purlText.indexOf('http://') === 0 || purlText.indexOf('https://') === 0) {
+              return purlText;
+            }
+            if (item.purl) {
+              var sip = Array.isArray(item.sip) && item.sip.length ? String(item.sip[0] || '').trim() : '';
+              if (sip.indexOf('http://') === 0 || sip.indexOf('https://') === 0) {
+                return sip + String(item.purl).replace(/^\/+/, '');
+              }
+            }
+            var wifiText = String(item.wifiurl || '').trim();
+            if (wifiText.indexOf('http://') === 0 || wifiText.indexOf('https://') === 0) {
+              return wifiText;
+            }
+          }
+          return '';
+        }
+      },
+      {
+        provider: 'tencent-aggregate-xunhuisi',
+        method: 'GET',
+        url: 'https://api.xunhuisi.store/API/QQMusic/Song.php?mid=' + encodeURIComponent(songmid) + '&type=json',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
+          'Accept': 'application/json'
+        },
+        extractUrl: function (data) {
+          var root = parseTencentLooseJson(data);
+          if (!root) return '';
+          var candidates = [
+            root.music_url,
+            root.url,
+            root.data && root.data.music_url,
+            root.data && root.data.url
+          ];
+          for (var i = 0; i < candidates.length; i += 1) {
+            var candidateText = typeof candidates[i] === 'string' ? candidates[i].trim() : '';
+            if (candidateText.indexOf('http://') === 0 || candidateText.indexOf('https://') === 0) {
+              return candidateText;
+            }
+          }
+          return '';
+        }
+      },
+      {
+        provider: 'tencent-aggregate-hk0cc',
+        method: 'GET',
+        url: 'https://api.hk0.cc/api/qqmusic?mid=' + encodeURIComponent(songmid),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/148.0.0.0 Safari/537.36',
+          'Accept': 'application/json'
+        },
+        extractUrl: function (data) {
+          var root = parseTencentLooseJson(data);
+          if (!root) return '';
+          var candidates = [
+            root.song_play_url_sq,
+            root.song_play_url_pq,
+            root.song_play_url_hq,
+            root.song_play_url,
+            root.song_play_url_standard,
+            root.data && root.data.song_play_url_sq,
+            root.data && root.data.song_play_url_pq,
+            root.data && root.data.song_play_url
+          ];
+          for (var i = 0; i < candidates.length; i += 1) {
+            var candidateText = typeof candidates[i] === 'string' ? candidates[i].trim() : '';
+            if (candidateText.indexOf('http://') === 0 || candidateText.indexOf('https://') === 0) {
+              return candidateText;
+            }
+          }
+          return '';
+        }
+      }
+    ];
+
+    var lastError = null;
       function tryBackend(index) {
         if (index >= backends.length) {
           return callback(lastError || new Error('All Kugou aggregate backends failed'));
