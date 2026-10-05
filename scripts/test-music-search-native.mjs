@@ -742,7 +742,8 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       'tx',
       { songmid: '0039MnQn' },
       '128k',
-      (err, value) => err ? reject(err) : resolve(value)
+      (err, value) => err ? reject(err) : resolve(value),
+      { skipProvider: 'gd-studio' }
     )
   })
 
