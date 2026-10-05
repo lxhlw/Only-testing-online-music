@@ -109,6 +109,27 @@ page.on('request', request => {
 try {
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 })
   assert.equal(await page.locator('#install-btn').isVisible(), true, 'App did not load')
+
+  await page.evaluate(() => {
+    const audio = document.getElementById('audio')
+    window.__audioEvents = []
+    if (!audio) return
+    for (const name of ['loadstart', 'loadedmetadata', 'canplay', 'playing', 'waiting', 'stalled', 'error', 'ended']) {
+      audio.addEventListener(name, () => {
+        window.__audioEvents.push({
+          name,
+          at: Date.now(),
+          src: audio.currentSrc || audio.src || '',
+          currentTime: Number(audio.currentTime || 0),
+          duration: Number(audio.duration || 0),
+          readyState: Number(audio.readyState || 0),
+          paused: Boolean(audio.paused),
+          errorCode: audio.error ? audio.error.code : null,
+        })
+        if (window.__audioEvents.length > 300) window.__audioEvents.shift()
+      })
+    }
+  })
   assert.match(await page.locator('#app-version').textContent(), /^v\d+\.\d+\.\d+$/)
 
   await page.locator('#source-url').fill(SOURCE_URL)
@@ -201,7 +222,13 @@ try {
     const attempts = []
     const candidateCount = Math.min(3, results.length)
     for (let i = 0; i < candidateCount; i += 1) {
-      const startedAt = Date.now()
+      const marker = await page.evaluate(() => {
+        const audio = document.getElementById('audio')
+        return {
+          eventIndex: Array.isArray(window.__audioEvents) ? window.__audioEvents.length : 0,
+          src: audio?.currentSrc || audio?.src || '',
+        }
+      })
 
       await page.evaluate(() => {
         const audio = document.getElementById('audio')
@@ -219,31 +246,28 @@ try {
         }
       })
 
+      const startedAt = Date.now()
       await page.locator('#search-results .search-row').nth(i).getByRole('button', { name: '解析并播放' }).click()
 
-      const expectedDuration = parseDuration(results[i]?.interval)
       try {
         await page.waitForFunction(
-          ({ baselineSrc }) => {
+          ({ markerIndex }) => {
             const audio = document.getElementById('audio')
+            const events = Array.isArray(window.__audioEvents) ? window.__audioEvents.slice(markerIndex) : []
             if (!audio) return false
-            const src = audio.currentSrc || audio.src || ''
-            if (audio.error) return true
-            if (src && src !== baselineSrc) {
-              const currentTime = Number(audio.currentTime || 0)
-              const duration = Number(audio.duration || 0)
-              if (currentTime >= 0.8) return true
-              if (Number.isFinite(duration) && duration > 0 && currentTime >= 0.2 && audio.readyState >= 2) return true
-            }
-            return false
+            if (events.some(event => ['playing', 'error', 'ended'].includes(event.name))) return true
+            return Number(audio.currentTime || 0) >= 0.8
           },
-          { baselineSrc: baseline.src },
+          { markerIndex: marker.eventIndex },
           { timeout: PLAYBACK_TIMEOUT_MS },
         )
       } catch {}
 
-      const attempt = await page.evaluate(() => {
+      await page.waitForTimeout(1200)
+
+      const attempt = await page.evaluate((markerIndex) => {
         const audio = document.getElementById('audio')
+        const events = Array.isArray(window.__audioEvents) ? window.__audioEvents.slice(markerIndex) : []
         return {
           status: document.getElementById('status')?.textContent || '',
           audioUrl: audio?.currentSrc || audio?.src || '',
@@ -256,8 +280,9 @@ try {
             code: audio.error.code,
             message: audio.error.message || '',
           } : null,
+          events: events.slice(-40),
         }
-      })
+      }, marker.eventIndex)
 
       const recentResolver = resolverResponses.filter(item => item.at >= startedAt)
       const recentMedia = mediaResponses.filter(item => item.at >= startedAt)
@@ -282,6 +307,7 @@ try {
         result: results[i],
         ...attempt,
         baselineSrc: baseline.src,
+        markerEventIndex: marker.eventIndex,
         sourceChanged: Boolean(attempt.audioUrl && attempt.audioUrl !== baseline.src),
         resolverResponses: recentResolver.map(item => ({
           status: item.status,
@@ -294,6 +320,7 @@ try {
           target: item.target,
           contentType: item.headers?.['content-type'] || '',
           contentLength: item.headers?.['content-length'] || '',
+          contentRange: item.headers?.['content-range'] || '',
           acceptRanges: item.headers?.['accept-ranges'] || '',
         })),
         audioTarget,
@@ -306,6 +333,7 @@ try {
       )
       const validatedProgress = attempt.currentTime >= 12
       const sourceChanged = Boolean(attempt.audioUrl && attempt.audioUrl !== baseline.src)
+      const hadPlayingEvent = attempt.events.some(event => event.name === 'playing')
       const resolverBackedMedia =
         !audioTarget ||
         resolverDataUrls.length === 0 ||
@@ -315,6 +343,7 @@ try {
       if (
         REQUIRE_PLAUSIBLE_PLAYBACK &&
         sourceChanged &&
+        (hadPlayingEvent || attempt.currentTime >= 0.8) &&
         attempt.currentTime >= 0.8 &&
         attempt.readyState >= 2 &&
         !attempt.error &&
@@ -391,12 +420,16 @@ try {
     }
 
     assert.ok(
+      success,
+      channel.toUpperCase() + ' playback did not reach real playing state after ' +
+      attempts.length + ' candidates: ' + JSON.stringify(attempts, null, 2)
+    )
+    assert.ok(
       success.audioUrl && success.audioUrl !== success.baselineSrc,
       channel.toUpperCase() + ' playback reused the pre-click/stale audio source: ' +
       JSON.stringify(success, null, 2)
     )
     assert.ok(
-      success,
       channel.toUpperCase() + ' playback did not produce a plausible full-length song after ' +
       attempts.length + ' candidates: ' + JSON.stringify(attempts, null, 2)
     )
