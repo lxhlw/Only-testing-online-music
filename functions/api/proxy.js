@@ -106,7 +106,7 @@ async function fetchFlowerResolverViaSocket(target, request) {
   for (var hi = 0; hi < hosts.length; hi += 1) {
     var socket = null;
     try {
-      socket = connect({ hostname: hosts[hi], port: 80 });
+      socket = connect({ hostname: '97.64.37.235', port: 80 });
       await socket.opened;
 
       var forwarded = pickForwardHeaders(request);
@@ -202,29 +202,20 @@ async function fetchFlowerResolverViaSocket(target, request) {
 }
 
 async function fetchFlowerResolverViaHttpBridge(target, request) {
-  var targetCandidates = [
-    target.toString(),
-    'http://ts.tempmusic.tk' + target.pathname + target.search,
-    'http://tm.tempmusic.tk' + target.pathname + target.search
-  ];
   var bridges = [
     function (targetUrl) {
       return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl);
     },
     function (targetUrl) {
       return 'https://corsproxy.io/?url=' + encodeURIComponent(targetUrl);
-    },
-    function (targetUrl) {
-      return 'https://r.jina.ai/' + targetUrl;
     }
   ];
 
   var forwarded = pickForwardHeaders(request);
   var lastError = null;
 
-  for (var ti = 0; ti < targetCandidates.length; ti += 1) {
-    for (var bi = 0; bi < bridges.length; bi += 1) {
-      var bridgeUrl = bridges[bi](targetCandidates[ti]);
+  for (var bi = 0; bi < bridges.length; bi += 1) {
+    var bridgeUrl = bridges[bi](target.toString());
     try {
       var bridgeHeaders = new Headers();
       forwarded.forEach(function (value, key) {
@@ -258,7 +249,6 @@ async function fetchFlowerResolverViaHttpBridge(target, request) {
       );
     } catch (e) {
       lastError = e;
-    }
     }
   }
 
