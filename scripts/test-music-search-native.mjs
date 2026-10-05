@@ -699,6 +699,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     {
       time: { status: 500, body: 'must not be used' },
       search: [
+        { status: 200, body: '{}' },
         { status: 200, body: JSON.stringify({ code: 200, url: 'https://audio.example.test/tx-aggregate.mp3' }) }
       ]
     }
@@ -715,8 +716,8 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 
   assert.equal(result.provider, 'tencent-aggregate-xinghai')
   assert.equal(result.url, 'https://audio.example.test/tx-aggregate.mp3')
-  assert.equal(h.calls.length, 1)
-  const target = new URL(h.calls[0].xhrUrl).searchParams.get('url')
+  assert.equal(h.calls.length, 2)
+  const target = new URL(h.calls[1].xhrUrl).searchParams.get('url')
   assert.match(target, /yy\.zddyr\.top\/lx\/api/)
   assert.equal(new URL(target).searchParams.get('source'), 'qq')
   assert.equal(new URL(target).searchParams.get('songmid'), '0039MnYb0qxYhV')
