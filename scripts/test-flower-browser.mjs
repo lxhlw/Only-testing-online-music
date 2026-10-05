@@ -390,7 +390,7 @@ try {
     assert.ok(targetSeen, channel.toUpperCase() + ' did not produce expected platform/Flower proxy traffic')
 
     const success = attempts.find(item =>
-      item.currentTime >= 0.8 &&
+      item.currentTime >= REAL_PLAYBACK_PROGRESS_S &&
       item.readyState >= 2 &&
       !item.error &&
       (
