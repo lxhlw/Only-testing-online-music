@@ -361,11 +361,12 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       assert.equal(result.provider, 'kugou-native')
       assert.equal(result.url, 'https://audio.example.test/kg-tracker.mp3')
       assert.equal(result.id, 'ABCDEF0123456789')
-      const kgCalls = h.calls.filter(call => call.xhrMethod === 'GET' && String(call.xhrUrl || '').includes('trackercdn.kugou.com'))
+      const kgCalls = h.calls.filter(call => call.xhrMethod === 'GET' && String(call.xhrUrl || '').includes('gateway.kugou.com'))
       assert.equal(kgCalls.length, 1)
       const target = new URL(kgCalls[0].xhrUrl).searchParams.get('url')
-      assert.match(target, /trackercdn\.kugou\.com\/i\/v2/)
-      assert.match(target, /hash=ABCDEF0123456789/)
+      assert.match(target, /gateway\.kugou\.com\/i\/v2/)
+      assert.equal(new URL(target).searchParams.get('cmd'), '26')
+      assert.equal(new URL(target).searchParams.get('appid'), '1005')
 
     } else {
       assert.equal(result.provider, 'huibq')
