@@ -468,6 +468,28 @@ function isTencentMediaHost(hostname) {
     host === 'amobile.music.tc.qq.com';
 }
 
+function getPreferredUpstreamUrls(target) {
+  var original = target.toString();
+  var host = String(target.hostname || '').toLowerCase();
+
+  // Several legacy LX sources still publish plain HTTP search URLs. The
+  // HTTP endpoints can stall behind modern proxy/runner networks even when
+  // their HTTPS equivalents are healthy. Prefer HTTPS for known search hosts,
+  // then retain the original HTTP form as a fallback.
+  var httpsFirstHosts = {
+    'search.kuwo.cn': true,
+    'songsearch.kugou.com': true,
+    'u.y.qq.com': true,
+    'c.y.qq.com': true
+  };
+
+  if (target.protocol !== 'http:' || !httpsFirstHosts[host]) return [original];
+
+  var secure = new URL(target.toString());
+  secure.protocol = 'https:';
+  return [secure.toString(), original];
+}
+
 function getTencentMediaCandidateUrls(target) {
   var original = target.toString();
   if (!isTencentMediaHost(target.hostname) || target.pathname === '/') return [original];
@@ -638,7 +660,13 @@ export async function onRequest(context) {
     return flowerSocketResponse;
   }
 
-  var candidateUrls = getTencentMediaCandidateUrls(target);
+  var candidateUrls = target.protocol === 'http:'
+    ? getPreferredUpstreamUrls(target)
+    : [target.toString()];
+
+  if (isTencentMediaHost(target.hostname)) {
+    candidateUrls = getTencentMediaCandidateUrls(target);
+  }
 
   var lastError = null;
   for (var ci = 0; ci < candidateUrls.length; ci += 1) {
