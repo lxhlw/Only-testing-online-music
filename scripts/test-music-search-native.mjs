@@ -30,7 +30,9 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       let targetUrl = self.url
       try { targetUrl = decodeURIComponent(self.url) } catch {}
       const searchIndex = calls.filter(call => {
-        return String(call.xhrUrl || '').indexOf('/time') < 0
+        let callTarget = String(call.xhrUrl || '')
+        try { callTarget = decodeURIComponent(callTarget) } catch {}
+        return callTarget.indexOf('/time') < 0
       }).length - 1
       const searchResponses = Array.isArray(responses.search)
         ? responses.search
