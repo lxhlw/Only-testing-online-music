@@ -57,34 +57,41 @@ async function fetchFlowerResolverViaHost(target, request) {
 
   for (var bi = 0; bi < bases.length; bi += 1) {
     var base = bases[bi];
-    var endpoint = base + target.pathname + target.search;
-    try {
-      var upstream = await fetch(endpoint, {
-        method: String(request.method || 'GET').toUpperCase(),
-        headers: forwarded,
-        redirect: 'follow'
-      });
-      var body = await upstream.text();
-      var trimmed = String(body || '').replace(/^\s+|\s+$/g, '');
+    var paths = [target.pathname];
+    if (/^\/flower\/v1\/url\//.test(target.pathname)) {
+      paths.push(target.pathname.replace(/^\/flower\/v1\/url\//, '/url/'));
+    }
 
-      if (upstream.status >= 200 && upstream.status < 300 &&
-          /^(?:https?:\/\/|\{|\[)/i.test(trimmed)) {
-        return new Response(trimmed, {
-          status: 200,
-          statusText: 'OK',
-          headers: new Headers({
-            'Content-Type': upstream.headers.get('Content-Type') || 'text/plain; charset=utf-8',
-            'Cache-Control': 'no-store'
-          })
+    for (var pi = 0; pi < paths.length; pi += 1) {
+      var endpoint = base + paths[pi] + target.search;
+      try {
+        var upstream = await fetch(endpoint, {
+          method: String(request.method || 'GET').toUpperCase(),
+          headers: forwarded,
+          redirect: 'follow'
         });
-      }
+        var body = await upstream.text();
+        var trimmed = String(body || '').replace(/^\s+|\s+$/g, '');
 
-      lastError = new Error(
-        'Flower host HTTP ' + upstream.status + ' via ' + endpoint +
-        (trimmed ? ': ' + trimmed.slice(0, 180) : '')
-      );
-    } catch (e) {
-      lastError = e;
+        if (upstream.status >= 200 && upstream.status < 300 &&
+            /^(?:https?:\/\/|\{|\[)/i.test(trimmed)) {
+          return new Response(trimmed, {
+            status: 200,
+            statusText: 'OK',
+            headers: new Headers({
+              'Content-Type': upstream.headers.get('Content-Type') || 'text/plain; charset=utf-8',
+              'Cache-Control': 'no-store'
+            })
+          });
+        }
+
+        lastError = new Error(
+          'Flower host HTTP ' + upstream.status + ' via ' + endpoint +
+          (trimmed ? ': ' + trimmed.slice(0, 180) : '')
+        );
+      } catch (e) {
+        lastError = e;
+      }
     }
   }
 
