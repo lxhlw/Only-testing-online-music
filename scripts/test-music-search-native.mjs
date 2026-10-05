@@ -219,6 +219,60 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 {
   const h = createHarness(
     {
+      mg: { actions: ['musicUrl'] }
+    },
+    () => {},
+    {
+      search: {
+        status: 200,
+        body: JSON.stringify({
+          code: '000000',
+          songResultData: {
+            totalCount: 1,
+            result: [{
+              songId: '1106531626',
+              copyrightId: '6005861N71E',
+              contentId: '600929000002562618',
+              resourceType: '2',
+              name: '成都',
+              singerList: [{ name: '赵雷' }],
+              album: '无法长大',
+              duration: 329,
+              audioFormats: [{ formatType: 'PQ', asize: '5242880' }]
+            }]
+          }
+        })
+      }
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.search('mg', '成都', 1, 20, (err, value) => err ? reject(err) : resolve(value)
+    )
+  })
+
+  assert.equal(result.searchProvider, 'migu-native')
+  assert.equal(result.list.length, 1)
+  assert.equal(result.list[0].songmid, '1106531626')
+  assert.equal(result.list[0].copyrightId, '6005861N71E')
+  assert.equal(result.list[0].contentId, '600929000002562618')
+  assert.equal(result.list[0].name, '成都')
+  assert.equal(result.list[0].singer, '赵雷')
+
+  const searchTarget = new URL(h.calls[0].xhrUrl).searchParams.get('url')
+  const searchUrl = new URL(searchTarget)
+  assert.equal(searchUrl.hostname, 'c.musicapp.migu.cn')
+  assert.equal(searchUrl.pathname, '/v1.0/content/search_all.do')
+  assert.equal(searchUrl.searchParams.get('text'), '成都')
+  assert.equal(searchUrl.searchParams.get('pageNo'), '1')
+  assert.equal(searchUrl.searchParams.get('pageSize'), '20')
+  assert.equal(searchUrl.searchParams.get('isCopyright'), '1')
+  assert.equal(searchUrl.searchParams.get('sort'), '1')
+}
+
+{
+  const h = createHarness(
+    {
       kw: { actions: ['musicUrl'] }
     },
     () => {},

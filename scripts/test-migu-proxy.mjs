@@ -22,6 +22,8 @@ function extractFunction(source, name) {
 
 assert.match(proxy, /function decodeMiguH5V24\(bytes, signedResponse\)/)
 assert.match(proxy, /var signatureHeader = upstream\.headers\.get\('signature'\) \|\| ''/)
+assert.match(proxy, /var MIGU_SEARCH_V10_HOST = 'c\.musicapp\.migu\.cn'/)
+assert.match(proxy, /target\.pathname === MIGU_SEARCH_V10_PATH/)
 assert.match(proxy, /String\(signatureHeader\)\.trim\(\) === '1'/)
 
 const decodeBody = extractFunction(proxy, 'decodeMiguH5V24')

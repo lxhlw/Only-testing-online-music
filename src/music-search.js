@@ -804,9 +804,9 @@
 
     for (var i = 0; i < rawData.length; i += 1) {
       var group = rawData[i];
-      if (!Array.isArray(group)) continue;
-      for (var j = 0; j < group.length; j += 1) {
-        var data = group[j] || {};
+      var groupItems = Array.isArray(group) ? group : [group];
+      for (var j = 0; j < groupItems.length; j += 1) {
+        var data = groupItems[j] || {};
         if (!data.songId || !data.copyrightId) continue;
         var key = String(data.copyrightId);
         if (seen[key]) continue;
@@ -857,31 +857,35 @@
   }
 
   function searchMigu(keyword, page, limit, callback) {
-    var time = String(Date.now ? Date.now() : new Date().getTime());
-    var signature = miguCreateSignature(time, keyword);
     var target =
-      'https://jadeite.migu.cn/music_search/v3/search/searchAll' +
-      '?isCorrect=0' +
-      '&isCopyright=1' +
-      '&searchSwitch=%7B%22song%22%3A1%2C%22album%22%3A0%2C%22singer%22%3A0%2C%22tagSong%22%3A1%2C%22mvSong%22%3A0%2C%22bestShow%22%3A1%2C%22songlist%22%3A0%2C%22lyricSong%22%3A0%7D' +
-      '&pageSize=' + encodeURIComponent(limit) +
-      '&text=' + encodeURIComponent(keyword) +
+      'https://c.musicapp.migu.cn/v1.0/content/search_all.do' +
+      '?text=' + encodeURIComponent(keyword) +
       '&pageNo=' + encodeURIComponent(page) +
-      '&sort=0' +
-      '&sid=USS';
+      '&pageSize=' + encodeURIComponent(limit) +
+      '&isCopyright=1' +
+      '&sort=1' +
+      '&searchSwitch=' + encodeURIComponent(JSON.stringify({
+        song: 1,
+        album: 0,
+        singer: 0,
+        tagSong: 1,
+        mvSong: 0,
+        bestShow: 1
+      }));
 
     requestViaProxy(
       target,
       'GET',
       null,
       {
-        'uiVersion': 'A_music_3.6.1',
-        'deviceId': signature.deviceId,
-        'timestamp': time,
-        'sign': signature.sign,
-        'channel': '0146921',
-        'User-Agent': 'Mozilla/5.0 (Linux; U; Android 11.0.0; zh-cn; MI 11 Build/OPR1.170623.032) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30',
-        'Accept': 'application/json, text/javascript, */*; q=0.01'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Origin': 'https://h5.nf.migu.cn',
+        'Referer': 'https://h5.nf.migu.cn/',
+        'ua': 'Android_migu',
+        'version': '6.8.8',
+        'channel': '014021I',
+        'subchannel': '014021I'
       },
       true,
       function (err, data) {
@@ -890,7 +894,10 @@
           return callback(new Error('Migu search returned an invalid response'));
         }
         var resultData = data.songResultData || {};
-        var list = buildMiguList(resultData.resultList);
+        var rawList = Array.isArray(resultData.result)
+          ? resultData.result
+          : (Array.isArray(resultData.resultList) ? resultData.resultList : []);
+        var list = buildMiguList(rawList);
         if (!list.length) return callback(new Error('Migu search returned no usable songs'));
 
         var total = Number(resultData.totalCount);
