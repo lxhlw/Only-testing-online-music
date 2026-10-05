@@ -1557,6 +1557,13 @@
       );
     }
 
+    function finishAfterWebApi(webErr) {
+      resolveKugouAggregateUrl(info, requested, function (aggregateErr, aggregateResult) {
+        if (!aggregateErr && aggregateResult && aggregateResult.url) return callback(null, aggregateResult);
+        callback(webErr || aggregateErr || new Error('Kugou playback resolution failed'));
+      });
+    }
+
     function requestWebApi(hash, fallbackError) {
       var url = 'https://wwwapi.kugou.com/yy/index.php' +
         '?r=play/getdata&hash=' + encodeURIComponent(hash);
@@ -1570,7 +1577,7 @@
         },
         false,
         function (err, raw) {
-          if (err) return callback(fallbackError || err);
+          if (err) return finishAfterWebApi(fallbackError || err);
           var text = String(raw || '').replace(/^\s+|\s+$/g, '');
           var parsed = null;
           try {
@@ -1579,7 +1586,7 @@
           } catch (e) {}
           var detail = parsed && parsed.data ? parsed.data : parsed;
           var directUrl = extractDirectUrl(detail);
-          if (!directUrl || isCrossPlatformPlaybackUrl('kg', directUrl)) return callback(fallbackError || new Error('Kugou web API returned no playable URL for ' + hash));
+          if (!directUrl || isCrossPlatformPlaybackUrl('kg', directUrl)) return finishAfterWebApi(fallbackError || new Error('Kugou web API returned no playable URL for ' + hash));
           callback(null, {
             url: directUrl,
             source: 'kg',
@@ -1592,6 +1599,147 @@
         }
       );
     }
+
+    function resolveKugouAggregateUrl(info, quality, callback) {
+      var requestedQuality = String(quality || '').toLowerCase() || '128k';
+      var levelMap = {
+        '128k': 'standard',
+        '192k': 'standard',
+        '320k': 'exhigh',
+        'flac': 'lossless',
+        'flac24bit': 'hires',
+        'hires': 'hires',
+        'atmos': 'atmos',
+        'atmos_plus': 'atmos',
+        'master': 'clear'
+      };
+      var level = levelMap[requestedQuality] || 'standard';
+      var songmid = String((info && (info.songmid || info.id || info.mediaMid)) || '')
+        .replace(/^\s+|\s+$/g, '');
+      var hash = String((info && (info.hash || info.fileHash)) || '')
+        .replace(/^\s+|\s+$/g, '');
+      if (!hash && !songmid) return callback(new Error('No Kugou id for aggregate playback'));
+
+      var albumId = String((info && (info.albumId || info.album_id)) || '')
+        .replace(/^\s+|\s+$/g, '');
+
+      function extractUrl(data) {
+        if (data == null) return '';
+        if (typeof data === 'string') {
+          var text = data.replace(/^\s+|\s+$/g, '');
+          return /^https?:\/\//i.test(text) ? text : '';
+        }
+        var candidates = [
+          data.url,
+          data.play_url,
+          data.playUrl,
+          data.data && data.data.url,
+          data.data && data.data.play_url,
+          data.data && data.data.playUrl,
+          data.data && data.data.musicUrl,
+          data.data && data.data.playurl
+        ];
+        for (var i = 0; i < candidates.length; i += 1) {
+          var value = candidates[i];
+          if (typeof value === 'string' && /^https?:\/\//i.test(value.trim())) return value.trim();
+          if (Array.isArray(value)) {
+            for (var j = 0; j < value.length; j += 1) {
+              if (typeof value[j] === 'string' && /^https?:\/\//i.test(value[j].trim())) return value[j].trim();
+            }
+          }
+        }
+        return '';
+      }
+
+      function acceptUrl(url, provider, raw, done) {
+        var clean = String(url || '').replace(/^\s+|\s+$/g, '');
+        if (!/^https?:\/\//i.test(clean)) return done(new Error(provider + ' returned no playable URL'));
+        if (isCrossPlatformPlaybackUrl('kg', clean)) {
+          return done(new Error(provider + ' returned a cross-platform URL'));
+        }
+        done(null, {
+          url: clean,
+          source: 'kg',
+          provider: provider,
+          requestedQuality: requestedQuality,
+          actualBr: requestedQuality,
+          id: hash || songmid,
+          raw: raw
+        });
+      }
+
+      var backends = [
+        {
+          provider: 'kugou-aggregate-haitang',
+          method: 'POST',
+          url: 'https://musicserver.haitangw.cc/v1/music/resolve-url',
+          body: JSON.stringify({ source: 'kg', rid: hash || songmid, level: level }),
+          headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' }
+        },
+        {
+          provider: 'kugou-aggregate-xinghai',
+          method: 'GET',
+          url: 'https://yy.zddyr.top/lx/api/?source=kg' +
+            '&quality=' + encodeURIComponent(requestedQuality) +
+            '&songmid=' + encodeURIComponent(songmid || hash) +
+            '&albumId=' + encodeURIComponent(albumId) +
+            '&mainHash=' + encodeURIComponent(hash || songmid) +
+            '&hash=' + encodeURIComponent(hash || songmid),
+          headers: { 'User-Agent': 'Mozilla/5.0' }
+        },
+        {
+          provider: 'kugou-aggregate-zrcdy',
+          method: 'GET',
+          url: 'https://zrcdy.dpdns.org/lx/api/api.php?source=kg' +
+            '&songmid=' + encodeURIComponent(songmid || hash) +
+            '&quality=' + encodeURIComponent(requestedQuality),
+          headers: { 'User-Agent': 'Mozilla/5.0' }
+        },
+        {
+          provider: 'kugou-aggregate-lerd',
+          method: 'POST',
+          url: 'https://api.music.lerd.dpdns.org/kg',
+          body: JSON.stringify({
+            musicInfo: { songmid: songmid || hash, hash: hash || undefined, albumId: albumId || undefined },
+            type: requestedQuality
+          }),
+          headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' }
+        }
+      ];
+
+      var lastError = null;
+      function tryBackend(index) {
+        if (index >= backends.length) {
+          return callback(lastError || new Error('All Kugou aggregate backends failed'));
+        }
+        var backend = backends[index];
+        requestViaProxy(
+          backend.url,
+          backend.method,
+          backend.body || null,
+          backend.headers,
+          true,
+          function (err, data) {
+            if (!err) {
+              var directUrl = extractUrl(data);
+              if (directUrl) {
+                return acceptUrl(directUrl, backend.provider, data, function (acceptErr, result) {
+                  if (!acceptErr) return callback(null, result);
+                  lastError = acceptErr;
+                  tryBackend(index + 1);
+                });
+              }
+              lastError = new Error(backend.provider + ' returned no playable URL');
+            } else {
+              lastError = err;
+            }
+            tryBackend(index + 1);
+          }
+        );
+      }
+      tryBackend(0);
+    }
+
 
     resolveKugouV5Url(baseHash, info, quality, function (v5Err, v5Result) {
       if (!v5Err && v5Result && v5Result.url) {

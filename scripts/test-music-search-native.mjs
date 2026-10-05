@@ -650,4 +650,46 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   assert.equal(requestUrl.searchParams.get('br'), '128k')
 }
 
+{
+  const h = createHarness(
+    { kg: { actions: ['musicUrl'] } },
+    () => {},
+    {
+      time: { status: 500, body: 'must not be used' },
+      search: [
+        { status: 200, body: '{}' },
+        { status: 200, body: JSON.stringify({ data: [[{ album_info: { album_id: '1802652' }, album_audio_id: '40118502' }]] }) },
+        { status: 200, body: '{}' },
+        { status: 200, body: '{}' },
+        { status: 200, body: '{}' },
+        { status: 200, body: '{}' },
+        { status: 200, body: '{}' },
+        { status: 200, body: '{}' },
+        { status: 200, body: '{}' },
+        { status: 200, body: JSON.stringify({ code: 200, url: 'https://audio.example.test/kg-aggregate.mp3' }) }
+      ]
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.resolveMusicUrl(
+      'kg',
+      {
+        hash: 'A06B033B356BFC974C5245D0195086A5',
+        songmid: '19863164',
+        albumId: '1802652',
+        albumAudioId: '40118502'
+      },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value)
+    )
+  })
+
+  assert.equal(result.provider, 'kugou-aggregate-haitang')
+  assert.equal(result.url, 'https://audio.example.test/kg-aggregate.mp3')
+  assert.equal(h.calls.length, 10)
+  const aggregateTarget = new URL(h.calls[9].xhrUrl).searchParams.get('url')
+  assert.match(aggregateTarget, /musicserver\.haitangw\.cc\/v1\/music\/resolve-url/)
+}
+
 console.log('PASS: LX search routing stays channel-bound and never mixes providers')
