@@ -107,6 +107,9 @@ jobs:
       - name: Run legacy transpiler routing test
         run: node scripts/test-legacy-transpiler.mjs
 
+      - name: Run HUIBQ ES5 adapter test
+        run: node scripts/test-huibq-legacy.mjs
+
       - name: Show Pages server log on failure
         if: failure()
         run: cat /tmp/wrangler.log || true
