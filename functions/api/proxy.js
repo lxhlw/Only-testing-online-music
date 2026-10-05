@@ -260,54 +260,176 @@ async function fetchFlowerResolverViaSocket(target, request) {
   });
 }
 
+function flowerResolverTargets(target) {
+  var targets = [];
+
+  function add(url) {
+    if (!url) return;
+    for (var i = 0; i < targets.length; i += 1) {
+      if (targets[i] === url) return;
+    }
+    targets.push(url);
+  }
+
+  add(target.toString());
+
+  if (/^\/flower\/v1\/url\//.test(target.pathname)) {
+    var legacyPath = target.pathname.replace(/^\/flower\/v1\/url\//, '/url/');
+    var bases = [
+      'http://ts.tempmusics.tk',
+      'http://tm.tempmusics.tk',
+      'https://ts.tempmusics.tk',
+      'https://tm.tempmusics.tk'
+    ];
+
+    for (var bi = 0; bi < bases.length; bi += 1) {
+      add(bases[bi] + legacyPath + target.search);
+      add(bases[bi] + target.pathname + target.search);
+    }
+  }
+
+  return targets;
+}
+
+function extractFlowerResolverPayload(body) {
+  var text = String(body || '').replace(/^\uFEFF\s*|\s+$/g, '');
+  if (!text) return null;
+
+  function findAudioUrl(value, depth) {
+    if (depth > 6 || value == null) return '';
+
+    if (typeof value === 'string') {
+      var direct = value.replace(/^\s+|\s+$/g, '');
+      if (/^https?:\/\//i.test(direct) &&
+          /\.(?:mp3|m4a|flac|aac|ogg|wav)(?:[?#].*)?$/i.test(direct)) {
+        return direct;
+      }
+
+      var matches = direct.match(/https?:\/\/[^\s"'<>]+/ig) || [];
+      for (var mi = 0; mi < matches.length; mi += 1) {
+        var candidate = matches[mi].replace(/[),.;]+$/g, '');
+        if (/\.(?:mp3|m4a|flac|aac|ogg|wav)(?:[?#].*)?$/i.test(candidate)) {
+          return candidate;
+        }
+      }
+      return '';
+    }
+
+    if (Array.isArray(value)) {
+      for (var ai = 0; ai < value.length; ai += 1) {
+        var fromArray = findAudioUrl(value[ai], depth + 1);
+        if (fromArray) return fromArray;
+      }
+      return '';
+    }
+
+    if (typeof value === 'object') {
+      var preferred = [
+        'url', 'play_url', 'playUrl', 'musicUrl', 'music_url',
+        'audio', 'audioUrl', 'src'
+      ];
+
+      for (var pi = 0; pi < preferred.length; pi += 1) {
+        if (Object.prototype.hasOwnProperty.call(value, preferred[pi])) {
+          var fromPreferred = findAudioUrl(value[preferred[pi]], depth + 1);
+          if (fromPreferred) return fromPreferred;
+        }
+      }
+
+      for (var key in value) {
+        if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+        var fromValue = findAudioUrl(value[key], depth + 1);
+        if (fromValue) return fromValue;
+      }
+    }
+
+    return '';
+  }
+
+  try {
+    var parsed = JSON.parse(text);
+    var parsedUrl = findAudioUrl(parsed, 0);
+    if (parsedUrl) {
+      return {
+        body: text,
+        contentType: 'application/json; charset=utf-8'
+      };
+    }
+  } catch (e) {}
+
+  var bodyUrl = findAudioUrl(text, 0);
+  if (bodyUrl) {
+    return {
+      body: JSON.stringify({ url: bodyUrl }),
+      contentType: 'application/json; charset=utf-8'
+    };
+  }
+
+  return null;
+}
+
 async function fetchFlowerResolverViaHttpBridge(target, request) {
+  var targets = flowerResolverTargets(target);
   var bridges = [
+    function (targetUrl) {
+      return 'https://r.jina.ai/' + targetUrl;
+    },
     function (targetUrl) {
       return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl);
     },
     function (targetUrl) {
       return 'https://corsproxy.io/?url=' + encodeURIComponent(targetUrl);
+    },
+    function (targetUrl) {
+      return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(targetUrl);
     }
   ];
 
   var forwarded = pickForwardHeaders(request);
   var lastError = null;
 
-  for (var bi = 0; bi < bridges.length; bi += 1) {
-    var bridgeUrl = bridges[bi](target.toString());
-    try {
-      var bridgeHeaders = new Headers();
-      forwarded.forEach(function (value, key) {
-        var lower = key.toLowerCase();
-        if (lower === 'host' || lower === 'content-length' || lower === 'connection') return;
-        try { bridgeHeaders.set(key, value); } catch (e) {}
-      });
+  for (var ti = 0; ti < targets.length; ti += 1) {
+    for (var bi = 0; bi < bridges.length; bi += 1) {
+      var targetUrl = targets[ti];
+      var bridgeUrl = bridges[bi](targetUrl);
 
-      var upstream = await fetch(bridgeUrl, {
-        method: 'GET',
-        headers: bridgeHeaders,
-        redirect: 'follow'
-      });
-
-      var body = await upstream.text();
-      if (upstream.status >= 200 && upstream.status < 300 &&
-          /^(?:https?:\/\/|\s*\{)/i.test(body)) {
-        return new Response(body, {
-          status: 200,
-          statusText: 'OK',
-          headers: new Headers({
-            'Content-Type': upstream.headers.get('Content-Type') || 'text/plain; charset=utf-8',
-            'Cache-Control': 'no-store'
-          })
+      try {
+        var bridgeHeaders = new Headers();
+        forwarded.forEach(function (value, key) {
+          var lower = key.toLowerCase();
+          if (lower === 'host' || lower === 'content-length' || lower === 'connection') return;
+          try { bridgeHeaders.set(key, value); } catch (e) {}
         });
-      }
+        bridgeHeaders.set('Accept', 'application/json, text/plain, */*');
 
-      lastError = new Error(
-        'Flower HTTPS bridge HTTP ' + upstream.status + ' via ' + bridgeUrl +
-        (body ? ': ' + body.slice(0, 180) : '')
-      );
-    } catch (e) {
-      lastError = e;
+        var upstream = await fetch(bridgeUrl, {
+          method: 'GET',
+          headers: bridgeHeaders,
+          redirect: 'follow'
+        });
+
+        var body = await upstream.text();
+        var payload = extractFlowerResolverPayload(body);
+
+        if (upstream.status >= 200 && upstream.status < 300 && payload) {
+          return new Response(payload.body, {
+            status: 200,
+            statusText: 'OK',
+            headers: new Headers({
+              'Content-Type': payload.contentType,
+              'Cache-Control': 'no-store'
+            })
+          });
+        }
+
+        lastError = new Error(
+          'Flower HTTPS bridge HTTP ' + upstream.status +
+          ' via ' + bridgeUrl +
+          (body ? ': ' + body.slice(0, 180) : '')
+        );
+      } catch (e) {
+        lastError = e;
+      }
     }
   }
 
