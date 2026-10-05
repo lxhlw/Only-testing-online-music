@@ -723,4 +723,47 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   assert.equal(new URL(target).searchParams.get('quality'), '128k')
 }
 
+{
+  const h = createHarness(
+    { tx: { actions: ['musicUrl'] } },
+    () => {},
+    {
+      time: { status: 500, body: 'must not be used' },
+      search: [
+        {
+          status: 200,
+          body: JSON.stringify({
+            req_0: {
+              data: {
+                midurlinfo: [{ purl: 'M5000039MnQn.mp3' }],
+                sip: ['https://audio.example.test/']
+              }
+            }
+          })
+        }
+      ]
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.resolveMusicUrl(
+      'tx',
+      { songmid: '0039MnQn' },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value)
+    )
+  })
+
+  assert.equal(result.provider, 'tencent-aggregate-official')
+  assert.equal(result.url, 'https://audio.example.test/M5000039MnQn.mp3')
+  assert.equal(h.calls.length, 1)
+
+  const target = new URL(h.calls[0].xhrUrl).searchParams.get('url')
+  assert.equal(target, 'https://u.y.qq.com/cgi-bin/musicu.fcg')
+  const payload = JSON.parse(h.calls[0].xhrBody)
+  assert.equal(payload.req_0.method, 'CgiGetVkey')
+  assert.equal(payload.req_0.param.songmid[0], '0039MnQn')
+  assert.equal(payload.req_0.param.loginflag, 0)
+}
+
 console.log('PASS: LX search routing stays channel-bound and never mixes providers')

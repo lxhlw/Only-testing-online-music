@@ -1781,7 +1781,20 @@
         data.data && data.data.url,
         data.data && data.data.play_url,
         data.data && data.data.playUrl,
-        data.data && data.data.music
+        data.data && data.data.music,
+        data.req_0 && data.req_0.data && data.req_0.data.midurlinfo &&
+          data.req_0.data.midurlinfo[0] && data.req_0.data.midurlinfo[0].purl
+          ? (
+              (Array.isArray(data.req_0.data.sip) && data.req_0.data.sip[0]
+                ? data.req_0.data.sip[0]
+                : 'https://isure.stream.qqmusic.qq.com/') +
+              data.req_0.data.midurlinfo[0].purl
+            )
+          : '',
+        data.req_0 && data.req_0.data && data.req_0.data.midurlinfo &&
+          data.req_0.data.midurlinfo[0] && data.req_0.data.midurlinfo[0].wifiurl
+          ? data.req_0.data.midurlinfo[0].wifiurl
+          : ''
       ];
       for (var i = 0; i < candidates.length; i += 1) {
         var value = candidates[i];
@@ -1805,7 +1818,40 @@
       });
     }
 
+    var officialGuid = 'lxweb' + String(Date.now ? Date.now() : new Date().getTime());
+    var officialFilePrefix = requestedQuality === '128k' || requestedQuality === '192k' ? 'M500' :
+      (requestedQuality === '320k' ? 'M800' :
+      (requestedQuality.indexOf('flac') === 0 || requestedQuality.indexOf('hires') === 0 ? 'F000' : 'M500'));
+    var officialFileExt = officialFilePrefix === 'F000' ? '.flac' : '.mp3';
+
     var backends = [
+      {
+        provider: 'tencent-aggregate-official',
+        method: 'POST',
+        url: 'https://u.y.qq.com/cgi-bin/musicu.fcg',
+        body: JSON.stringify({
+          req_0: {
+            module: 'vkey.GetVkeyServer',
+            method: 'CgiGetVkey',
+            param: {
+              filename: [officialFilePrefix + songmid + officialFileExt],
+              guid: officialGuid,
+              songmid: [songmid],
+              songtype: [0],
+              uin: '0',
+              loginflag: 0,
+              platform: '20'
+            }
+          },
+          loginUin: '0',
+          comm: { uin: '0', format: 'json', ct: 24, cv: 0 }
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'QQMusic 14090508(android 12)',
+          'Accept': 'application/json'
+        }
+      },
       {
         provider: 'tencent-aggregate-xinghai',
         method: 'GET',
