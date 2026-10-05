@@ -1078,6 +1078,102 @@
   }
 
 
+  function resolveKugouGatewayUrl(hash, musicInfo, quality, callback) {
+    hash = String(hash || '').replace(/^\s+|\s+$/g, '');
+    if (!hash) return callback(new Error('No Kugou hash for gateway playback'));
+
+    var info = musicInfo || {};
+    var md5Fn = null;
+    try {
+      md5Fn = global.createLXRuntime({ env: 'web' }).utils.crypto.md5;
+    } catch (e) {}
+    if (typeof md5Fn !== 'function') {
+      return callback(new Error('LX MD5 runtime unavailable for Kugou gateway'));
+    }
+
+    var mid = '239526275778893399526700786998289824956';
+    var userid = '0';
+    var secret = '57ae12eb6890223e355ccfcb74edf70d';
+    var key = '';
+    try {
+      key = String(md5Fn(hash.toLowerCase() + secret + mid + userid));
+    } catch (e) {
+      return callback(new Error('Kugou gateway key generation failed'));
+    }
+
+    var albumId = String(
+      info.albumId || info.album_id ||
+      (info.raw && (info.raw.album_id || info.raw.albumId)) || ''
+    ).replace(/^\s+|\s+$/g, '');
+    var albumAudioId = String(
+      info.albumAudioId || info.album_audio_id ||
+      (info.raw && (info.raw.album_audio_id || info.raw.albumAudioId)) || ''
+    ).replace(/^\s+|\s+$/g, '');
+
+    var url = 'https://gateway.kugou.com/i/v2/' +
+      '?dfid=' +
+      '&pid=2' +
+      '&mid=' + encodeURIComponent(mid) +
+      '&cmd=26' +
+      '&token=' +
+      '&hash=' + encodeURIComponent(hash.toLowerCase()) +
+      '&area_code=1' +
+      '&behavior=play' +
+      '&appid=1005' +
+      '&module=' +
+      '&vipType=6' +
+      '&ptype=1' +
+      '&userid=0' +
+      '&mtype=1' +
+      '&album_id=' + encodeURIComponent(albumId) +
+      '&pidversion=3001' +
+      '&key=' + encodeURIComponent(key) +
+      '&version=10209' +
+      '&album_audio_id=' + encodeURIComponent(albumAudioId) +
+      '&with_res_tag=1';
+
+    requestViaProxy(
+      url,
+      'GET',
+      null,
+      {
+        'x-router': 'tracker.kugou.com',
+        'User-Agent': 'Android511-AndroidPhone-10209-14-0-NetMusic-wifi',
+        'Accept': 'application/json, text/plain, */*'
+      },
+      true,
+      function (err, data) {
+        if (err) return callback(err);
+
+        var directUrl = '';
+        if (data && Array.isArray(data.url)) directUrl = String(data.url[0] || '').trim();
+        else if (data && typeof data.url === 'string') directUrl = String(data.url).trim();
+        else if (data && data.data && Array.isArray(data.data.url)) directUrl = String(data.data.url[0] || '').trim();
+        else if (data && data.data && typeof data.data.url === 'string') directUrl = String(data.data.url).trim();
+
+        if (!directUrl || !/^https?:\/\//i.test(directUrl)) {
+          return callback(new Error('Kugou gateway returned no playable URL'));
+        }
+        if (isCrossPlatformPlaybackUrl('kg', directUrl)) {
+          return callback(new Error('Kugou gateway returned a cross-platform URL'));
+        }
+
+        var actualBr = data && data.br != null ? String(data.br) :
+          (data && data.data && data.data.br != null ? String(data.data.br) : String(quality || ''));
+
+        callback(null, {
+          url: directUrl,
+          source: 'kg',
+          provider: 'kugou-native',
+          requestedQuality: String(quality || ''),
+          actualBr: actualBr,
+          id: hash,
+          raw: data
+        });
+      }
+    );
+  }
+
   function resolveKugouTrackerUrl(hash, quality, callback) {
     hash = String(hash || '').replace(/^\s+|\s+$/g, '');
     if (!hash) return callback(new Error('No Kugou hash for tracker playback'));
@@ -1145,7 +1241,7 @@
         function (err, detail) {
           if (!err) {
             var directUrl = extractTrackerUrl(detail);
-            if (directUrl) {
+            if (directUrl && !isCrossPlatformPlaybackUrl('kg', directUrl)) {
               return callback(null, {
                 url: directUrl,
                 source: 'kg',
@@ -1248,7 +1344,7 @@
         function (err, detail) {
           if (err) return done(err);
           var directUrl = extractDirectUrl(detail);
-          if (!directUrl) return done(new Error('Kugou native API returned no playable URL for ' + hash));
+          if (!directUrl || isCrossPlatformPlaybackUrl('kg', directUrl)) return done(new Error('Kugou native API returned no playable URL for ' + hash));
           done(null, {
             url: directUrl,
             source: 'kg',
@@ -1284,7 +1380,7 @@
           } catch (e) {}
           var detail = parsed && parsed.data ? parsed.data : parsed;
           var directUrl = extractDirectUrl(detail);
-          if (!directUrl) return callback(fallbackError || new Error('Kugou web API returned no playable URL for ' + hash));
+          if (!directUrl || isCrossPlatformPlaybackUrl('kg', directUrl)) return callback(fallbackError || new Error('Kugou web API returned no playable URL for ' + hash));
           callback(null, {
             url: directUrl,
             source: 'kg',
@@ -1298,11 +1394,16 @@
       );
     }
 
-    resolveKugouTrackerUrl(baseHash, quality, function (trackerErr, trackerResult) {
+    resolveKugouGatewayUrl(baseHash, info, quality, function (gatewayErr, gatewayResult) {
+      if (!gatewayErr && gatewayResult && gatewayResult.url) {
+        return callback(null, gatewayResult);
+      }
+      resolveKugouTrackerUrl(baseHash, quality, function (trackerErr, trackerResult) {
       if (!trackerErr && trackerResult && trackerResult.url) {
         return callback(null, trackerResult);
       }
-      fallbackAfterTracker(trackerErr);
+      fallbackAfterTracker(trackerErr || gatewayErr);
+      });
     });
   }
 

@@ -385,6 +385,43 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 
 
 {
+  const h = createHarness(
+    { kg: { actions: ['musicUrl'] } },
+    () => {},
+    {
+      time: { status: 500, body: 'must not be used' },
+      search: {
+        status: 200,
+        body: JSON.stringify({
+          url: ['https://audio.example.test/kg-gateway.mp3'],
+          br: 128
+        })
+      }
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.resolveMusicUrl(
+      'kg',
+      { hash: 'ABCDEF0123456789', albumId: '939265', albumAudioId: '0' },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value)
+    )
+  })
+
+  assert.equal(result.provider, 'kugou-native')
+  assert.equal(result.url, 'https://audio.example.test/kg-gateway.mp3')
+  assert.equal(result.id, 'ABCDEF0123456789')
+  assert.equal(h.calls.length, 1)
+  const gatewayTarget = new URL(h.calls[0].xhrUrl).searchParams.get('url')
+  assert.match(gatewayTarget, /gateway\.kugou\.com\/i\/v2\//)
+  assert.equal(new URL(gatewayTarget).searchParams.get('cmd'), '26')
+  assert.equal(new URL(gatewayTarget).searchParams.get('appid'), '1005')
+  const forwarded = JSON.parse(h.calls[0].xhrHeaders['X-LX-Headers'])
+  assert.equal(forwarded['x-router'], 'tracker.kugou.com')
+}
+
+{
   const cases = [
     {
       source: 'wy',
