@@ -781,14 +781,21 @@
       + ' ' + escapeHtml(quality) + '：' + escapeHtml(music.name) + '……'
     );
 
-    // Flower's kw musicUrl resolver is currently hosted on an HTTP
-    // origin that can stall behind Cloudflare. Warm the existing native
-    // Kuwo resolver in parallel for Flower only; whichever valid playback
-    // URL settles first wins, and stale source callbacks are ignored.
+    // Flower's musicUrl resolver is hosted on an HTTP origin that can
+    // stall behind Cloudflare. For every supported Flower channel, start the
+    // project's same-channel fallback resolver in parallel. A valid fallback
+    // URL may win before the source request settles; stale callbacks are ignored.
+    var flowerParallelFallback = {
+      kw: true,
+      kg: true,
+      tx: true,
+      wy: true,
+      mg: true
+    };
     if (
-      source === 'kw' &&
       active.url &&
       /flower\/latest\.js/i.test(String(active.url)) &&
+      flowerParallelFallback[source] &&
       global.LXMusicSearch &&
       typeof global.LXMusicSearch.resolveMusicUrl === 'function'
     ) {
