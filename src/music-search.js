@@ -1892,6 +1892,9 @@
             '&vkey=' + encodeURIComponent(vkey) +
             '&uin=0&fromtag=66';
         }
+      },
+      {
+        provider: 'tencent-aggregate-xinghai',
         method: 'GET',
         url: 'https://yy.zddyr.top/lx/api/?source=qq&songmid=' + encodeURIComponent(songmid) + '&quality=' + encodeURIComponent(requestedQuality),
         headers: { 'User-Agent': 'Mozilla/5.0' }
@@ -1925,7 +1928,7 @@
       }
       requestViaProxy(backend.url, backend.method, backend.body || null, backend.headers, true, function (err, data) {
         if (!err) {
-          var directUrl = extractUrl(data);
+          var directUrl = backend.extractUrl ? backend.extractUrl(data) : extractUrl(data);
           if (directUrl) {
             return acceptUrl(directUrl, backend.provider, data, function (acceptErr, result) {
               if (!acceptErr) return callback(null, result);
