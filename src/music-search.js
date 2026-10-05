@@ -1215,6 +1215,15 @@
       );
     }
 
+    var albumId = String(
+      info.albumId || info.album_id ||
+      (info.raw && (info.raw.album_id || info.raw.albumId)) || ''
+    ).replace(/^\s+|\s+$/g, '');
+    var albumAudioId = String(
+      info.albumAudioId || info.album_audio_id ||
+      (info.raw && (info.raw.album_audio_id || info.raw.albumAudioId)) || ''
+    ).replace(/^\s+|\s+$/g, '');
+
     function requestMetadata() {
       requestViaProxy(
         'https://gateway.kugou.com/v3/album_audio/audio',
