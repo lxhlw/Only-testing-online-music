@@ -851,17 +851,12 @@
           if (state.token !== playbackToken) return;
           if (!resolverErr && resolverResult && resolverResult.url &&
               String(resolverResult.provider || '') !== failedProvider) {
-            var resolverLabel = resolverResult.provider === 'huibq'
-              ? 'Huibq 平台兜底'
-              : (resolverResult.provider === 'tune-free'
-                ? 'TuneHub 平台兜底'
-                : (resolverResult.provider === 'kugou-native'
-                  ? '酷狗直连兜底'
-                  : (resolverResult.provider === 'kuwo-native'
-                    ? '酷我直连兜底'
-                    : (resolverResult.provider === 'netease-native'
-                      ? '网易云直连兜底'
-                      : 'GD Studio 平台兜底')));
+            var resolverLabel = 'GD Studio 平台兜底';
+            if (resolverResult.provider === 'huibq') resolverLabel = 'Huibq 平台兜底';
+            else if (resolverResult.provider === 'tune-free') resolverLabel = 'TuneHub 平台兜底';
+            else if (resolverResult.provider === 'kugou-native') resolverLabel = '酷狗直连兜底';
+            else if (resolverResult.provider === 'kuwo-native') resolverLabel = '酷我直连兜底';
+            else if (resolverResult.provider === 'netease-native') resolverLabel = '网易云直连兜底';
             return useResolvedUrl(
               resolverResult.url,
               failedQuality,
