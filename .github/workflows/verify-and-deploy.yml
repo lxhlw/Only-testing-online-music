@@ -66,6 +66,9 @@ jobs:
           cat /tmp/wrangler.log
           exit 1
 
+      - name: Run Migu proxy decryption regression test
+        run: node scripts/test-migu-proxy.mjs
+
       - name: Run deterministic search and resolver tests
         run: node scripts/test-music-search-native.mjs
 

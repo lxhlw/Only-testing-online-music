@@ -607,9 +607,20 @@ var MIGU_H5_V24_HOST = 'c.musicapp.migu.cn';
 var MIGU_H5_V24_PATH = '/strategy/listen-url/h5/v2.4';
 var MIGU_H5_V24_KEY = new TextEncoder().encode('Jk8qzuePiJ1qE3mDYhLQ3T73DtDoAhLP');
 
-function decodeMiguH5V24(bytes) {
+function decodeMiguH5V24(bytes, signedResponse) {
   var raw = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || []);
-  if (raw.length < 4 || raw[0] !== 0xab || raw[1] !== 0xcd || raw[2] !== 0x01) {
+  var hasMagicHeader = raw.length >= 4 &&
+    raw[0] === 0xab && raw[1] === 0xcd && raw[2] === 0x01;
+  var hasSignedHeader = signedResponse === true || String(signedResponse || '').trim() === '1';
+
+  // Current Migu H5 clients mark encrypted responses either with the AB CD 01
+  // payload prefix or with response header "signature: 1". Both forms use the
+  // same four-byte seed envelope; the signed form may omit the magic prefix.
+  if (!hasMagicHeader && !hasSignedHeader) {
+    return new TextDecoder('utf-8').decode(raw);
+  }
+
+  if (raw.length < 4) {
     return new TextDecoder('utf-8').decode(raw);
   }
 
@@ -638,7 +649,11 @@ async function fetchMiguH5V24(target, request) {
       });
     }
 
-    var decodedText = decodeMiguH5V24(new Uint8Array(await upstream.arrayBuffer()));
+    var signatureHeader = upstream.headers.get('signature') || '';
+    var decodedText = decodeMiguH5V24(
+      new Uint8Array(await upstream.arrayBuffer()),
+      String(signatureHeader).trim() === '1'
+    );
     var parsed;
     try {
       parsed = JSON.parse(decodedText);
