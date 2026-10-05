@@ -1143,7 +1143,7 @@
       return '';
     }
 
-    function requestV5(albumId, albumAudioId) {
+    function requestV5(albumId, albumAudioId, done) {
       var clientTime = Math.floor((Date.now ? Date.now() : new Date().getTime()) / 1000);
       var params = {
         album_id: String(albumId || ''),
@@ -1186,12 +1186,12 @@
         },
         true,
         function (err, data) {
-          if (err) return callback(err);
+          if (err) return done(err);
 
           var directUrl = extractUrl(data);
           if (!directUrl || isCrossPlatformPlaybackUrl('kg', directUrl)) {
             var status = data && data.status != null ? String(data.status) : '';
-            return callback(new Error(
+            return done(new Error(
               'Kugou V5 returned no playable URL' + (status ? ' (status ' + status + ')' : '')
             ));
           }
@@ -1200,7 +1200,7 @@
             ? String(data.br)
             : (data && data.data && data.data.br != null ? String(data.data.br) : requestedPlatformQuality);
 
-          callback(null, {
+          done(null, {
             url: directUrl,
             source: 'kg',
             provider: 'kugou-native',
@@ -1224,7 +1224,7 @@
       (info.raw && (info.raw.album_audio_id || info.raw.albumAudioId)) || ''
     ).replace(/^\s+|\s+$/g, '');
 
-    function requestMetadata() {
+    function requestMetadata(done) {
       requestViaProxy(
         'https://gateway.kugou.com/v3/album_audio/audio',
         'POST',
@@ -1253,13 +1253,13 @@
         },
         true,
         function (err, data) {
-          if (err) return callback(err);
+          if (err) return done(err);
           var item = data && data.data && Array.isArray(data.data[0]) ? data.data[0][0] : null;
           var resolvedAlbumId = item && item.album_info ? item.album_info.album_id : '';
           var resolvedAlbumAudioId = item ? (item.album_audio_id || '') : '';
           if (!resolvedAlbumId && item) resolvedAlbumId = item.album_id || '';
-          if (!resolvedAlbumId) return callback(new Error('Kugou V5 metadata returned no album id'));
-          requestV5(resolvedAlbumId, resolvedAlbumAudioId || '0');
+          if (!resolvedAlbumId) return done(new Error('Kugou V5 metadata returned no album id'));
+          requestV5(resolvedAlbumId, resolvedAlbumAudioId || '0', done);
         }
       );
     }
@@ -1268,7 +1268,12 @@
       if (!v5Err && v5Result && v5Result.url) {
         return callback(null, v5Result);
       }
-      requestMetadata();
+      requestMetadata(function (metadataErr, metadataResult) {
+        if (!metadataErr && metadataResult && metadataResult.url) {
+          return callback(null, metadataResult);
+        }
+        callback(metadataErr || v5Err || new Error('Kugou V5 resolution failed'));
+      });
     });
   }
 

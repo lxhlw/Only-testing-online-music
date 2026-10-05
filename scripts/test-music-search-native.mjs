@@ -387,6 +387,70 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 
 {
   const h = createHarness(
+    {
+      kg: { actions: ['musicUrl'] }
+    },
+    () => {},
+    {
+      time: { status: 500, body: 'must not be used' },
+      search: [
+        { status: 502, body: 'initial v5 unavailable' },
+        {
+          status: 200,
+          body: JSON.stringify({
+            data: [[
+              {
+                album_info: { album_id: '939265' },
+                album_audio_id: '7788'
+              }
+            ]]
+          })
+        },
+        {
+          status: 200,
+          body: JSON.stringify({
+            url: ['https://audio.example.test/kg-v5-after-meta.mp3'],
+            br: 128
+          })
+        }
+      ]
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.resolveMusicUrl(
+      'kg',
+      {
+        hash: 'ABCDEF0123456789',
+        albumId: '939265',
+        albumAudioId: '0'
+      },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value)
+    )
+  })
+
+  assert.equal(result.provider, 'kugou-native')
+  assert.equal(result.resolver, 'kugou-v5')
+  assert.equal(result.url, 'https://audio.example.test/kg-v5-after-meta.mp3')
+  assert.equal(h.calls.length, 3)
+
+  const firstTarget = new URL(h.calls[0].xhrUrl).searchParams.get('url')
+  assert.match(firstTarget, /tracker\.kugou\.com\/v5\/url/)
+  assert.equal(new URL(firstTarget).searchParams.get('hash'), 'abcdef0123456789')
+
+  const metadataTarget = new URL(h.calls[1].xhrUrl).searchParams.get('url')
+  assert.match(metadataTarget, /gateway\.kugou\.com\/v3\/album_audio\/audio/)
+
+  const retryTarget = new URL(h.calls[2].xhrUrl).searchParams.get('url')
+  assert.match(retryTarget, /tracker\.kugou\.com\/v5\/url/)
+  assert.equal(new URL(retryTarget).searchParams.get('hash'), 'abcdef0123456789')
+  assert.equal(new URL(retryTarget).searchParams.get('album_id'), '939265')
+  assert.equal(new URL(retryTarget).searchParams.get('album_audio_id'), '7788')
+}
+
+{
+  const h = createHarness(
     { kg: { actions: ['musicUrl'] } },
     () => {},
     {
