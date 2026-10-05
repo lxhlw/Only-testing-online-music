@@ -756,7 +756,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   })
 
   assert.equal(result.provider, 'tencent-aggregate-official')
-  assert.equal(result.url, 'https://audio.example.test/M5000039MnQn.mp3')
+  assert.equal(result.url, 'https://isure.stream.qqmusic.qq.com/M5000039MnQn.mp3')
   assert.equal(h.calls.length, 1)
 
   const target = new URL(h.calls[0].xhrUrl).searchParams.get('url')
