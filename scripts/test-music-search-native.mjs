@@ -907,7 +907,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 
   assert.equal(result.provider, 'tencent-aggregate-express-vkey')
   assert.equal(h.calls.length, 2)
-  assert.match(result.url, /^http:\/\/dl\.stream\.qqmusic\.qq\.com\/M5000039MnQn\.mp3\?/)
+  assert.match(result.url, /^http:\/\/dl\.stream\.qqmusic\.qq\.com\/C4000039MnQn\.m4a\?/)
   const resultUrl = new URL(result.url)
   assert.equal(resultUrl.searchParams.get('guid').length, 10)
   assert.equal(resultUrl.searchParams.get('vkey'), 'EXPRESS_VKEY_123')
@@ -915,7 +915,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   assert.equal(resultUrl.searchParams.get('fromtag'), '66')
   const expressTarget = new URL(h.calls[h.calls.length - 1].xhrUrl).searchParams.get('url')
   assert.match(expressTarget, /c\.y\.qq\.com\/base\/fcgi-bin\/fcg_music_express_mobile3\.fcg/)
-  assert.equal(new URL(expressTarget).searchParams.get('filename'), 'M5000039MnQn.mp3')
+  assert.equal(new URL(expressTarget).searchParams.get('filename'), 'C4000039MnQn.m4a')
 
 }
 

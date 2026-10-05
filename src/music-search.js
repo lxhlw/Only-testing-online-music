@@ -1896,7 +1896,13 @@
     var expressGuid = String(
       Math.floor((Date.now ? Date.now() : new Date().getTime()) % 10000000000)
     );
-    var expressFileName = officialFilePrefix + officialFileId + officialFileExt;
+    // The classic QQ Express vkey endpoint accepts the songmid-based
+    // C400 filename even when the newer musicu request uses MediaMid.
+    var expressFilePrefix = requestedQuality === '128k' || requestedQuality === '192k'
+      ? 'C400'
+      : officialFilePrefix;
+    var expressFileExt = expressFilePrefix === 'C400' ? '.m4a' : officialFileExt;
+    var expressFileName = expressFilePrefix + songmid + expressFileExt;
 
     var backends = [
       {
