@@ -2036,16 +2036,16 @@
           if (!Array.isArray(midurlinfo)) return '';
           for (var i = 0; i < midurlinfo.length; i += 1) {
             var item = midurlinfo[i] || {};
-            if (item.purl && /^https?:\\/\\//i.test(String(item.purl).trim())) {
+            if (item.purl && /^https?:\/\/i.test(String(item.purl).trim())) {
               return String(item.purl).trim();
             }
             if (item.purl) {
               var sip = Array.isArray(item.sip) && item.sip.length ? String(item.sip[0] || '').trim() : '';
-              if (sip && /^https?:\\/\\//i.test(sip)) {
-                return sip + String(item.purl).replace(/^\\/+/, '');
+              if (sip && /^https?:\/\/i.test(sip)) {
+                return sip + String(item.purl).replace(/^\/+/, '');
               }
             }
-            if (item.wifiurl && /^https?:\\/\\//i.test(String(item.wifiurl).trim())) {
+            if (item.wifiurl && /^https?:\/\/i.test(String(item.wifiurl).trim())) {
               return String(item.wifiurl).trim();
             }
           }
@@ -2120,7 +2120,7 @@
             root.data && root.data.url
           ];
           for (var i = 0; i < candidates.length; i += 1) {
-            if (typeof candidates[i] === 'string' && /^https?:\\/\\//i.test(candidates[i].trim())) {
+            if (typeof candidates[i] === 'string' && /^https?:\/\/i.test(candidates[i].trim())) {
               return candidates[i].trim();
             }
           }
@@ -2149,7 +2149,7 @@
             root.data && root.data.song_play_url
           ];
           for (var i = 0; i < candidates.length; i += 1) {
-            if (typeof candidates[i] === 'string' && /^https?:\\/\\//i.test(candidates[i].trim())) {
+            if (typeof candidates[i] === 'string' && /^https?:\/\/i.test(candidates[i].trim())) {
               return candidates[i].trim();
             }
           }
