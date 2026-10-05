@@ -1,0 +1,94 @@
+name: Test Original LX Sources In Chromium (manual)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sixyin-browser:
+    name: LX source browser ${{ matrix.source.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    strategy:
+      fail-fast: false
+      matrix:
+        source:
+          - name: "sixyin-1.2.0"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/1.2.0.js"
+          - name: "sixyin-1.2.1"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/1.2.1.js"
+          - name: "lx-2"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/lx/2.js"
+          - name: "lx-3"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/lx/3.js"
+          - name: "lx-4"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/lx/4.js"
+          - name: "lx-latest"
+            url: "https://ghproxy.net/raw.githubusercontent.com/pdone/lx-music-source/main/lx/latest.js"
+          - name: "flower-latest"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js"
+          - name: "flower-1"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/1.js"
+          - name: "qdy-latest"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/qdy/latest.js"
+          - name: "qdy-9.3"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/qdy/9.3.js"
+          - name: "huanyin-latest"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/huanyin/latest.js"
+          - name: "huanyin-3"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/huanyin/3.js"
+          - name: "grass-latest"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/grass/latest.js"
+          - name: "grass-1"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/grass/1.js"
+          - name: "huibq-1.2.0"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/1.2.0.js"
+          - name: "huibq-latest"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/latest.js"
+          - name: "ikun-latest"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/ikun/latest.js"
+          - name: "juhe-latest"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/juhe/latest.js"
+          - name: "changqing-latest"
+            url: "https://raw.githubusercontent.com/pdone/lx-music-source/main/changqing/latest.js"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Validate browser test script
+        run: node --check scripts/test-sixyin-browser.mjs
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start local site
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/wrangler.log 2>&1 &
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8788/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/wrangler.log
+          exit 1
+
+      - name: Test original SixYin in real Chromium
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+          LX_SOURCE_URL: ${{ matrix.source.url }}
+          LX_SOURCE_NAME: ${{ matrix.source.name }}
+          SIXYIN_INIT_TIMEOUT_MS: 30000
+          PLAYBACK_CANDIDATES: 3
+        run: node scripts/test-sixyin-browser.mjs
+
+      - name: Show local server log on failure
+        if: failure()
+        run: cat /tmp/wrangler.log || true

@@ -1,0 +1,61 @@
+name: Core Validation
+
+on:
+  workflow_dispatch:
+
+jobs:
+  core:
+    name: Deterministic project checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Check core JavaScript syntax
+        run: |
+          node --check src/promise-lite.js
+          node --check src/app-version.js
+          node --check src/version-check.js
+          node --check src/source-transpiler.js
+          node --check src/app.js
+          node --check src/lx-runtime.js
+          node --check src/music-library.js
+          node --check src/music-lyrics.js
+          node --check src/music-search.js
+          node --check src/play-settings.js
+          node --check src/sha1.js
+          node --check src/source-manager.js
+
+      - name: Validate legacy page syntax
+        run: node scripts/check-legacy-test.mjs
+
+      - name: Test Promise compatibility
+        run: node scripts/test-promise-lite.mjs
+
+      - name: Test source transpilation
+        run: node scripts/test-source-transpiler.mjs
+
+      - name: Test native LX search
+        run: node scripts/test-music-search-native.mjs
+
+      - name: Test version metadata
+        run: node scripts/test-version.mjs
+
+      - name: Test playback settings
+        run: node scripts/test-settings.mjs
+
+      - name: Test music library
+        run: node scripts/test-music-library.mjs
+
+      - name: Test lyrics parser
+        run: node scripts/test-music-lyrics.mjs

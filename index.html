@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Only Testing Online Music</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="topbar-row">
+        <div>
+          <div class="brand">LX Music Web</div>
+          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.7</span></div>
+        </div>
+        <a class="topbar-link" href="./settings.html">设置</a>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="card">
+        <div class="version-panel">
+          <div>
+            <div class="version-label">当前版本</div>
+            <strong id="version-current">v0.2.7</strong>
+            <div id="version-release-date" class="version-release">2026-10-05</div>
+          </div>
+          <div class="version-actions">
+            <span id="version-status" class="version-status">尚未检查最新版</span>
+            <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
+          </div>
+        </div>
+
+        <h1>在线音乐测试</h1>
+        <p class="muted">导入原版 LX Music 音源脚本后，按照音源声明显示可用渠道，并使用对应平台 MusicInfo 调用 musicUrl。</p>
+
+        <label for="source-url">LX 音源 URL</label>
+        <input id="source-url" type="text" autocapitalize="off" autocomplete="off"
+          spellcheck="false"
+          value="https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/latest.js">
+
+        <div class="actions">
+          <button id="install-btn" type="button">导入音源</button>
+          <button id="verified-install-btn" type="button" class="secondary">一键导入已验证 Huibq</button>
+          <button id="sixyin-install-btn" type="button" class="secondary">一键导入六音</button>
+          <button id="clear-btn" type="button" class="secondary">清空已安装音源</button>
+        </div>
+
+        <div id="status" class="status">等待导入。</div>
+      </section>
+
+      <section class="card">
+        <div class="card-title-row">
+          <h2>已安装音源</h2>
+          <span id="source-count" class="badge">0</span>
+        </div>
+        <div id="source-list" class="source-list"></div>
+      </section>
+
+      <section class="card">
+        <h2>搜索与播放渠道</h2>
+        <p class="muted">下面的渠道完全按照当前 LX 音源的 sources 声明动态显示。先选择渠道，再搜索和播放。</p>
+        <div class="channel-section">
+          <div class="channel-title">支持渠道</div>
+          <div id="channel-list" class="channel-list"></div>
+        </div>
+        <div class="channel-section">
+          <div class="channel-title">音质</div>
+          <div id="quality-summary" class="quality-summary"></div>
+          <div class="setting-inline">
+            <span id="quality-settings-label" class="muted">音质由“设置”统一管理。</span>
+            <a class="button-link compact-link" href="./settings.html">打开音质设置</a>
+          </div>
+        </div>
+        <div class="actions">
+          <input id="search-input" type="text" value="成都"
+            autocapitalize="off" autocomplete="off" spellcheck="false"
+            aria-label="搜索关键词">
+          <button id="search-btn" type="button">按当前渠道搜索</button>
+          <button id="quick-test-btn" type="button">一键测试当前渠道</button>
+        </div>
+        <div id="search-results" class="source-list" aria-live="polite"></div>
+      </section>
+
+
+      <section class="card lyrics-card">
+        <div class="card-title-row">
+          <h2>歌词</h2>
+          <button id="lyrics-refresh-btn" type="button" class="secondary compact-button">刷新歌词</button>
+        </div>
+        <div id="lyrics-title" class="lyrics-title">未选择歌曲</div>
+        <div id="lyrics-status" class="lyrics-status">播放支持歌词的 LX 音源后会自动尝试加载歌词。</div>
+        <div id="lyrics-lines" class="lyrics-lines"></div>
+      </section>
+
+      <section class="card library-card">
+        <div class="card-title-row">
+          <h2>播放库</h2>
+          <span class="muted">本机保存</span>
+        </div>
+
+        <div class="library-section">
+          <div class="library-heading">
+            <strong>播放队列</strong>
+            <button id="clear-queue-btn" type="button" class="secondary compact-button">清空</button>
+          </div>
+          <div id="queue-list" class="library-list"></div>
+        </div>
+
+        <div class="library-section">
+          <div class="library-heading">
+            <strong>收藏</strong>
+            <button id="clear-favorites-btn" type="button" class="secondary compact-button">清空</button>
+          </div>
+          <div id="favorite-list" class="library-list"></div>
+        </div>
+
+        <div class="library-section">
+          <div class="library-heading">
+            <strong>最近播放</strong>
+            <button id="clear-history-btn" type="button" class="secondary compact-button">清空</button>
+          </div>
+          <div id="history-list" class="library-list"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Android 4.4 / Via 真机测试</h2>
+        <p class="muted">先在旧设备上运行浏览器能力自检，再进入音乐测试页。</p>
+        <div class="actions">
+          <a class="button-link" href="./legacy-test.html">打开老浏览器自检</a>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>真实音源测试基准</h2>
+        <p class="muted">原版 LX 音源搜索基准：<strong>成都</strong>。不会转换 LX 音源协议。</p>
+        <p class="muted">六音专项 URL：<code>https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/latest.js</code></p>
+      </section>
+
+      <section class="card">
+        <h2>LX Runtime</h2>
+        <pre id="runtime-info" class="runtime-info"></pre>
+      </section>
+
+      <section class="card">
+        <h2>Phase 1 验证</h2>
+        <div class="check-row"><span>静态网页</span><b class="ok">READY</b></div>
+        <div class="check-row"><span>原始 LX 源保存</span><b id="check-storage" class="pending">WAIT</b></div>
+        <div class="check-row"><span>globalThis.lx Runtime</span><b id="check-runtime" class="pending">WAIT</b></div>
+        <div class="check-row"><span>音源 inited</span><b id="check-inited" class="pending">WAIT</b></div>
+      </section>
+    </main>
+
+    <footer class="player">
+      <div class="player-text">
+        <div id="player-title">未播放</div>
+        <div id="player-artist" class="muted">—</div>
+      </div>
+      <div class="player-controls">
+      <button id="prev-track-btn" type="button" class="secondary player-nav" aria-label="上一首">上一首</button>
+      <audio id="audio" controls preload="none"></audio>
+      <button id="next-track-btn" type="button" class="secondary player-nav" aria-label="下一首">下一首</button>
+    </div>
+    </footer>
+  </div>
+
+  <script src="vendor/forge.min.js"></script>
+  <script src="src/promise-lite.js"></script>
+  <script src="src/app-version.js"></script>
+  <script src="src/version-check.js"></script>
+  <script src="src/source-transpiler.js"></script>
+  <script src="src/sha1.js"></script>
+  <script src="src/play-settings.js"></script>
+  <script src="src/music-search.js"></script>
+  <script src="src/lx-runtime.js"></script>
+  <script src="src/source-manager.js"></script>
+  <script src="src/music-library.js"></script>
+  <script src="src/music-lyrics.js"></script>
+  <script src="src/app.js?v=0.2.7"></script>
+</body>
+</html>

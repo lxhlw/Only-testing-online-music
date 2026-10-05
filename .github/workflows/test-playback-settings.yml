@@ -1,0 +1,17 @@
+name: Test Playback Settings (manual)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  settings:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Test playback settings
+        run: node scripts/test-settings.mjs

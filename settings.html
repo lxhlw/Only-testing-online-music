@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>播放设置 - Only Testing Online Music</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="topbar-row">
+        <div>
+          <div class="brand">LX Music Web</div>
+          <div class="subtitle">播放设置 · <span id="app-version">v0.2.1</span></div>
+        </div>
+        <a class="topbar-link" href="./index.html">返回播放器</a>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="card">
+        <h1>播放设置</h1>
+        <p class="muted">音质设置独立保存到当前设备。默认优先当前音源支持的最高音质。</p>
+      </section>
+
+      <section class="card">
+        <h2>音质</h2>
+        <div class="setting-row quality-choice-row">
+          <div>
+            <div class="setting-label">优先播放的音质（如果可用）</div>
+            <div class="setting-help">与 LX Music 的播放音质逻辑保持一致：先尝试你指定的档位；选择“最高音质”时自动使用当前音源支持的最高档位。</div>
+          </div>
+          <div id="quality-choice" class="quality-choice-group" role="radiogroup" aria-label="优先播放的音质">
+            <label class="quality-option"><input type="radio" name="play-quality" value="highest"><span>最高音质</span></label>
+            <label class="quality-option"><input type="radio" name="play-quality" value="128k"><span>128k</span></label>
+            <label class="quality-option"><input type="radio" name="play-quality" value="192k"><span>192k</span></label>
+            <label class="quality-option"><input type="radio" name="play-quality" value="256k"><span>256k</span></label>
+            <label class="quality-option"><input type="radio" name="play-quality" value="320k"><span>320k</span></label>
+            <label class="quality-option"><input type="radio" name="play-quality" value="flac"><span>FLAC</span></label>
+            <label class="quality-option"><input type="radio" name="play-quality" value="flac24bit"><span>FLAC 24bit</span></label>
+            <label class="quality-option"><input type="radio" name="play-quality" value="flac32bit"><span>FLAC 32bit</span></label>
+          </div>
+        </div>
+
+        <div class="setting-row setting-row-checkbox">
+          <div>
+            <div class="setting-label">播放失败时自动切换较低音质</div>
+            <div class="setting-help">音源返回失败、播放地址无效或 HTML5 Audio 加载失败时，按高→低顺序继续尝试；仅自动播放权限被拒绝时不会降级。</div>
+          </div>
+          <input id="auto-fallback" type="checkbox">
+        </div>
+
+        <div id="setting-status" class="status">正在读取设置……</div>
+
+        <div class="actions">
+          <button id="save-btn" type="button">保存设置</button>
+          <button id="reset-btn" type="button" class="secondary">恢复默认</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>当前默认逻辑</h2>
+        <div class="info-box">
+          <div>① 优先选择当前音源支持的最高音质</div>
+          <div>② 获取播放地址失败 → 尝试下一档较低音质</div>
+          <div>③ 播放器加载失败 → 尝试下一档较低音质</div>
+          <div>④ 当前音源只支持单一音质 → 直接使用该音质</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="src/app-version.js"></script>
+  <script src="src/play-settings.js"></script>
+  <script>
+  (function (global) {
+    'use strict';
+
+    var qualityRadios = document.querySelectorAll('input[name="play-quality"]');
+    var fallbackEl = document.getElementById('auto-fallback');
+    var statusEl = document.getElementById('setting-status');
+
+    function getSelectedQuality() {
+      for (var i = 0; i < qualityRadios.length; i += 1) {
+        if (qualityRadios[i].checked) return qualityRadios[i].value;
+      }
+      return 'highest';
+    }
+
+    function renderQualityChoices() {
+      for (var i = 0; i < qualityRadios.length; i += 1) {
+        var option = qualityRadios[i].parentNode;
+        if (!option) continue;
+        var selected = qualityRadios[i].checked;
+        option.className = 'quality-option' + (selected ? ' selected' : '');
+      }
+    }
+
+    function setSelectedQuality(value) {
+      var target = value || 'highest';
+      var matched = false;
+      for (var i = 0; i < qualityRadios.length; i += 1) {
+        qualityRadios[i].checked = qualityRadios[i].value === target;
+        if (qualityRadios[i].checked) matched = true;
+      }
+      if (!matched) {
+        for (var j = 0; j < qualityRadios.length; j += 1) {
+          qualityRadios[j].checked = qualityRadios[j].value === 'highest';
+        }
+      }
+      renderQualityChoices();
+    }
+
+    function setStatus(text, type) {
+      statusEl.className = 'status' + (type ? ' ' + type : '');
+      statusEl.innerHTML = text;
+    }
+
+    function loadForm() {
+      var settings = global.LXPlaySettings.load();
+      setSelectedQuality(settings.qualityMode === 'fixed' ? settings.fixedQuality : 'highest');
+      fallbackEl.checked = settings.autoFallback;
+      setStatus('当前：' + global.LXPlaySettings.getLabel(settings), 'ready');
+    }
+
+    document.getElementById('save-btn').onclick = function () {
+      var selected = getSelectedQuality();
+      var settings = global.LXPlaySettings.save({
+        qualityMode: selected === 'highest' ? 'highest' : 'fixed',
+        fixedQuality: selected === 'highest' ? '320k' : selected,
+        autoFallback: fallbackEl.checked
+      });
+      setSelectedQuality(settings.qualityMode === 'fixed' ? settings.fixedQuality : 'highest');
+      fallbackEl.checked = settings.autoFallback;
+      setStatus('已保存：' + global.LXPlaySettings.getLabel(settings), 'ready');
+    };
+
+    document.getElementById('reset-btn').onclick = function () {
+      var settings = global.LXPlaySettings.save(global.LXPlaySettings.defaults());
+      setSelectedQuality(settings.qualityMode === 'fixed' ? settings.fixedQuality : 'highest');
+      fallbackEl.checked = settings.autoFallback;
+      setStatus('已恢复默认：' + global.LXPlaySettings.getLabel(settings), 'ready');
+    };
+
+    for (var i = 0; i < qualityRadios.length; i += 1) {
+      qualityRadios[i].onclick = renderQualityChoices;
+    }
+
+    loadForm();
+  })(window);
+  </script>
+</body>
+</html>

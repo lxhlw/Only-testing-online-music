@@ -1,0 +1,61 @@
+name: Test Source Channel Playback Matrix (manual)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: source-channel-playback-matrix
+  cancel-in-progress: true
+
+jobs:
+  channel-playback:
+    name: Channel ${{ matrix.channel }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [kw, kg, tx, wy, mg]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Validate channel playback test
+        run: node --check scripts/test-channel-playback.mjs
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start local site
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/wrangler.log 2>&1 &
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8788/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/wrangler.log
+          exit 1
+
+      - name: Test channel
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+          TEST_CHANNEL: ${{ matrix.channel }}
+          SEARCH_TIMEOUT_MS: 20000
+          URL_TIMEOUT_MS: 20000
+          PLAYBACK_TIMEOUT_MS: 12000
+        run: node scripts/test-channel-playback.mjs
+
+      - name: Show local server log on failure
+        if: failure()
+        run: cat /tmp/wrangler.log || true
