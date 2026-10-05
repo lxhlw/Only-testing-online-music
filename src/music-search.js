@@ -2890,6 +2890,10 @@
   }
 
 
+  function isMiguNativeProvider(provider) {
+    return String(provider || '').toLowerCase().indexOf('migu-native') === 0;
+  }
+
   function resolveMusicUrl(source, musicInfo, quality, callback, options) {
     source = String(source || '').toLowerCase();
     options = options || {};
@@ -2987,7 +2991,7 @@
       });
     }
 
-    if (source === 'mg' && skipProvider !== 'migu-native') {
+    if (source === 'mg' && !isMiguNativeProvider(skipProvider)) {
       return resolveMiguNativeUrl(musicInfo, quality, function (nativeErr, nativeResult) {
         if (!nativeErr && nativeResult && nativeResult.url) return callback(null, nativeResult);
         afterHuibq();

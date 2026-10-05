@@ -1336,3 +1336,48 @@ console.log('PASS: LX search routing stays channel-bound and never mixes provide
   assert.equal(target.includes('1106531626'), false)
 }
 
+
+{
+  const h = createHarness(
+    { mg: { actions: ['musicUrl'] } },
+    () => {},
+    {
+      huibq: {
+        mg: {
+          status: 200,
+          body: JSON.stringify({
+            code: 0,
+            url: 'https://audio.example.test/mg-huibq-after-native.mp3'
+          })
+        }
+      }
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.resolveMusicUrl(
+      'mg',
+      {
+        songmid: '1106531626',
+        copyrightId: '6005861N71E',
+        contentId: '600929000002562618',
+        resourceType: '2'
+      },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value),
+      { skipProvider: 'migu-native-listenSong' }
+    )
+  })
+
+  assert.equal(result.provider, 'huibq')
+  assert.equal(result.url, 'https://audio.example.test/mg-huibq-after-native.mp3')
+  const huibqCalls = h.calls.filter(call => {
+    let url = String(call.xhrUrl || '')
+    try { url = decodeURIComponent(url) } catch {}
+    return url.includes('lxmusicapi.onrender.com/url/mg/')
+  })
+  assert.equal(huibqCalls.length, 1)
+  const target = new URL(huibqCalls[0].xhrUrl).searchParams.get('url')
+  assert.equal(target, 'https://lxmusicapi.onrender.com/url/mg/6005861N71E/128k')
+}
+
