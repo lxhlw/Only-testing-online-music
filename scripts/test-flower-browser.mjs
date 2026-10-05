@@ -253,7 +253,11 @@ try {
             const audio = document.getElementById('audio')
             const events = Array.isArray(window.__audioEvents) ? window.__audioEvents.slice(markerIndex) : []
             if (!audio) return false
-            if (events.some(event => ['playing', 'error', 'ended'].includes(event.name))) return true
+            if (events.some(event => ['error', 'ended'].includes(event.name))) return true
+            if (audio.error) return true
+            // The 'playing' event can fire at currentTime=0 while the first
+            // media bytes are still arriving. Do not cut the probe short;
+            // require actual time progression before evaluating success.
             return Number(audio.currentTime || 0) >= REAL_PLAYBACK_PROGRESS_S
           },
           { markerIndex: baseline.eventIndex },
