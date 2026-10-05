@@ -14,6 +14,8 @@
   var playbackToken = 0;
   var searchToken = 0;
   var MIN_UNKNOWN_MEDIA_DURATION_SECONDS = 15;
+  var MIN_CONFIRMED_PLAYBACK_PROGRESS_SECONDS = 0.25;
+  var PLAYBACK_CONFIRM_TIMEOUT_MS = 3500;
 
   var CHANNEL_NAMES = {
     kw: '酷我音乐',
@@ -398,7 +400,7 @@
     setStatus('音源已执行并发送 inited：<b>' + escapeHtml(item.name) + '</b>', 'ready');
   }
 
-  function buildPlayableUrl(url) {
+  function buildPlayableUrl(url, forceProxy) {
     var value = String(url || '');
     if (!/^https?:/i.test(value)) return value;
 
@@ -413,11 +415,11 @@
           hostname === 'bd-er.kuwo.cn' ||
           hostname === 'kwcdn.kuwo.cn';
 
-        // Kuwo's native resolver already returns a signed CDN media URL.
-        // Keep that trusted media URL direct; the server-side proxy can hang
-        // while waiting for these CDN hosts even though the browser can play
-        // the same URL normally.
-        if (trustedKuwoMediaHost && target.protocol === 'https:') {
+        // Signed Kuwo CDN URLs should stay direct. The same applies to other
+        // HTTPS media URLs: <audio> can request them without the JSON proxy.
+        // HTTP media still goes through the same-origin proxy to avoid mixed
+        // content on the HTTPS Pages site.
+        if (!forceProxy && (trustedKuwoMediaHost || target.protocol === 'https:')) {
           return target.href;
         }
 
@@ -430,6 +432,7 @@
 
     try {
       var origin = String(global.location.protocol || '') + '//' + String(global.location.host || '');
+      if (origin && !forceProxy && /^https:/i.test(value)) return value;
       if (origin) return origin + '/api/proxy?url=' + encodeURIComponent(value);
     } catch (e) {}
 
@@ -542,15 +545,22 @@
     musicInfo,
     settings,
     viaLabel,
-    viaProvider
+    viaProvider,
+    forceProxy
   ) {
     if (token !== playbackToken) return;
 
     var audio = document.getElementById('audio');
-    var playableUrl = buildPlayableUrl(url);
+    var playableUrl = buildPlayableUrl(url, forceProxy === true);
+    if (playbackState && playbackState.confirmTimer) {
+      try { global.clearTimeout(playbackState.confirmTimer); } catch (e) {}
+      playbackState.confirmTimer = null;
+    }
     playbackState.waitingForAudio = true;
     playbackState.url = playableUrl;
     playbackState.sourceUrl = url;
+    playbackState.transport = playableUrl === String(url || '') ? 'direct' : 'proxy';
+    playbackState.lastForceProxy = forceProxy === true;
 
     playbackState.quality = quality;
     playbackState.resolver = viaLabel || 'LX source';
@@ -599,6 +609,9 @@
     audio.onplaying = function () {
       handleAudioPlaying(token, playableUrl);
     };
+    audio.ontimeupdate = function () {
+      handleAudioPlaying(token, playableUrl);
+    };
     audio.onloadedmetadata = function () {
       if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
       var duration = Number(audio.duration || 0);
@@ -619,6 +632,14 @@
 
       var duration = Number(audio.duration || 0);
       var currentTime = Number(audio.currentTime || 0);
+      if (playbackState.waitingForAudio) {
+        setStatus(
+          '媒体连接已结束，但尚未产生真实播放进度，正在自动更换解析器……',
+          'warn'
+        );
+        handleAudioError(token, playableUrl);
+        return;
+      }
       if (playbackState.playing &&
           (isSuspiciousPlaybackDuration(duration, playbackState.expectedDuration) ||
            isSuspiciousPlaybackEnd(currentTime, playbackState.expectedDuration))) {
@@ -889,25 +910,36 @@
       index: 0,
       quality: plan[0],
       url: '',
-      waitingForAudio: false
+      waitingForAudio: false,
+      playing: false,
+      transport: '',
+      sourceUrl: '',
+      directProxyRetry: false,
+      confirmTimer: null
     };
 
     requestQuality(music, source, buildMusicInfo(music, source), plan, 0, token);
   }
 
-  function handleAudioPlaying(expectedToken, expectedUrl) {
-    var state = playbackState;
-    if (!state || state.token !== playbackToken || !state.waitingForAudio) return;
-    if (expectedToken != null && expectedToken !== state.token) return;
-    if (expectedUrl && state.url !== expectedUrl) return;
+  function clearPlaybackConfirmTimer(state) {
+    if (!state || !state.confirmTimer) return;
+    try { global.clearTimeout(state.confirmTimer); } catch (e) {}
+    state.confirmTimer = null;
+  }
 
-    if (isSuspiciousPlaybackDuration(
-      Number(document.getElementById('audio')?.duration || 0),
-      state.expectedDuration
-    )) {
-      return handleAudioError(state.token, state.url);
+  function confirmAudioPlayback(expectedToken, expectedUrl) {
+    var state = playbackState;
+    var audio = document.getElementById('audio');
+    if (!state || state.token !== playbackToken || !state.waitingForAudio || !audio) return false;
+    if (expectedToken != null && expectedToken !== state.token) return false;
+    if (expectedUrl && state.url !== expectedUrl) return false;
+
+    var currentTime = Number(audio.currentTime || 0);
+    if (audio.readyState < 2 || currentTime < MIN_CONFIRMED_PLAYBACK_PROGRESS_SECONDS) {
+      return false;
     }
 
+    clearPlaybackConfirmTimer(state);
     state.waitingForAudio = false;
     state.playing = true;
     if (global.LXMusicLibrary) {
@@ -920,6 +952,41 @@
       'ready'
     );
     loadLyricsForState(state);
+    return true;
+  }
+
+  function handleAudioPlaying(expectedToken, expectedUrl) {
+    var state = playbackState;
+    var audio = document.getElementById('audio');
+    if (!state || state.token !== playbackToken || !state.waitingForAudio || !audio) return;
+    if (expectedToken != null && expectedToken !== state.token) return;
+    if (expectedUrl && state.url !== expectedUrl) return;
+
+    if (isSuspiciousPlaybackDuration(
+      Number(audio.duration || 0),
+      state.expectedDuration
+    )) {
+      return handleAudioError(state.token, state.url);
+    }
+
+    if (confirmAudioPlayback(expectedToken, expectedUrl)) return;
+
+    if (!state.confirmTimer) {
+      state.confirmTimer = global.setTimeout(function () {
+        if (!playbackState || playbackState.token !== state.token) return;
+        state.confirmTimer = null;
+        var currentTime = Number(audio.currentTime || 0);
+        if (currentTime >= MIN_CONFIRMED_PLAYBACK_PROGRESS_SECONDS && audio.readyState >= 2) {
+          confirmAudioPlayback(state.token, state.url);
+          return;
+        }
+        setStatus(
+          '媒体已连接但播放进度没有增长，正在自动更换解析器……',
+          'warn'
+        );
+        handleAudioError(state.token, state.url);
+      }, PLAYBACK_CONFIRM_TIMEOUT_MS);
+    }
   }
 
   function handleAudioError(expectedToken, expectedUrl) {
@@ -929,6 +996,7 @@
     if (!state.waitingForAudio && !state.playing) return;
     if (expectedToken != null && expectedToken !== state.token) return;
     if (expectedUrl && state.url !== expectedUrl) return;
+    clearPlaybackConfirmTimer(state);
     state.waitingForAudio = false;
     state.playing = false;
 
@@ -942,10 +1010,36 @@
       try { if (typeof currentAudio.load === 'function') currentAudio.load(); } catch (e) {}
     }
 
+    var failedProvider = state.resolverProvider;
+    var failedQuality = state.quality;
+
+    // If direct HTTPS media stalls, retry the exact same signed URL through
+    // the project proxy once before selecting a different resolver.
+    if (
+      state.transport === 'direct' &&
+      !state.directProxyRetry &&
+      state.sourceUrl &&
+      /^https?:/i.test(String(state.sourceUrl)) &&
+      global.location &&
+      String(state.sourceUrl).indexOf(String(global.location.origin || '')) !== 0
+    ) {
+      state.directProxyRetry = true;
+      return useResolvedUrl(
+        state.sourceUrl,
+        failedQuality,
+        state.token,
+        state.music,
+        state.source,
+        buildMusicInfo(state.music, state.source),
+        settings,
+        state.resolver,
+        failedProvider,
+        true
+      );
+    }
+
     if (settings.autoFallback && global.LXMusicSearch &&
         typeof global.LXMusicSearch.resolveMusicUrl === 'function') {
-      var failedProvider = state.resolverProvider;
-      var failedQuality = state.quality;
       return global.LXMusicSearch.resolveMusicUrl(
         state.source,
         buildMusicInfo(state.music, state.source),
@@ -1023,6 +1117,8 @@
     var errorCode = audio.error && audio.error.code ? '（错误码 ' + audio.error.code + '）' : '';
     setStatus('当前音质无法播放，且没有可用的更低音质可切换' + errorCode + '。', 'fail');
   }
+
+
 
   function testMusic(music, addToQueue) {
     var active = global.LXSourceManager.getActive();
