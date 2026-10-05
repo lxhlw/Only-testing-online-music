@@ -2567,9 +2567,11 @@
       add(info.songmid);
       add(info.id);
     } else if (source === 'mg') {
-      add(info.songmid);
+      // Migu playback is keyed by copyrightId. songmid can be a separate
+      // internal/search identifier and is not a safe fallback resolver id.
       add(info.copyrightId);
       add(info.copyright_id);
+      add(info.songmid);
       add(info.id);
     } else {
       add(info.songmid);
