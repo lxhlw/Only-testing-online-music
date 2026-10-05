@@ -1824,23 +1824,38 @@
       if (!/^https?:\/\//i.test(text)) return false;
       if (isCrossPlatformPlaybackUrl('tx', text)) return false;
 
-      // api.vkeys.cn can return stale RS02... URLs for a 128k request.
-      // Reject them before they reach the audio element; a resolver result
-      // is not a success unless its URL belongs to a known QQ media pattern.
-      var path = '';
-      try { path = new URL(text).pathname.toLowerCase(); } catch (e) { return false; }
+      var parsed;
+      try {
+        parsed = new URL(text);
+      } catch (e) {
+        return false;
+      }
+
+      var path = parsed.pathname.toLowerCase();
+      // api.vkeys.cn can return stale RS02... URLs for a 128k request. These
+      // are rejected before the audio element sees them, while third-party
+      // resolver CDNs remain valid candidates when they return real media.
       if (/\/rs0?2[^/]*\.(?:mp3|m4a)$/i.test(path)) return false;
 
+      var host = String(parsed.hostname || '').toLowerCase();
+      var isQqCdn = host === 'ws.stream.qqmusic.qq.com' ||
+        host === 'stream.qqmusic.qq.com' ||
+        host === 'isure.stream.qqmusic.qq.com' ||
+        host === 'dl.stream.qqmusic.qq.com' ||
+        host === 'streamoc.music.tc.qq.com' ||
+        host === 'mobileoc.music.tc.qq.com' ||
+        host === 'aqqmusic.tc.qq.com' ||
+        host === 'amobile.music.tc.qq.com';
+
+      if (!isQqCdn) return true;
+
       if (requestedQuality === '128k' || requestedQuality === '192k') {
-        if (mediaMid) {
-          return /\/(?:c400|m500)[^/]+\.(?:mp3|m4a)$/i.test(path);
-        }
-        return /\/(?:c400|m500)[^/]+\.(?:mp3|m4a)$/i.test(path) || /\/rs0?2/i.test(path) === false;
+        return /\/(?:c400|m500)[^/]+\.(?:mp3|m4a)$/i.test(path);
       }
       if (requestedQuality === '320k') {
-        return /\/(?:m800|c600)[^/]+\.(?:mp3|m4a)$/i.test(path) || !/\/rs0?2/i.test(path);
+        return /\/(?:m800|c600)[^/]+\.(?:mp3|m4a)$/i.test(path);
       }
-      return !/\/rs0?2/i.test(path);
+      return /\/(?:c400|m500|m800|c600|f000)[^/]+\.(?:mp3|m4a|flac)$/i.test(path);
     }
 
     function acceptUrl(url, provider, raw, done) {
