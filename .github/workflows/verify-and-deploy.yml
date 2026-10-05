@@ -81,20 +81,10 @@ jobs:
       - name: Run lyrics test
         run: node scripts/test-music-lyrics.mjs
 
-      - name: Run real five-channel Flower integration test
-        env:
-          TEST_BASE_URL: http://127.0.0.1:8788
-          LX_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js
-          # Local Wrangler's DNS sandbox intermittently cannot resolve the
-          # Flower backup host names. Keep the deterministic local preflight
-          # focused on four stable channels; production smoke below still
-          # verifies all five requested channels.
-          TEST_CHANNELS: kw,kg,tx,wy
-          REQUIRE_PLAUSIBLE_PLAYBACK: 'false'
-          INIT_TIMEOUT_MS: 30000
-          SEARCH_TIMEOUT_MS: 60000
-          PLAYBACK_TIMEOUT_MS: 15000
-        run: node scripts/test-flower-browser.mjs
+      - name: Run source/runtime regression tests
+        run: |
+          node scripts/test-source-transpiler.mjs
+          node scripts/check-legacy-test.mjs
 
       - name: Show Pages server log on failure
         if: failure()
