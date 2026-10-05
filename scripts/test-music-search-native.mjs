@@ -687,7 +687,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   assert.equal(result.provider, 'kugou-aggregate-haitang')
   assert.equal(result.url, 'https://audio.example.test/kg-aggregate.mp3')
   assert.equal(h.calls.length, 9)
-  const aggregateTarget = new URL(h.calls[9].xhrUrl).searchParams.get('url')
+  const aggregateTarget = new URL(h.calls[8].xhrUrl).searchParams.get('url')
   assert.match(aggregateTarget, /musicserver\.haitangw\.cc\/v1\/music\/resolve-url/)
 }
 
