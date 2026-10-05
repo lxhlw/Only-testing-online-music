@@ -767,6 +767,52 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     () => {},
     {
       time: { status: 500, body: 'must not be used' },
+      search: [
+        {
+          status: 200,
+          body: JSON.stringify({ code: 0, data: { midurlinfo: [] } })
+        },
+        {
+          status: 200,
+          body: JSON.stringify({
+            data: {
+              items: [{ vkey: 'EXPRESS_VKEY_123' }]
+            }
+          })
+        }
+      ]
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.resolveMusicUrl(
+      'tx',
+      { songmid: '0039MnQn' },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value),
+      { skipProvider: 'gd-studio' }
+    )
+  })
+
+  assert.equal(result.provider, 'tencent-aggregate-express-vkey')
+  assert.match(result.url, /^http:\/\/ws\.stream\.qqmusic\.qq\.com\/M5000039MnQn\.mp3\?/)
+  const resultUrl = new URL(result.url)
+  assert.equal(resultUrl.searchParams.get('guid').length, 10)
+  assert.equal(resultUrl.searchParams.get('vkey'), 'EXPRESS_VKEY_123')
+  assert.equal(resultUrl.searchParams.get('uin'), '0')
+  assert.equal(resultUrl.searchParams.get('fromtag'), '66')
+  const expressTarget = new URL(h.calls[h.calls.length - 1].xhrUrl).searchParams.get('url')
+  assert.match(expressTarget, /c\.y\.qq\.com\/base\/fcgi-bin\/fcg_music_express_mobile3\.fcg/)
+  assert.equal(new URL(expressTarget).searchParams.get('filename'), 'M5000039MnQn.mp3')
+
+}
+
+{
+  const h = createHarness(
+    { tx: { actions: ['musicUrl'] } },
+    () => {},
+    {
+      time: { status: 500, body: 'must not be used' },
       search: [{
         status: 200,
         body: JSON.stringify({

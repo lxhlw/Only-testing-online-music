@@ -320,17 +320,19 @@ function getTencentMediaCandidateUrls(target) {
   if (!isTencentMediaHost(target.hostname) || target.pathname === '/') return [original];
 
   var preferred = [
-    'isure.stream.qqmusic.qq.com',
-    'ws.stream.qqmusic.qq.com',
-    'streamoc.music.tc.qq.com',
-    'dl.stream.qqmusic.qq.com'
+    { protocol: 'http:', hostname: 'ws.stream.qqmusic.qq.com' },
+    { protocol: 'http:', hostname: 'dl.stream.qqmusic.qq.com' },
+    { protocol: 'http:', hostname: 'streamoc.music.tc.qq.com' },
+    { protocol: 'https:', hostname: 'ws.stream.qqmusic.qq.com' },
+    { protocol: 'https:', hostname: 'dl.stream.qqmusic.qq.com' },
+    { protocol: 'https:', hostname: 'streamoc.music.tc.qq.com' },
+    { protocol: 'https:', hostname: 'isure.stream.qqmusic.qq.com' }
   ];
-  var sourceHost = String(target.hostname || '').toLowerCase();
   var candidates = [];
 
-  function pushHost(hostname) {
+  function pushCandidate(protocol, hostname) {
     var copy = new URL(target.toString());
-    copy.protocol = 'https:';
+    copy.protocol = protocol;
     copy.hostname = hostname;
     copy.port = '';
     var value = copy.toString();
@@ -340,10 +342,13 @@ function getTencentMediaCandidateUrls(target) {
     candidates.push(value);
   }
 
-  // Start with the host returned by the resolver, then try known QQ CDN
-  // aliases using the same path/query so the vkey can be reused.
-  pushHost(sourceHost);
-  for (var pi = 0; pi < preferred.length; pi += 1) pushHost(preferred[pi]);
+  // Preserve the resolver's original target first. Then try the HTTP CDN
+  // forms used by current QQ player implementations, followed by HTTPS
+  // aliases. The vkey/path stays unchanged across these CDN hosts.
+  pushCandidate(target.protocol, String(target.hostname || '').toLowerCase());
+  for (var pi = 0; pi < preferred.length; pi += 1) {
+    pushCandidate(preferred[pi].protocol, preferred[pi].hostname);
+  }
   return candidates;
 }
 

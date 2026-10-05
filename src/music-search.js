@@ -1198,7 +1198,7 @@
         function (err, data) {
           if (err) return done(err);
 
-          var directUrl = extractUrl(data);
+          var directUrl = backend.extractUrl ? backend.extractUrl(data) : extractUrl(data);
           if (!directUrl || isCrossPlatformPlaybackUrl('kg', directUrl)) {
             var status = data && data.status != null ? String(data.status) : '';
             return done(new Error(
@@ -1772,15 +1772,6 @@
   function normalizeTencentPlaybackUrl(value) {
     var clean = String(value || '').replace(/^\s+|\s+$/g, '');
     if (!clean || !/^https?:\/\//i.test(clean)) return clean;
-    try {
-      var target = new URL(clean);
-      var host = String(target.hostname || '').toLowerCase();
-      if (host === 'ws.stream.qqmusic.qq.com' || host === 'stream.qqmusic.qq.com') {
-        target.protocol = 'https:';
-        target.hostname = 'isure.stream.qqmusic.qq.com';
-        return target.toString();
-      }
-    } catch (e) {}
     return clean;
   }
 
@@ -1845,6 +1836,10 @@
       (requestedQuality === '320k' ? 'M800' :
       (requestedQuality.indexOf('flac') === 0 || requestedQuality.indexOf('hires') === 0 ? 'F000' : 'M500'));
     var officialFileExt = officialFilePrefix === 'F000' ? '.flac' : '.mp3';
+    var expressGuid = String(
+      Math.floor((Date.now ? Date.now() : new Date().getTime()) % 10000000000)
+    );
+    var expressFileName = officialFilePrefix + songmid + officialFileExt;
 
     var backends = [
       {
@@ -1897,6 +1892,30 @@
         method: 'GET',
         url: 'https://88.lxmusic.xn--fiqs8s/lxmusicv4/url/tx/' + encodeURIComponent(songmid) + '/' + encodeURIComponent(requestedQuality),
         headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'x-request-key': 'lxmusic' }
+      },
+      {
+        provider: 'tencent-aggregate-express-vkey',
+        method: 'GET',
+        url: 'https://c.y.qq.com/base/fcgi-bin/fcg_music_express_mobile3.fcg' +
+          '?g_tk=0&loginUin=0&hostUin=0&format=json&inCharset=utf8&outCharset=utf-8' +
+          '&notice=0&platform=yqq&needNewCode=0&cid=205361747&uin=0' +
+          '&songmid=' + encodeURIComponent(songmid) +
+          '&filename=' + encodeURIComponent(expressFileName) +
+          '&guid=' + encodeURIComponent(expressGuid),
+        headers: {
+          'User-Agent': 'Mozilla/5.0',
+          'Referer': 'https://y.qq.com/portal/player.html',
+          'Accept': 'application/json'
+        },
+        extractUrl: function (data) {
+          var item = data && data.data && data.data.items && data.data.items[0];
+          var vkey = item && item.vkey ? String(item.vkey).trim() : '';
+          if (!vkey) return '';
+          return 'http://ws.stream.qqmusic.qq.com/' + expressFileName +
+            '?guid=' + encodeURIComponent(expressGuid) +
+            '&vkey=' + encodeURIComponent(vkey) +
+            '&uin=0&fromtag=66';
+        }
       }
     ];
 
