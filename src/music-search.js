@@ -903,11 +903,10 @@
     var info = musicInfo || {};
     var requested = String(quality || '').toLowerCase() || '128k';
     var toneFlag = 'PQ';
-    var resourceType = '2';
+    var resourceType = String(info.resourceType || (info.raw && info.raw.resourceType) || '2') || '2';
 
     if (requested === '320k' || requested === '192k' || requested === '256k') {
       toneFlag = 'HQ';
-      resourceType = '2';
     } else if (
       requested.indexOf('flac') === 0 ||
       requested === 'wav' ||
@@ -918,13 +917,21 @@
       requested === 'atmos_plus'
     ) {
       toneFlag = 'SQ';
-      resourceType = 'E';
+      if (!resourceType) resourceType = 'E';
     }
 
     var copyrightId = String(
       info.copyrightId ||
       info.copyright_id ||
       (info.raw && (info.raw.copyrightId || info.raw.copyright_id)) ||
+      ''
+    ).replace(/^\s+|\s+$/g, '');
+
+    var songId = String(
+      info.songmid ||
+      info.songId ||
+      info.song_id ||
+      (info.raw && (info.raw.songmid || info.raw.songId || info.raw.song_id)) ||
       ''
     ).replace(/^\s+|\s+$/g, '');
 
@@ -936,12 +943,12 @@
       ''
     ).replace(/^\s+|\s+$/g, '');
 
-    if (!copyrightId && !contentId) {
-      return callback(new Error('No Migu copyrightId/contentId for native playback'));
+    if (!copyrightId && !songId && !contentId) {
+      return callback(new Error('No Migu songId/copyrightId/contentId for native playback'));
     }
 
     function extractUrl(value, depth) {
-      if (depth > 7 || value == null) return '';
+      if (depth > 8 || value == null) return '';
       if (typeof value === 'string') {
         var text = value.replace(/^\s+|\s+$/g, '');
         if (/^https?:\/\//i.test(text)) return text;
@@ -986,86 +993,103 @@
         provider: provider,
         requestedQuality: requested,
         actualBr: requested,
-        id: String(info.songmid || info.id || contentId || copyrightId || ''),
+        id: String(info.id || songId || copyrightId || contentId || ''),
         raw: raw || null
       });
     }
 
-    var listenUrlApi =
-      'https://app.c.nf.migu.cn/MIGUM2.0/v2.0/content/listen-url' +
-      '?copyrightId=' + encodeURIComponent(copyrightId) +
-      '&netType=01' +
-      '&toneFlag=' + encodeURIComponent(toneFlag);
+    function requestOfficialListenUrl(done) {
+      if (!songId) return done(new Error('Migu songId is missing'));
 
-    // Prefer Migu's API that returns the actual URL for the requested tone.
-    // Keep the response recursive so minor response-shape changes do not
-    // break playback.
-    if (copyrightId) {
+      var api =
+        'https://app.c.nf.migu.cn/MIGUM2.0/strategy/listen-url/v2.4' +
+        '?netType=01' +
+        '&resourceType=' + encodeURIComponent(resourceType || '2') +
+        '&songId=' + encodeURIComponent(songId) +
+        '&toneFlag=' + encodeURIComponent(toneFlag);
+
       requestViaProxy(
-        listenUrlApi,
+        api,
         'GET',
         null,
         {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/148.0.0.0 Safari/537.36',
+          'Accept': 'application/json, text/plain, */*',
+          'Content-Type': 'application/json;charset=UTF-8',
+          'Origin': 'https://music.migu.cn',
           'Referer': 'https://music.migu.cn/',
-          'Accept': 'application/json, text/plain, */*'
+          'User-Agent': 'Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 Chrome/148.0.0.0 Mobile Safari/537.36',
+          'channel': '0146921',
+          'ua': 'Android_migu',
+          'mode': 'android'
         },
         true,
         function (apiErr, data) {
-          if (!apiErr) {
-            var returned = extractUrl(data, 0);
-            if (returned) return finish(returned, 'migu-native-listen-url', data);
-          }
-
-          if (!contentId) {
-            return callback(apiErr || new Error('Migu listen-url returned no playable URL'));
-          }
-
-          // Older Migu clients use listenSong.do. This endpoint redirects to
-          // the actual media CDN and can be loaded by <audio> directly.
-          var directUrl =
-            'https://app.pd.nf.migu.cn/MIGUM2.0/v1.0/content/sub/listenSong.do' +
-            '?toneFlag=' + encodeURIComponent(toneFlag) +
-            '&netType=00' +
-            '&userId=15548614588710179085069' +
-            '&ua=Android_migu' +
-            '&version=5.1' +
-            '&copyrightId=0' +
-            '&contentId=' + encodeURIComponent(contentId) +
-            '&resourceType=' + encodeURIComponent(resourceType) +
-            '&channel=0';
-
-          finish(directUrl, 'migu-native-listenSong', {
-            listenUrlError: apiErr ? String(apiErr.message || apiErr) : '',
-            contentId: contentId,
-            resourceType: resourceType,
-            toneFlag: toneFlag
-          });
+          if (apiErr) return done(apiErr);
+          var returned = extractUrl(data, 0);
+          if (!returned) return done(new Error('Migu strategy/listen-url returned no URL'));
+          finish(returned, 'migu-native-strategy-v2.4', data);
         }
       );
-      return;
     }
 
-    if (!contentId) {
-      return callback(new Error('Migu native playback requires copyrightId or contentId'));
+    function requestCopyrightListenUrl(done) {
+      if (!copyrightId) return done(new Error('Migu copyrightId is missing'));
+
+      var api =
+        'https://app.c.nf.migu.cn/MIGUM2.0/v2.0/content/listen-url' +
+        '?copyrightId=' + encodeURIComponent(copyrightId) +
+        '&netType=01' +
+        '&toneFlag=' + encodeURIComponent(toneFlag);
+
+      requestViaProxy(
+        api,
+        'GET',
+        null,
+        {
+          'Accept': 'application/json, text/plain, */*',
+          'Referer': 'https://music.migu.cn/',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/148.0.0.0 Safari/537.36',
+          'channel': '0146921'
+        },
+        true,
+        function (apiErr, data) {
+          if (apiErr) return done(apiErr);
+          var returned = extractUrl(data, 0);
+          if (!returned) return done(new Error('Migu copyright listen-url returned no URL'));
+          finish(returned, 'migu-native-listen-url', data);
+        }
+      );
     }
 
-    var directUrlOnly =
-      'https://app.pd.nf.migu.cn/MIGUM2.0/v1.0/content/sub/listenSong.do' +
-      '?toneFlag=' + encodeURIComponent(toneFlag) +
-      '&netType=00' +
-      '&userId=15548614588710179085069' +
-      '&ua=Android_migu' +
-      '&version=5.1' +
-      '&copyrightId=0' +
-      '&contentId=' + encodeURIComponent(contentId) +
-      '&resourceType=' + encodeURIComponent(resourceType) +
-      '&channel=0';
+    // Native priority:
+    // 1) v2.4 strategy endpoint keyed by songId (the field exposed as songmid).
+    // 2) v2.0 copyrightId endpoint as a second official source.
+    // 3) Legacy listenSong.do only as the last fallback; it may return JSON.
+    requestOfficialListenUrl(function (officialErr) {
+      if (!officialErr) return;
+      requestCopyrightListenUrl(function (copyrightErr) {
+        if (!copyrightErr) return;
+        if (!contentId) return callback(copyrightErr || officialErr);
 
-    finish(directUrlOnly, 'migu-native-listenSong', {
-      contentId: contentId,
-      resourceType: resourceType,
-      toneFlag: toneFlag
+        var directUrl =
+          'https://app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do' +
+          '?channel=mx' +
+          '&copyrightId=' + encodeURIComponent(copyrightId || '') +
+          '&contentId=' + encodeURIComponent(contentId) +
+          '&toneFlag=' + encodeURIComponent(toneFlag) +
+          '&resourceType=' + encodeURIComponent(resourceType || '2') +
+          '&userId=15548614588710179085069' +
+          '&netType=00';
+
+        finish(directUrl, 'migu-native-listenSong', {
+          copyrightId: copyrightId,
+          contentId: contentId,
+          resourceType: resourceType,
+          toneFlag: toneFlag,
+          officialError: officialErr ? String(officialErr.message || officialErr) : '',
+          copyrightError: copyrightErr ? String(copyrightErr.message || copyrightErr) : ''
+        });
+      });
     });
   }
 
