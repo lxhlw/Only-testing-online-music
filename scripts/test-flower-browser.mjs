@@ -241,6 +241,7 @@ try {
     if (channel === 'mg') assert.ok(results.every(item => item.id || item.copyrightId), 'MG results must contain a Migu identifier')
 
     const attempts = []
+    const successfulFlowerResolverUrls = []
     const candidateCount = Math.min(3, results.length)
     for (let i = 0; i < candidateCount; i += 1) {
       await page.evaluate(() => {
@@ -367,20 +368,19 @@ try {
         resolverDataUrls.includes(audioTarget) ||
         recentMedia.some(item => item.target === audioTarget)
 
-      const successfulFlowerResolverUrls = recentResolver
-        .filter(item => item.status >= 200 && item.status < 300)
-        .map(item => {
-          try {
-            const json = JSON.parse(item.body || '')
-            const data = json?.data ?? json?.body?.data
-            return typeof data === 'string' && /^https?:\/\//i.test(data.trim())
-              ? data.trim()
-              : ''
-          } catch {
-            return ''
+      for (const item of recentResolver) {
+        if (item.status < 200 || item.status >= 300) continue
+        try {
+          const json = JSON.parse(item.body || '')
+          const data = json?.data ?? json?.body?.data
+          if (typeof data === 'string' && /^https?:\/\//i.test(data.trim())) {
+            const url = data.trim()
+            if (!successfulFlowerResolverUrls.includes(url)) {
+              successfulFlowerResolverUrls.push(url)
+            }
           }
-        })
-        .filter(Boolean)
+        } catch {}
+      }
 
       if (
         REQUIRE_PLAUSIBLE_PLAYBACK &&
