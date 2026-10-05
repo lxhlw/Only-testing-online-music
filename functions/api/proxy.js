@@ -259,6 +259,7 @@ async function fetchFlowerResolverViaHttpBridge(target, request) {
     } catch (e) {
       lastError = e;
     }
+    }
   }
 
   return new Response(JSON.stringify({

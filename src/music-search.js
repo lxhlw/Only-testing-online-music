@@ -1340,7 +1340,7 @@
 
   function isCrossPlatformPlaybackUrl(source, value) {
     var text = String(value || '').toLowerCase();
-    if (!/^https?:\/\//.test(text)) return true;
+    if (!/^https?:\\/\\//.test(text)) return true;
     var blocked = {
       kg: ['kuwo.cn', 'panspace.kuwo.cn', 'bd-er.kuwo.cn', 'qq.com', 'y.qq.com', 'm.music.migu.cn', '163.com', 'music.163.com'],
       kw: ['kugou.com', 'webfs.kugou.com', 'qq.com', 'y.qq.com', 'music.163.com', 'm.music.migu.cn'],
