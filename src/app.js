@@ -398,23 +398,6 @@
     setStatus('音源已执行并发送 inited：<b>' + escapeHtml(item.name) + '</b>', 'ready');
   }
 
-  function isClearlyWrongPlatformUrl(source, url) {
-    source = String(source || '').toLowerCase();
-    try {
-      var hostname = new global.URL(String(url || ''), global.location.href).hostname.toLowerCase();
-
-      if (source !== 'kw' && /(?:^|\.)kuwo\.cn$/.test(hostname)) return true;
-      if (source !== 'kg' && /(?:^|\.)kugou\.com$/.test(hostname)) return true;
-      if (source !== 'tx' && /(?:^|\.)qq\.com$/.test(hostname)) return true;
-      if (source !== 'wy' && /(?:^|\.)163\.com$/.test(hostname)) return true;
-      if (source !== 'mg' && /(?:^|\.)migu\.cn$/.test(hostname)) return true;
-
-      return false;
-    } catch (e) {
-      return false;
-    }
-  }
-
   function buildPlayableUrl(url) {
     var value = String(url || '');
     if (!/^https?:/i.test(value)) return value;
@@ -554,14 +537,6 @@
     playbackState.url = playableUrl;
     playbackState.sourceUrl = url;
 
-    if (isClearlyWrongPlatformUrl(source, url)) {
-      setStatus(
-        (CHANNEL_NAMES[source] || source.toUpperCase()) +
-        ' 返回了疑似其他平台的播放地址，已阻止播放，正在更换解析器……',
-        'warn'
-      );
-      return handleAudioError(token, playableUrl);
-    }
     playbackState.quality = quality;
     playbackState.resolver = viaLabel || 'LX source';
     playbackState.resolverProvider = viaProvider || 'lx-source';

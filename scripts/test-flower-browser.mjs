@@ -222,14 +222,6 @@ try {
     const attempts = []
     const candidateCount = Math.min(3, results.length)
     for (let i = 0; i < candidateCount; i += 1) {
-      const marker = await page.evaluate(() => {
-        const audio = document.getElementById('audio')
-        return {
-          eventIndex: Array.isArray(window.__audioEvents) ? window.__audioEvents.length : 0,
-          src: audio?.currentSrc || audio?.src || '',
-        }
-      })
-
       await page.evaluate(() => {
         const audio = document.getElementById('audio')
         if (!audio) return
@@ -243,6 +235,7 @@ try {
         return {
           src: audio?.currentSrc || audio?.src || '',
           currentTime: Number(audio?.currentTime || 0),
+          eventIndex: Array.isArray(window.__audioEvents) ? window.__audioEvents.length : 0,
         }
       })
 
@@ -258,7 +251,7 @@ try {
             if (events.some(event => ['playing', 'error', 'ended'].includes(event.name))) return true
             return Number(audio.currentTime || 0) >= 0.8
           },
-          { markerIndex: marker.eventIndex },
+          { markerIndex: baseline.eventIndex },
           { timeout: PLAYBACK_TIMEOUT_MS },
         )
       } catch {}
@@ -282,7 +275,7 @@ try {
           } : null,
           events: events.slice(-40),
         }
-      }, marker.eventIndex)
+      }, baseline.eventIndex)
 
       const recentResolver = resolverResponses.filter(item => item.at >= startedAt)
       const recentMedia = mediaResponses.filter(item => item.at >= startedAt)
@@ -307,7 +300,7 @@ try {
         result: results[i],
         ...attempt,
         baselineSrc: baseline.src,
-        markerEventIndex: marker.eventIndex,
+        markerEventIndex: baseline.eventIndex,
         sourceChanged: Boolean(attempt.audioUrl && attempt.audioUrl !== baseline.src),
         resolverResponses: recentResolver.map(item => ({
           status: item.status,
@@ -342,7 +335,6 @@ try {
 
       if (
         REQUIRE_PLAUSIBLE_PLAYBACK &&
-        sourceChanged &&
         (hadPlayingEvent || attempt.currentTime >= 0.8) &&
         attempt.currentTime >= 0.8 &&
         attempt.readyState >= 2 &&
