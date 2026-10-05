@@ -353,6 +353,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
         item.source,
         item.info,
         item.quality,
+        item.source === 'tx' ? { skipProvider: 'tencent-aggregate' } : undefined,
         (err, value) => err ? reject(err) : resolve(value)
       )
     })
