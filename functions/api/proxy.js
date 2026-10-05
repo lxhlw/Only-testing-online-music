@@ -303,6 +303,50 @@ function isPrivateHost(hostname) {
   return false;
 }
 
+function isTencentMediaHost(hostname) {
+  var host = String(hostname || '').toLowerCase();
+  return host === 'isure.stream.qqmusic.qq.com' ||
+    host === 'ws.stream.qqmusic.qq.com' ||
+    host === 'stream.qqmusic.qq.com' ||
+    host === 'dl.stream.qqmusic.qq.com' ||
+    host === 'streamoc.music.tc.qq.com' ||
+    host === 'mobileoc.music.tc.qq.com' ||
+    host === 'aqqmusic.tc.qq.com' ||
+    host === 'amobile.music.tc.qq.com';
+}
+
+function getTencentMediaCandidateUrls(target) {
+  var original = target.toString();
+  if (!isTencentMediaHost(target.hostname) || target.pathname === '/') return [original];
+
+  var preferred = [
+    'isure.stream.qqmusic.qq.com',
+    'ws.stream.qqmusic.qq.com',
+    'streamoc.music.tc.qq.com',
+    'dl.stream.qqmusic.qq.com'
+  ];
+  var sourceHost = String(target.hostname || '').toLowerCase();
+  var candidates = [];
+
+  function pushHost(hostname) {
+    var copy = new URL(target.toString());
+    copy.protocol = 'https:';
+    copy.hostname = hostname;
+    copy.port = '';
+    var value = copy.toString();
+    for (var i = 0; i < candidates.length; i += 1) {
+      if (candidates[i] === value) return;
+    }
+    candidates.push(value);
+  }
+
+  // Start with the host returned by the resolver, then try known QQ CDN
+  // aliases using the same path/query so the vkey can be reused.
+  pushHost(sourceHost);
+  for (var pi = 0; pi < preferred.length; pi += 1) pushHost(preferred[pi]);
+  return candidates;
+}
+
 function pickForwardHeaders(request) {
   var out = new Headers();
   var requested = request.headers.get('X-LX-Headers');
@@ -390,7 +434,25 @@ export async function onRequest(context) {
   }
 
   var method = request.method.toUpperCase();
-  var init = { method: method, headers: pickForwardHeaders(request), redirect: 'follow' };
+  var targetHeaders = pickForwardHeaders(request);
+
+  // QQ Music CDN requests are stricter than the resolver APIs. A valid vkey
+  // can still return 404 when the request does not look like a QQ player
+  // request, so add the stable player headers unless the caller supplied them.
+  if (isTencentMediaHost(target.hostname)) {
+    if (!targetHeaders.has('Referer')) targetHeaders.set('Referer', 'https://y.qq.com/portal/player.html');
+    if (!targetHeaders.has('Origin')) targetHeaders.set('Origin', 'https://y.qq.com');
+    if (!targetHeaders.has('User-Agent')) {
+      targetHeaders.set(
+        'User-Agent',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+        '(KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36'
+      );
+    }
+    if (!targetHeaders.has('Accept')) targetHeaders.set('Accept', 'audio/mpeg,audio/*;q=0.9,*/*;q=0.8');
+  }
+
+  var init = { method: method, headers: targetHeaders, redirect: 'follow' };
   if (method !== 'GET' && method !== 'HEAD') init.body = request.body;
 
   // Cloudflare rejects direct-IP requests with Error 1003. Flower publishes
@@ -415,7 +477,7 @@ export async function onRequest(context) {
     return flowerSocketResponse;
   }
 
-  var candidateUrls = [target.toString()];
+  var candidateUrls = getTencentMediaCandidateUrls(target);
 
   var lastError = null;
   for (var ci = 0; ci < candidateUrls.length; ci += 1) {
