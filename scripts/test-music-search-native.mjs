@@ -45,7 +45,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       } else if (targetUrl.indexOf('tracker.kugou.com/v5/url') >= 0 && responses.kugouTracker) {
         response = responses.kugouTracker
       } else if (
-        targetUrl.indexOf('app.c.nf.migu.cn/MIGUM2.0/strategy/listen-url/v2.4') >= 0 &&
+        targetUrl.indexOf('c.musicapp.migu.cn/strategy/listen-url/h5/v2.4') >= 0 &&
         responses.miguStrategyListenUrl
       ) {
         response = responses.miguStrategyListenUrl
@@ -427,6 +427,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     { source: 'wy', info: { songmid: '99887766' }, quality: '192k', id: '99887766', huibqQuality: '128k' },
     { source: 'mg', info: {
       copyrightId: '55667788',
+      contentId: 'mg-content-55667788',
       songmid: 'mg-song-55667788',
       albumId: 'mg-album-55667788',
       lowerQualityContentId: 'mg-lower-55667788'
@@ -480,16 +481,17 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
         if (call.xhrMethod !== 'GET') return false
         let url = String(call.xhrUrl || '')
         try { url = decodeURIComponent(url) } catch {}
-        return url.includes('app.c.nf.migu.cn/MIGUM2.0/strategy/listen-url/v2.4')
+        return url.includes('c.musicapp.migu.cn/strategy/listen-url/h5/v2.4')
       })
       assert.equal(mgCalls.length, 1)
       const target = new URL(mgCalls[0].xhrUrl).searchParams.get('url')
       const requestUrl = new URL(target)
-      assert.equal(requestUrl.searchParams.get('albumId'), 'mg-album-55667788')
-      assert.equal(requestUrl.searchParams.get('lowerQualityContentId'), 'mg-lower-55667788')
-      assert.equal(requestUrl.searchParams.get('songId'), 'mg-song-55667788')
+      assert.equal(requestUrl.searchParams.get('contentId'), 'mg-content-55667788')
+      assert.equal(requestUrl.searchParams.get('copyrightId'), '55667788')
       assert.equal(requestUrl.searchParams.get('resourceType'), '2')
       assert.equal(requestUrl.searchParams.get('toneFlag'), 'SQ')
+      assert.equal(requestUrl.searchParams.get('scene'), '')
+      assert.equal(requestUrl.searchParams.get('lowerQualityContentId'), 'mg-lower-55667788')
     }
   }
 }

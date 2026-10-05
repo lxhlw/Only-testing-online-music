@@ -2,7 +2,7 @@
   'use strict';
 
   global.OnlyTestingMusicVersion = {
-    version: '0.2.11',
+    version: '0.2.12',
     releaseDate: '2026-10-05',
     name: 'Only Testing Online Music'
   };

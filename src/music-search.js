@@ -1018,14 +1018,14 @@
       if (!songId) return done(new Error('Migu songId is missing'));
 
       var api =
-        'https://app.c.nf.migu.cn/MIGUM2.0/strategy/listen-url/v2.4' +
-        '?' +
-        (albumId ? 'albumId=' + encodeURIComponent(albumId) + '&' : '') +
-        (lowerQualityContentId ? 'lowerQualityContentId=' + encodeURIComponent(lowerQualityContentId) + '&' : '') +
-        'netType=01' +
+        'https://c.musicapp.migu.cn/strategy/listen-url/h5/v2.4' +
+        '?contentId=' + encodeURIComponent(contentId) +
+        '&copyrightId=' + encodeURIComponent(copyrightId) +
         '&resourceType=' + encodeURIComponent(resourceType || '2') +
-        '&songId=' + encodeURIComponent(songId) +
-        '&toneFlag=' + encodeURIComponent(toneFlag);
+        '&netType=01' +
+        '&toneFlag=' + encodeURIComponent(toneFlag) +
+        '&scene=' +
+        '&lowerQualityContentId=' + encodeURIComponent(lowerQualityContentId || contentId);
 
       requestViaProxy(
         api,
@@ -1034,12 +1034,16 @@
         {
           'Accept': 'application/json, text/plain, */*',
           'Content-Type': 'application/json;charset=UTF-8',
-          'Origin': 'https://music.migu.cn',
-          'Referer': 'https://music.migu.cn/',
-          'User-Agent': 'Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 Chrome/148.0.0.0 Mobile Safari/537.36',
-          'channel': '0146921',
+          'Origin': 'https://y.migu.cn',
+          'Referer': 'https://y.migu.cn/app/v4/zt/2022/music/index.html',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0',
+          'birth': 'h5page',
+          'signature': '1',
+          'channel': '014X031',
+          'subchannel': '014X031',
           'ua': 'Android_migu',
-          'mode': 'android'
+          'version': '6.8.8',
+          'deviceId': 'only-testing-' + String(Date.now ? Date.now() : new Date().getTime())
         },
         true,
         function (apiErr, data) {
@@ -1090,24 +1094,11 @@
         if (!copyrightErr) return;
         if (!contentId) return callback(copyrightErr || officialErr);
 
-        var directUrl =
-          'https://app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do' +
-          '?channel=mx' +
-          '&copyrightId=' + encodeURIComponent(copyrightId || '') +
-          '&contentId=' + encodeURIComponent(contentId) +
-          '&toneFlag=' + encodeURIComponent(toneFlag) +
-          '&resourceType=' + encodeURIComponent(resourceType || '2') +
-          '&userId=15548614588710179085069' +
-          '&netType=00';
-
-        finish(directUrl, 'migu-native-listenSong', {
-          copyrightId: copyrightId,
-          contentId: contentId,
-          resourceType: resourceType,
-          toneFlag: toneFlag,
-          officialError: officialErr ? String(officialErr.message || officialErr) : '',
-          copyrightError: copyrightErr ? String(copyrightErr.message || copyrightErr) : ''
-        });
+        return callback(new Error(
+          'Migu official playback endpoints returned no playable media URL' +
+          '；strategy: ' + String(officialErr && officialErr.message || officialErr || 'failed') +
+          '；copyright: ' + String(copyrightErr && copyrightErr.message || copyrightErr || 'failed')
+        ));
       });
     });
   }

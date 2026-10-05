@@ -603,6 +603,77 @@ function copyResponseHeaders(source, request) {
   return headers;
 }
 
+var MIGU_H5_V24_HOST = 'c.musicapp.migu.cn';
+var MIGU_H5_V24_PATH = '/strategy/listen-url/h5/v2.4';
+var MIGU_H5_V24_KEY = new TextEncoder().encode('Jk8qzuePiJ1qE3mDYhLQ3T73DtDoAhLP');
+
+function decodeMiguH5V24(bytes) {
+  var raw = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || []);
+  if (raw.length < 4 || raw[0] !== 0xab || raw[1] !== 0xcd || raw[2] !== 0x01) {
+    return new TextDecoder('utf-8').decode(raw);
+  }
+
+  var seed = raw[3];
+  var decoded = new Uint8Array(raw.length - 4);
+  for (var i = 4; i < raw.length; i += 1) {
+    decoded[i - 4] =
+      (raw[i] + seed - MIGU_H5_V24_KEY[(i - 4) % MIGU_H5_V24_KEY.length]) & 0xff;
+  }
+  return new TextDecoder('utf-8').decode(decoded);
+}
+
+async function fetchMiguH5V24(target, request) {
+  var targetHeaders = pickForwardHeaders(request);
+  var method = String(request.method || 'GET').toUpperCase();
+  var init = { method: method, headers: targetHeaders, redirect: 'follow' };
+  if (method !== 'GET' && method !== 'HEAD') init.body = request.body;
+
+  try {
+    var upstream = await fetch(target.toString(), init);
+    if (upstream.status < 200 || upstream.status >= 300) {
+      return new Response(upstream.body, {
+        status: upstream.status,
+        statusText: upstream.statusText,
+        headers: copyResponseHeaders(upstream, request)
+      });
+    }
+
+    var decodedText = decodeMiguH5V24(new Uint8Array(await upstream.arrayBuffer()));
+    var parsed;
+    try {
+      parsed = JSON.parse(decodedText);
+    } catch (e) {
+      return new Response(JSON.stringify({
+        error: 'Migu H5 v2.4 response decode failed',
+        message: 'The upstream response was not valid JSON after decryption'
+      }), {
+        status: 502,
+        headers: Object.assign({
+          'Content-Type': 'application/json; charset=utf-8'
+        }, corsHeaders(request))
+      });
+    }
+
+    return new Response(JSON.stringify(parsed), {
+      status: upstream.status,
+      headers: Object.assign({
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-store'
+      }, corsHeaders(request))
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({
+      error: 'Migu H5 v2.4 request failed',
+      message: e && e.message ? e.message : 'Unknown upstream error'
+    }), {
+      status: 502,
+      headers: Object.assign({
+        'Content-Type': 'application/json; charset=utf-8'
+      }, corsHeaders(request))
+    });
+  }
+}
+
 export async function onRequestOptions(context) {
   return new Response(null, { status: 204, headers: corsHeaders(context.request) });
 }
@@ -669,6 +740,13 @@ export async function onRequest(context) {
 
   var init = { method: method, headers: targetHeaders, redirect: 'follow' };
   if (method !== 'GET' && method !== 'HEAD') init.body = request.body;
+
+  if (
+    target.hostname.toLowerCase() === MIGU_H5_V24_HOST &&
+    target.pathname === MIGU_H5_V24_PATH
+  ) {
+    return await fetchMiguH5V24(target, request);
+  }
 
   // Cloudflare rejects direct-IP requests with Error 1003. Flower publishes
   // its resolver on this IP, so try known DNS aliases for the same origin.
