@@ -2006,29 +2006,6 @@
           'Accept': 'application/json'
         }
       },
-      {
-        provider: 'tencent-aggregate-queryvkey',
-        method: 'POST',
-        url: 'https://u.y.qq.com/cgi-bin/musicu.fcg',
-        body: JSON.stringify({
-          queryvkey: {
-            module: 'vkey.GetVkeyServer',
-            method: 'CgiGetVkey',
-            param: {
-              uin: '0',
-              guid: officialGuid,
-              referer: 'y.qq.com',
-              songtype: [0],
-              filename: [expressFileName],
-              songmid: [songmid]
-            }
-          }
-        }),
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/148.0.0.0 Safari/537.36',
-          'Referer': 'https://y.qq.com/'
-        },
         extractUrl: function (data) {
           var root = parseTencentLooseJson(data);
           var block = root && root.queryvkey;
@@ -2104,14 +2081,6 @@
         url: 'https://zrcdy.dpdns.org/lx/api/api.php?source=qq&songmid=' + encodeURIComponent(songmid) + '&quality=' + encodeURIComponent(requestedQuality),
         headers: { 'User-Agent': 'Mozilla/5.0' }
       },
-      {
-        provider: 'tencent-aggregate-xunhuisi',
-        method: 'GET',
-        url: 'https://api.xunhuisi.store/API/QQMusic/Song.php?mid=' + encodeURIComponent(songmid) + '&type=json',
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
-          'Accept': 'application/json'
-        },
         extractUrl: function (data) {
           var root = parseTencentLooseJson(data);
           if (!root) return '';
@@ -2131,14 +2100,6 @@
           return '';
         }
       },
-      {
-        provider: 'tencent-aggregate-hk0cc',
-        method: 'GET',
-        url: 'https://api.hk0.cc/api/qqmusic?mid=' + encodeURIComponent(songmid),
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/148.0.0.0 Safari/537.36',
-          'Accept': 'application/json'
-        },
         extractUrl: function (data) {
           var root = parseTencentLooseJson(data);
           if (!root) return '';
@@ -2174,6 +2135,46 @@
         url: 'https://88.lxmusic.xn--fiqs8s/lxmusicv4/url/tx/' + encodeURIComponent(songmid) + '/' + encodeURIComponent(requestedQuality),
         headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'x-request-key': 'lxmusic' }
       },
+
+      {
+        provider: 'tencent-aggregate-queryvkey',
+        method: 'POST',
+        url: 'https://u.y.qq.com/cgi-bin/musicu.fcg',
+        body: JSON.stringify({
+          queryvkey: {
+            module: 'vkey.GetVkeyServer',
+            method: 'CgiGetVkey',
+            param: {
+              uin: '0',
+              guid: officialGuid,
+              referer: 'y.qq.com',
+              songtype: [0],
+              filename: [expressFileName],
+              songmid: [songmid]
+            }
+          }
+        }),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/148.0.0.0 Safari/537.36',
+          'Referer': 'https://y.qq.com/'
+        },
+      {
+        provider: 'tencent-aggregate-xunhuisi',
+        method: 'GET',
+        url: 'https://api.xunhuisi.store/API/QQMusic/Song.php?mid=' + encodeURIComponent(songmid) + '&type=json',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
+          'Accept': 'application/json'
+        },
+      {
+        provider: 'tencent-aggregate-hk0cc',
+        method: 'GET',
+        url: 'https://api.hk0.cc/api/qqmusic?mid=' + encodeURIComponent(songmid),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/148.0.0.0 Safari/537.36',
+          'Accept': 'application/json'
+        },
     ];
 
     var lastError = null;
