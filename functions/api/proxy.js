@@ -54,10 +54,11 @@ async function fetchFlowerResolverViaHost(target, request) {
   ];
   var forwarded = pickForwardHeaders(request);
   var lastError = null;
+  var resolverPath = target.pathname.replace(/^\/flower\/v1\/url\//, '/url/');
 
   for (var bi = 0; bi < bases.length; bi += 1) {
     var base = bases[bi];
-    var endpoint = base + target.pathname + target.search;
+    var endpoint = base + resolverPath + target.search;
     try {
       var upstream = await fetch(endpoint, {
         method: String(request.method || 'GET').toUpperCase(),
