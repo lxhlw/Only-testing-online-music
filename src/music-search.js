@@ -1255,6 +1255,9 @@
       );
     }
 
+    if (albumId) {
+      return requestV5(albumId, albumAudioId || '0');
+    }
     requestMetadata();
   }
 
