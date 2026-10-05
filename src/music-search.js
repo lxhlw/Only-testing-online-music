@@ -1264,10 +1264,12 @@
       );
     }
 
-    if (albumId) {
-      return requestV5(albumId, albumAudioId || '0');
-    }
-    requestMetadata();
+    requestV5(albumId, albumAudioId || '0', function (v5Err, v5Result) {
+      if (!v5Err && v5Result && v5Result.url) {
+        return callback(null, v5Result);
+      }
+      requestMetadata();
+    });
   }
 
   function resolveKugouGatewayUrl(hash, musicInfo, quality, callback) {
