@@ -808,7 +808,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   const result = await new Promise((resolve, reject) => {
     h.sandbox.LXMusicSearch.resolveMusicUrl(
       'tx',
-      { songmid: '0039MnQn', id: '200790315' },
+      { songmid: '0039MnQn' },
       '128k',
       (err, value) => err ? reject(err) : resolve(value)
     )
