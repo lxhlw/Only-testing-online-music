@@ -2036,16 +2036,18 @@
           if (!Array.isArray(midurlinfo)) return '';
           for (var i = 0; i < midurlinfo.length; i += 1) {
             var item = midurlinfo[i] || {};
-            if (item.purl && /^https?:\/\/i.test(String(item.purl).trim())) {
+            var purlText = String(item.purl || '').trim();
+            if (item.purl && (purlText.indexOf('http://') === 0 || purlText.indexOf('https://') === 0)) {
               return String(item.purl).trim();
             }
             if (item.purl) {
               var sip = Array.isArray(item.sip) && item.sip.length ? String(item.sip[0] || '').trim() : '';
-              if (sip && /^https?:\/\/i.test(sip)) {
+              if (sip && (sip.indexOf('http://') === 0 || sip.indexOf('https://') === 0)) {
                 return sip + String(item.purl).replace(/^\/+/, '');
               }
             }
-            if (item.wifiurl && /^https?:\/\/i.test(String(item.wifiurl).trim())) {
+            var wifiText = String(item.wifiurl || '').trim();
+            if (item.wifiurl && (wifiText.indexOf('http://') === 0 || wifiText.indexOf('https://') === 0)) {
               return String(item.wifiurl).trim();
             }
           }
