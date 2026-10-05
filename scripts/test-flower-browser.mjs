@@ -233,11 +233,15 @@ try {
       const baseline = await page.evaluate(() => {
         const audio = document.getElementById('audio')
         return {
-          src: audio?.currentSrc || audio?.src || '',
+          src: audio?.getAttribute('src') || '',
           currentTime: Number(audio?.currentTime || 0),
           eventIndex: Array.isArray(window.__audioEvents) ? window.__audioEvents.length : 0,
         }
       })
+
+      if (baseline.src) {
+        throw new Error(channel.toUpperCase() + ' pre-click audio source was not cleared: ' + baseline.src)
+      }
 
       const startedAt = Date.now()
       await page.locator('#search-results .search-row').nth(i).getByRole('button', { name: '解析并播放' }).click()
@@ -263,7 +267,7 @@ try {
         const events = Array.isArray(window.__audioEvents) ? window.__audioEvents.slice(markerIndex) : []
         return {
           status: document.getElementById('status')?.textContent || '',
-          audioUrl: audio?.currentSrc || audio?.src || '',
+          audioUrl: audio?.getAttribute('src') || '',
           readyState: Number(audio?.readyState || 0),
           currentTime: Number(audio?.currentTime || 0),
           duration: Number(audio?.duration || 0),

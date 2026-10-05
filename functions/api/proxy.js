@@ -45,6 +45,145 @@ function decodeChunkedBody(text) {
   return out;
 }
 
+
+async function fetchFlowerResolverViaSocket(target, request) {
+  if (!target || target.protocol !== 'http:' ||
+      String(target.hostname || '').toLowerCase() !== '97.64.37.235') {
+    return new Response(JSON.stringify({
+      error: 'Flower socket resolver skipped',
+      message: 'Target is not the canonical Flower HTTP origin'
+    }), {
+      status: 400,
+      headers: Object.assign({'Content-Type': 'application/json; charset=utf-8'}, corsHeaders(request))
+    });
+  }
+
+  var socket = null;
+  var writer = null;
+  var timeoutId = null;
+
+  try {
+    var method = String(request.method || 'GET').toUpperCase();
+    if (method !== 'GET' && method !== 'HEAD') {
+      throw new Error('Flower socket resolver only supports GET/HEAD');
+    }
+
+    socket = connect({
+      hostname: target.hostname,
+      port: Number(target.port || 80)
+    });
+
+    writer = socket.writable.getWriter();
+
+    var forwarded = pickForwardHeaders(request);
+    var requestHeaders = [
+      'Host: ' + target.hostname,
+      'Connection: close',
+      'Accept: application/json, text/plain, */*',
+      'Accept-Encoding: identity'
+    ];
+
+    forwarded.forEach(function (value, key) {
+      var lower = String(key || '').toLowerCase();
+      if (lower === 'host' || lower === 'content-length' || lower === 'connection' ||
+          lower === 'accept-encoding') return;
+      requestHeaders.push(String(key) + ': ' + String(value));
+    });
+
+    var encoder = new TextEncoder();
+    var path = target.pathname + target.search;
+    await writer.write(encoder.encode(
+      method + ' ' + path + ' HTTP/1.1\\r\\n' +
+      requestHeaders.join('\\r\\n') + '\\r\\n\\r\\n'
+    ));
+    await writer.close();
+    writer = null;
+
+    var responsePromise = readSocketBytes(socket);
+    var timeoutPromise = new Promise(function (_, reject) {
+      timeoutId = setTimeout(function () {
+        reject(new Error('Flower socket resolver timed out'));
+      }, 7000);
+    });
+
+    var bytes = await Promise.race([responsePromise, timeoutPromise]);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+
+    var text = new TextDecoder('utf-8').decode(bytes);
+    var headerEnd = text.indexOf('\\r\\n\\r\\n');
+    if (headerEnd < 0) throw new Error('Flower socket response missing HTTP headers');
+
+    var head = text.slice(0, headerEnd);
+    var body = text.slice(headerEnd + 4);
+    var lines = head.split('\\r\\n');
+    var statusMatch = lines[0].match(/^HTTP\\/\\d(?:\\.\\d)?\\s+(\\d{3})\\b/i);
+    var status = statusMatch ? Number(statusMatch[1]) : 0;
+
+    var responseHeaders = {};
+    for (var hi = 1; hi < lines.length; hi += 1) {
+      var separator = lines[hi].indexOf(':');
+      if (separator < 0) continue;
+      var headerName = lines[hi].slice(0, separator).replace(/^\\s+|\\s+$/g, '');
+      var headerValue = lines[hi].slice(separator + 1).replace(/^\\s+|\\s+$/g, '');
+      if (headerName) responseHeaders[headerName.toLowerCase()] = headerValue;
+    }
+
+    var transferEncoding = String(responseHeaders['transfer-encoding'] || '').toLowerCase();
+    if (transferEncoding.indexOf('chunked') >= 0) {
+      body = decodeChunkedBody(body);
+    } else {
+      var contentLength = Number(responseHeaders['content-length']);
+      if (isFinite(contentLength) && contentLength >= 0) {
+        body = body.slice(0, contentLength);
+      }
+    }
+
+    var payload = extractFlowerResolverPayload(body);
+    if (status >= 200 && status < 300 && payload) {
+      return new Response(payload.body, {
+        status: 200,
+        statusText: 'OK',
+        headers: new Headers({
+          'Content-Type': payload.contentType,
+          'Cache-Control': 'no-store'
+        })
+      });
+    }
+
+    throw new Error(
+      'Flower socket HTTP ' + String(status || 'unknown') +
+      (body ? ': ' + String(body).slice(0, 180) : '')
+    );
+  } catch (e) {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+
+    if (writer) {
+      try { writer.releaseLock(); } catch (ignore) {}
+      writer = null;
+    }
+
+    var message = e && e.message ? e.message : 'Unknown Flower socket error';
+    return new Response(JSON.stringify({
+      error: 'Flower socket resolver failed',
+      message: message
+    }), {
+      status: 502,
+      headers: Object.assign({'Content-Type': 'application/json; charset=utf-8'}, corsHeaders(request))
+    });
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+    if (socket) {
+      try { await socket.close(); } catch (ignore) {}
+    }
+  }
+}
+
 async function fetchFlowerResolverViaDirectFetch(target, request) {
   try {
     var forwarded = pickForwardHeaders(request);
@@ -535,8 +674,16 @@ export async function onRequest(context) {
   // its resolver on this IP, so try known DNS aliases for the same origin.
   if (target.hostname.toLowerCase() === '97.64.37.235'
       && /^\/flower\/v1\/url\//.test(target.pathname)) {
-    // Workers can fetch hostnames but not raw IP URLs. Try wildcard-DNS
-    // hostnames first, then the public bridges, then legacy fallbacks.
+    // Cloudflare's ordinary fetch path rejects this public HTTP IP. Use the
+    // Workers Socket API first so the canonical Flower resolver can still be
+    // reached without changing the imported LX source URL.
+    var flowerSocketResponse = await fetchFlowerResolverViaSocket(target, request);
+    if (flowerSocketResponse.status >= 200 && flowerSocketResponse.status < 300) {
+      return flowerSocketResponse;
+    }
+
+    // If the socket route is unavailable, retain the existing hostname and
+    // HTTPS bridge fallbacks as secondary compatibility paths.
     var flowerHostResponse = await fetchFlowerResolverViaHost(target, request);
     if (flowerHostResponse.status >= 200 && flowerHostResponse.status < 300) {
       return flowerHostResponse;
