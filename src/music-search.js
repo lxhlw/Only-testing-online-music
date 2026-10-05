@@ -1247,17 +1247,18 @@
           requestCopyrightListenUrl(function (copyrightErr) {
             if (!copyrightErr) return;
             requestLegacyListenSongUrl(function (legacyErr) {
-            if (!legacyErr) return;
-            if (!contentId) return callback(copyrightErr || officialErr || pcErr || legacyErr);
+              if (!legacyErr) return;
+              if (!contentId) return callback(copyrightErr || officialErr || pcErr || legacyErr);
 
-            return callback(new Error(
-              'Migu playback endpoints returned no playable media URL' +
-              '；strategy: ' + String(strategyErr && strategyErr.message || strategyErr || 'failed') +
-              '；h5: ' + String(officialErr && officialErr.message || officialErr || 'failed') +
-              '；pc: ' + String(pcErr && pcErr.message || pcErr || 'failed') +
-              '；copyright: ' + String(copyrightErr && copyrightErr.message || copyrightErr || 'failed') +
-              '；legacy: ' + String(legacyErr && legacyErr.message || legacyErr || 'failed')
-            ));
+              return callback(new Error(
+                'Migu playback endpoints returned no playable media URL' +
+                '；strategy: ' + String(strategyErr && strategyErr.message || strategyErr || 'failed') +
+                '；h5: ' + String(officialErr && officialErr.message || officialErr || 'failed') +
+                '；pc: ' + String(pcErr && pcErr.message || pcErr || 'failed') +
+                '；copyright: ' + String(copyrightErr && copyrightErr.message || copyrightErr || 'failed') +
+                '；legacy: ' + String(legacyErr && legacyErr.message || legacyErr || 'failed')
+              ));
+            });
           });
         });
       });
