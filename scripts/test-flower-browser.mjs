@@ -247,25 +247,30 @@ try {
       const startedAt = Date.now()
       await page.locator('#search-results .search-row').nth(i).getByRole('button', { name: '解析并播放' }).click()
 
-      try {
-        await page.waitForFunction(
-          ({ markerIndex }) => {
-            const audio = document.getElementById('audio')
-            const events = Array.isArray(window.__audioEvents) ? window.__audioEvents.slice(markerIndex) : []
-            if (!audio) return false
-            if (events.some(event => ['error', 'ended'].includes(event.name))) return true
-            if (audio.error) return true
-            // The 'playing' event can fire at currentTime=0 while the first
-            // media bytes are still arriving. Do not cut the probe short;
-            // require actual time progression before evaluating success.
-            return Number(audio.currentTime || 0) >= REAL_PLAYBACK_PROGRESS_S
-          },
-          { markerIndex: baseline.eventIndex },
-          { timeout: PLAYBACK_TIMEOUT_MS },
-        )
-      } catch {}
+      const playbackDeadline = Date.now() + PLAYBACK_TIMEOUT_MS
+      while (Date.now() < playbackDeadline) {
+        const probe = await page.evaluate(() => {
+          const audio = document.getElementById('audio')
+          if (!audio) return { currentTime: 0, readyState: 0, error: true, ended: false }
+          return {
+            currentTime: Number(audio.currentTime || 0),
+            readyState: Number(audio.readyState || 0),
+            error: Boolean(audio.error),
+            ended: Boolean(audio.ended),
+          }
+        })
 
-      await page.waitForTimeout(1200)
+        if (
+          probe.error ||
+          probe.ended ||
+          (probe.readyState >= 2 && probe.currentTime >= REAL_PLAYBACK_PROGRESS_S)
+        ) {
+          break
+        }
+        await page.waitForTimeout(250)
+      }
+
+      await page.waitForTimeout(500)
 
       const attempt = await page.evaluate((markerIndex) => {
         const audio = document.getElementById('audio')
