@@ -636,6 +636,8 @@
     );
   }
 
+  var SOURCE_RESOLVE_TIMEOUT_MS = 8000;
+
   function requestQuality(music, source, musicInfo, plan, index, token) {
     var active = global.LXSourceManager.getActive();
     var settings = getPlaySettings();
@@ -647,22 +649,104 @@
     playbackState.waitingForAudio = false;
     playbackState.playing = false;
     playbackState.url = '';
+    playbackState.resolveAttemptId = Number(playbackState.resolveAttemptId || 0) + 1;
+    var resolveAttemptId = playbackState.resolveAttemptId;
+    var settled = false;
+    var sourceTimer = null;
+
+    function isCurrentAttempt() {
+      return token === playbackToken &&
+        playbackState &&
+        playbackState.token === token &&
+        playbackState.resolveAttemptId === resolveAttemptId;
+    }
+
+    function clearSourceTimer() {
+      if (sourceTimer) {
+        global.clearTimeout(sourceTimer);
+        sourceTimer = null;
+      }
+    }
+
+    function finishAttempt() {
+      if (settled) return false;
+      settled = true;
+      clearSourceTimer();
+      return true;
+    }
+
+    function runFallback(reason) {
+      if (!isCurrentAttempt() || !finishAttempt()) return;
+
+      if (reason) {
+        setStatus(reason, 'warn');
+      }
+
+      if (global.LXMusicSearch && typeof global.LXMusicSearch.resolveMusicUrl === 'function') {
+        return global.LXMusicSearch.resolveMusicUrl(source, musicInfo, quality, function (fallbackErr, fallbackResult) {
+          if (token !== playbackToken || !playbackState || playbackState.resolveAttemptId !== resolveAttemptId) return;
+          if (!fallbackErr && fallbackResult && fallbackResult.url) {
+            return useResolvedUrl(
+              fallbackResult.url,
+              quality,
+              token,
+              music,
+              source,
+              musicInfo,
+              settings,
+              fallbackResult.provider === 'huibq'
+                ? 'Huibq 平台兜底'
+                : (fallbackResult.provider === 'tune-free'
+                  ? 'TuneHub 平台兜底'
+                  : (fallbackResult.provider === 'kugou-native'
+                    ? '酷狗直连兜底'
+                    : (fallbackResult.provider === 'kuwo-native'
+                      ? '酷我直连兜底'
+                      : (fallbackResult.provider === 'netease-native'
+                        ? '网易云直连兜底'
+                        : 'GD Studio 平台兜底')))),
+              fallbackResult.provider
+            );
+          }
+
+          if (settings.autoFallback && index + 1 < plan.length) {
+            return requestQuality(music, source, musicInfo, plan, index + 1, token);
+          }
+
+          return setStatus('musicUrl 备用解析失败（' + escapeHtml(quality) + '）：'
+            + escapeHtml((fallbackErr && (fallbackErr.message || fallbackErr)) || '没有可用地址'),
+            'fail');
+        }, { skipProvider: '' });
+      }
+
+      if (settings.autoFallback && index + 1 < plan.length) {
+        return requestQuality(music, source, musicInfo, plan, index + 1, token);
+      }
+
+      return setStatus('当前音质无法播放，且没有可用的备用解析器。', 'fail');
+    }
 
     setStatus(
       (index === 0 ? '正在请求' : '当前音质失败，正在自动切换') +
       ' ' + escapeHtml(quality) + '：' + escapeHtml(music.name) + '……'
     );
 
-    global.LXSourceManager.requestAction(source, 'musicUrl', {
-      type: quality,
-      musicInfo: musicInfo
+    sourceTimer = global.setTimeout(function () {
+      if (!isCurrentAttempt() || settled) return;
+      runFallback(
+        '原始音源解析超过 ' + Math.round(SOURCE_RESOLVE_TIMEOUT_MS / 1000) +
+        ' 秒，正在切换备用解析器……'
+      );
+    }, SOURCE_RESOLVE_TIMEOUT_MS);
+
     }, function (err, result) {
-      if (token !== playbackToken) return;
+      if (!isCurrentAttempt() || settled) return;
 
       if (err) {
+        if (!finishAttempt()) return;
         if (global.LXMusicSearch && typeof global.LXMusicSearch.resolveMusicUrl === 'function') {
           return global.LXMusicSearch.resolveMusicUrl(source, musicInfo, quality, function (fallbackErr, fallbackResult) {
-            if (token !== playbackToken) return;
+            if (token !== playbackToken || !playbackState || playbackState.resolveAttemptId !== resolveAttemptId) return;
             if (!fallbackErr && fallbackResult && fallbackResult.url) {
               return useResolvedUrl(
                 fallbackResult.url,
@@ -706,38 +790,7 @@
       var url = typeof result === 'string' ? result : (result && (result.url || result.result));
       if (url != null) url = String(url).replace(/^\s+|\s+$/g, '');
       if (!url || !/^https?:/i.test(url)) {
-        if (global.LXMusicSearch && typeof global.LXMusicSearch.resolveMusicUrl === 'function') {
-          return global.LXMusicSearch.resolveMusicUrl(source, musicInfo, quality, function (fallbackErr, fallbackResult) {
-            if (token !== playbackToken) return;
-            if (!fallbackErr && fallbackResult && fallbackResult.url) {
-              return useResolvedUrl(
-                fallbackResult.url,
-                quality,
-                token,
-                music,
-                source,
-                musicInfo,
-                settings,
-                fallbackResult.provider === 'huibq'
-                  ? 'Huibq 平台兜底'
-                  : (fallbackResult.provider === 'tune-free'
-                    ? 'TuneHub 平台兜底'
-                    : (fallbackResult.provider === 'kugou-native' ? '酷狗直连兜底' : 'GD Studio 平台兜底')),
-                fallbackResult.provider
-              );
-            }
-            if (settings.autoFallback && index + 1 < plan.length) {
-              return requestQuality(music, source, musicInfo, plan, index + 1, token);
-            }
-            return setStatus('musicUrl 在 ' + escapeHtml(quality) + ' 下返回了无效结果。'
-              + (fallbackErr ? '；平台兜底也失败：' + escapeHtml(fallbackErr.message || fallbackErr) : ''),
-              'fail');
-          });
-        }
-        if (settings.autoFallback && index + 1 < plan.length) {
-          return requestQuality(music, source, musicInfo, plan, index + 1, token);
-        }
-        return setStatus('musicUrl 在 ' + escapeHtml(quality) + ' 下返回了无效结果。', 'fail');
+        return runFallback('原始音源返回的播放地址无效，正在切换备用解析器……');
       }
 
       return useResolvedUrl(
