@@ -44,6 +44,8 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
         response = responses.kuwo
       } else if (targetUrl.indexOf('tracker.kugou.com/v5/url') >= 0 && responses.kugouTracker) {
         response = responses.kugouTracker
+      } else if (targetUrl.indexOf('app.c.nf.migu.cn/MIGUM2.0/v2.0/content/listen-url') >= 0 && responses.miguListenUrl) {
+        response = responses.miguListenUrl
       } else if (targetUrl.indexOf('lxmusicapi.onrender.com/url/') >= 0 && responses.huibq) {
         const provider = targetUrl.split('/url/')[1]?.split('/')[0] || 'unknown'
         response = responses.huibq[provider] || { status: 200, body: '[]' }
@@ -336,6 +338,15 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     () => {},
     {
       kuwo: { status: 200, body: 'https://audio.example.test/kw-native.mp3' },
+      miguListenUrl: {
+        status: 200,
+        body: JSON.stringify({
+          code: '000000',
+          data: {
+            url: 'https://audio.example.test/mg-native.mp3'
+          }
+        })
+      },
       kugouTracker: {
         status: 200,
         body: JSON.stringify({
@@ -442,17 +453,18 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       assert.equal(result.url, 'https://music.163.com/song/media/outer/url?id=99887766.mp3')
       assert.equal(result.id, '99887766')
     } else {
-      assert.equal(result.provider, 'huibq')
-      assert.equal(result.url, 'https://cdn.example.test/mg-audio.mp3')
+      assert.equal(result.provider, 'migu-native-listen-url')
+      assert.equal(result.url, 'https://audio.example.test/mg-native.mp3')
       assert.equal(result.id, 'mg-song-55667788')
-
-      const call = h.calls[h.calls.length - 1]
-      const target = new URL(call.xhrUrl).searchParams.get('url')
+      const mgCalls = h.calls.filter(call =>
+        call.xhrMethod === 'GET' &&
+        String(call.xhrUrl || '').includes('app.c.nf.migu.cn/MIGUM2.0/v2.0/content/listen-url')
+      )
+      assert.equal(mgCalls.length, 1)
+      const target = new URL(mgCalls[0].xhrUrl).searchParams.get('url')
       const requestUrl = new URL(target)
-      assert.equal(requestUrl.origin, 'https://lxmusicapi.onrender.com')
-      assert.equal(requestUrl.pathname, '/url/mg/mg-song-55667788/320k')
-      const forwarded = JSON.parse(call.xhrHeaders['X-LX-Headers'])
-      assert.equal(forwarded['X-Request-Key'], 'share-v3')
+      assert.equal(requestUrl.searchParams.get('copyrightId'), '55667788')
+      assert.equal(requestUrl.searchParams.get('toneFlag'), 'SQ')
     }
   }
 }
@@ -588,6 +600,8 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
           resultList: [[{
             songId: 'mg-song-1',
             copyrightId: 'mg-copy-1',
+            contentId: 'mg-content-1',
+            resourceType: '2',
             name: '晴天',
             album: '叶惠美',
             albumId: 'mg-alb',
@@ -640,6 +654,8 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     if (item.source === 'mg') {
       assert.equal(result.list[0].copyrightId, 'mg-copy-1')
       assert.equal(result.list[0].songmid, 'mg-song-1')
+      assert.equal(result.list[0].contentId, 'mg-content-1')
+      assert.equal(result.list[0].resourceType, '2')
       assert.equal(result.list[0].singer, '周杰伦')
       assert.equal(h.calls[0].xhrMethod, 'GET')
     }
