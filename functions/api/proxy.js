@@ -271,22 +271,9 @@ function flowerResolverTargets(target) {
     targets.push(url);
   }
 
+  // Keep the canonical Flower endpoint as a raw-IP target. Do not add the
+  // historical tempmusics aliases: their DNS currently fails in workerd.
   add(target.toString());
-
-  if (/^\/flower\/v1\/url\//.test(target.pathname)) {
-    var legacyPath = target.pathname.replace(/^\/flower\/v1\/url\//, '/url/');
-    var bases = [
-      'http://ts.tempmusics.tk',
-      'http://tm.tempmusics.tk',
-      'https://ts.tempmusics.tk',
-      'https://tm.tempmusics.tk'
-    ];
-
-    for (var bi = 0; bi < bases.length; bi += 1) {
-      add(bases[bi] + legacyPath + target.search);
-      add(bases[bi] + target.pathname + target.search);
-    }
-  }
 
   return targets;
 }
@@ -371,17 +358,13 @@ function extractFlowerResolverPayload(body) {
 async function fetchFlowerResolverViaHttpBridge(target, request) {
   var targets = flowerResolverTargets(target);
   var bridges = [
+    // Server-side CORS bridge for the raw Flower endpoint.
+    function (targetUrl) {
+      return 'https://cors.io/?url=' + encodeURIComponent(targetUrl);
+    },
+    // Secondary server-side reader bridge.
     function (targetUrl) {
       return 'https://r.jina.ai/' + targetUrl;
-    },
-    function (targetUrl) {
-      return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl);
-    },
-    function (targetUrl) {
-      return 'https://corsproxy.io/?url=' + encodeURIComponent(targetUrl);
-    },
-    function (targetUrl) {
-      return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(targetUrl);
     }
   ];
 
