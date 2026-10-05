@@ -1,26 +1,25 @@
 import assert from 'node:assert/strict'
-
 const baseUrl = process.env.TEST_BASE_URL
 assert.ok(baseUrl, 'TEST_BASE_URL is required')
 
-const controller = new AbortController()
-const timeout = setTimeout(() => controller.abort(), 20000)
-
-let response
-try {
-  response = await fetch(baseUrl + '/api/babel', {
-    signal: controller.signal,
-    headers: { Accept: 'application/javascript,text/javascript,*/*' }
-  })
-} finally {
-  clearTimeout(timeout)
+async function get(path) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 20000)
+  try {
+    return await fetch(baseUrl + path, { signal: controller.signal, headers: { Accept: 'application/javascript,*/*' } })
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
-assert.equal(response.status, 200, 'Production Babel endpoint should return HTTP 200')
-const contentType = response.headers.get('content-type') || ''
-assert.match(contentType, /javascript/i, 'Production Babel endpoint should return JavaScript')
-const body = await response.text()
-assert.ok(body.length > 500000, 'Production Babel bundle unexpectedly small')
-assert.match(body, /Babel/i, 'Production Babel bundle marker missing')
+const vendor = await get('/vendor/babel.min.js')
+assert.equal(vendor.status, 200)
+assert.match(vendor.headers.get('content-type') || '', /javascript/i)
+const body = await vendor.text()
+assert.ok(body.length > 500000)
+assert.match(body, /Babel/i)
 
-console.log('PASS: production /api/babel serves the pinned Babel standalone bundle')
+const api = await get('/api/babel')
+assert.equal(api.status, 200)
+
+console.log('PASS: production serves bundled Babel and retains API fallback')

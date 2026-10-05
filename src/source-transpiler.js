@@ -7,7 +7,7 @@
     'https://cdn.jsdelivr.net/npm/@babel/standalone@' + BABEL_VERSION + '/babel.min.js',
     'https://unpkg.com/@babel/standalone@' + BABEL_VERSION + '/babel.min.js'
   ];
-  var loadState = 0;
+  var loadState = global.Babel && typeof global.Babel.transform === 'function' ? 2 : 0;
   var loadQueue = [];
   var loadError = null;
   var loadIndex = 0;
@@ -15,11 +15,8 @@
   var LOAD_TIMEOUT_MS = 15000;
 
   function schedule(fn) {
-    if (typeof global.setTimeout === 'function') {
-      global.setTimeout(fn, 0);
-    } else {
-      fn();
-    }
+    if (typeof global.setTimeout === 'function') global.setTimeout(fn, 0);
+    else fn();
   }
 
   function finishLoad(err) {
@@ -46,13 +43,10 @@
     var script = global.document.createElement('script');
     var parent = global.document.getElementsByTagName('head')[0] || global.document.documentElement;
     if (!parent) throw new Error('Document head is unavailable for legacy transpiler');
-
     script.type = 'text/javascript';
     script.async = false;
 
-    if (typeof script.text !== 'undefined') {
-      script.text = String(code || '');
-    } else if (global.document.createTextNode) {
+    if (global.document.createTextNode) {
       script.appendChild(global.document.createTextNode(String(code || '')));
     } else {
       script.innerHTML = String(code || '');
@@ -153,11 +147,8 @@
     }
 
     script.onload = function () {
-      if (global.Babel && typeof global.Babel.transform === 'function') {
-        done(true, null);
-      } else {
-        failed('Legacy transpiler script loaded without Babel');
-      }
+      if (global.Babel && typeof global.Babel.transform === 'function') done(true, null);
+      else failed('Legacy transpiler script loaded without Babel');
     };
     script.onreadystatechange = function () {
       if ((script.readyState === 'loaded' || script.readyState === 'complete') &&
@@ -188,25 +179,23 @@
 
     if (src === '/api/babel') {
       loadViaXhr(src, function (ok) {
-        if (ok) {
-          finishLoad(null);
-        } else {
-          loadNext();
-        }
+        if (ok) finishLoad(null);
+        else loadNext();
       });
       return;
     }
 
     loadViaScript(src, function (ok) {
-      if (ok) {
-        finishLoad(null);
-      } else {
-        loadNext();
-      }
+      if (ok) finishLoad(null);
+      else loadNext();
     });
   }
 
   function loadBabel(callback) {
+    if (loadState !== 2 && global.Babel && typeof global.Babel.transform === 'function') {
+      loadState = 2;
+      loadError = null;
+    }
     if (loadState === 2) {
       schedule(function () { callback(null, global.Babel); });
       return;
@@ -238,7 +227,6 @@
         callback(err);
         return;
       }
-
       try {
         var result = babel.transform(String(code || ''), {
           filename: filename || 'lx-source.js',
@@ -246,12 +234,7 @@
           sourceMaps: false,
           comments: true,
           compact: false,
-          presets: [
-            ['env', {
-              targets: { ie: '8' },
-              bugfixes: false
-            }]
-          ]
+          presets: [['env', { targets: { ie: '8' }, bugfixes: false }]]
         });
         if (!result || typeof result.code !== 'string' || !result.code) {
           callback(new Error('Legacy JavaScript transpiler returned empty output'));
@@ -267,12 +250,10 @@
   function prepare(code, filename, callback, options) {
     var text = String(code || '');
     var force = options && options.force === true;
-
     if (!force && canParse(text)) {
       schedule(function () { callback(null, text, false); });
       return;
     }
-
     transform(text, filename, function (err, output) {
       if (err) {
         callback(err, null, false);

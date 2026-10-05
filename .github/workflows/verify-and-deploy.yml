@@ -38,6 +38,12 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Prepare bundled legacy Babel
+        run: |
+          mkdir -p vendor
+          cp node_modules/@babel/standalone/babel.min.js vendor/babel.min.js
+          node scripts/test-bundled-babel.mjs
+
       - name: Check JavaScript syntax
         run: |
           node --check src/app.js
@@ -127,6 +133,12 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           npx wrangler pages project create only-testing-online-music --production-branch main || true
+
+      - name: Prepare bundled legacy Babel
+        run: |
+          mkdir -p vendor
+          cp node_modules/@babel/standalone/babel.min.js vendor/babel.min.js
+          node scripts/test-bundled-babel.mjs
           npx wrangler pages deploy . --project-name only-testing-online-music --commit-hash "$GITHUB_SHA" --commit-message "Verify And Deploy $GITHUB_SHA" | tee /tmp/deploy.log
           DEPLOYMENT_URL="https://only-testing-online-music.pages.dev"
           echo "deployment_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
@@ -143,6 +155,11 @@ jobs:
             sleep 2
           done
           exit 1
+
+      - name: Verify deployed Babel bundle
+        env:
+          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
+        run: node scripts/test-babel-production.mjs
 
   live-smoke:
     name: Live Flower Five-Channel Smoke Test
