@@ -1078,12 +1078,121 @@
   }
 
 
+  function resolveKugouTrackerUrl(hash, quality, callback) {
+    hash = String(hash || '').replace(/^\s+|\s+$/g, '');
+    if (!hash) return callback(new Error('No Kugou hash for tracker playback'));
+
+    var md5Fn = null;
+    try {
+      md5Fn = global.createLXRuntime({ env: 'web' }).utils.crypto.md5;
+    } catch (e) {}
+    if (typeof md5Fn !== 'function') return callback(new Error('LX MD5 runtime unavailable for Kugou tracker'));
+
+    var key = '';
+    try {
+      key = String(md5Fn(hash + 'kgcloudv2'));
+    } catch (e) {
+      return callback(new Error('Kugou tracker key generation failed'));
+    }
+
+    function extractTrackerUrl(detail) {
+      if (!detail || typeof detail !== 'object') return '';
+      var candidates = [
+        detail.url,
+        detail.play_url,
+        detail.playUrl,
+        detail.data && detail.data.url,
+        detail.data && detail.data.play_url,
+        detail.data && detail.data.playUrl
+      ];
+      for (var i = 0; i < candidates.length; i += 1) {
+        var value = candidates[i];
+        if (typeof value === 'string' && /^https?:\/\//i.test(value.trim())) return value.trim();
+        if (Array.isArray(value)) {
+          for (var j = 0; j < value.length; j += 1) {
+            if (typeof value[j] === 'string' && /^https?:\/\//i.test(value[j].trim())) {
+              return value[j].trim();
+            }
+          }
+        }
+      }
+      return '';
+    }
+
+    var endpoints = [
+      'http://trackercdn.kugou.com/i/v2/?key=' + encodeURIComponent(key) +
+        '&hash=' + encodeURIComponent(hash) +
+        '&br=hq&appid=1005&pid=2&cmd=25&behavior=play',
+      'http://trackercdnbj.kugou.com/i/v2/?cmd=23&pid=1&behavior=download' +
+        '&hash=' + encodeURIComponent(hash) + '&key=' + encodeURIComponent(key)
+    ];
+
+    var lastError = null;
+    function tryEndpoint(index) {
+      if (index >= endpoints.length) {
+        return callback(lastError || new Error('Kugou tracker returned no playable URL'));
+      }
+
+      requestViaProxy(
+        endpoints[index],
+        'GET',
+        null,
+        {
+          'User-Agent': 'lx-music/desktop',
+          'Accept': 'application/json, text/plain, */*'
+        },
+        true,
+        function (err, detail) {
+          if (!err) {
+            var directUrl = extractTrackerUrl(detail);
+            if (directUrl) {
+              return callback(null, {
+                url: directUrl,
+                source: 'kg',
+                provider: 'kugou-native',
+                requestedQuality: String(quality || ''),
+                actualBr: detail.bitRate != null ? String(detail.bitRate) : '',
+                id: hash,
+                raw: detail
+              });
+            }
+            lastError = new Error('Kugou tracker returned no URL');
+          } else {
+            lastError = err;
+          }
+          tryEndpoint(index + 1);
+        }
+      );
+    }
+
+    tryEndpoint(0);
+  }
+
   function resolveKugouNativeUrl(musicInfo, quality, callback) {
     var info = musicInfo || {};
     var baseHash = String(info.hash || info.fileHash || '').replace(/^\s+|\s+$/g, '');
     if (!baseHash) return callback(new Error('No Kugou hash for native playback'));
 
     var requested = String(quality || '').toLowerCase();
+
+    function fallbackAfterTracker(trackerErr) {
+      requestDetail(baseHash, function (baseErr, baseResult) {
+        if (baseErr) return requestWebApi(baseHash, trackerErr || baseErr);
+
+        if (requested === '128k') return callback(null, baseResult);
+
+        var detail = baseResult.raw || {};
+        var qualityHash = chooseQualityHash(detail);
+        if (qualityHash && qualityHash !== baseHash) {
+          return requestDetail(qualityHash, function (qualityErr, qualityResult) {
+            if (!qualityErr && qualityResult && qualityResult.url) return callback(null, qualityResult);
+            requestWebApi(baseHash, qualityErr || baseErr);
+          });
+        }
+
+        requestWebApi(baseHash, trackerErr || baseErr);
+      });
+    }
 
     function extractDirectUrl(detail) {
       if (!detail || typeof detail !== 'object') return '';
@@ -1189,21 +1298,11 @@
       );
     }
 
-    requestDetail(baseHash, function (baseErr, baseResult) {
-      if (baseErr) return requestWebApi(baseHash, baseErr);
-
-      if (requested === '128k') return callback(null, baseResult);
-
-      var detail = baseResult.raw || {};
-      var qualityHash = chooseQualityHash(detail);
-      if (qualityHash && qualityHash !== baseHash) {
-        return requestDetail(qualityHash, function (qualityErr, qualityResult) {
-          if (!qualityErr && qualityResult && qualityResult.url) return callback(null, qualityResult);
-          requestWebApi(baseHash, qualityErr || baseErr);
-        });
+    resolveKugouTrackerUrl(baseHash, quality, function (trackerErr, trackerResult) {
+      if (!trackerErr && trackerResult && trackerResult.url) {
+        return callback(null, trackerResult);
       }
-
-      requestWebApi(baseHash, baseErr);
+      fallbackAfterTracker(trackerErr);
     });
   }
 

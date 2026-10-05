@@ -304,21 +304,8 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
           status: 200,
           body: JSON.stringify({
             status: 1,
-            hash: 'ABCDEF0123456789',
-            bitRate: 128,
-            url: 'https://audio.example.test/kg-128.mp3',
-            extra: {
-              '320hash': '320HASH0123456789'
-            }
-          })
-        },
-        {
-          status: 200,
-          body: JSON.stringify({
-            status: 1,
-            hash: '320HASH0123456789',
             bitRate: 320,
-            url: 'https://audio.example.test/kg-320.mp3'
+            url: ['https://audio.example.test/kg-tracker.mp3']
           })
         },
         {
@@ -372,16 +359,14 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 
     if (item.source === 'kg') {
       assert.equal(result.provider, 'kugou-native')
-      assert.equal(result.url, 'https://audio.example.test/kg-320.mp3')
-      assert.equal(result.id, '320HASH0123456789')
-      const kgCalls = h.calls.filter(call => call.xhrMethod === 'GET' && String(call.xhrUrl || '').includes('m.kugou.com'))
-      assert.equal(kgCalls.length, 2)
-      const firstTarget = new URL(kgCalls[0].xhrUrl).searchParams.get('url')
-      const secondTarget = new URL(kgCalls[1].xhrUrl).searchParams.get('url')
-      assert.match(firstTarget, /m\.kugou\.com\/app\/i\/getSongInfo\.php/)
-      assert.match(secondTarget, /m\.kugou\.com\/app\/i\/getSongInfo\.php/)
-      assert.match(firstTarget, /hash=ABCDEF0123456789/)
-      assert.match(secondTarget, /hash=320HASH0123456789/)
+      assert.equal(result.url, 'https://audio.example.test/kg-tracker.mp3')
+      assert.equal(result.id, 'ABCDEF0123456789')
+      const kgCalls = h.calls.filter(call => call.xhrMethod === 'GET' && String(call.xhrUrl || '').includes('trackercdn.kugou.com'))
+      assert.equal(kgCalls.length, 1)
+      const target = new URL(kgCalls[0].xhrUrl).searchParams.get('url')
+      assert.match(target, /trackercdn\.kugou\.com\/i\/v2/)
+      assert.match(target, /hash=ABCDEF0123456789/)
+
     } else {
       assert.equal(result.provider, 'huibq')
       assert.equal(result.url, 'https://cdn.example.test/' + item.source + '-audio.mp3')
