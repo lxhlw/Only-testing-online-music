@@ -53,6 +53,13 @@ function extractAppFunction(sourceText, name) {
     /^https:\/\/only-testing-online-music\.pages\.dev\/api\/proxy\?url=/,
     'Explicit playback retry must still force the Migu URL through the project proxy'
   )
+
+  const kugouHttpUrl = 'http://fsdg360.hw.kugou.com/202610052213/example/path.mp3'
+  assert.equal(
+    buildPlayableUrl(kugouHttpUrl, false),
+    'https://fsdg360.hw.kugou.com/202610052213/example/path.mp3',
+    'Kugou HW CDN HTTP media must be upgraded to HTTPS instead of proxied'
+  )
 }
 
 

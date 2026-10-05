@@ -415,14 +415,18 @@
           hostname === 'kw-lv.kuwo.cn' ||
           hostname === 'bd-er.kuwo.cn' ||
           hostname === 'kwcdn.kuwo.cn';
+        var trustedKugouMediaHost = hostname.endsWith('.hw.kugou.com');
 
-        // Signed Kuwo CDN URLs and official Migu HTTPS media/redirect
-        // endpoints should stay direct. The <audio> element can consume
-        // cross-origin HTTPS media without routing it through the JSON proxy.
-        // HTTP media still goes through the same-origin proxy to avoid mixed
-        // content on the HTTPS Pages site.
+        // Signed Kuwo CDN URLs and Kugou HW CDN media can be used directly.
+        // The Kugou resolver commonly returns an HTTP CDN URL; upgrading that
+        // media request to HTTPS avoids mixed-content blocking on the Pages app
+        // and avoids routing a valid media CDN through the JSON proxy.
+        // Official Migu HTTPS media/redirect endpoints also stay direct.
         if (!forceProxy &&
-            (trustedKuwoMediaHost || target.protocol === 'https:')) {
+            (trustedKuwoMediaHost || trustedKugouMediaHost || target.protocol === 'https:')) {
+          if (trustedKugouMediaHost && target.protocol === 'http:') {
+            target.protocol = 'https:';
+          }
           return target.href;
         }
 
