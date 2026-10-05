@@ -605,6 +605,8 @@ function copyResponseHeaders(source, request) {
 
 var MIGU_H5_V24_HOST = 'c.musicapp.migu.cn';
 var MIGU_H5_V24_PATH = '/strategy/listen-url/h5/v2.4';
+var MIGU_PC_V20_HOST = 'app.c.nf.migu.cn';
+var MIGU_PC_V20_PATH = '/strategy/pc/listen/v2.0';
 var MIGU_H5_V24_KEY = new TextEncoder().encode('Jk8qzuePiJ1qE3mDYhLQ3T73DtDoAhLP');
 
 function decodeMiguH5V24(bytes, signedResponse) {
@@ -757,8 +759,10 @@ export async function onRequest(context) {
   if (method !== 'GET' && method !== 'HEAD') init.body = request.body;
 
   if (
-    target.hostname.toLowerCase() === MIGU_H5_V24_HOST &&
-    target.pathname === MIGU_H5_V24_PATH
+    (target.hostname.toLowerCase() === MIGU_H5_V24_HOST &&
+      target.pathname === MIGU_H5_V24_PATH) ||
+    (target.hostname.toLowerCase() === MIGU_PC_V20_HOST &&
+      target.pathname === MIGU_PC_V20_PATH)
   ) {
     return await fetchMiguH5V24(target, request);
   }

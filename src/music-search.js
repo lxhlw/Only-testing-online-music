@@ -1071,6 +1071,56 @@
       );
     }
 
+    function requestOfficialPcListenUrl(done) {
+      if (!contentId || !copyrightId) {
+        return done(new Error('Migu contentId/copyrightId is missing for PC strategy'));
+      }
+
+      var api =
+        'https://app.c.nf.migu.cn/strategy/pc/listen/v2.0' +
+        '?contentId=' + encodeURIComponent(contentId) +
+        '&copyrightId=' + encodeURIComponent(copyrightId) +
+        '&scene=' +
+        '&netType=01' +
+        '&resourceType=' + encodeURIComponent(resourceType || '2') +
+        '&toneFlag=' + encodeURIComponent(toneFlag);
+
+      requestViaProxy(
+        api,
+        'GET',
+        null,
+        {
+          'Accept': 'application/json, text/plain, */*',
+          'Content-Type': 'application/json;charset=UTF-8',
+          'Origin': 'https://music.migu.cn',
+          'Referer': 'https://music.migu.cn/',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0',
+          'birth': 'h5page',
+          'signature': '1',
+          'channel': '014X031',
+          'subchannel': '014X031',
+          'ua': 'Android_migu',
+          'version': '6.8.8',
+          'deviceId': '963B7AA0-D215-11ED-807E-E5846EC87D20',
+          'appId': 'h5',
+          'platform': 'H5',
+          'activityId': 'MUSIC-WWW',
+          'test': '00',
+          'timestamp': String(Date.now ? Date.now() : new Date().getTime()),
+          'logId': 'cfrom=&appId=h5',
+          'uid': '',
+          'pacmtoken': ''
+        },
+        true,
+        function (apiErr, data) {
+          if (apiErr) return done(apiErr);
+          var returned = extractUrl(data, 0);
+          if (!returned) return done(new Error('Migu PC strategy/listen returned no URL'));
+          finish(returned, 'migu-native-pc-v2.0', data);
+        }
+      );
+    }
+
     function requestCopyrightListenUrl(done) {
       if (!copyrightId) return done(new Error('Migu copyrightId is missing'));
 
@@ -1131,18 +1181,22 @@
     // endpoints return no usable media URL.
     requestOfficialListenUrl(function (officialErr) {
       if (!officialErr) return;
-      requestCopyrightListenUrl(function (copyrightErr) {
-        if (!copyrightErr) return;
-        requestLegacyListenSongUrl(function (legacyErr) {
-          if (!legacyErr) return;
-          if (!contentId) return callback(copyrightErr || officialErr || legacyErr);
+      requestOfficialPcListenUrl(function (pcErr) {
+        if (!pcErr) return;
+        requestCopyrightListenUrl(function (copyrightErr) {
+          if (!copyrightErr) return;
+          requestLegacyListenSongUrl(function (legacyErr) {
+            if (!legacyErr) return;
+            if (!contentId) return callback(copyrightErr || officialErr || pcErr || legacyErr);
 
-          return callback(new Error(
-            'Migu official and legacy playback endpoints returned no playable media URL' +
-            '；strategy: ' + String(officialErr && officialErr.message || officialErr || 'failed') +
-            '；copyright: ' + String(copyrightErr && copyrightErr.message || copyrightErr || 'failed') +
-            '；legacy: ' + String(legacyErr && legacyErr.message || legacyErr || 'failed')
-          ));
+            return callback(new Error(
+              'Migu playback endpoints returned no playable media URL' +
+              '；h5: ' + String(officialErr && officialErr.message || officialErr || 'failed') +
+              '；pc: ' + String(pcErr && pcErr.message || pcErr || 'failed') +
+              '；copyright: ' + String(copyrightErr && copyrightErr.message || copyrightErr || 'failed') +
+              '；legacy: ' + String(legacyErr && legacyErr.message || legacyErr || 'failed')
+            ));
+          });
         });
       });
     });

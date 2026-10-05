@@ -49,6 +49,11 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
         responses.miguStrategyListenUrl
       ) {
         response = responses.miguStrategyListenUrl
+      } else if (
+        targetUrl.indexOf('app.c.nf.migu.cn/strategy/pc/listen/v2.0') >= 0 &&
+        responses.miguPcListenUrl
+      ) {
+        response = responses.miguPcListenUrl
       } else if (targetUrl.indexOf('app.c.nf.migu.cn/MIGUM2.0/v2.0/content/listen-url') >= 0 && responses.miguListenUrl) {
         response = responses.miguListenUrl
       } else if (targetUrl.indexOf('app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do') >= 0 && responses.miguLegacyListenSong) {
@@ -302,6 +307,58 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 
 
 {
+  const hPc = createHarness(
+    {
+      mg: { actions: ['musicUrl'] }
+    },
+    () => {},
+    {
+      miguStrategyListenUrl: {
+        status: 200,
+        body: JSON.stringify({ code: '000000', data: {} })
+      },
+      miguListenUrl: {
+        status: 200,
+        body: JSON.stringify({ code: '000000', data: {} })
+      },
+      miguPcListenUrl: {
+        status: 200,
+        body: JSON.stringify({
+          code: '000000',
+          data: { url: 'https://audio.example.test/mg-native-pc.mp3' }
+        })
+      }
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    hPc.sandbox.LXMusicSearch.resolveMusicUrl(
+      'mg',
+      { id: 'mg-song-55667788', songmid: 'mg-song-55667788', copyrightId: '55667788', contentId: 'mg-content-55667788', resourceType: '2' },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value)
+    )
+  })
+
+  assert.equal(result.provider, 'migu-native-pc-v2.0')
+  assert.equal(result.url, 'https://audio.example.test/mg-native-pc.mp3')
+
+  const pcCalls = hPc.calls.filter(call => {
+    let url = String(call.xhrUrl || '')
+    try { url = decodeURIComponent(url) } catch {}
+    return url.includes('app.c.nf.migu.cn/strategy/pc/listen/v2.0')
+  })
+  assert.equal(pcCalls.length, 1)
+  const target = new URL(pcCalls[0].xhrUrl).searchParams.get('url')
+  const requestUrl = new URL(target)
+  assert.equal(requestUrl.searchParams.get('contentId'), 'mg-content-55667788')
+  assert.equal(requestUrl.searchParams.get('copyrightId'), '55667788')
+  assert.equal(requestUrl.searchParams.get('resourceType'), '2')
+  assert.equal(requestUrl.searchParams.get('toneFlag'), 'PQ')
+  assert.equal(requestUrl.searchParams.get('scene'), '')
+}
+
+{
   const hLegacy = createHarness(
     { mg: { actions: ['musicUrl'] } },
     () => {},
@@ -309,6 +366,13 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       miguStrategyListenUrl: {
         status: 200,
         body: JSON.stringify({ code: '000000', data: { url: '' } })
+      },
+      miguPcListenUrl: {
+        status: 200,
+        body: JSON.stringify({
+          code: '000000',
+          data: { url: 'https://audio.example.test/mg-native-pc.mp3' }
+        })
       },
       miguListenUrl: {
         status: 200,
