@@ -195,6 +195,26 @@ try {
       { timeout: SEARCH_TIMEOUT_MS },
     )
 
+    // A transient browser/network HTTP 0 can occur before any upstream
+    // response reaches the page. Retry the same channel search once rather
+    // than failing the whole five-channel matrix on an infrastructure blip.
+    const firstSearchState = await page.evaluate(() => ({
+      count: document.querySelectorAll('#search-results .search-row').length,
+      status: document.getElementById('status')?.textContent || '',
+    }))
+    if (firstSearchState.count === 0 && /Search API HTTP 0/.test(firstSearchState.status)) {
+      await page.waitForTimeout(500)
+      await page.locator('#search-btn').click()
+      await page.waitForFunction(
+        () => {
+          const status = document.getElementById('status')?.textContent || ''
+          return document.querySelectorAll('#search-results .search-row').length > 0 || /\u641c\u7d22\u5931\u8d25/.test(status)
+        },
+        null,
+        { timeout: SEARCH_TIMEOUT_MS },
+      )
+    }
+
     const results = await page.evaluate(() => {
       return (window.__LXLastSearchResults || []).slice(0, 8).map(item => ({
         id: item.id || '',
