@@ -2160,23 +2160,72 @@
     var songId = String(info.songmid || info.id || '').replace(/^\s+|\s+$/g, '');
     if (!songId) return callback(new Error('No Netease song id for native playback'));
 
-    // The public outer-media endpoint redirects to the platform CDN. Return
-    // the official URL and let /api/proxy follow the redirect server-side.
-    var returnedUrl =
-      'https://music.163.com/song/media/outer/url?id=' + encodeURIComponent(songId) + '.mp3';
+    var requested = String(quality || '').toLowerCase() || '128k';
+    var levelMap = {
+      '128k': 'standard',
+      '192k': 'higher',
+      '256k': 'exhigh',
+      '320k': 'exhigh',
+      'flac': 'lossless',
+      'flac24bit': 'hires',
+      'flac32bit': 'hires',
+      '24bit': 'hires',
+      'wav': 'hires',
+      'ape': 'lossless',
+      'hires': 'hires',
+      'atmos': 'jymaster',
+      'atmos_plus': 'jymaster',
+      'master': 'jymaster'
+    };
+    var level = levelMap[requested] || 'standard';
+    var target =
+      'https://music.163.com/api/song/enhance/player/url/v1' +
+      '?ids=' + encodeURIComponent('[' + songId + ']') +
+      '&level=' + encodeURIComponent(level) +
+      '&encodeType=mp3';
 
-    if (isCrossPlatformPlaybackUrl('wy', returnedUrl)) {
-      return callback(new Error('Netease native URL failed platform validation'));
-    }
+    requestViaProxy(
+      target,
+      'GET',
+      null,
+      {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'Referer': 'https://music.163.com/',
+        'Accept': 'application/json, text/plain, */*'
+      },
+      true,
+      function (err, data) {
+        if (err) return callback(err);
 
-    callback(null, {
-      url: returnedUrl,
-      source: 'wy',
-      provider: 'netease-native',
-      requestedQuality: String(quality || ''),
-      actualBr: String(quality || '128k'),
-      id: songId
-    });
+        var rows = data && Array.isArray(data.data) ? data.data : [];
+        var row = rows.length ? rows[0] : null;
+        var returnedUrl = row && typeof row.url === 'string'
+          ? row.url.replace(/^\s+|\s+$/g, '')
+          : '';
+
+        if (!/^https?:\/\//i.test(returnedUrl)) {
+          return callback(new Error('Netease player URL API returned no playable URL for ' + songId));
+        }
+        if (isCrossPlatformPlaybackUrl('wy', returnedUrl)) {
+          return callback(new Error('Netease player URL API returned a cross-platform URL'));
+        }
+
+        var br = Number(row && row.br);
+        var actualBr = isFinite(br) && br > 0
+          ? String(Math.round(br / 1000)) + 'k'
+          : requested;
+
+        callback(null, {
+          url: returnedUrl,
+          source: 'wy',
+          provider: 'netease-native-v1',
+          requestedQuality: requested,
+          actualBr: actualBr,
+          id: songId,
+          raw: row || null
+        });
+      }
+    );
   }
 
   function normalizeTencentPlaybackUrl(value) {

@@ -111,6 +111,8 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
         response = responses.miguListenUrl
       } else if (targetUrl.indexOf('app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do') >= 0 && responses.miguLegacyListenSong) {
         response = responses.miguLegacyListenSong
+      } else if (targetUrl.indexOf('music.163.com/api/song/enhance/player/url/v1') >= 0 && responses.neteasePlayerUrl) {
+        response = responses.neteasePlayerUrl
       } else if (targetUrl.indexOf('lxmusicapi.onrender.com/url/') >= 0 && responses.huibq) {
         const provider = targetUrl.split('/url/')[1]?.split('/')[0] || 'unknown'
         response = responses.huibq[provider] || { status: 200, body: '[]' }
@@ -510,6 +512,17 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
           }
         })
       },
+      neteasePlayerUrl: {
+        status: 200,
+        body: JSON.stringify({
+          code: 200,
+          data: [{
+            url: 'https://audio.example.test/wy-native-v1.mp3',
+            br: 192000,
+            code: 200
+          }]
+        })
+      },
       miguListenUrl: {
         status: 200,
         body: JSON.stringify({
@@ -627,9 +640,21 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       assert.equal(new URL(target).searchParams.get('hash'), 'abcdef0123456789')
       assert.equal(new URL(target).searchParams.get('quality'), '320')
     } else if (item.source === 'wy') {
-      assert.equal(result.provider, 'netease-native')
-      assert.equal(result.url, 'https://music.163.com/song/media/outer/url?id=99887766.mp3')
+      assert.equal(result.provider, 'netease-native-v1')
+      assert.equal(result.url, 'https://audio.example.test/wy-native-v1.mp3')
       assert.equal(result.id, '99887766')
+      const wyCalls = h.calls.filter(call => {
+        if (call.xhrMethod !== 'GET') return false
+        let url = String(call.xhrUrl || '')
+        try { url = decodeURIComponent(url) } catch {}
+        return url.includes('music.163.com/api/song/enhance/player/url/v1')
+      })
+      assert.equal(wyCalls.length, 1)
+      const target = new URL(wyCalls[0].xhrUrl).searchParams.get('url')
+      const requestUrl = new URL(target)
+      assert.equal(requestUrl.searchParams.get('ids'), '[99887766]')
+      assert.equal(requestUrl.searchParams.get('level'), 'higher')
+      assert.equal(requestUrl.searchParams.get('encodeType'), 'mp3')
     } else {
       assert.equal(result.provider, 'migu-native-strategy-v2.4')
       assert.equal(result.url, 'https://audio.example.test/mg-native-v24.mp3')
