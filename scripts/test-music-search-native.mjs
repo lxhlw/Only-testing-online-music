@@ -104,11 +104,8 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
         response = responses.kuwo
       } else if (targetUrl.indexOf('tracker.kugou.com/v5/url') >= 0 && responses.kugouTracker) {
         response = responses.kugouTracker
-      } else if (
-        targetUrl.indexOf('app.c.nf.migu.cn/MIGUM2.0/strategy/listen-url/v2.4') >= 0 &&
-        responses.miguStrategyV24Url
-      ) {
-        response = responses.miguStrategyV24Url
+      } else if (targetUrl.indexOf('app.c.nf.migu.cn/MIGUM2.0/strategy/listen-url/v2.4') >= 0) {
+        response = responses.miguStrategyV24Url || { status: 502, body: JSON.stringify({ error: 'Migu MIGUM2 strategy unavailable' }) }
       } else if (
         targetUrl.indexOf('c.musicapp.migu.cn/strategy/listen-url/h5/v2.4') >= 0 &&
         responses.miguStrategyListenUrl
@@ -521,6 +518,17 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     () => {},
     {
       kuwo: { status: 200, body: 'https://audio.example.test/kw-native.mp3' },
+      miguStrategyV24Url: {
+        status: 200,
+        body: JSON.stringify({
+          code: '000000',
+          data: {
+            formatType: 'SQ',
+            audioFormatType: 'SQ',
+            url: 'https://audio.example.test/mg-native-strategy-v24.mp3'
+          }
+        })
+      },
       miguStrategyListenUrl: {
         status: 200,
         body: JSON.stringify({
@@ -676,23 +684,20 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       assert.equal(requestUrl.searchParams.get('encodeType'), 'mp3')
     } else {
       assert.equal(result.provider, 'migu-native-strategy-v2.4')
-      assert.equal(result.url, 'https://audio.example.test/mg-native-v24.mp3')
+      assert.equal(result.url, 'https://audio.example.test/mg-native-strategy-v24.mp3')
       assert.equal(result.id, 'mg-song-55667788')
       const mgCalls = h.calls.filter(call => {
         if (call.xhrMethod !== 'GET') return false
         let url = String(call.xhrUrl || '')
         try { url = decodeURIComponent(url) } catch {}
-        return url.includes('c.musicapp.migu.cn/strategy/listen-url/h5/v2.4')
+        return url.includes('app.c.nf.migu.cn/MIGUM2.0/strategy/listen-url/v2.4')
       })
       assert.equal(mgCalls.length, 1)
       const target = new URL(mgCalls[0].xhrUrl).searchParams.get('url')
       const requestUrl = new URL(target)
-      assert.equal(requestUrl.searchParams.get('contentId'), 'mg-content-55667788')
-      assert.equal(requestUrl.searchParams.get('copyrightId'), '55667788')
+      assert.equal(requestUrl.searchParams.get('songId'), 'mg-song-55667788')
       assert.equal(requestUrl.searchParams.get('resourceType'), '2')
       assert.equal(requestUrl.searchParams.get('toneFlag'), 'SQ')
-      assert.equal(requestUrl.searchParams.get('scene'), '')
-      assert.equal(requestUrl.searchParams.get('lowerQualityContentId'), 'mg-lower-55667788')
     }
   }
 }
