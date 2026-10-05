@@ -907,7 +907,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 
   assert.equal(result.provider, 'tencent-aggregate-express-vkey')
   assert.equal(h.calls.length, 2)
-  assert.match(result.url, /^http:\/\/ws\.stream\.qqmusic\.qq\.com\/M5000039MnQn\.mp3\?/)
+  assert.match(result.url, /^http:\/\/dl\.stream\.qqmusic\.qq\.com\/M5000039MnQn\.mp3\?/)
   const resultUrl = new URL(result.url)
   assert.equal(resultUrl.searchParams.get('guid').length, 10)
   assert.equal(resultUrl.searchParams.get('vkey'), 'EXPRESS_VKEY_123')
