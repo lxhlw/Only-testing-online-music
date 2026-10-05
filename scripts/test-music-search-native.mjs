@@ -348,7 +348,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
             size: 1234
           })
         }
-      }      }
+      ]
     }
   )
 
