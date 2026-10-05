@@ -1078,6 +1078,135 @@
   }
 
 
+  function resolveKugouNativeUrl(musicInfo, quality, callback) {
+    var info = musicInfo || {};
+    var baseHash = String(info.hash || info.fileHash || '').replace(/^\s+|\s+$/g, '');
+    if (!baseHash) return callback(new Error('No Kugou hash for native playback'));
+
+    var requested = String(quality || '').toLowerCase();
+
+    function extractDirectUrl(detail) {
+      if (!detail || typeof detail !== 'object') return '';
+      var candidates = [
+        detail.url,
+        detail.play_url,
+        detail.playUrl,
+        detail.audioUrl,
+        detail.data && detail.data.url,
+        detail.data && detail.data.play_url,
+        detail.data && detail.data.playUrl
+      ];
+      for (var i = 0; i < candidates.length; i += 1) {
+        var value = candidates[i];
+        if (typeof value === 'string' && /^https?:\/\//i.test(value.trim())) return value.trim();
+        if (Array.isArray(value)) {
+          for (var j = 0; j < value.length; j += 1) {
+            if (typeof value[j] === 'string' && /^https?:\/\//i.test(value[j].trim())) {
+              return value[j].trim();
+            }
+          }
+        }
+      }
+      return '';
+    }
+
+    function chooseQualityHash(detail) {
+      var extra = detail && detail.extra && typeof detail.extra === 'object' ? detail.extra : {};
+      if (requested === '320k' || requested === '256k' || requested === '192k') {
+        return String(extra['320hash'] || baseHash).replace(/^\s+|\s+$/g, '');
+      }
+      if (requested.indexOf('flac') === 0 || requested === 'wav' || requested === 'ape' ||
+          requested === 'hires' || requested === 'master' || requested === 'atmos' ||
+          requested === 'atmos_plus') {
+        return String(extra.sqhash || extra.SQHash || extra['320hash'] || baseHash)
+          .replace(/^\s+|\s+$/g, '');
+      }
+      return baseHash;
+    }
+
+    function requestDetail(hash, done) {
+      var url = 'http://m.kugou.com/app/i/getSongInfo.php' +
+        '?cmd=playInfo&hash=' + encodeURIComponent(hash);
+      requestViaProxy(
+        url,
+        'GET',
+        null,
+        {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
+          'Accept': 'application/json, text/plain, */*'
+        },
+        true,
+        function (err, detail) {
+          if (err) return done(err);
+          var directUrl = extractDirectUrl(detail);
+          if (!directUrl) return done(new Error('Kugou native API returned no playable URL for ' + hash));
+          done(null, {
+            url: directUrl,
+            source: 'kg',
+            provider: 'kugou-native',
+            requestedQuality: requested,
+            actualBr: detail.bitRate != null ? String(detail.bitRate) : requested,
+            id: hash,
+            raw: detail
+          });
+        }
+      );
+    }
+
+    function requestWebApi(hash, fallbackError) {
+      var url = 'https://wwwapi.kugou.com/yy/index.php' +
+        '?r=play/getdata&hash=' + encodeURIComponent(hash);
+      requestViaProxy(
+        url,
+        'GET',
+        null,
+        {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
+          'Accept': 'application/json, text/javascript, */*; q=0.01'
+        },
+        false,
+        function (err, raw) {
+          if (err) return callback(fallbackError || err);
+          var text = String(raw || '').replace(/^\s+|\s+$/g, '');
+          var parsed = null;
+          try {
+            var callbackMatch = text.match(/^\s*[^\(]+\((.*)\)\s*;?\s*$/s);
+            parsed = JSON.parse(callbackMatch ? callbackMatch[1] : text);
+          } catch (e) {}
+          var detail = parsed && parsed.data ? parsed.data : parsed;
+          var directUrl = extractDirectUrl(detail);
+          if (!directUrl) return callback(fallbackError || new Error('Kugou web API returned no playable URL for ' + hash));
+          callback(null, {
+            url: directUrl,
+            source: 'kg',
+            provider: 'kugou-native',
+            requestedQuality: requested,
+            actualBr: detail && detail.feq ? String(detail.feq) : requested,
+            id: hash,
+            raw: detail
+          });
+        }
+      );
+    }
+
+    requestDetail(baseHash, function (baseErr, baseResult) {
+      if (baseErr) return requestWebApi(baseHash, baseErr);
+
+      if (requested === '128k') return callback(null, baseResult);
+
+      var detail = baseResult.raw || {};
+      var qualityHash = chooseQualityHash(detail);
+      if (qualityHash && qualityHash !== baseHash) {
+        return requestDetail(qualityHash, function (qualityErr, qualityResult) {
+          if (!qualityErr && qualityResult && qualityResult.url) return callback(null, qualityResult);
+          requestWebApi(baseHash, qualityErr || baseErr);
+        });
+      }
+
+      requestWebApi(baseHash, baseErr);
+    });
+  }
+
   function getHuibqPlaybackId(source, musicInfo) {
     var info = musicInfo || {};
     var candidates = [];
@@ -1379,11 +1508,8 @@
     source = String(source || '').toLowerCase();
     options = options || {};
     var skipProvider = String(options.skipProvider || '').toLowerCase();
-    var huibqErr = null;
-    var tuneErr = null;
-    var gdErr = null;
 
-    function finishGd() {
+    function finishGd(huibqErr, tuneErr) {
       if (skipProvider === 'gd-studio') {
         var message = 'No alternate playback provider remains for ' + source;
         if (huibqErr && huibqErr.message) message += '；Huibq: ' + huibqErr.message;
@@ -1391,8 +1517,7 @@
         return callback(new Error(message));
       }
 
-      resolveGdStudioUrl(source, musicInfo, quality, function (err, result) {
-        gdErr = err || null;
+      resolveGdStudioUrl(source, musicInfo, quality, function (gdErr, result) {
         if (!gdErr && result && result.url) return callback(null, result);
 
         var message = 'Playback fallback failed for ' + source;
@@ -1403,28 +1528,34 @@
       });
     }
 
-    function afterTuneHub() {
+    function afterTuneHub(huibqErr) {
       if (TUNEFREE_SOURCE_MAP[source] && skipProvider !== 'tune-free') {
-        resolveTuneFreeUrl(source, musicInfo, quality, function (err, result) {
-          tuneErr = err || null;
+        resolveTuneFreeUrl(source, musicInfo, quality, function (tuneErr, result) {
           if (!tuneErr && result && result.url) return callback(null, result);
-          finishGd();
+          finishGd(huibqErr, tuneErr);
         });
         return;
       }
-      finishGd();
+      finishGd(huibqErr, null);
     }
 
-    if (skipProvider !== 'huibq') {
-      resolveHuibqUrl(source, musicInfo, quality, function (err, result) {
-        huibqErr = err || null;
+    function afterHuibq() {
+      if (skipProvider === 'huibq') return afterTuneHub(null);
+
+      resolveHuibqUrl(source, musicInfo, quality, function (huibqErr, result) {
         if (!huibqErr && result && result.url) return callback(null, result);
-        afterTuneHub();
+        afterTuneHub(huibqErr);
       });
-      return;
     }
 
-    afterTuneHub();
+    if (source === 'kg' && skipProvider !== 'kugou-native') {
+      return resolveKugouNativeUrl(musicInfo, quality, function (nativeErr, nativeResult) {
+        if (!nativeErr && nativeResult && nativeResult.url) return callback(null, nativeResult);
+        afterHuibq();
+      });
+    }
+
+    return afterHuibq();
   }
 
   global.LXMusicSearch = {

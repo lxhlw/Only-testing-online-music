@@ -674,7 +674,9 @@
                 settings,
                 fallbackResult.provider === 'huibq'
                   ? 'Huibq 平台兜底'
-                  : (fallbackResult.provider === 'tune-free' ? 'TuneHub 平台兜底' : 'GD Studio 平台兜底'),
+                  : (fallbackResult.provider === 'tune-free'
+                    ? 'TuneHub 平台兜底'
+                    : (fallbackResult.provider === 'kugou-native' ? '酷狗直连兜底' : 'GD Studio 平台兜底')),
                 fallbackResult.provider
               );
             }
@@ -712,7 +714,9 @@
                 settings,
                 fallbackResult.provider === 'huibq'
                   ? 'Huibq 平台兜底'
-                  : (fallbackResult.provider === 'tune-free' ? 'TuneHub 平台兜底' : 'GD Studio 平台兜底'),
+                  : (fallbackResult.provider === 'tune-free'
+                    ? 'TuneHub 平台兜底'
+                    : (fallbackResult.provider === 'kugou-native' ? '酷狗直连兜底' : 'GD Studio 平台兜底')),
                 fallbackResult.provider
               );
             }
@@ -838,7 +842,9 @@
               String(resolverResult.provider || '') !== failedProvider) {
             var resolverLabel = resolverResult.provider === 'huibq'
               ? 'Huibq 平台兜底'
-              : (resolverResult.provider === 'tune-free' ? 'TuneHub 平台兜底' : 'GD Studio 平台兜底');
+              : (resolverResult.provider === 'tune-free'
+                ? 'TuneHub 平台兜底'
+                : (resolverResult.provider === 'kugou-native' ? '酷狗直连兜底' : 'GD Studio 平台兜底'));
             return useResolvedUrl(
               resolverResult.url,
               failedQuality,
