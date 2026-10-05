@@ -312,15 +312,6 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
           status: 200,
           body: JSON.stringify({
             code: 0,
-            url: 'https://cdn.example.test/tx-audio.mp3',
-            br: 128,
-            size: 1234
-          })
-        },
-        {
-          status: 200,
-          body: JSON.stringify({
-            code: 0,
             url: 'https://cdn.example.test/wy-audio.mp3',
             br: 128,
             size: 1234
