@@ -1198,7 +1198,7 @@
         function (err, data) {
           if (err) return done(err);
 
-          var directUrl = backend.extractUrl ? backend.extractUrl(data) : extractUrl(data);
+          var directUrl = extractUrl(data);
           if (!directUrl || isCrossPlatformPlaybackUrl('kg', directUrl)) {
             var status = data && data.status != null ? String(data.status) : '';
             return done(new Error(
