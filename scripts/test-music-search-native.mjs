@@ -709,8 +709,9 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 
   assert.equal(result.provider, 'tencent-aggregate-xinghai')
   assert.equal(result.url, 'https://audio.example.test/tx-aggregate.mp3')
-  assert.equal(h.calls.length, 2)
-  const target = new URL(h.calls[1].xhrUrl).searchParams.get('url')
+  assert.equal(h.calls.length, 3)
+  assert.equal(new URL(h.calls[1].xhrUrl).searchParams.get('url').includes('c.y.qq.com/base/fcgi-bin/fcg_music_express_mobile3.fcg'), true)
+  const target = new URL(h.calls[2].xhrUrl).searchParams.get('url')
   assert.match(target, /yy\.zddyr\.top\/lx\/api/)
   assert.equal(new URL(target).searchParams.get('source'), 'qq')
   assert.equal(new URL(target).searchParams.get('songmid'), '0039MnYb0qxYhV')
