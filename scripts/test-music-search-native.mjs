@@ -3,6 +3,59 @@ import fs from 'node:fs'
 import vm from 'node:vm'
 
 const source = fs.readFileSync(new URL('../src/music-search.js', import.meta.url), 'utf8')
+const appSource = fs.readFileSync(new URL('../src/app.js', import.meta.url), 'utf8')
+
+function extractAppFunction(sourceText, name) {
+  const start = sourceText.indexOf('function ' + name + '(')
+  assert.ok(start >= 0, 'Missing app function: ' + name)
+  const braceStart = sourceText.indexOf('{', start)
+  assert.ok(braceStart >= 0, 'Missing app function body: ' + name)
+  let depth = 0
+  for (let i = braceStart; i < sourceText.length; i += 1) {
+    const ch = sourceText[i]
+    if (ch === '{') depth += 1
+    else if (ch === '}') {
+      depth -= 1
+      if (depth === 0) return sourceText.slice(start, i + 1)
+    }
+  }
+  throw new Error('Unterminated app function: ' + name)
+}
+
+{
+  const buildPlayableUrl = new Function(
+    'global',
+    extractAppFunction(appSource, 'buildPlayableUrl') + ';return buildPlayableUrl;'
+  )({
+    location: {
+      protocol: 'https:',
+      host: 'only-testing-online-music.pages.dev',
+      origin: 'https://only-testing-online-music.pages.dev',
+      href: 'https://only-testing-online-music.pages.dev/'
+    },
+    URL
+  })
+
+  const miguLegacyUrl =
+    'https://app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do' +
+    '?channel=mx&copyrightId=6005861N71E&contentId=600929000002562618' +
+    '&toneFlag=PQ&resourceType=2&userId=15548614588710179085069&netType=00'
+
+  assert.equal(
+    buildPlayableUrl(miguLegacyUrl, false),
+    miguLegacyUrl,
+    'Migu MIGUM3 HTTPS playback endpoints must not be forced through the JSON proxy'
+  )
+
+  const miguLegacyForcedProxy = buildPlayableUrl(miguLegacyUrl, true)
+  assert.match(
+    miguLegacyForcedProxy,
+    /^https:\/\/only-testing-online-music\.pages\.dev\/api\/proxy\?url=/,
+    'Explicit playback retry must still force the Migu URL through the project proxy'
+  )
+}
+
+
 
 function createHarness(activeSources, requestHandler, xhrResponses) {
   const calls = []
