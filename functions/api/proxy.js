@@ -315,7 +315,7 @@ function pickForwardHeaders(request) {
     if (!Object.prototype.hasOwnProperty.call(data, key)) continue;
     var lower = key.toLowerCase();
     if (lower === 'host' || lower === 'content-length' || lower === 'connection'
-        || lower === 'referer' || lower === 'cookie'
+        || lower === 'cookie'
         || lower === 'access-control-request-method' || lower === 'access-control-request-headers') continue;
     var value = String(data[key]);
     if (value.length > 4096) continue;
