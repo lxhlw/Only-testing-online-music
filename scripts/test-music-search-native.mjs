@@ -37,9 +37,30 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       const searchResponses = Array.isArray(responses.search)
         ? responses.search
         : [responses.search || { status: 200, body: '[]' }]
-      const response = targetUrl.indexOf('/time') >= 0
-        ? (responses.time || { status: 200, body: '1791139200' })
-        : (searchResponses[Math.min(searchIndex, searchResponses.length - 1)] || { status: 200, body: '[]' })
+      let response
+      if (targetUrl.indexOf('/time') >= 0) {
+        response = responses.time || { status: 200, body: '1791139200' }
+      } else if (targetUrl.indexOf('antiserver.kuwo.cn/anti.s') >= 0) {
+        response = responses.kuwo || { status: 200, body: 'https://audio.example.test/kw-native.mp3' }
+      } else if (targetUrl.indexOf('tracker.kugou.com/v5/url') >= 0) {
+        response = responses.kugouTracker || {
+          status: 200,
+          body: JSON.stringify({ status: 1, bitRate: 320, url: ['https://audio.example.test/kg-tracker.mp3'] })
+        }
+      } else if (targetUrl.indexOf('lxmusicapi.onrender.com/url/') >= 0) {
+        const provider = targetUrl.split('/url/')[1]?.split('/')[0] || 'unknown'
+        response = (responses.huibq && responses.huibq[provider]) || {
+          status: 200,
+          body: JSON.stringify({
+            code: 0,
+            url: 'https://cdn.example.test/' + provider + '-audio.mp3',
+            br: 128,
+            size: 1234
+          })
+        }
+      } else {
+        response = searchResponses[Math.min(searchIndex, searchResponses.length - 1)] || { status: 200, body: '[]' }
+      }
       self.readyState = 4
       self.status = response.status
       self.responseText = response.body
@@ -350,7 +371,17 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       )
     })
 
-    if (item.source === 'kg') {
+    if (item.source === 'kw') {
+      assert.equal(result.provider, 'kuwo-native')
+      assert.equal(result.url, 'https://audio.example.test/kw-native.mp3')
+      assert.equal(result.id, '62355680')
+      const kwCalls = h.calls.filter(call => String(call.xhrUrl || '').includes('antiserver.kuwo.cn/anti.s'))
+      assert.equal(kwCalls.length, 1)
+      const target = new URL(kwCalls[0].xhrUrl).searchParams.get('url')
+      const requestUrl = new URL(target)
+      assert.equal(requestUrl.hostname, 'antiserver.kuwo.cn')
+      assert.equal(requestUrl.searchParams.get('rid'), '62355680')
+    } else if (item.source === 'kg') {
       assert.equal(result.provider, 'kugou-native')
       assert.equal(result.url, 'https://audio.example.test/kg-tracker.mp3')
       assert.equal(result.id, 'abcdef0123456789')
@@ -360,17 +391,20 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       assert.match(target, /tracker\.kugou\.com\/v5\/url/)
       assert.equal(new URL(target).searchParams.get('hash'), 'abcdef0123456789')
       assert.equal(new URL(target).searchParams.get('quality'), '320')
-
+    } else if (item.source === 'wy') {
+      assert.equal(result.provider, 'netease-native')
+      assert.equal(result.url, 'https://music.163.com/song/media/outer/url?id=99887766.mp3')
+      assert.equal(result.id, '99887766')
     } else {
       assert.equal(result.provider, 'huibq')
-      assert.equal(result.url, 'https://cdn.example.test/' + item.source + '-audio.mp3')
-      assert.equal(result.id, item.id)
+      assert.equal(result.url, 'https://cdn.example.test/mg-audio.mp3')
+      assert.equal(result.id, 'mg-song-55667788')
 
       const call = h.calls[h.calls.length - 1]
       const target = new URL(call.xhrUrl).searchParams.get('url')
       const requestUrl = new URL(target)
       assert.equal(requestUrl.origin, 'https://lxmusicapi.onrender.com')
-      assert.equal(requestUrl.pathname, '/url/' + item.source + '/' + item.id + '/' + item.huibqQuality)
+      assert.equal(requestUrl.pathname, '/url/mg/mg-song-55667788/320k')
       const forwarded = JSON.parse(call.xhrHeaders['X-LX-Headers'])
       assert.equal(forwarded['X-Request-Key'], 'share-v3')
     }
