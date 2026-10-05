@@ -430,9 +430,18 @@ try {
       channel.toUpperCase() + ' playback did not produce a plausible full-length song after ' +
       attempts.length + ' candidates: ' + JSON.stringify(attempts, null, 2)
     )
+    let acceptedPlaybackUrl = String(success.audioUrl || '').indexOf('/api/proxy?url=') >= 0
+    if (!acceptedPlaybackUrl && channel === 'kw') {
+      try {
+        const playbackUrl = new URL(success.audioUrl)
+        acceptedPlaybackUrl =
+          playbackUrl.protocol === 'https:' &&
+          /^(?:kw-bj|kw-lv|bd-er|kwcdn)\.kuwo\.cn$/i.test(playbackUrl.hostname)
+      } catch {}
+    }
     assert.ok(
-      String(success.audioUrl || '').indexOf('/api/proxy?url=') >= 0,
-      channel.toUpperCase() + ' playback URL was not normalized through the same-origin media proxy: ' +
+      acceptedPlaybackUrl,
+      channel.toUpperCase() + ' playback URL was neither normalized through the same-origin media proxy nor a trusted Kuwo CDN URL: ' +
       JSON.stringify(success, null, 2)
     )
 

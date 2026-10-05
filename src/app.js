@@ -406,6 +406,21 @@
       if (global.location && typeof global.URL === 'function') {
         var target = new global.URL(value, global.location.href);
         var page = new global.URL(global.location.href);
+        var hostname = String(target.hostname || '').toLowerCase();
+        var trustedKuwoMediaHost =
+          hostname === 'kw-bj.kuwo.cn' ||
+          hostname === 'kw-lv.kuwo.cn' ||
+          hostname === 'bd-er.kuwo.cn' ||
+          hostname === 'kwcdn.kuwo.cn';
+
+        // Kuwo's native resolver already returns a signed CDN media URL.
+        // Keep that trusted media URL direct; the server-side proxy can hang
+        // while waiting for these CDN hosts even though the browser can play
+        // the same URL normally.
+        if (trustedKuwoMediaHost && target.protocol === 'https:') {
+          return target.href;
+        }
+
         if (target.origin === page.origin && target.protocol === page.protocol) {
           return target.href;
         }
