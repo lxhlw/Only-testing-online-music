@@ -968,6 +968,10 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
         },
         {
           status: 200,
+          body: JSON.stringify({ result: { songCount: 0, songs: [] } })
+        },
+        {
+          status: 200,
           body: JSON.stringify([
             { id: 'wy-good', name: '晴天', artist: '周杰伦', source: 'netease', songmid: 'wy-good' },
             { id: 'tx-bad', name: '晴天', artist: '周杰伦', source: 'tencent', songmid: 'tx-bad' }
@@ -990,9 +994,10 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   assert.equal(result.list.length, 1)
   assert.equal(result.list[0].source, 'wy')
   assert.equal(result.list[0].id, 'wy-good')
-  assert.match(decodeURIComponent(h.calls[0].xhrUrl), /music\.163\.com\/api\/cloudsearch\/pc/)
-  assert.match(decodeURIComponent(h.calls[1].xhrUrl), /music-api\.gdstudio\.xyz\/api\.php/)
-  const fallbackTarget = new URL(new URL(h.calls[1].xhrUrl).searchParams.get('url'))
+  assert.match(decodeURIComponent(h.calls[0].xhrUrl), /\/api\/netease-search/)
+  assert.match(decodeURIComponent(h.calls[1].xhrUrl), /music\.163\.com\/api\/cloudsearch\/pc/)
+  assert.match(decodeURIComponent(h.calls[2].xhrUrl), /music-api\.gdstudio\.xyz\/api\.php/)
+  const fallbackTarget = new URL(new URL(h.calls[2].xhrUrl).searchParams.get('url'))
   assert.equal(fallbackTarget.searchParams.get('source'), 'netease')
 }
 
