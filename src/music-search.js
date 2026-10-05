@@ -1769,6 +1769,67 @@
     });
   }
 
+  function resolveKuwoNativeUrl(musicInfo, quality, callback) {
+    var info = musicInfo || {};
+    var rid = String(info.songmid || info.id || '').replace(/^\s+|\s+$/g, '');
+    if (!rid) return callback(new Error('No Kuwo rid for native playback'));
+
+    var target =
+      'http://antiserver.kuwo.cn/anti.s?type=convert_url' +
+      '&format=aac|mp3&response=url&rid=' + encodeURIComponent(rid);
+
+    requestViaProxy(
+      target,
+      'GET',
+      null,
+      {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
+        'Accept': 'text/plain, */*'
+      },
+      false,
+      function (err, data) {
+        if (err) return callback(err);
+        var returnedUrl = String(data || '').replace(/^\s+|\s+$/g, '');
+        if (!/^https?:\/\//i.test(returnedUrl) || isCrossPlatformPlaybackUrl('kw', returnedUrl)) {
+          return callback(new Error('Kuwo native API returned no playable URL'));
+        }
+
+        callback(null, {
+          url: returnedUrl,
+          source: 'kw',
+          provider: 'kuwo-native',
+          requestedQuality: String(quality || ''),
+          actualBr: String(quality || '128k'),
+          id: rid
+        });
+      }
+    );
+  }
+
+  function resolveNeteaseNativeUrl(musicInfo, quality, callback) {
+    var info = musicInfo || {};
+    var songId = String(info.songmid || info.id || '').replace(/^\s+|\s+$/g, '');
+    if (!songId) return callback(new Error('No Netease song id for native playback'));
+
+    // The public outer-media endpoint redirects to the platform CDN. Return
+    // the official URL and let /api/proxy follow the redirect server-side.
+    var returnedUrl =
+      'https://music.163.com/song/media/outer/url?id=' + encodeURIComponent(songId) + '.mp3';
+
+    if (isCrossPlatformPlaybackUrl('wy', returnedUrl)) {
+      return callback(new Error('Netease native URL failed platform validation'));
+    }
+
+    callback(null, {
+      url: returnedUrl,
+      source: 'wy',
+      provider: 'netease-native',
+      requestedQuality: String(quality || ''),
+      actualBr: String(quality || '128k'),
+      id: songId
+    });
+  }
+
   function normalizeTencentPlaybackUrl(value) {
     var clean = String(value || '').replace(/^\s+|\s+$/g, '');
     if (!clean || !/^https?:\/\//i.test(clean)) return clean;
@@ -2447,6 +2508,20 @@
 
     if (source === 'kg' && skipProvider !== 'kugou-native') {
       return resolveKugouNativeUrl(musicInfo, quality, function (nativeErr, nativeResult) {
+        if (!nativeErr && nativeResult && nativeResult.url) return callback(null, nativeResult);
+        afterHuibq();
+      });
+    }
+
+    if (source === 'kw' && skipProvider !== 'kuwo-native') {
+      return resolveKuwoNativeUrl(musicInfo, quality, function (nativeErr, nativeResult) {
+        if (!nativeErr && nativeResult && nativeResult.url) return callback(null, nativeResult);
+        afterHuibq();
+      });
+    }
+
+    if (source === 'wy' && skipProvider !== 'netease-native') {
+      return resolveNeteaseNativeUrl(musicInfo, quality, function (nativeErr, nativeResult) {
         if (!nativeErr && nativeResult && nativeResult.url) return callback(null, nativeResult);
         afterHuibq();
       });
