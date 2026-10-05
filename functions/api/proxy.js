@@ -54,38 +54,41 @@ async function fetchFlowerResolverViaHost(target, request) {
   ];
   var forwarded = pickForwardHeaders(request);
   var lastError = null;
-  var resolverPath = target.pathname.replace(/^\/flower\/v1\/url\//, '/url/');
+  var paths = [target.pathname];
+  var mapped = target.pathname.replace(/^\/flower\/v1\/url\//, '/url/');
+  if (mapped !== target.pathname) paths.push(mapped);
 
   for (var bi = 0; bi < bases.length; bi += 1) {
-    var base = bases[bi];
-    var endpoint = base + resolverPath + target.search;
-    try {
-      var upstream = await fetch(endpoint, {
-        method: String(request.method || 'GET').toUpperCase(),
-        headers: forwarded,
-        redirect: 'follow'
-      });
-      var body = await upstream.text();
-      var trimmed = String(body || '').replace(/^\s+|\s+$/g, '');
-
-      if (upstream.status >= 200 && upstream.status < 300 &&
-          /^(?:https?:\/\/|\{|\[)/i.test(trimmed)) {
-        return new Response(trimmed, {
-          status: 200,
-          statusText: 'OK',
-          headers: new Headers({
-            'Content-Type': upstream.headers.get('Content-Type') || 'text/plain; charset=utf-8',
-            'Cache-Control': 'no-store'
-          })
+    for (var pi = 0; pi < paths.length; pi += 1) {
+      var endpoint = bases[bi] + paths[pi] + target.search;
+      try {
+        var upstream = await fetch(endpoint, {
+          method: String(request.method || 'GET').toUpperCase(),
+          headers: forwarded,
+          redirect: 'follow'
         });
-      }
+        var body = await upstream.text();
+        var trimmed = String(body || '').replace(/^\s+|\s+$/g, '');
 
-      lastError = new Error(
-        'Flower host HTTP ' + upstream.status + ' via ' + endpoint +
-        (trimmed ? ': ' + trimmed.slice(0, 180) : '')
-      );
-    } catch (e) {
-      lastError = e;
+        if (upstream.status >= 200 && upstream.status < 300 &&
+            /^(?:https?:\/\/|\{|\[)/i.test(trimmed)) {
+          return new Response(trimmed, {
+            status: 200,
+            statusText: 'OK',
+            headers: new Headers({
+              'Content-Type': upstream.headers.get('Content-Type') || 'text/plain; charset=utf-8',
+              'Cache-Control': 'no-store'
+            })
+          });
+        }
+
+        lastError = new Error(
+          'Flower host HTTP ' + upstream.status + ' via ' + endpoint +
+          (trimmed ? ': ' + trimmed.slice(0, 180) : '')
+        );
+      } catch (e) {
+        lastError = e;
+      }
     }
   }
 
@@ -99,96 +102,100 @@ async function fetchFlowerResolverViaHost(target, request) {
 }
 
 async function fetchFlowerResolverViaSocket(target, request) {
-  var hosts = ['97.64.37.235', 'ts.tempmusic.tk', 'tm.tempmusic.tk'];
+  var hosts = ['ts.tempmusic.tk', 'tm.tempmusic.tk', '97.64.37.235'];
+  var paths = [target.pathname];
+  var mapped = target.pathname.replace(/^\/flower\/v1\/url\//, '/url/');
+  if (mapped !== target.pathname) paths.push(mapped);
   var encoder = new TextEncoder();
   var decoder = new TextDecoder();
   var lastError = null;
 
   for (var hi = 0; hi < hosts.length; hi += 1) {
-    var socket = null;
-    try {
-      socket = connect({ hostname: '97.64.37.235', port: 80 });
-      await socket.opened;
+    for (var pi = 0; pi < paths.length; pi += 1) {
+      var socket = null;
+      try {
+        socket = connect({ hostname: hosts[hi], port: 80 });
+        await socket.opened;
 
-      var forwarded = pickForwardHeaders(request);
-      var requestLines = [
-        String(request.method || 'GET').toUpperCase() + ' ' + target.pathname + target.search + ' HTTP/1.0',
-        'Host: ' + hosts[hi],
-        'Connection: close',
-        'Accept-Encoding: identity'
-      ];
+        var forwarded = pickForwardHeaders(request);
+        var requestLines = [
+          String(request.method || 'GET').toUpperCase() + ' ' + paths[pi] + target.search + ' HTTP/1.0',
+          'Host: ' + hosts[hi],
+          'Connection: close',
+          'Accept-Encoding: identity'
+        ];
 
-      forwarded.forEach(function (value, key) {
-        var lower = key.toLowerCase();
-        if (lower === 'host' || lower === 'connection' || lower === 'content-length') return;
-        requestLines.push(key + ': ' + value);
-      });
-
-      var writer = socket.writable.getWriter();
-      await writer.write(encoder.encode(requestLines.join('\r\n') + '\r\n\r\n'));
-      await writer.close();
-
-      var bytes = await readSocketBytes(socket);
-      var text = decoder.decode(bytes);
-      var split = text.indexOf('\r\n\r\n');
-      var separatorLength = 4;
-      if (split < 0) {
-        split = text.indexOf('\n\n');
-        separatorLength = 2;
-      }
-
-      if (split < 0) {
-        var bodyOnly = String(text || '').replace(/^\s+|\s+$/g, '');
-        if (/^(?:https?:\/\/|\{|\[)/i.test(bodyOnly)) {
-          return new Response(bodyOnly, {
-            status: 200,
-            statusText: 'OK',
-            headers: new Headers({
-              'Content-Type': 'text/plain; charset=utf-8',
-              'Cache-Control': 'no-store'
-            })
-          });
-        }
-        throw new Error(
-          'Flower resolver returned an invalid HTTP response: ' +
-          String(text || '').slice(0, 160)
-        );
-      }
-
-      var headerText = text.slice(0, split);
-      var bodyText = text.slice(split + separatorLength);
-      var statusMatch = headerText.match(/^HTTP\/\d(?:\.\d)?\s+(\d{3})/i);
-      if (!statusMatch) throw new Error(
-        'Flower resolver returned an invalid HTTP status: ' +
-        headerText.slice(0, 160)
-      );
-      var status = Number(statusMatch[1]);
-
-      var normalizedHeaders = headerText.replace(/\r/g, '');
-      var contentTypeMatch = normalizedHeaders.match(/(?:^|\n)Content-Type:\s*([^\n]+)/i);
-      var transferEncoding = /(?:^|\n)Transfer-Encoding:\s*chunked/i.test(normalizedHeaders);
-      if (transferEncoding) bodyText = decodeChunkedBody(bodyText);
-
-      var responseHeaders = new Headers();
-      if (contentTypeMatch) responseHeaders.set('Content-Type', String(contentTypeMatch[1]).trim());
-      responseHeaders.set('Cache-Control', 'no-store');
-
-      if (status >= 200 && status < 300) {
-        return new Response(bodyText, {
-          status: status,
-          statusText: 'OK',
-          headers: responseHeaders
+        forwarded.forEach(function (value, key) {
+          var lower = key.toLowerCase();
+          if (lower === 'host' || lower === 'connection' || lower === 'content-length') return;
+          requestLines.push(key + ': ' + value);
         });
-      }
 
-      lastError = new Error(
-        'Flower TCP resolver HTTP ' + status + ' via Host ' + hosts[hi]
-      );
-    } catch (e) {
-      lastError = e;
-    } finally {
-      if (socket) {
-        try { await socket.close(); } catch (e) {}
+        var writer = socket.writable.getWriter();
+        await writer.write(encoder.encode(requestLines.join('\r\n') + '\r\n\r\n'));
+        await writer.close();
+
+        var bytes = await readSocketBytes(socket);
+        var text = decoder.decode(bytes);
+        var split = text.indexOf('\r\n\r\n');
+        var separatorLength = 4;
+        if (split < 0) {
+          split = text.indexOf('\n\n');
+          separatorLength = 2;
+        }
+
+        if (split < 0) {
+          var bodyOnly = String(text || '').replace(/^\s+|\s+$/g, '');
+          if (/^(?:https?:\/\/|\{|\[)/i.test(bodyOnly)) {
+            return new Response(bodyOnly, {
+              status: 200,
+              statusText: 'OK',
+              headers: new Headers({
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Cache-Control': 'no-store'
+              })
+            });
+          }
+          lastError = new Error(
+            'Flower resolver returned an invalid HTTP response via ' + hosts[hi] +
+            paths[pi] + ': ' + String(text || '').slice(0, 160)
+          );
+          continue;
+        }
+
+        var headerText = text.slice(0, split);
+        var bodyText = text.slice(split + separatorLength);
+        var statusMatch = headerText.match(/^HTTP\/\d(?:\.\d)?\s+(\d{3})/i);
+        if (!statusMatch) {
+          lastError = new Error('Flower resolver returned an invalid HTTP status via ' + hosts[hi]);
+          continue;
+        }
+
+        var status = Number(statusMatch[1]);
+        var normalizedHeaders = headerText.replace(/\r/g, '');
+        var transferEncoding = /(?:^|\n)Transfer-Encoding:\s*chunked/i.test(normalizedHeaders);
+        if (transferEncoding) bodyText = decodeChunkedBody(bodyText);
+
+        var trimmedBody = String(bodyText || '').replace(/^\s+|\s+$/g, '');
+        var contentTypeMatch = normalizedHeaders.match(/(?:^|\n)Content-Type:\s*([^\n]+)/i);
+
+        if (status >= 200 && status < 300 && /^(?:https?:\/\/|\{|\[)/i.test(trimmedBody)) {
+          var responseHeaders = new Headers();
+          if (contentTypeMatch) responseHeaders.set('Content-Type', String(contentTypeMatch[1]).trim());
+          responseHeaders.set('Cache-Control', 'no-store');
+          return new Response(trimmedBody, { status: 200, statusText: 'OK', headers: responseHeaders });
+        }
+
+        lastError = new Error(
+          'Flower TCP resolver HTTP ' + status + ' via ' + hosts[hi] + paths[pi] +
+          (trimmedBody ? ': ' + trimmedBody.slice(0, 160) : '')
+        );
+      } catch (e) {
+        lastError = e;
+      } finally {
+        if (socket) {
+          try { await socket.close(); } catch (e) {}
+        }
       }
     }
   }
