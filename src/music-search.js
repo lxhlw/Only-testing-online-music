@@ -1338,6 +1338,23 @@
     return candidates[0] || '';
   }
 
+  function isCrossPlatformPlaybackUrl(source, value) {
+    var text = String(value || '').toLowerCase();
+    if (!/^https?:\\/\\//.test(text)) return true;
+    var blocked = {
+      kg: ['kuwo.cn', 'panspace.kuwo.cn', 'bd-er.kuwo.cn', 'qq.com', 'y.qq.com', 'm.music.migu.cn', '163.com', 'music.163.com'],
+      kw: ['kugou.com', 'webfs.kugou.com', 'qq.com', 'y.qq.com', 'music.163.com', 'm.music.migu.cn'],
+      tx: ['kugou.com', 'webfs.kugou.com', 'kuwo.cn', 'panspace.kuwo.cn', 'music.163.com', 'm.music.migu.cn'],
+      wy: ['kugou.com', 'webfs.kugou.com', 'kuwo.cn', 'panspace.kuwo.cn', 'qq.com', 'y.qq.com', 'm.music.migu.cn'],
+      mg: ['kugou.com', 'webfs.kugou.com', 'kuwo.cn', 'panspace.kuwo.cn', 'qq.com', 'y.qq.com', 'music.163.com']
+    };
+    var list = blocked[String(source || '').toLowerCase()] || [];
+    for (var i = 0; i < list.length; i += 1) {
+      if (text.indexOf(list[i]) >= 0) return true;
+    }
+    return false;
+  }
+
   function resolveHuibqUrl(source, musicInfo, quality, callback) {
     source = String(source || '').toLowerCase();
     if (!SOURCE_MAP[source]) return callback(new Error('Unsupported playback source: ' + source));
@@ -1367,7 +1384,7 @@
 
         var code = data && data.code != null ? Number(data.code) : NaN;
         var returnedUrl = data && typeof data.url === 'string' ? data.url : '';
-        if (code !== 0 || !/^https?:/i.test(returnedUrl)) {
+        if (code !== 0 || !/^https?:/i.test(returnedUrl) || isCrossPlatformPlaybackUrl(source, returnedUrl)) {
           var message = data && data.msg ? String(data.msg) : 'Huibq returned no playable URL';
           return callback(new Error(message));
         }
@@ -1453,7 +1470,7 @@
           } catch (e) {}
 
           if (!returnedUrl && /^https?:/i.test(text)) returnedUrl = text;
-          if (!returnedUrl || !/^https?:/i.test(returnedUrl)) {
+          if (!returnedUrl || !/^https?:/i.test(returnedUrl) || isCrossPlatformPlaybackUrl(source, returnedUrl)) {
             lastError = new Error('TuneHub returned no playable URL for ' + platform + ' (' + br + ')');
             return tryId(index + 1);
           }

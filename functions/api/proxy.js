@@ -106,7 +106,7 @@ async function fetchFlowerResolverViaSocket(target, request) {
   for (var hi = 0; hi < hosts.length; hi += 1) {
     var socket = null;
     try {
-      socket = connect({ hostname: '97.64.37.235', port: 80 });
+      socket = connect({ hostname: hosts[hi], port: 80 });
       await socket.opened;
 
       var forwarded = pickForwardHeaders(request);
