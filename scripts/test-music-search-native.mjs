@@ -412,7 +412,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 
   assert.equal(result.provider, 'kugou-native')
   assert.equal(result.url, 'https://audio.example.test/kg-gateway.mp3')
-  assert.equal(result.id, 'ABCDEF0123456789')
+  assert.equal(result.id, 'abcdef0123456789')
   assert.equal(h.calls.length, 1)
   const gatewayTarget = new URL(h.calls[0].xhrUrl).searchParams.get('url')
   assert.match(gatewayTarget, /gateway\.kugou\.com\/i\/v2\//)
