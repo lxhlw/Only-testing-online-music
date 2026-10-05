@@ -367,13 +367,6 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
         status: 200,
         body: JSON.stringify({ code: '000000', data: { url: '' } })
       },
-      miguPcListenUrl: {
-        status: 200,
-        body: JSON.stringify({
-          code: '000000',
-          data: { url: 'https://audio.example.test/mg-native-pc.mp3' }
-        })
-      },
       miguListenUrl: {
         status: 200,
         body: JSON.stringify({ code: '000000', data: {} })
