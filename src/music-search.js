@@ -172,7 +172,10 @@
       ? global.location.origin
       : (global.location.protocol + '//' + global.location.host);
     var proxyUrl = origin + '/api/proxy?url=' + encodeURIComponent(targetUrl);
-    return requestBrowserXhr(proxyUrl, method, body, headers, parseJson, callback, 16000);
+    var proxyHeaders = {
+      'X-LX-Headers': JSON.stringify(headers || {})
+    };
+    return requestBrowserXhr(proxyUrl, method, body, proxyHeaders, parseJson, callback, 16000);
   }
 
   function requestSameOrigin(path, method, body, headers, parseJson, callback) {
