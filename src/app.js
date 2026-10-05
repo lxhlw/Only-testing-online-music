@@ -650,6 +650,7 @@
     playbackState.playing = false;
     playbackState.url = '';
     playbackState.resolveAttemptId = Number(playbackState.resolveAttemptId || 0) + 1;
+
     var resolveAttemptId = playbackState.resolveAttemptId;
     var settled = false;
     var sourceTimer = null;
@@ -675,48 +676,61 @@
       return true;
     }
 
+    function providerLabel(provider) {
+      if (provider === 'huibq') return 'Huibq 平台兜底';
+      if (provider === 'tune-free') return 'TuneHub 平台兜底';
+      if (provider === 'kugou-native') return '酷狗直连兜底';
+      if (provider === 'kuwo-native') return '酷我直连兜底';
+      if (provider === 'netease-native') return '网易云直连兜底';
+      return 'GD Studio 平台兜底';
+    }
+
     function runFallback(reason) {
       if (!isCurrentAttempt() || !finishAttempt()) return;
 
-      if (reason) {
-        setStatus(reason, 'warn');
-      }
+      if (reason) setStatus(reason, 'warn');
 
       if (global.LXMusicSearch && typeof global.LXMusicSearch.resolveMusicUrl === 'function') {
-        return global.LXMusicSearch.resolveMusicUrl(source, musicInfo, quality, function (fallbackErr, fallbackResult) {
-          if (token !== playbackToken || !playbackState || playbackState.resolveAttemptId !== resolveAttemptId) return;
-          if (!fallbackErr && fallbackResult && fallbackResult.url) {
-            return useResolvedUrl(
-              fallbackResult.url,
-              quality,
-              token,
-              music,
-              source,
-              musicInfo,
-              settings,
-              fallbackResult.provider === 'huibq'
-                ? 'Huibq 平台兜底'
-                : (fallbackResult.provider === 'tune-free'
-                  ? 'TuneHub 平台兜底'
-                  : (fallbackResult.provider === 'kugou-native'
-                    ? '酷狗直连兜底'
-                    : (fallbackResult.provider === 'kuwo-native'
-                      ? '酷我直连兜底'
-                      : (fallbackResult.provider === 'netease-native'
-                        ? '网易云直连兜底'
-                        : 'GD Studio 平台兜底')))),
-              fallbackResult.provider
+        return global.LXMusicSearch.resolveMusicUrl(
+          source,
+          musicInfo,
+          quality,
+          function (fallbackErr, fallbackResult) {
+            if (
+              token !== playbackToken ||
+              !playbackState ||
+              playbackState.resolveAttemptId !== resolveAttemptId
+            ) return;
+
+            if (!fallbackErr && fallbackResult && fallbackResult.url) {
+              return useResolvedUrl(
+                fallbackResult.url,
+                quality,
+                token,
+                music,
+                source,
+                musicInfo,
+                settings,
+                providerLabel(fallbackResult.provider),
+                fallbackResult.provider
+              );
+            }
+
+            if (settings.autoFallback && index + 1 < plan.length) {
+              return requestQuality(music, source, musicInfo, plan, index + 1, token);
+            }
+
+            return setStatus(
+              'musicUrl 备用解析失败（' + escapeHtml(quality) + '）：'
+              + escapeHtml(
+                (fallbackErr && (fallbackErr.message || fallbackErr))
+                || '没有可用地址'
+              ),
+              'fail'
             );
-          }
-
-          if (settings.autoFallback && index + 1 < plan.length) {
-            return requestQuality(music, source, musicInfo, plan, index + 1, token);
-          }
-
-          return setStatus('musicUrl 备用解析失败（' + escapeHtml(quality) + '）：'
-            + escapeHtml((fallbackErr && (fallbackErr.message || fallbackErr)) || '没有可用地址'),
-            'fail');
-        }, { skipProvider: '' });
+          },
+          { skipProvider: '' }
+        );
       }
 
       if (settings.autoFallback && index + 1 < plan.length) {
@@ -727,84 +741,60 @@
     }
 
     setStatus(
-      (index === 0 ? '正在请求' : '当前音质失败，正在自动切换') +
-      ' ' + escapeHtml(quality) + '：' + escapeHtml(music.name) + '……'
+      (index === 0 ? '正在请求' : '当前音质失败，正在自动切换')
+      + ' ' + escapeHtml(quality) + '：' + escapeHtml(music.name) + '……'
     );
 
     sourceTimer = global.setTimeout(function () {
       if (!isCurrentAttempt() || settled) return;
       runFallback(
-        '原始音源解析超过 ' + Math.round(SOURCE_RESOLVE_TIMEOUT_MS / 1000) +
-        ' 秒，正在切换备用解析器……'
+        '原始音源解析超过 ' + Math.round(SOURCE_RESOLVE_TIMEOUT_MS / 1000)
+        + ' 秒，正在切换备用解析器……'
       );
     }, SOURCE_RESOLVE_TIMEOUT_MS);
 
-    }, function (err, result) {
-      if (!isCurrentAttempt() || settled) return;
+    global.LXSourceManager.requestAction(
+      source,
+      'musicUrl',
+      {
+        type: quality,
+        musicInfo: musicInfo
+      },
+      function (err, result) {
+        if (!isCurrentAttempt() || settled) return;
 
-      if (err) {
+        if (err) {
+          return runFallback(
+            '原始音源解析失败，正在切换备用解析器……'
+          );
+        }
+
+        var url = typeof result === 'string'
+          ? result
+          : (result && (result.url || result.result));
+        if (url != null) url = String(url).replace(/^\\s+|\\s+$/g, '');
+
+        if (!url || !/^https?:/i.test(url)) {
+          return runFallback(
+            '原始音源返回的播放地址无效，正在切换备用解析器……'
+          );
+        }
+
         if (!finishAttempt()) return;
-        if (global.LXMusicSearch && typeof global.LXMusicSearch.resolveMusicUrl === 'function') {
-          return global.LXMusicSearch.resolveMusicUrl(source, musicInfo, quality, function (fallbackErr, fallbackResult) {
-            if (token !== playbackToken || !playbackState || playbackState.resolveAttemptId !== resolveAttemptId) return;
-            if (!fallbackErr && fallbackResult && fallbackResult.url) {
-              return useResolvedUrl(
-                fallbackResult.url,
-                quality,
-                token,
-                music,
-                source,
-                musicInfo,
-                settings,
-                fallbackResult.provider === 'huibq'
-                  ? 'Huibq 平台兜底'
-                  : (fallbackResult.provider === 'tune-free'
-                    ? 'TuneHub 平台兜底'
-                    : (fallbackResult.provider === 'kugou-native'
-                      ? '酷狗直连兜底'
-                      : (fallbackResult.provider === 'kuwo-native'
-                        ? '酷我直连兜底'
-                        : (fallbackResult.provider === 'netease-native'
-                          ? '网易云直连兜底'
-                          : 'GD Studio 平台兜底')))),
-                fallbackResult.provider
-              );
-            }
-            if (settings.autoFallback && index + 1 < plan.length) {
-              return requestQuality(music, source, musicInfo, plan, index + 1, token);
-            }
-            return setStatus('musicUrl 失败（' + escapeHtml(quality) + '）：'
-              + escapeHtml(err.message || err)
-              + (fallbackErr ? '；平台兜底也失败：' + escapeHtml(fallbackErr.message || fallbackErr) : ''),
-              'fail');
-          });
-        }
 
-        if (settings.autoFallback && index + 1 < plan.length) {
-          return requestQuality(music, source, musicInfo, plan, index + 1, token);
-        }
-        return setStatus('musicUrl 失败（' + escapeHtml(quality) + '）：'
-          + escapeHtml(err.message || err), 'fail');
+        return useResolvedUrl(
+          url,
+          quality,
+          token,
+          music,
+          source,
+          musicInfo,
+          settings,
+          null,
+          'lx-source'
+        );
       }
-
-      var url = typeof result === 'string' ? result : (result && (result.url || result.result));
-      if (url != null) url = String(url).replace(/^\s+|\s+$/g, '');
-      if (!url || !/^https?:/i.test(url)) {
-        return runFallback('原始音源返回的播放地址无效，正在切换备用解析器……');
-      }
-
-      return useResolvedUrl(
-        url,
-        quality,
-        token,
-        music,
-        source,
-        musicInfo,
-        settings,
-        null,
-        'lx-source'
-      );
-    });
+    );
   }
 
   function startPlayback(music, source) {
