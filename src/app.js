@@ -760,6 +760,11 @@
       audio.pause();
       audio.onerror = null;
       audio.onplaying = null;
+      // Never retain the previous track while a new source resolver is
+      // running. This prevents stale media URLs from appearing as a new
+      // channel's playback attempt.
+      try { audio.removeAttribute('src'); } catch (e) {}
+      try { if (typeof audio.load === 'function') audio.load(); } catch (e) {}
     }
 
     var plan = getQualityPlan(active, source);

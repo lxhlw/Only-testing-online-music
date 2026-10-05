@@ -144,6 +144,103 @@ async function fetchFlowerResolverViaHost(target, request) {
   });
 }
 
+function flowerResolverTargets(target) {
+  var targets = [];
+  function add(url) {
+    if (!url) return;
+    for (var i = 0; i < targets.length; i += 1) {
+      if (targets[i] === url) return;
+    }
+    targets.push(url);
+  }
+
+  // Keep the canonical raw-IP endpoint and add hostname-routed aliases.
+  // Cloudflare Workers may reject direct public-IP HTTP fetches, while
+  // wildcard-DNS hostnames still route to the same origin.
+  var path = target.pathname + target.search;
+  add(target.toString());
+  add('http://97-64-37-235.sslip.io' + path);
+  add('http://97-64-37-235.nip.io' + path);
+  return targets;
+}
+
+function extractFlowerResolverPayload(body) {
+  var text = String(body || '').replace(/^\uFEFF\s*|\s+$/g, '');
+  if (!text) return null;
+
+  function findAudioUrl(value, depth) {
+    if (depth > 6 || value == null) return '';
+
+    if (typeof value === 'string') {
+      var direct = value.replace(/^\s+|\s+$/g, '');
+      if (/^https?:\/\//i.test(direct) &&
+          /\.(?:mp3|m4a|flac|aac|ogg|wav)(?:[?#].*)?$/i.test(direct)) {
+        return direct;
+      }
+
+      var matches = direct.match(/https?:\/\/[^\s"'<>]+/ig) || [];
+      for (var mi = 0; mi < matches.length; mi += 1) {
+        var candidate = matches[mi].replace(/[),.;]+$/g, '');
+        if (/\.(?:mp3|m4a|flac|aac|ogg|wav)(?:[?#].*)?$/i.test(candidate)) {
+          return candidate;
+        }
+      }
+      return '';
+    }
+
+    if (Array.isArray(value)) {
+      for (var ai = 0; ai < value.length; ai += 1) {
+        var fromArray = findAudioUrl(value[ai], depth + 1);
+        if (fromArray) return fromArray;
+      }
+      return '';
+    }
+
+    if (typeof value === 'object') {
+      var preferred = [
+        'url', 'play_url', 'playUrl', 'musicUrl', 'music_url',
+        'audio', 'audioUrl', 'src'
+      ];
+
+      for (var pi = 0; pi < preferred.length; pi += 1) {
+        if (Object.prototype.hasOwnProperty.call(value, preferred[pi])) {
+          var fromPreferred = findAudioUrl(value[preferred[pi]], depth + 1);
+          if (fromPreferred) return fromPreferred;
+        }
+      }
+
+      for (var key in value) {
+        if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+        var fromValue = findAudioUrl(value[key], depth + 1);
+        if (fromValue) return fromValue;
+      }
+    }
+
+    return '';
+  }
+
+  try {
+    var parsed = JSON.parse(text);
+    var parsedUrl = findAudioUrl(parsed, 0);
+    if (parsedUrl) {
+      return {
+        body: text,
+        contentType: 'application/json; charset=utf-8'
+      };
+    }
+  } catch (e) {}
+
+  var bodyUrl = findAudioUrl(text, 0);
+  if (bodyUrl) {
+    return {
+      body: JSON.stringify({ url: bodyUrl }),
+      contentType: 'application/json; charset=utf-8'
+    };
+  }
+
+  return null;
+}
+
 async function fetchFlowerResolverViaHttpBridge(target, request) {
   var targets = flowerResolverTargets(target);
   var bridges = [
@@ -445,8 +542,17 @@ export async function onRequest(context) {
       return flowerDirectResponse;
     }
 
-    var flowerSocketResponse = await fetchFlowerResolverViaSocket(target, request);
-    return flowerSocketResponse;
+    // Do not use the legacy TCP socket fallback here. Cloudflare Workers
+    // can reject public HTTP socket connections, and the old socket fallback
+    // was the source of Worker 1101 crashes. Return a normal 502 instead so
+    // the browser-side playback layer can activate native platform fallback.
+    return new Response(JSON.stringify({
+      error: 'Flower resolver unavailable',
+      message: 'All Flower HTTP resolver routes failed'
+    }), {
+      status: 502,
+      headers: Object.assign({'Content-Type': 'application/json; charset=utf-8'}, corsHeaders(request))
+    });
   }
 
   var candidateUrls = target.protocol === 'http:'
