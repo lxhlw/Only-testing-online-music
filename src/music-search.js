@@ -1870,30 +1870,6 @@
         }
       },
       {
-        provider: 'tencent-aggregate-xinghai',
-        method: 'GET',
-        url: 'https://yy.zddyr.top/lx/api/?source=qq&songmid=' + encodeURIComponent(songmid) + '&quality=' + encodeURIComponent(requestedQuality),
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      },
-      {
-        provider: 'tencent-aggregate-zrcdy',
-        method: 'GET',
-        url: 'https://zrcdy.dpdns.org/lx/api/api.php?source=qq&songmid=' + encodeURIComponent(songmid) + '&quality=' + encodeURIComponent(requestedQuality),
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      },
-      {
-        provider: 'tencent-aggregate-vkeys',
-        method: 'GET',
-        url: 'https://api.vkeys.cn/v2/music/tencent/geturl?mid=' + encodeURIComponent(songmid) + '&quality=' + encodeURIComponent(vkeysQuality),
-        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }
-      },
-      {
-        provider: 'tencent-aggregate-lxmusic88',
-        method: 'GET',
-        url: 'https://88.lxmusic.xn--fiqs8s/lxmusicv4/url/tx/' + encodeURIComponent(songmid) + '/' + encodeURIComponent(requestedQuality),
-        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'x-request-key': 'lxmusic' }
-      },
-      {
         provider: 'tencent-aggregate-express-vkey',
         method: 'GET',
         url: 'https://c.y.qq.com/base/fcgi-bin/fcg_music_express_mobile3.fcg' +
@@ -1916,7 +1892,28 @@
             '&vkey=' + encodeURIComponent(vkey) +
             '&uin=0&fromtag=66';
         }
-      }
+        method: 'GET',
+        url: 'https://yy.zddyr.top/lx/api/?source=qq&songmid=' + encodeURIComponent(songmid) + '&quality=' + encodeURIComponent(requestedQuality),
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      },
+      {
+        provider: 'tencent-aggregate-zrcdy',
+        method: 'GET',
+        url: 'https://zrcdy.dpdns.org/lx/api/api.php?source=qq&songmid=' + encodeURIComponent(songmid) + '&quality=' + encodeURIComponent(requestedQuality),
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      },
+      {
+        provider: 'tencent-aggregate-vkeys',
+        method: 'GET',
+        url: 'https://api.vkeys.cn/v2/music/tencent/geturl?mid=' + encodeURIComponent(songmid) + '&quality=' + encodeURIComponent(vkeysQuality),
+        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }
+      },
+      {
+        provider: 'tencent-aggregate-lxmusic88',
+        method: 'GET',
+        url: 'https://88.lxmusic.xn--fiqs8s/lxmusicv4/url/tx/' + encodeURIComponent(songmid) + '/' + encodeURIComponent(requestedQuality),
+        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'x-request-key': 'lxmusic' }
+      },
     ];
 
     var lastError = null;
