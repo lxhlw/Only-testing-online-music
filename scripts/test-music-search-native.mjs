@@ -40,24 +40,13 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       let response
       if (targetUrl.indexOf('/time') >= 0) {
         response = responses.time || { status: 200, body: '1791139200' }
-      } else if (targetUrl.indexOf('antiserver.kuwo.cn/anti.s') >= 0) {
-        response = responses.kuwo || { status: 200, body: 'https://audio.example.test/kw-native.mp3' }
-      } else if (targetUrl.indexOf('tracker.kugou.com/v5/url') >= 0) {
-        response = responses.kugouTracker || {
-          status: 200,
-          body: JSON.stringify({ status: 1, bitRate: 320, url: ['https://audio.example.test/kg-tracker.mp3'] })
-        }
-      } else if (targetUrl.indexOf('lxmusicapi.onrender.com/url/') >= 0) {
+      } else if (targetUrl.indexOf('antiserver.kuwo.cn/anti.s') >= 0 && responses.kuwo) {
+        response = responses.kuwo
+      } else if (targetUrl.indexOf('tracker.kugou.com/v5/url') >= 0 && responses.kugouTracker) {
+        response = responses.kugouTracker
+      } else if (targetUrl.indexOf('lxmusicapi.onrender.com/url/') >= 0 && responses.huibq) {
         const provider = targetUrl.split('/url/')[1]?.split('/')[0] || 'unknown'
-        response = (responses.huibq && responses.huibq[provider]) || {
-          status: 200,
-          body: JSON.stringify({
-            code: 0,
-            url: 'https://cdn.example.test/' + provider + '-audio.mp3',
-            br: 128,
-            size: 1234
-          })
-        }
+        response = responses.huibq[provider] || { status: 200, body: '[]' }
       } else {
         response = searchResponses[Math.min(searchIndex, searchResponses.length - 1)] || { status: 200, body: '[]' }
       }
@@ -313,6 +302,26 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     },
     () => {},
     {
+      kuwo: { status: 200, body: 'https://audio.example.test/kw-native.mp3' },
+      kugouTracker: {
+        status: 200,
+        body: JSON.stringify({
+          status: 1,
+          bitRate: 320,
+          url: ['https://audio.example.test/kg-tracker.mp3']
+        })
+      },
+      huibq: {
+        mg: {
+          status: 200,
+          body: JSON.stringify({
+            code: 0,
+            url: 'https://cdn.example.test/mg-audio.mp3',
+            br: 128,
+            size: 1234
+          })
+        }
+      },
       search: [
         {
           status: 200,
