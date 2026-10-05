@@ -1784,8 +1784,10 @@
     return clean;
   }
 
-  function resolveTencentAggregateUrl(musicInfo, quality, callback) {
+  function resolveTencentAggregateUrl(musicInfo, quality, callback, options) {
     var info = musicInfo || {};
+    options = options || {};
+    var skipProvider = String(options.skipProvider || '').toLowerCase();
     var songmid = String(info.songmid || info.id || info.mediaMid || '').replace(/^\s+|\s+$/g, '');
     if (!songmid) return callback(new Error('No Tencent songmid for aggregate playback'));
     var requestedQuality = String(quality || '').toLowerCase() || '128k';
@@ -1902,6 +1904,9 @@
     function tryBackend(index) {
       if (index >= backends.length) return callback(lastError || new Error('All Tencent aggregate backends failed'));
       var backend = backends[index];
+      if (skipProvider && String(backend.provider || '').toLowerCase() === skipProvider) {
+        return tryBackend(index + 1);
+      }
       requestViaProxy(backend.url, backend.method, backend.body || null, backend.headers, true, function (err, data) {
         if (!err) {
           var directUrl = extractUrl(data);
@@ -2296,6 +2301,17 @@
       if (source === 'tx' && skipProvider !== 'gd-studio') {
         return resolveGdStudioUrl(source, musicInfo, quality, function (gdErr, gdResult) {
           if (!gdErr && gdResult && gdResult.url) return callback(null, gdResult);
+
+          // GD Studio availability is independent of the selected Tencent
+          // track. Prefer the existing LX/Huibq resolver before aggregates
+          // when GD cannot produce a URL.
+          if (skipProvider !== 'huibq') {
+            return resolveHuibqUrl(source, musicInfo, quality, function (huibqErr, huibqResult) {
+              if (!huibqErr && huibqResult && huibqResult.url) return callback(null, huibqResult);
+              afterTencentAggregate(gdErr || huibqErr);
+            });
+          }
+
           afterTencentAggregate(gdErr);
         });
       }
@@ -2311,7 +2327,7 @@
             if (!huibqErr && result && result.url) return callback(null, result);
             afterTuneHub(aggregateFailure || huibqErr);
           });
-        });
+        }, { skipProvider: skipProvider });
       }
       if (skipProvider === 'huibq') return afterTuneHub(null);
 

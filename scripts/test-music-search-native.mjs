@@ -822,6 +822,45 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   assert.equal(new URL(h.calls[1].xhrUrl).searchParams.get('url'), 'https://music-api.gdstudio.xyz/api.php')
 }
 
+
+{
+  const h = createHarness(
+    { tx: { actions: ['musicUrl'] } },
+    () => {},
+    {
+      time: { status: 403, body: 'forbidden' },
+      search: [
+        { status: 200, body: '{}' },
+        { status: 200, body: '{}' },
+        {
+          status: 200,
+          body: JSON.stringify({
+            code: 0,
+            url: 'https://media.example.test/tx-huibq.mp3'
+          })
+        }
+      ]
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.resolveMusicUrl(
+      'tx',
+      { songmid: '0039MnQn', id: '200790315' },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value)
+    )
+  })
+
+  assert.equal(result.provider, 'huibq')
+  assert.equal(result.url, 'https://media.example.test/tx-huibq.mp3')
+  assert.equal(h.calls.length, 4)
+  assert.equal(new URL(h.calls[0].xhrUrl).searchParams.get('url'), 'https://music.gdstudio.xyz/time')
+  assert.equal(new URL(h.calls[1].xhrUrl).searchParams.get('url'), 'https://music-api.gdstudio.xyz/api.php')
+  assert.equal(new URL(h.calls[2].xhrUrl).searchParams.get('url'), 'https://music-api.gdstudio.xyz/api.php')
+  assert.match(new URL(h.calls[3].xhrUrl).searchParams.get('url'), /lxmusicapi\.onrender\.com\/url\/tx\//)
+}
+
 {
   const h = createHarness(
     { tx: { actions: ['musicUrl'] } },
