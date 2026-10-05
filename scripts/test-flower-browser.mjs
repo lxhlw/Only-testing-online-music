@@ -51,15 +51,49 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
 const pageErrors = []
 const failedResponses = []
 const proxyTargets = []
+const resolverResponses = []
+const mediaResponses = []
 
 page.on('pageerror', error => pageErrors.push(String(error)))
-page.on('response', response => {
+page.on('response', async response => {
+  const url = response.url()
   if (response.status() >= 400) {
     failedResponses.push(
-      response.status() + ' ' + response.request().method() + ' ' + response.url()
+      response.status() + ' ' + response.request().method() + ' ' + url
     )
   }
+
+  if (!url.includes('/api/proxy?url=')) return
+
+  let target = ''
+  try {
+    target = new URL(url).searchParams.get('url') || ''
+  } catch {}
+
+  if (!target) return
+
+  const event = {
+    at: Date.now(),
+    status: response.status(),
+    method: response.request().method(),
+    target,
+    headers: response.headers(),
+  }
+
+  if (/\/flower\/v1\/url\/(?:kw|kg|tx|wy|mg)\//.test(target)) {
+    try {
+      const body = await response.text()
+      event.body = body.slice(0, 4096)
+    } catch {}
+    resolverResponses.push(event)
+    return
+  }
+
+  if (/(?:kuwo\.cn|kugou\.com|qq\.com|163\.com|migu\.cn)/i.test(target)) {
+    mediaResponses.push(event)
+  }
 })
+
 page.on('request', request => {
   const url = request.url()
   if (!url.includes('/api/proxy?url=')) return
@@ -167,35 +201,43 @@ try {
     const attempts = []
     const candidateCount = Math.min(3, results.length)
     for (let i = 0; i < candidateCount; i += 1) {
-      await page.locator('#search-results .search-row').nth(i).getByRole('button', { name: '\u89e3\u6790\u5e76\u64ad\u653e' }).click()
+      const startedAt = Date.now()
+
+      await page.evaluate(() => {
+        const audio = document.getElementById('audio')
+        if (!audio) return
+        try { audio.pause() } catch {}
+        try { audio.removeAttribute('src') } catch {}
+        try { audio.load() } catch {}
+      })
+
+      const baseline = await page.evaluate(() => {
+        const audio = document.getElementById('audio')
+        return {
+          src: audio?.currentSrc || audio?.src || '',
+          currentTime: Number(audio?.currentTime || 0),
+        }
+      })
+
+      await page.locator('#search-results .search-row').nth(i).getByRole('button', { name: '解析并播放' }).click()
 
       const expectedDuration = parseDuration(results[i]?.interval)
       try {
         await page.waitForFunction(
-          ({ expectedDuration }) => {
+          ({ baselineSrc }) => {
             const audio = document.getElementById('audio')
             if (!audio) return false
+            const src = audio.currentSrc || audio.src || ''
             if (audio.error) return true
-
-            const currentTime = Number(audio.currentTime || 0)
-            if (audio.ended) return true
-            if (currentTime >= 12) return true
-
-            const duration = Number(audio.duration || 0)
-            if (!Number.isFinite(duration) || duration <= 0) return false
-            return currentTime >= 0.8 && (
-              !Number.isFinite(expectedDuration) ||
-              expectedDuration <= 0 ||
-              (expectedDuration >= 120
-                ? duration >= Math.max(30, expectedDuration * 0.45)
-                : expectedDuration >= 60
-                  ? duration >= Math.max(20, expectedDuration * 0.45)
-                  : expectedDuration >= 30
-                    ? duration >= Math.max(15, expectedDuration * 0.40)
-                    : duration >= Math.max(8, expectedDuration * 0.30))
-            )
+            if (src && src !== baselineSrc) {
+              const currentTime = Number(audio.currentTime || 0)
+              const duration = Number(audio.duration || 0)
+              if (currentTime >= 0.8) return true
+              if (Number.isFinite(duration) && duration > 0 && currentTime >= 0.2 && audio.readyState >= 2) return true
+            }
+            return false
           },
-          { expectedDuration },
+          { baselineSrc: baseline.src },
           { timeout: PLAYBACK_TIMEOUT_MS },
         )
       } catch {}
@@ -204,29 +246,81 @@ try {
         const audio = document.getElementById('audio')
         return {
           status: document.getElementById('status')?.textContent || '',
-          audioUrl: audio?.src || '',
+          audioUrl: audio?.currentSrc || audio?.src || '',
           readyState: Number(audio?.readyState || 0),
           currentTime: Number(audio?.currentTime || 0),
           duration: Number(audio?.duration || 0),
+          paused: Boolean(audio?.paused),
+          ended: Boolean(audio?.ended),
           error: audio?.error ? {
             code: audio.error.code,
             message: audio.error.message || '',
           } : null,
         }
       })
-      attempts.push({ index: i + 1, result: results[i], ...attempt })
+
+      const recentResolver = resolverResponses.filter(item => item.at >= startedAt)
+      const recentMedia = mediaResponses.filter(item => item.at >= startedAt)
+      const resolverDataUrls = []
+      for (const item of recentResolver) {
+        try {
+          const json = JSON.parse(item.body || '')
+          const data = json?.data ?? json?.body?.data
+          if (typeof data === 'string' && /^https?:\/\//i.test(data.trim())) {
+            resolverDataUrls.push(data.trim())
+          }
+        } catch {}
+      }
+
+      let audioTarget = ''
+      try {
+        audioTarget = new URL(attempt.audioUrl).searchParams.get('url') || ''
+      } catch {}
+
+      const trace = {
+        index: i + 1,
+        result: results[i],
+        ...attempt,
+        baselineSrc: baseline.src,
+        sourceChanged: Boolean(attempt.audioUrl && attempt.audioUrl !== baseline.src),
+        resolverResponses: recentResolver.map(item => ({
+          status: item.status,
+          target: item.target,
+          body: item.body || '',
+        })),
+        resolverDataUrls,
+        mediaResponses: recentMedia.map(item => ({
+          status: item.status,
+          target: item.target,
+          contentType: item.headers?.['content-type'] || '',
+          contentLength: item.headers?.['content-length'] || '',
+          acceptRanges: item.headers?.['accept-ranges'] || '',
+        })),
+        audioTarget,
+      }
+      attempts.push(trace)
+
       const validatedDuration = isPlausiblePlaybackDuration(
         attempt.duration,
         parseDuration(results[i]?.interval)
       )
       const validatedProgress = attempt.currentTime >= 12
+      const sourceChanged = Boolean(attempt.audioUrl && attempt.audioUrl !== baseline.src)
+      const resolverBackedMedia =
+        !audioTarget ||
+        resolverDataUrls.length === 0 ||
+        resolverDataUrls.includes(audioTarget) ||
+        recentMedia.some(item => item.target === audioTarget)
+
       if (
         REQUIRE_PLAUSIBLE_PLAYBACK &&
+        sourceChanged &&
         attempt.currentTime >= 0.8 &&
         attempt.readyState >= 2 &&
         !attempt.error &&
         (validatedDuration || validatedProgress) &&
-        /(?:正在播放|播放中)/.test(attempt.status)
+        /(?:正在播放|播放中)/.test(attempt.status) &&
+        resolverBackedMedia
       ) break
     }
 
@@ -296,6 +390,11 @@ try {
       continue
     }
 
+    assert.ok(
+      success.audioUrl && success.audioUrl !== success.baselineSrc,
+      channel.toUpperCase() + ' playback reused the pre-click/stale audio source: ' +
+      JSON.stringify(success, null, 2)
+    )
     assert.ok(
       success,
       channel.toUpperCase() + ' playback did not produce a plausible full-length song after ' +
