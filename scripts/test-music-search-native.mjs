@@ -105,6 +105,11 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       } else if (targetUrl.indexOf('tracker.kugou.com/v5/url') >= 0 && responses.kugouTracker) {
         response = responses.kugouTracker
       } else if (
+        targetUrl.indexOf('app.c.nf.migu.cn/MIGUM2.0/strategy/listen-url/v2.4') >= 0 &&
+        responses.miguStrategyV24Url
+      ) {
+        response = responses.miguStrategyV24Url
+      } else if (
         targetUrl.indexOf('c.musicapp.migu.cn/strategy/listen-url/h5/v2.4') >= 0 &&
         responses.miguStrategyListenUrl
       ) {
@@ -427,6 +432,10 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     { mg: { actions: ['musicUrl'] } },
     () => {},
     {
+      miguStrategyV24Url: {
+        status: 200,
+        body: JSON.stringify({ code: '000000', data: {} })
+      },
       miguStrategyListenUrl: {
         status: 200,
         body: JSON.stringify({ code: '000000', data: { url: '' } })
@@ -434,6 +443,15 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       miguListenUrl: {
         status: 200,
         body: JSON.stringify({ code: '000000', data: {} })
+      },
+      miguLegacyListenSong: {
+        status: 200,
+        body: JSON.stringify({
+          code: '000000',
+          data: {
+            url: '//audio.example.test/mg-legacy.mp3'
+          }
+        })
       }
     }
   )
@@ -448,22 +466,14 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   })
 
   assert.equal(result.provider, 'migu-native-listenSong')
-  assert.equal(result.url.startsWith('https://app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do'), true)
-  const legacyUrl = new URL(result.url)
-  assert.equal(legacyUrl.searchParams.get('copyrightId'), 'mg-copy-legacy')
-  assert.equal(legacyUrl.searchParams.get('contentId'), 'mg-content-legacy')
-  assert.equal(legacyUrl.searchParams.get('toneFlag'), 'PQ')
-  assert.equal(legacyUrl.searchParams.get('resourceType'), '2')
-  assert.equal(legacyUrl.searchParams.get('netType'), '00')
-  assert.equal(legacyUrl.searchParams.get('channel'), 'mx')
-  assert.equal(legacyUrl.searchParams.get('userId'), '15548614588710179085069')
+  assert.equal(result.url, 'https://audio.example.test/mg-legacy.mp3')
   const legacyProxyCalls = hLegacy.calls.filter(call => {
     if (call.xhrMethod !== 'GET') return false
     let url = String(call.xhrUrl || '')
     try { url = decodeURIComponent(url) } catch {}
-    return url.includes('app.pd.nf.migu.cn/MIGUM2.0/v1.0/content/sub/listenSong.do')
+    return url.includes('app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do')
   })
-  assert.equal(legacyProxyCalls.length, 0)
+  assert.equal(legacyProxyCalls.length, 1)
 }
 
 {
@@ -1513,3 +1523,48 @@ console.log('PASS: LX search routing stays channel-bound and never mixes provide
   assert.match(eapiTarget, /interface3\.music\.163\.com\/eapi\/song\/enhance\/player\/url\/v1/)
   assert.match(hEapi.calls[1].xhrBody || '', /^params=/)
 }
+
+{
+  const hStrategy = createHarness(
+    { mg: { actions: ['musicUrl'] } },
+    () => {},
+    {
+      miguStrategyV24Url: {
+        status: 200,
+        body: JSON.stringify({
+          code: '000000',
+          data: {
+            formatType: 'PQ',
+            audioFormatType: 'PQ',
+            url: '//audio.example.test/mg-strategy-v24.mp3'
+          }
+        })
+      }
+    }
+  )
+
+  const strategyResult = await new Promise((resolve, reject) => {
+    hStrategy.sandbox.LXMusicSearch.resolveMusicUrl(
+      'mg',
+      {
+        id: 'mg-strategy-test',
+        songmid: '1106531626',
+        copyrightId: '6005861N71E',
+        contentId: '600929000002562618',
+        resourceType: '2'
+      },
+      '128k',
+      (err, value) => err ? reject(err) : resolve(value)
+    )
+  })
+
+  assert.equal(strategyResult.provider, 'migu-native-strategy-v2.4')
+  assert.equal(strategyResult.url, 'https://audio.example.test/mg-strategy-v24.mp3')
+  assert.equal(hStrategy.calls.filter(call => {
+    if (call.xhrMethod !== 'GET') return false
+    let url = String(call.xhrUrl || '')
+    try { url = decodeURIComponent(url) } catch {}
+    return url.includes('app.c.nf.migu.cn/MIGUM2.0/strategy/listen-url/v2.4')
+  }).length, 1)
+}
+

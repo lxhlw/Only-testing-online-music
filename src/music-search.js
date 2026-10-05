@@ -977,8 +977,11 @@
       if (typeof value === 'string') {
         var text = value.replace(/^\s+|\s+$/g, '');
         if (/^https?:\/\//i.test(text)) return text;
-        var matches = text.match(/https?:\/\/[^\s"'<>]+/ig) || [];
-        return matches.length ? matches[0].replace(/[),.;]+$/g, '') : '';
+        if (/^\/\//.test(text)) return 'https:' + text;
+        var matches = text.match(/https?:\/\/[^\s"'<>]+|\/\/[^\s"'<>]+/ig) || [];
+        if (!matches.length) return '';
+        var matched = matches[0].replace(/[),.;]+$/g, '');
+        return /^\/\//.test(matched) ? 'https:' + matched : matched;
       }
       if (Array.isArray(value)) {
         for (var i = 0; i < value.length; i += 1) {
@@ -1021,6 +1024,39 @@
         id: String(info.id || songId || copyrightId || contentId || ''),
         raw: raw || null
       });
+    }
+
+    function requestOfficialStrategyV24(done) {
+      if (!songId) return done(new Error('Migu songId is missing for MIGUM2 strategy'));
+
+      var api =
+        'https://app.c.nf.migu.cn/MIGUM2.0/strategy/listen-url/v2.4' +
+        '?netType=01' +
+        '&resourceType=' + encodeURIComponent(resourceType || '2') +
+        '&songId=' + encodeURIComponent(songId) +
+        '&toneFlag=' + encodeURIComponent(toneFlag);
+
+      requestViaProxy(
+        api,
+        'GET',
+        null,
+        {
+          'Accept': 'application/json, text/plain, */*',
+          'Content-Type': 'application/json;charset=UTF-8',
+          'Origin': 'https://music.migu.cn',
+          'Referer': 'https://music.migu.cn/',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36',
+          'birth': 'h5page',
+          'signature': '1'
+        },
+        true,
+        function (apiErr, data) {
+          if (apiErr) return done(apiErr);
+          var returned = extractUrl(data, 0);
+          if (!returned) return done(new Error('Migu MIGUM2 strategy/listen-url returned no URL'));
+          finish(returned, 'migu-native-strategy-v2.4', data);
+        }
+      );
     }
 
     function requestOfficialListenUrl(done) {
@@ -1164,11 +1200,9 @@
         return done(new Error('Migu legacy listenSong.do requires copyrightId and contentId'));
       }
 
-      // Current interoperable Migu playback falls back to the MIGUM3.0
-      // listenSong endpoint. MIGUM2.0 may return JSON/protection metadata rather
-      // than audio, which the HTML audio element correctly rejects as media.
-      // Keep the actual copyrightId and use the MX channel identity expected by
-      // the current Migu endpoint.
+      // MIGUM3.0 is an API endpoint. It may return JSON/protection metadata
+      // containing the actual media URL; never pass the endpoint itself to
+      // HTMLAudioElement.
       var api =
         'https://app.pd.nf.migu.cn/MIGUM3.0/v1.0/content/sub/listenSong.do' +
         '?channel=mx' +
@@ -1179,26 +1213,46 @@
         '&userId=15548614588710179085069' +
         '&netType=00';
 
-      finish(api, 'migu-native-listenSong', null);
+      requestViaProxy(
+        api,
+        'GET',
+        null,
+        {
+          'Accept': 'application/json, text/plain, */*',
+          'Referer': 'https://music.migu.cn/',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36'
+        },
+        true,
+        function (apiErr, data) {
+          if (apiErr) return done(apiErr);
+          var returned = extractUrl(data, 0);
+          if (!returned) return done(new Error('Migu MIGUM3 listenSong returned no media URL'));
+          finish(returned, 'migu-native-listenSong', data);
+        }
+      );
     }
 
     // Native priority:
-    // 1) v2.4 strategy endpoint keyed by songId (the field exposed as songmid).
-    // 2) v2.0 copyrightId endpoint as a second official source.
-    // 3) MIGUM3.0 listenSong.do as the final native fallback when the
-    // official strategy endpoints return no usable media URL.
-    requestOfficialListenUrl(function (officialErr) {
-      if (!officialErr) return;
-      requestOfficialPcListenUrl(function (pcErr) {
-        if (!pcErr) return;
-        requestCopyrightListenUrl(function (copyrightErr) {
-          if (!copyrightErr) return;
-          requestLegacyListenSongUrl(function (legacyErr) {
+    // 1) MIGUM2.0 strategy/listen-url/v2.4 keyed by songId,
+    // 2) H5 strategy endpoint keyed by contentId/copyrightId,
+    // 3) PC strategy endpoint,
+    // 4) copyright listen-url endpoint,
+    // 5) MIGUM3.0 listenSong.do after parsing its JSON response.
+    requestOfficialStrategyV24(function (strategyErr) {
+      if (!strategyErr) return;
+      requestOfficialListenUrl(function (officialErr) {
+        if (!officialErr) return;
+        requestOfficialPcListenUrl(function (pcErr) {
+          if (!pcErr) return;
+          requestCopyrightListenUrl(function (copyrightErr) {
+            if (!copyrightErr) return;
+            requestLegacyListenSongUrl(function (legacyErr) {
             if (!legacyErr) return;
             if (!contentId) return callback(copyrightErr || officialErr || pcErr || legacyErr);
 
             return callback(new Error(
               'Migu playback endpoints returned no playable media URL' +
+              '；strategy: ' + String(strategyErr && strategyErr.message || strategyErr || 'failed') +
               '；h5: ' + String(officialErr && officialErr.message || officialErr || 'failed') +
               '；pc: ' + String(pcErr && pcErr.message || pcErr || 'failed') +
               '；copyright: ' + String(copyrightErr && copyrightErr.message || copyrightErr || 'failed') +
