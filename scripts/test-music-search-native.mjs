@@ -290,15 +290,65 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
     },
     () => {},
     {
-      search: {
-        status: 200,
-        body: JSON.stringify({
-          code: 0,
-          url: 'https://cdn.example.test/audio.mp3',
-          br: 128,
-          size: 1234
-        })
-      }
+      search: [
+        {
+          status: 200,
+          body: JSON.stringify({
+            code: 0,
+            url: 'https://cdn.example.test/kw-audio.mp3',
+            br: 128,
+            size: 1234
+          })
+        },
+        {
+          status: 200,
+          body: JSON.stringify({
+            status: 1,
+            hash: 'ABCDEF0123456789',
+            bitRate: 128,
+            url: 'https://audio.example.test/kg-128.mp3',
+            extra: {
+              '320hash': '320HASH0123456789'
+            }
+          })
+        },
+        {
+          status: 200,
+          body: JSON.stringify({
+            status: 1,
+            hash: '320HASH0123456789',
+            bitRate: 320,
+            url: 'https://audio.example.test/kg-320.mp3'
+          })
+        },
+        {
+          status: 200,
+          body: JSON.stringify({
+            code: 0,
+            url: 'https://cdn.example.test/tx-audio.mp3',
+            br: 128,
+            size: 1234
+          })
+        },
+        {
+          status: 200,
+          body: JSON.stringify({
+            code: 0,
+            url: 'https://cdn.example.test/wy-audio.mp3',
+            br: 128,
+            size: 1234
+          })
+        },
+        {
+          status: 200,
+          body: JSON.stringify({
+            code: 0,
+            url: 'https://cdn.example.test/mg-audio.mp3',
+            br: 128,
+            size: 1234
+          })
+        }
+      }      }
     }
   )
 
@@ -320,17 +370,31 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       )
     })
 
-    assert.equal(result.provider, 'huibq')
-    assert.equal(result.url, 'https://cdn.example.test/audio.mp3')
-    assert.equal(result.id, item.id)
+    if (item.source === 'kg') {
+      assert.equal(result.provider, 'kugou-native')
+      assert.equal(result.url, 'https://audio.example.test/kg-320.mp3')
+      assert.equal(result.id, '320HASH0123456789')
+      const kgCalls = h.calls.filter(call => call.xhrMethod === 'GET' && String(call.xhrUrl || '').includes('m.kugou.com'))
+      assert.equal(kgCalls.length, 2)
+      const firstTarget = new URL(kgCalls[0].xhrUrl).searchParams.get('url')
+      const secondTarget = new URL(kgCalls[1].xhrUrl).searchParams.get('url')
+      assert.match(firstTarget, /m\.kugou\.com\/app\/i\/getSongInfo\.php/)
+      assert.match(secondTarget, /m\.kugou\.com\/app\/i\/getSongInfo\.php/)
+      assert.match(firstTarget, /hash=ABCDEF0123456789/)
+      assert.match(secondTarget, /hash=320HASH0123456789/)
+    } else {
+      assert.equal(result.provider, 'huibq')
+      assert.equal(result.url, 'https://cdn.example.test/' + item.source + '-audio.mp3')
+      assert.equal(result.id, item.id)
 
-    const call = h.calls[h.calls.length - 1]
-    const target = new URL(call.xhrUrl).searchParams.get('url')
-    const requestUrl = new URL(target)
-    assert.equal(requestUrl.origin, 'https://lxmusicapi.onrender.com')
-    assert.equal(requestUrl.pathname, '/url/' + item.source + '/' + item.id + '/' + item.huibqQuality)
-    const forwarded = JSON.parse(call.xhrHeaders['X-LX-Headers'])
-    assert.equal(forwarded['X-Request-Key'], 'share-v3')
+      const call = h.calls[h.calls.length - 1]
+      const target = new URL(call.xhrUrl).searchParams.get('url')
+      const requestUrl = new URL(target)
+      assert.equal(requestUrl.origin, 'https://lxmusicapi.onrender.com')
+      assert.equal(requestUrl.pathname, '/url/' + item.source + '/' + item.id + '/' + item.huibqQuality)
+      const forwarded = JSON.parse(call.xhrHeaders['X-LX-Headers'])
+      assert.equal(forwarded['X-Request-Key'], 'share-v3')
+    }
   }
 }
 
