@@ -414,12 +414,13 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   assert.equal(result.url, 'https://audio.example.test/kg-gateway.mp3')
   assert.equal(result.id, 'abcdef0123456789')
   assert.equal(h.calls.length, 1)
-  const gatewayTarget = new URL(h.calls[0].xhrUrl).searchParams.get('url')
-  assert.match(gatewayTarget, /gateway\.kugou\.com\/i\/v2\//)
-  assert.equal(new URL(gatewayTarget).searchParams.get('cmd'), '26')
-  assert.equal(new URL(gatewayTarget).searchParams.get('appid'), '1005')
+  const v5Target = new URL(h.calls[0].xhrUrl).searchParams.get('url')
+  assert.match(v5Target, /tracker\.kugou\.com\/v5\/url/)
+  assert.equal(new URL(v5Target).searchParams.get('hash'), 'abcdef0123456789')
+  assert.equal(new URL(v5Target).searchParams.get('quality'), '128')
   const forwarded = JSON.parse(h.calls[0].xhrHeaders['X-LX-Headers'])
-  assert.equal(forwarded['x-router'], 'tracker.kugou.com')
+  assert.equal(forwarded['KG-THash'], '255d751')
+  assert.equal(forwarded['KG-RC'], '1')
 }
 
 {
