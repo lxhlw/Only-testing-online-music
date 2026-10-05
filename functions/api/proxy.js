@@ -89,25 +89,17 @@ async function fetchFlowerResolverViaDirectFetch(target, request) {
 
 async function fetchFlowerResolverViaHost(target, request) {
   var bases = [
-    'http://ts.tempmusics.tk',
-    'http://tm.tempmusics.tk',
-    'https://ts.tempmusics.tk',
-    'https://tm.tempmusics.tk'
+    'http://97-64-37-235.sslip.io',
+    'http://97-64-37-235.nip.io'
   ];
   var forwarded = pickForwardHeaders(request);
   var lastError = null;
 
   for (var bi = 0; bi < bases.length; bi += 1) {
     var base = bases[bi];
-    var paths = [];
+    var paths = [target.pathname];
     if (/^\/flower\/v1\/url\//.test(target.pathname)) {
-      // Prefer the legacy LX resolver route exposed by tempmusics.tk.
-      // Cloudflare cannot reliably fetch the raw Flower IP, while the
-      // hostname-routed /url endpoint remains the compatible HTTP entrypoint.
-      paths.push(target.pathname.replace(/^\/flower\/v1\/url\//, '/url/'));
-      paths.push(target.pathname);
-    } else {
-      paths.push(target.pathname);
+      paths.unshift(target.pathname.replace(/^\/flower\/v1\/url\//, '/url/'));
     }
 
     for (var pi = 0; pi < paths.length; pi += 1) {
@@ -134,225 +126,22 @@ async function fetchFlowerResolverViaHost(target, request) {
         }
 
         lastError = new Error(
-          'Flower host HTTP ' + upstream.status + ' via ' + endpoint +
+          'Flower wildcard DNS HTTP ' + upstream.status + ' via ' + endpoint +
           (trimmed ? ': ' + trimmed.slice(0, 180) : '')
         );
-      } catch (e) {
-        lastError = e;
+      } catch (err) {
+        lastError = err;
       }
     }
   }
 
   return new Response(JSON.stringify({
-    error: 'Flower host resolver failed',
-    message: lastError && lastError.message ? lastError.message : 'No Flower host response'
+    error: 'Flower wildcard DNS resolver failed',
+    message: lastError && lastError.message ? lastError.message : 'No wildcard DNS response'
   }), {
     status: 502,
     headers: Object.assign({'Content-Type': 'application/json; charset=utf-8'}, corsHeaders(request))
   });
-}
-
-async function fetchFlowerResolverViaSocket(target, request) {
-  var hosts = [
-    { hostname: '97.64.37.235', hostHeader: '97.64.37.235' },
-    { hostname: 'ts.tempmusics.tk', hostHeader: 'ts.tempmusics.tk' },
-    { hostname: 'tm.tempmusics.tk', hostHeader: 'tm.tempmusics.tk' }
-  ];
-  var encoder = new TextEncoder();
-  var decoder = new TextDecoder();
-  var lastError = null;
-
-  for (var hi = 0; hi < hosts.length; hi += 1) {
-    var socket = null;
-    try {
-      socket = connect({ hostname: hosts[hi].hostname, port: 80 });
-      await socket.opened;
-
-      var forwarded = pickForwardHeaders(request);
-      var requestLines = [
-        String(request.method || 'GET').toUpperCase() + ' ' + target.pathname + target.search + ' HTTP/1.1',
-        'Host: ' + hosts[hi].hostHeader,
-        'Connection: close',
-        'Accept-Encoding: identity'
-      ];
-
-      forwarded.forEach(function (value, key) {
-        var lower = key.toLowerCase();
-        if (lower === 'host' || lower === 'connection' || lower === 'content-length') return;
-        requestLines.push(key + ': ' + value);
-      });
-
-      var writer = socket.writable.getWriter();
-      await writer.write(encoder.encode(requestLines.join('\r\n') + '\r\n\r\n'));
-      await writer.close();
-
-      var bytes = await readSocketBytes(socket);
-      var text = decoder.decode(bytes);
-      var split = text.indexOf('\r\n\r\n');
-      var separatorLength = 4;
-      if (split < 0) {
-        split = text.indexOf('\n\n');
-        separatorLength = 2;
-      }
-
-      if (split < 0) {
-        var bodyOnly = String(text || '').replace(/^\s+|\s+$/g, '');
-        if (/^(?:https?:\/\/|\{|\[)/i.test(bodyOnly)) {
-          return new Response(bodyOnly, {
-            status: 200,
-            statusText: 'OK',
-            headers: new Headers({
-              'Content-Type': 'text/plain; charset=utf-8',
-              'Cache-Control': 'no-store'
-            })
-          });
-        }
-        throw new Error(
-          'Flower resolver returned an invalid HTTP response: ' +
-          String(text || '').slice(0, 160)
-        );
-      }
-
-      var headerText = text.slice(0, split);
-      var bodyText = text.slice(split + separatorLength);
-      var statusMatch = headerText.match(/^HTTP\/\d(?:\.\d)?\s+(\d{3})/i);
-      if (!statusMatch) throw new Error(
-        'Flower resolver returned an invalid HTTP status: ' +
-        headerText.slice(0, 160)
-      );
-      var status = Number(statusMatch[1]);
-
-      var normalizedHeaders = headerText.replace(/\r/g, '');
-      var contentTypeMatch = normalizedHeaders.match(/(?:^|\n)Content-Type:\s*([^\n]+)/i);
-      var transferEncoding = /(?:^|\n)Transfer-Encoding:\s*chunked/i.test(normalizedHeaders);
-      if (transferEncoding) bodyText = decodeChunkedBody(bodyText);
-
-      var responseHeaders = new Headers();
-      if (contentTypeMatch) responseHeaders.set('Content-Type', String(contentTypeMatch[1]).trim());
-      responseHeaders.set('Cache-Control', 'no-store');
-
-      if (status >= 200 && status < 300) {
-        return new Response(bodyText, {
-          status: status,
-          statusText: 'OK',
-          headers: responseHeaders
-        });
-      }
-
-      lastError = new Error(
-        'Flower TCP resolver HTTP ' + status + ' via Host ' + hosts[hi].hostHeader
-      );
-    } catch (e) {
-      lastError = e;
-    } finally {
-      if (socket) {
-        try { await socket.close(); } catch (e) {}
-      }
-    }
-  }
-
-  return new Response(JSON.stringify({
-    error: 'Flower TCP resolver failed',
-    message: lastError && lastError.message ? lastError.message : 'No Flower TCP response'
-  }), {
-    status: 502,
-    headers: Object.assign({'Content-Type': 'application/json; charset=utf-8'}, corsHeaders(request))
-  });
-}
-
-function flowerResolverTargets(target) {
-  var targets = [];
-
-  function add(url) {
-    if (!url) return;
-    for (var i = 0; i < targets.length; i += 1) {
-      if (targets[i] === url) return;
-    }
-    targets.push(url);
-  }
-
-  // Keep the canonical Flower endpoint as a raw-IP target. Do not add the
-  // historical tempmusics aliases: their DNS currently fails in workerd.
-  add(target.toString());
-
-  return targets;
-}
-
-function extractFlowerResolverPayload(body) {
-  var text = String(body || '').replace(/^\uFEFF\s*|\s+$/g, '');
-  if (!text) return null;
-
-  function findAudioUrl(value, depth) {
-    if (depth > 6 || value == null) return '';
-
-    if (typeof value === 'string') {
-      var direct = value.replace(/^\s+|\s+$/g, '');
-      if (/^https?:\/\//i.test(direct) &&
-          /\.(?:mp3|m4a|flac|aac|ogg|wav)(?:[?#].*)?$/i.test(direct)) {
-        return direct;
-      }
-
-      var matches = direct.match(/https?:\/\/[^\s"'<>]+/ig) || [];
-      for (var mi = 0; mi < matches.length; mi += 1) {
-        var candidate = matches[mi].replace(/[),.;]+$/g, '');
-        if (/\.(?:mp3|m4a|flac|aac|ogg|wav)(?:[?#].*)?$/i.test(candidate)) {
-          return candidate;
-        }
-      }
-      return '';
-    }
-
-    if (Array.isArray(value)) {
-      for (var ai = 0; ai < value.length; ai += 1) {
-        var fromArray = findAudioUrl(value[ai], depth + 1);
-        if (fromArray) return fromArray;
-      }
-      return '';
-    }
-
-    if (typeof value === 'object') {
-      var preferred = [
-        'url', 'play_url', 'playUrl', 'musicUrl', 'music_url',
-        'audio', 'audioUrl', 'src'
-      ];
-
-      for (var pi = 0; pi < preferred.length; pi += 1) {
-        if (Object.prototype.hasOwnProperty.call(value, preferred[pi])) {
-          var fromPreferred = findAudioUrl(value[preferred[pi]], depth + 1);
-          if (fromPreferred) return fromPreferred;
-        }
-      }
-
-      for (var key in value) {
-        if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
-        var fromValue = findAudioUrl(value[key], depth + 1);
-        if (fromValue) return fromValue;
-      }
-    }
-
-    return '';
-  }
-
-  try {
-    var parsed = JSON.parse(text);
-    var parsedUrl = findAudioUrl(parsed, 0);
-    if (parsedUrl) {
-      return {
-        body: text,
-        contentType: 'application/json; charset=utf-8'
-      };
-    }
-  } catch (e) {}
-
-  var bodyUrl = findAudioUrl(text, 0);
-  if (bodyUrl) {
-    return {
-      body: JSON.stringify({ url: bodyUrl }),
-      contentType: 'application/json; charset=utf-8'
-    };
-  }
-
-  return null;
 }
 
 async function fetchFlowerResolverViaHttpBridge(target, request) {
@@ -639,21 +428,21 @@ export async function onRequest(context) {
   // its resolver on this IP, so try known DNS aliases for the same origin.
   if (target.hostname.toLowerCase() === '97.64.37.235'
       && /^\/flower\/v1\/url\//.test(target.pathname)) {
-    // Route through a DNS hostname first. Cloudflare's raw-IP fetch can hit
-    // Error 1003 even though the same resolver is reachable by Host routing.
+    // Workers can fetch hostnames but not raw IP URLs. Try wildcard-DNS
+    // hostnames first, then the public bridges, then legacy fallbacks.
     var flowerHostResponse = await fetchFlowerResolverViaHost(target, request);
     if (flowerHostResponse.status >= 200 && flowerHostResponse.status < 300) {
       return flowerHostResponse;
     }
 
-    var flowerDirectResponse = await fetchFlowerResolverViaDirectFetch(target, request);
-    if (flowerDirectResponse.status >= 200 && flowerDirectResponse.status < 300) {
-      return flowerDirectResponse;
-    }
-
     var flowerBridgeResponse = await fetchFlowerResolverViaHttpBridge(target, request);
     if (flowerBridgeResponse.status >= 200 && flowerBridgeResponse.status < 300) {
       return flowerBridgeResponse;
+    }
+
+    var flowerDirectResponse = await fetchFlowerResolverViaDirectFetch(target, request);
+    if (flowerDirectResponse.status >= 200 && flowerDirectResponse.status < 300) {
+      return flowerDirectResponse;
     }
 
     var flowerSocketResponse = await fetchFlowerResolverViaSocket(target, request);
