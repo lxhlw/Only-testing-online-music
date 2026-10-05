@@ -456,10 +456,12 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
       assert.equal(result.provider, 'migu-native-listen-url')
       assert.equal(result.url, 'https://audio.example.test/mg-native.mp3')
       assert.equal(result.id, 'mg-song-55667788')
-      const mgCalls = h.calls.filter(call =>
-        call.xhrMethod === 'GET' &&
-        String(call.xhrUrl || '').includes('app.c.nf.migu.cn/MIGUM2.0/v2.0/content/listen-url')
-      )
+      const mgCalls = h.calls.filter(call => {
+        if (call.xhrMethod !== 'GET') return false
+        let url = String(call.xhrUrl || '')
+        try { url = decodeURIComponent(url) } catch {}
+        return url.includes('app.c.nf.migu.cn/MIGUM2.0/v2.0/content/listen-url')
+      })
       assert.equal(mgCalls.length, 1)
       const target = new URL(mgCalls[0].xhrUrl).searchParams.get('url')
       const requestUrl = new URL(target)
