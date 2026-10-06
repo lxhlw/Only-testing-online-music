@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>Only Testing Online Music</title>
-  <link rel="stylesheet" href="styles.css?v=0.2.35">
+  <link rel="stylesheet" href="styles.css?v=0.2.36">
 </head>
 <body>
   <div id="app">
@@ -12,7 +12,7 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.35</span></div>
+          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.36</span></div>
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">Only Testing Online Music</span>
@@ -25,11 +25,11 @@
       <aside class="nav-rail" aria-label="主导航">
         <div class="nav-brand">MUSIC</div>
         <nav class="main-nav">
-          <a class="nav-item active" href="#search" data-view="search"><span class="nav-symbol">⌕</span><span>搜索</span></a>
-          <a class="nav-item" href="#playlist" data-view="playlist"><span class="nav-symbol">▤</span><span>歌单</span></a>
-          <a class="nav-item" href="#ranking" data-view="ranking"><span class="nav-symbol">↗</span><span>排行榜</span></a>
-          <a class="nav-item" href="#mylist" data-view="mylist"><span class="nav-symbol">♡</span><span>我的列表</span></a>
-          <a class="nav-item" href="#settings" data-view="settings"><span class="nav-symbol">⚙</span><span>设置</span></a>
+          <a class="nav-item active" href="#search" data-view="search" onclick="return window.OnlyTestingNavigate ? window.OnlyTestingNavigate('search', event) : true;"><span class="nav-symbol">⌕</span><span>搜索</span></a>
+          <a class="nav-item" href="#playlist" data-view="playlist" onclick="return window.OnlyTestingNavigate ? window.OnlyTestingNavigate('playlist', event) : true;"><span class="nav-symbol">▤</span><span>歌单</span></a>
+          <a class="nav-item" href="#ranking" data-view="ranking" onclick="return window.OnlyTestingNavigate ? window.OnlyTestingNavigate('ranking', event) : true;"><span class="nav-symbol">↗</span><span>排行榜</span></a>
+          <a class="nav-item" href="#mylist" data-view="mylist" onclick="return window.OnlyTestingNavigate ? window.OnlyTestingNavigate('mylist', event) : true;"><span class="nav-symbol">♡</span><span>我的列表</span></a>
+          <a class="nav-item" href="#settings" data-view="settings" onclick="return window.OnlyTestingNavigate ? window.OnlyTestingNavigate('settings', event) : true;"><span class="nav-symbol">⚙</span><span>设置</span></a>
         </nav>
       </aside>
 
@@ -233,7 +233,7 @@
 
             <div class="settings-section">
               <h2>版本与兼容</h2>
-              <div class="version-detail"><strong id="version-current">v0.2.35</strong><span id="version-release-date">2026-10-06</span></div>
+              <div class="version-detail"><strong id="version-current">v0.2.36</strong><span id="version-release-date">2026-10-06</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
               <a class="button-link settings-link" href="./legacy-test.html">Android 4.4 / Via 兼容自检</a>
