@@ -142,7 +142,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: '.node-version'
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
@@ -195,7 +195,41 @@ jobs:
           TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
           TEST_PLAYLIST_KEYWORD: '\u5468\u6770\u4f26'
         run: node scripts/test-playlist-browser.mjs
-live-migu-smoke:
+  live-smoke:
+    name: Live Flower Four-Channel Smoke Test
+    needs: deploy
+    if: needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run live Flower search + playback matrix
+        env:
+          TEST_BASE_URL: ${{ needs.deploy.outputs.deployment_url }}
+          LX_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js
+          TEST_KEYWORD: 成都
+          TEST_CHANNELS: kw,kg,tx,wy
+          REQUIRE_PLAUSIBLE_PLAYBACK: 'true'
+          INIT_TIMEOUT_MS: 30000
+          SEARCH_TIMEOUT_MS: 60000
+          PLAYBACK_TIMEOUT_MS: 30000
+        run: node scripts/test-flower-browser.mjs
+
+  live-migu-smoke:
     name: Live Flower Migu Smoke Test
     needs: deploy
     if: needs.deploy.result == 'success'
