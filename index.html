@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>Only Testing Online Music</title>
-  <link rel="stylesheet" href="styles.css?v=0.2.27">
+  <link rel="stylesheet" href="styles.css?v=0.2.28">
 </head>
 <body>
   <div id="app">
@@ -12,204 +12,236 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.27</span></div>
+          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.28</span></div>
         </div>
         <div class="topbar-actions">
-          <span class="topbar-chip">成都 · 在线测试</span>
-          <a class="topbar-link" href="./settings.html">设置</a>
+          <span class="topbar-chip">Only Testing Online Music</span>
+          <span id="top-source-label" class="topbar-chip">未导入音源</span>
         </div>
       </div>
     </header>
 
-    <main class="app-shell">
-      <aside class="lx-sidebar">
-        <nav class="side-nav" aria-label="播放器导航">
-          <a class="side-nav-item active" href="#online-section"><span class="nav-icon">♫</span><span>在线音乐</span></a>
-          <a class="side-nav-item" href="#source-section"><span class="nav-icon">◈</span><span>音源管理</span></a>
-          <a class="side-nav-item" href="#library-area"><span class="nav-icon">♡</span><span>我的收藏</span></a>
-          <a class="side-nav-item" href="#tools-area"><span class="nav-icon">⚙</span><span>运行诊断</span></a>
+    <main class="lx-layout">
+      <aside class="nav-rail" aria-label="主导航">
+        <div class="nav-brand">MUSIC</div>
+        <nav class="main-nav">
+          <button type="button" class="nav-item active" data-view="search"><span class="nav-symbol">⌕</span><span>搜索</span></button>
+          <button type="button" class="nav-item" data-view="playlist"><span class="nav-symbol">▤</span><span>歌单</span></button>
+          <button type="button" class="nav-item" data-view="ranking"><span class="nav-symbol">↗</span><span>排行榜</span></button>
+          <button type="button" class="nav-item" data-view="mylist"><span class="nav-symbol">♡</span><span>我的列表</span></button>
+          <button type="button" class="nav-item" data-view="settings"><span class="nav-symbol">⚙</span><span>设置</span></button>
         </nav>
-
-        <section id="source-section" class="sidebar-card source-panel">
-          <div class="sidebar-title-row">
-            <div>
-              <div class="panel-kicker">SOURCE</div>
-              <h2>音源</h2>
-            </div>
-            <span id="source-count" class="badge">0</span>
-          </div>
-
-          <label for="source-url">LX 音源 URL</label>
-          <input id="source-url" type="text" autocapitalize="off" autocomplete="off"
-            spellcheck="false"
-            value="https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/latest.js">
-
-          <button id="install-btn" type="button" class="side-primary">导入音源</button>
-          <div class="side-button-row">
-            <button id="verified-install-btn" type="button" class="secondary">Huibq</button>
-            <button id="sixyin-install-btn" type="button" class="secondary">六音</button>
-          </div>
-          <button id="clear-btn" type="button" class="ghost-button side-clear">清空音源</button>
-
-          <div id="status" class="status">等待导入。</div>
-
-          <div class="subsection-heading"><span>已安装</span></div>
-          <div id="source-list" class="source-list"></div>
-        </section>
       </aside>
 
-      <section class="content-area">
-        <section id="online-section" class="music-page">
-          <div class="content-top">
-            <div>
-              <div class="panel-kicker">ONLINE MUSIC</div>
-              <h1>在线音乐</h1>
-            </div>
-            <div class="version-mini">
-              <strong id="version-current">v0.2.27</strong>
-              <span id="version-release-date">2026-10-06</span>
-              <span id="version-status">未检查更新</span>
-              <button id="check-update-btn" type="button" class="secondary compact-button">检查</button>
-            </div>
+      <section class="main-stage">
+        <div class="global-search-bar">
+          <div class="global-search">
+            <span class="search-icon">⌕</span>
+            <input id="global-search-input" type="text" value="成都" autocapitalize="off" autocomplete="off" spellcheck="false">
+            <button id="global-search-btn" type="button">搜索</button>
           </div>
+          <div id="global-search-context" class="search-context">搜索歌曲</div>
+        </div>
 
-          <section class="search-toolbar">
-            <div class="search-box">
-              <span class="search-icon">⌕</span>
-              <input id="search-input" type="text" value="成都"
-                autocapitalize="off" autocomplete="off" spellcheck="false"
-                aria-label="搜索关键词">
-              <button id="search-btn" type="button">搜索</button>
-            </div>
-            <button id="quick-test-btn" type="button" class="secondary quick-button">一键测试</button>
-          </section>
-
-          <section class="channel-strip">
-            <div class="strip-label">音乐平台</div>
-            <div id="channel-list" class="channel-list"></div>
-            <div class="quality-line">
-              <span>音质：</span><span id="quality-summary" class="quality-summary"></span>
-              <a href="./settings.html">设置</a>
-            </div>
-          </section>
-
-          <section class="results-panel">
-            <div class="results-toolbar">
+        <div class="view-container">
+          <section id="view-search" class="view-panel active">
+            <div class="view-header">
               <div>
-                <strong>搜索结果</strong>
-                <span class="muted">选择歌曲播放或加入队列</span>
+                <div class="panel-kicker">SEARCH</div>
+                <h1>搜索</h1>
+              </div>
+              <div class="view-tabs">
+                <button type="button" class="view-tab active" data-search-kind="song">歌曲</button>
+                <button type="button" class="view-tab" data-search-kind="playlist">歌单</button>
               </div>
             </div>
-            <div id="search-results" class="results-list" aria-live="polite"></div>
+
+            <div id="search-song-view">
+              <div class="sub-toolbar">
+                <span>搜索渠道</span>
+                <div id="channel-list" class="channel-list"></div>
+                <span id="quality-summary" class="quality-summary"></span>
+              </div>
+              <div class="results-head"><strong>歌曲</strong><span class="muted">按当前渠道搜索并播放</span></div>
+              <div id="search-results" class="results-list" aria-live="polite"></div>
+            </div>
+
+            <div id="search-playlist-view" class="secondary-view hidden">
+              <div class="sub-toolbar">
+                <span>歌单渠道</span>
+                <div class="platform-pills">
+                  <button type="button" class="platform-pill active" data-playlist-platform="wy">网易云音乐</button>
+                  <button type="button" class="platform-pill disabled" disabled>QQ音乐</button>
+                  <button type="button" class="platform-pill disabled" disabled>酷狗音乐</button>
+                </div>
+              </div>
+              <div class="category-row">
+                <span>分类</span>
+                <button type="button" class="category-pill active" data-playlist-cat="all">全部</button>
+                <button type="button" class="category-pill" data-playlist-cat="华语">华语</button>
+                <button type="button" class="category-pill" data-playlist-cat="流行">流行</button>
+                <button type="button" class="category-pill" data-playlist-cat="摇滚">摇滚</button>
+                <button type="button" class="category-pill" data-playlist-cat="轻音乐">轻音乐</button>
+              </div>
+              <div class="results-head"><strong>歌单</strong><span class="muted">搜索后显示歌单</span></div>
+              <div id="playlist-results" class="playlist-grid"></div>
+            </div>
           </section>
-        </section>
 
-        <section id="library-area" class="library-area">
-          <div class="section-heading">
-            <div>
-              <div class="panel-kicker">MY MUSIC</div>
-              <h2>我的音乐</h2>
+          <section id="view-playlist" class="view-panel">
+            <div class="view-header">
+              <div><div class="panel-kicker">PLAYLISTS</div><h1>歌单</h1></div>
+              <span class="view-note">歌单分类 · 平台选择 · 歌单收藏</span>
             </div>
-          </div>
-          <div class="library-grid">
-            <section class="library-block">
-              <div class="library-heading">
-                <div><strong>播放队列</strong><div class="library-help">准备继续播放</div></div>
-                <button id="clear-queue-btn" type="button" class="secondary compact-button">清空</button>
+            <div class="sub-toolbar">
+              <span>选择渠道</span>
+              <div class="platform-pills">
+                <button type="button" class="platform-pill active" data-playlist-platform="wy">网易云音乐</button>
+                <button type="button" class="platform-pill disabled" disabled>QQ音乐</button>
+                <button type="button" class="platform-pill disabled" disabled>酷狗音乐</button>
               </div>
-              <div id="queue-list" class="library-list"></div>
-            </section>
-            <section class="library-block">
-              <div class="library-heading">
-                <div><strong>收藏</strong><div class="library-help">保存的歌曲</div></div>
-                <button id="clear-favorites-btn" type="button" class="secondary compact-button">清空</button>
+            </div>
+            <div class="category-row">
+              <span>歌单分类</span>
+              <button type="button" class="category-pill active" data-playlist-cat="all">全部</button>
+              <button type="button" class="category-pill" data-playlist-cat="华语">华语</button>
+              <button type="button" class="category-pill" data-playlist-cat="流行">流行</button>
+              <button type="button" class="category-pill" data-playlist-cat="摇滚">摇滚</button>
+              <button type="button" class="category-pill" data-playlist-cat="轻音乐">轻音乐</button>
+            </div>
+            <div id="playlist-featured" class="playlist-grid"></div>
+          </section>
+
+          <section id="view-ranking" class="view-panel">
+            <div class="view-header">
+              <div><div class="panel-kicker">RANKING</div><h1>排行榜</h1></div>
+              <span class="view-note">选择榜单后显示歌曲</span>
+            </div>
+            <div class="ranking-layout">
+              <div class="ranking-sidebar">
+                <div class="subsection-heading">榜单类别</div>
+                <div id="ranking-list" class="ranking-list"></div>
               </div>
-              <div id="favorite-list" class="library-list"></div>
-            </section>
-            <section class="library-block">
-              <div class="library-heading">
-                <div><strong>最近播放</strong><div class="library-help">最近测试记录</div></div>
-                <button id="clear-history-btn" type="button" class="secondary compact-button">清空</button>
+              <div class="ranking-content">
+                <div id="ranking-title" class="ranking-title">请选择排行榜</div>
+                <div id="ranking-songs" class="results-list"></div>
               </div>
+            </div>
+          </section>
+
+          <section id="view-mylist" class="view-panel">
+            <div class="view-header">
+              <div><div class="panel-kicker">MY MUSIC</div><h1>我的列表</h1></div>
+            </div>
+            <div class="my-tabs">
+              <button type="button" class="my-tab active" data-my-tab="history">我的试听列表</button>
+              <button type="button" class="my-tab" data-my-tab="favorite">我的歌曲收藏</button>
+              <button type="button" class="my-tab" data-my-tab="playlist-favorite">我的歌单收藏</button>
+            </div>
+            <div id="my-history-panel" class="my-panel active">
+              <div class="list-toolbar"><strong>最近播放</strong><button id="clear-history-btn" type="button" class="secondary compact-button">清空</button></div>
               <div id="history-list" class="library-list"></div>
-            </section>
-          </div>
-        </section>
-
-        <section id="tools-area" class="tools-area">
-          <div class="section-heading">
-            <div>
-              <div class="panel-kicker">TOOLS</div>
-              <h2>设备与运行诊断</h2>
             </div>
-          </div>
-          <div class="tools-grid">
-            <section class="tool-item">
-              <div class="panel-kicker">LEGACY DEVICE</div>
-              <h3>Android 4.4 / Via</h3>
-              <p class="muted">运行旧浏览器兼容性自检。</p>
-              <a class="button-link" href="./legacy-test.html">打开自检</a>
-            </section>
-            <section class="tool-item">
-              <div class="panel-kicker">BENCHMARK</div>
-              <h3>真实音源基准</h3>
-              <p class="muted">搜索基准：<strong>成都</strong></p>
-              <code>sixyin/latest.js</code>
-            </section>
-            <section class="tool-item">
-              <div class="panel-kicker">RUNTIME</div>
-              <h3>LX Runtime</h3>
+            <div id="my-favorite-panel" class="my-panel hidden">
+              <div class="list-toolbar"><strong>歌曲收藏</strong><button id="clear-favorites-btn" type="button" class="secondary compact-button">清空</button></div>
+              <div id="favorite-list" class="library-list"></div>
+            </div>
+            <div id="my-playlist-favorite-panel" class="my-panel hidden">
+              <div class="list-toolbar"><strong>歌单收藏</strong><span class="muted">保存在当前设备</span></div>
+              <div id="playlist-favorite-list" class="playlist-grid"></div>
+            </div>
+            <div class="queue-panel">
+              <div class="list-toolbar"><strong>试听队列</strong><button id="clear-queue-btn" type="button" class="secondary compact-button">清空</button></div>
+              <div id="queue-list" class="library-list"></div>
+            </div>
+          </section>
+
+          <section id="view-settings" class="view-panel">
+            <div class="view-header">
+              <div><div class="panel-kicker">SETTINGS</div><h1>设置</h1></div>
+              <span class="view-note">整体播放与音源设置</span>
+            </div>
+
+            <div class="settings-section">
+              <h2>播放设置</h2>
+              <div class="setting-row-inline">
+                <div><strong>优先音质</strong><p>默认选择当前音源支持的最高音质。</p></div>
+                <select id="inline-quality">
+                  <option value="highest">最高音质</option>
+                  <option value="128k">128k</option>
+                  <option value="192k">192k</option>
+                  <option value="256k">256k</option>
+                  <option value="320k">320k</option>
+                  <option value="flac">FLAC</option>
+                  <option value="flac24bit">FLAC 24bit</option>
+                  <option value="flac32bit">FLAC 32bit</option>
+                </select>
+              </div>
+              <div class="setting-row-inline">
+                <div><strong>播放失败自动降级</strong><p>高音质播放失败时自动尝试更低音质。</p></div>
+                <input id="inline-fallback" type="checkbox">
+              </div>
+              <div class="setting-actions">
+                <button id="inline-save-settings" type="button">保存设置</button>
+                <button id="inline-reset-settings" type="button" class="secondary">恢复默认</button>
+                <span id="inline-settings-status" class="muted"></span>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <div class="section-header"><h2>音源管理</h2><span id="source-count" class="badge">0</span></div>
+              <label for="source-url">LX 音源 URL</label>
+              <input id="source-url" type="text" autocapitalize="off" autocomplete="off" spellcheck="false"
+                value="https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/latest.js">
+              <div class="source-setting-actions">
+                <button id="install-btn" type="button">导入音源</button>
+                <button id="verified-install-btn" type="button" class="secondary">一键导入 Huibq</button>
+                <button id="sixyin-install-btn" type="button" class="secondary">一键导入六音</button>
+                <button id="clear-btn" type="button" class="ghost-button">清空</button>
+              </div>
+              <div id="status" class="status">等待导入。</div>
+              <div id="source-list" class="source-list"></div>
+            </div>
+
+            <div class="settings-section">
+              <h2>版本与兼容</h2>
+              <div class="version-detail"><strong id="version-current">v0.2.28</strong><span id="version-release-date">2026-10-06</span></div>
+              <div id="version-status" class="muted">尚未检查最新版</div>
+              <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
+              <a class="button-link settings-link" href="./legacy-test.html">Android 4.4 / Via 兼容自检</a>
+            </div>
+
+            <div class="settings-section">
+              <h2>运行状态</h2>
               <pre id="runtime-info" class="runtime-info"></pre>
-            </section>
-            <section class="tool-item">
-              <div class="panel-kicker">CHECKS</div>
-              <h3>状态</h3>
               <div class="check-row"><span>静态网页</span><b class="ok">READY</b></div>
               <div class="check-row"><span>原始 LX 源保存</span><b id="check-storage" class="pending">WAIT</b></div>
               <div class="check-row"><span>globalThis.lx Runtime</span><b id="check-runtime" class="pending">WAIT</b></div>
               <div class="check-row"><span>音源 inited</span><b id="check-inited" class="pending">WAIT</b></div>
-            </section>
-          </div>
-        </section>
+            </div>
+          </section>
+        </div>
       </section>
-
-      <aside class="right-rail">
-        <section class="now-playing">
-          <div class="rail-header">
-            <span>正在播放</span>
-            <span class="live-dot">●</span>
-          </div>
-          <div class="cover-placeholder">♪</div>
-          <div id="rail-title" class="rail-title">未播放</div>
-          <div id="rail-artist" class="rail-artist">—</div>
-        </section>
-
-        <section class="lyrics-panel">
-          <div class="rail-header"><span>歌词</span><button id="lyrics-refresh-btn" type="button" class="secondary compact-button">刷新</button></div>
-          <div id="lyrics-title" class="lyrics-title">未选择歌曲</div>
-          <div id="lyrics-status" class="lyrics-status">播放支持歌词的 LX 音源后会自动尝试加载歌词。</div>
-          <div id="lyrics-lines" class="lyrics-lines"></div>
-        </section>
-
-        <section class="queue-mini">
-          <div class="rail-header"><span>播放队列</span><a href="#library-area">查看全部</a></div>
-          <div class="queue-mini-note">歌曲加入队列后会保存在当前设备。</div>
-        </section>
-      </aside>
     </main>
 
-    <footer class="player">
-      <div class="player-main">
+    <footer class="player-bar">
+      <div class="player-song">
         <div class="player-art">♪</div>
-        <div class="player-text">
+        <div class="player-meta">
           <div id="player-title">未播放</div>
-          <div id="player-artist" class="muted">—</div>
+          <div id="player-artist">—</div>
         </div>
       </div>
-      <div class="player-controls">
-        <button id="prev-track-btn" type="button" class="secondary player-nav" aria-label="上一首">上一首</button>
+      <div class="player-center">
+        <div class="player-actions">
+          <button id="prev-track-btn" type="button" class="player-control secondary">上一首</button>
+          <button id="next-track-btn" type="button" class="player-control secondary">下一首</button>
+        </div>
         <audio id="audio" controls preload="none"></audio>
-        <button id="next-track-btn" type="button" class="secondary player-nav" aria-label="下一首">下一首</button>
+        <div id="player-lyric" class="player-lyric">歌词：—</div>
+      </div>
+      <div class="player-status">
+        <span id="bottom-play-status">就绪</span>
       </div>
     </footer>
   </div>
@@ -218,27 +250,346 @@
   <script src="src/promise-lite.js"></script>
   <script src="src/app-version.js"></script>
   <script src="src/version-check.js"></script>
-  <script src="src/source-transpiler.js?v=0.2.27"></script>
+  <script src="src/source-transpiler.js?v=0.2.28"></script>
   <script src="src/sha1.js"></script>
   <script src="src/play-settings.js"></script>
-  <script src="src/music-search.js?v=0.2.27"></script>
+  <script src="src/music-search.js?v=0.2.28"></script>
   <script src="src/lx-runtime.js"></script>
   <script src="src/source-manager.js"></script>
   <script src="src/music-library.js"></script>
   <script src="src/music-lyrics.js"></script>
-  <script src="src/app.js?v=0.2.27"></script>
+  <script src="src/app.js?v=0.2.28"></script>
   <script>
-  (function () {
-    var title = document.getElementById('player-title');
-    var artist = document.getElementById('player-artist');
-    var railTitle = document.getElementById('rail-title');
-    var railArtist = document.getElementById('rail-artist');
-    function sync() {
-      if (title && railTitle) railTitle.innerHTML = title.innerHTML;
-      if (artist && railArtist) railArtist.innerHTML = artist.innerHTML;
+  (function (global) {
+    'use strict';
+
+    var currentView = 'search';
+    var searchKind = 'song';
+    var playlistPlatform = 'wy';
+    var playlistCategory = 'all';
+    var rankingSource = 'wy';
+    var rankingId = '';
+    var myTab = 'history';
+    var playlistFavoritesKey = 'only-testing-online-music.playlist-favorites';
+
+    function el(id){ return document.getElementById(id); }
+    function all(selector){ return document.querySelectorAll(selector); }
+    function hasClass(node, name){ return (' '+node.className+' ').indexOf(' '+name+' ') >= 0; }
+    function addClass(node,name){ if(!hasClass(node,name)) node.className += ' '+name; }
+    function removeClass(node,name){ node.className = node.className.replace(new RegExp('(^|\\s)'+name+'(?=\\s|$)','g'),' ').replace(/^\\s+|\\s+$/g,''); }
+
+    function showView(name){
+      currentView = name;
+      var panels = all('.view-panel');
+      for(var i=0;i<panels.length;i+=1){
+        if(panels[i].id === 'view-'+name) addClass(panels[i],'active');
+        else removeClass(panels[i],'active');
+      }
+      var navs=all('.nav-item');
+      for(var n=0;n<navs.length;n+=1){
+        if(navs[n].getAttribute('data-view')===name) addClass(navs[n],'active');
+        else removeClass(navs[n],'active');
+      }
+      var input=el('global-search-input');
+      var button=el('global-search-btn');
+      var context=el('global-search-context');
+      if(name==='search'){
+        input.disabled=false; button.disabled=false; input.placeholder=searchKind==='song'?'搜索歌曲':'搜索歌单';
+        context.innerHTML=searchKind==='song'?'搜索歌曲':'搜索歌单';
+      }else if(name==='playlist'){
+        input.disabled=false; button.disabled=false; input.placeholder='搜索歌单'; context.innerHTML='搜索歌单';
+      }else if(name==='ranking'){
+        input.disabled=true; button.disabled=true; input.placeholder='排行榜不需要搜索'; context.innerHTML='选择排行榜';
+      }else if(name==='mylist'){
+        input.disabled=false; button.disabled=false; input.placeholder='搜索我的列表'; context.innerHTML='搜索本机列表';
+      }else{
+        input.disabled=true; button.disabled=true; input.placeholder='设置不需要搜索'; context.innerHTML='整体设置';
+      }
+      if(name==='ranking') loadRankings();
+      if(name==='mylist') renderMyList();
+      if(name==='settings') loadInlineSettings();
     }
-    setInterval(sync, 500);
-  })();
+
+    function renderMyList(){
+      var tabs=all('.my-tab');
+      for(var i=0;i<tabs.length;i+=1){
+        if(tabs[i].getAttribute('data-my-tab')===myTab) addClass(tabs[i],'active'); else removeClass(tabs[i],'active');
+      }
+      var ids={history:'my-history-panel',favorite:'my-favorite-panel','playlist-favorite':'my-playlist-favorite-panel'};
+      for(var k in ids){
+        if(!Object.prototype.hasOwnProperty.call(ids,k)) continue;
+        var p=el(ids[k]);
+        if(!p) continue;
+        if(k===myTab) removeClass(p,'hidden'); else addClass(p,'hidden');
+      }
+      renderPlaylistFavorites();
+    }
+
+    function loadInlineSettings(){
+      if(!global.LXPlaySettings) return;
+      var s=global.LXPlaySettings.load();
+      el('inline-quality').value=s.qualityMode==='fixed'?s.fixedQuality:'highest';
+      el('inline-fallback').checked=s.autoFallback;
+      el('inline-settings-status').innerHTML=global.LXPlaySettings.getLabel(s);
+    }
+
+    function saveInlineSettings(reset){
+      if(!global.LXPlaySettings) return;
+      var s=reset?global.LXPlaySettings.defaults():{
+        qualityMode:el('inline-quality').value==='highest'?'highest':'fixed',
+        fixedQuality:el('inline-quality').value==='highest'?'320k':el('inline-quality').value,
+        autoFallback:el('inline-fallback').checked
+      };
+      if(reset){ s=global.LXPlaySettings.defaults(); }
+      global.LXPlaySettings.save(s);
+      loadInlineSettings();
+    }
+
+    function safePlaylistFavorites(){
+      try{
+        var raw=global.localStorage.getItem(playlistFavoritesKey);
+        var data=raw?JSON.parse(raw):[];
+        return data instanceof Array?data:[];
+      }catch(e){return [];}
+    }
+
+    function savePlaylistFavorites(items){
+      try{global.localStorage.setItem(playlistFavoritesKey,JSON.stringify(items.slice(0,100)));}catch(e){}
+      renderPlaylistFavorites();
+    }
+
+    function togglePlaylistFavorite(item){
+      var list=safePlaylistFavorites();
+      var id=String(item.id||'');
+      var found=-1;
+      for(var i=0;i<list.length;i+=1){if(String(list[i].id)===id){found=i;break;}}
+      if(found>=0) list.splice(found,1); else list.unshift(item);
+      savePlaylistFavorites(list);
+    }
+
+    function playlistIsFavorite(id){
+      var list=safePlaylistFavorites();
+      for(var i=0;i<list.length;i+=1) if(String(list[i].id)===String(id)) return true;
+      return false;
+    }
+
+    function renderPlaylistFavorites(){
+      var host=el('playlist-favorite-list');
+      if(!host)return;
+      var list=safePlaylistFavorites();
+      host.innerHTML='';
+      if(!list.length){host.innerHTML='<div class="empty-note">暂无歌单收藏</div>';return;}
+      for(var i=0;i<list.length;i+=1) host.appendChild(createPlaylistCard(list[i]));
+    }
+
+    function createPlaylistCard(item){
+      var box=document.createElement('div'); box.className='playlist-card';
+      var img=document.createElement('div'); img.className='playlist-cover';
+      if(item.coverImgUrl){ img.style.backgroundImage='url("'+String(item.coverImgUrl).replace(/"/g,'%22')+'")'; img.innerHTML='';}
+      else img.innerHTML='♫';
+      box.appendChild(img);
+      var name=document.createElement('div'); name.className='playlist-name'; name.innerHTML=escapeHtml(item.name||'未命名歌单'); box.appendChild(name);
+      var meta=document.createElement('div'); meta.className='playlist-meta'; meta.innerHTML=escapeHtml((item.trackCount||0)+' 首歌曲'); box.appendChild(meta);
+      var actions=document.createElement('div'); actions.className='playlist-card-actions';
+      var fav=document.createElement('button'); fav.type='button'; fav.className='secondary'; fav.innerHTML=playlistIsFavorite(item.id)?'取消收藏':'收藏';
+      fav.onclick=function(){togglePlaylistFavorite(item);};
+      actions.appendChild(fav);
+      box.appendChild(actions);
+      return box;
+    }
+
+    function normalizePlaylistItems(raw){
+      var list=raw&&raw.result&&raw.result.playlists?raw.result.playlists:(raw&&raw.playlists?raw.playlists:[]);
+      return list instanceof Array?list:[];
+    }
+
+    function requestJson(path,callback){
+      var xhr=new XMLHttpRequest(); var done=false;
+      function finish(err,data){if(done)return;done=true;callback(err,data);}
+      xhr.onreadystatechange=function(){
+        if(xhr.readyState!==4)return;
+        if(xhr.status>=200&&xhr.status<300){
+          try{finish(null,JSON.parse(xhr.responseText));}catch(e){finish(new Error('响应不是有效 JSON'));}}
+        else finish(new Error('请求失败 HTTP '+xhr.status));
+      };
+      xhr.onerror=function(){finish(new Error('网络请求失败'));};
+      try{xhr.open('GET',path,true);xhr.send(null);}catch(e){finish(e);}
+      setTimeout(function(){if(done)return;try{xhr.abort();}catch(e){};finish(new Error('请求超时'));},12000);
+    }
+
+    function searchPlaylists(keyword,hostId){
+      var host=el(hostId); if(!host)return;
+      host.innerHTML='<div class="loading-note">正在搜索歌单……</div>';
+      var q='?s='+encodeURIComponent(keyword||'')+'&offset=0&limit=20';
+      requestJson('/api/netease-playlists'+q,function(err,data){
+        if(err){host.innerHTML='<div class="empty-note">歌单搜索失败：'+escapeHtml(err.message||err)+'</div>';return;}
+        var list=normalizePlaylistItems(data);
+        if(!list.length){host.innerHTML='<div class="empty-note">没有找到歌单</div>';return;}
+        host.innerHTML='';
+        for(var i=0;i<list.length;i+=1) host.appendChild(createPlaylistCard(list[i]));
+      });
+    }
+
+    function loadFeaturedPlaylists(){
+      var host=el('playlist-featured'); if(!host)return;
+      host.innerHTML='<div class="loading-note">正在读取推荐歌单……</div>';
+      var q='?s='+encodeURIComponent(playlistCategory==='all'?'热门':playlistCategory)+'&offset=0&limit=12';
+      searchPlaylists(playlistCategory==='all'?'热门':playlistCategory,'playlist-featured');
+    }
+
+    function loadRankings(){
+      var listHost=el('ranking-list');
+      if(!listHost)return;
+      listHost.innerHTML='<div class="loading-note">正在读取榜单……</div>';
+      requestJson('/api/netease-toplist',function(err,data){
+        if(err){listHost.innerHTML='<div class="empty-note">排行榜加载失败：'+escapeHtml(err.message||err)+'</div>';return;}
+        var list=data&&data.list instanceof Array?data.list:[];
+        listHost.innerHTML='';
+        if(!list.length){listHost.innerHTML='<div class="empty-note">暂无榜单</div>';return;}
+        for(var i=0;i<list.length;i+=1){
+          var item=list[i]||{};
+          var b=document.createElement('button');b.type='button';b.className='ranking-item'+(String(item.id)===String(rankingId)?' active':'');
+          b.innerHTML=escapeHtml(item.name||'未命名榜单');
+          b.onclick=(function(id,name){return function(){rankingId=String(id);loadRankingSongs(id,name);loadRankings();};})(item.id,item.name);
+          listHost.appendChild(b);
+        }
+        if(!rankingId&&list[0]){rankingId=String(list[0].id);loadRankingSongs(list[0].id,list[0].name);}
+      });
+    }
+
+    function loadRankingSongs(id,name){
+      el('ranking-title').innerHTML=escapeHtml(name||'排行榜');
+      var host=el('ranking-songs');host.innerHTML='<div class="loading-note">正在读取榜单歌曲……</div>';
+      requestJson('/api/netease-toplist?id='+encodeURIComponent(String(id))+'&limit=30',function(err,data){
+        if(err){host.innerHTML='<div class="empty-note">榜单歌曲加载失败：'+escapeHtml(err.message||err)+'</div>';return;}
+        var songs=data&&data.songs instanceof Array?data.songs:[];
+        host.innerHTML='';
+        if(!songs.length){host.innerHTML='<div class="empty-note">该榜单没有可用歌曲</div>';return;}
+        renderSongListInto(host,songs);
+      });
+    }
+
+    function renderSongListInto(host,list){
+      for(var i=0;i<list.length;i+=1){
+        var item=list[i]||{}; 
+        var row=document.createElement('div');row.className='search-row';
+        row.innerHTML='<div class="song-main"><b>'+escapeHtml(item.name||'未知歌曲')+'</b><span>'+escapeHtml(item.singer||'未知歌手')+'</span></div>';
+        var action=document.createElement('button');action.type='button';action.innerHTML='播放';action.onclick=(function(m){return function(){playRankOrPlaylistSong(m);};})(item);
+        row.appendChild(action);host.appendChild(row);
+      }
+    }
+
+    function playRankOrPlaylistSong(item){
+      if(!item||!item.source)return;
+      var supported=global.LXSourceManager&&global.LXSourceManager.getActive?global.LXSourceManager.getActive():null;
+      var source=item.source;
+      if(supported&&supported.sources&&supported.sources[source]){global.__LXLastSearchResults=[item];if(global.OnlyTestingMusicApp&&global.OnlyTestingMusicApp.renderSources){}}
+      if(global.LXMusicSearch&&global.LXMusicSearch.search){
+        selectedSearchChannel(source||'wy',item.name||'',item);
+      }
+    }
+
+    function selectedSearchChannel(source,keyword,item){
+      var active=global.LXSourceManager.getActive();
+      var supported=[];
+      if(active&&active.sources){for(var k in active.sources)if(Object.prototype.hasOwnProperty.call(active.sources,k))supported.push(k);}
+      if(supported.indexOf(source)<0) source=supported.indexOf('wy')>=0?'wy':supported[0];
+      var buttons=all('.channel-button');
+      for(var i=0;i<buttons.length;i+=1) if(buttons[i].title===String(source).toUpperCase()) buttons[i].click();
+      if(item && item.source===source && typeof global.__LXPlayMusicDirect==='function') global.__LXPlayMusicDirect(item);
+    }
+
+    function escapeHtml(value){return String(value==null?'':value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+    function doGlobalSearch(){
+      var input=el('global-search-input'); var keyword=(input.value||'').replace(/^\s+|\s+$/g,'');
+      if(!keyword)return;
+      if(currentView==='search'&&searchKind==='song'){
+        var real=el('search-input');
+        if(real) real.value=keyword;
+        showView('search');
+        var button=el('search-btn');
+        if(button)button.click();
+        return;
+      }
+      if((currentView==='search'&&searchKind==='playlist')||currentView==='playlist'){
+        searchPlaylists(keyword,currentView==='playlist'?'playlist-featured':'playlist-results');
+        return;
+      }
+      if(currentView==='mylist'){
+        filterMyList(keyword);
+      }
+    }
+
+    function filterMyList(keyword){
+      var lists=[el('history-list'),el('favorite-list')];
+      var data=global.LXMusicLibrary?global.LXMusicLibrary.snapshot():{history:[],favorites:[]};
+      var names=['history','favorites'];
+      for(var n=0;n<lists.length;n+=1){
+        var host=lists[n],items=data[names[n]]||[]; if(!host)continue;
+        var filtered=[];
+        for(var i=0;i<items.length;i+=1){
+          var text=String(items[i].name||'')+' '+String(items[i].singer||'');
+          if(text.toLowerCase().indexOf(keyword.toLowerCase())>=0)filtered.push(items[i]);
+        }
+        host.innerHTML='';
+        if(!filtered.length){host.innerHTML='<div class="empty-note">没有匹配内容</div>';continue;}
+        var mode=n===0?'history':'favorite';
+        if(global.OnlyTestingMusicApp&&global.OnlyTestingMusicApp.renderLibraryListForExternal) global.OnlyTestingMusicApp.renderLibraryListForExternal(host,filtered,mode);
+      }
+    }
+
+    var navs=all('.nav-item');
+    for(var i=0;i<navs.length;i+=1) navs[i].onclick=(function(view){return function(){showView(view);};})(navs[i].getAttribute('data-view'));
+    var tabs=all('.view-tab');
+    for(var j=0;j<tabs.length;j+=1) tabs[j].onclick=(function(btn){return function(){
+      var kinds=all('.view-tab');for(var x=0;x<kinds.length;x+=1)removeClass(kinds[x],'active');
+      addClass(btn,'active');searchKind=btn.getAttribute('data-search-kind');
+      if(searchKind==='song'){removeClass(el('search-song-view'),'hidden');addClass(el('search-playlist-view'),'hidden');}
+      else {addClass(el('search-song-view'),'hidden');removeClass(el('search-playlist-view'),'hidden');}
+      showView('search');
+    };})(tabs[j]);
+    var mytabs=all('.my-tab');
+    for(var m=0;m<mytabs.length;m+=1) mytabs[m].onclick=(function(btn){return function(){myTab=btn.getAttribute('data-my-tab');renderMyList();};})(mytabs[m]);
+    el('global-search-btn').onclick=doGlobalSearch;
+    el('global-search-input').onkeydown=function(e){e=e||global.event;if(e&&e.keyCode===13)doGlobalSearch();};
+    var cats=all('.category-pill');
+    for(var c=0;c<cats.length;c+=1) cats[c].onclick=(function(btn){return function(){
+      playlistCategory=btn.getAttribute('data-playlist-cat');
+      var allCats=all('.category-pill');for(var q=0;q<allCats.length;q+=1)removeClass(allCats[q],'active');
+      addClass(btn,'active'); if(currentView==='playlist')loadFeaturedPlaylists();
+    };})(cats[c]);
+    var plats=all('.platform-pill');
+    for(var p=0;p<plats.length;p+=1) if(!hasClass(plats[p],'disabled')) plats[p].onclick=function(){
+      playlistPlatform=this.getAttribute('data-playlist-platform')||'wy'; 
+      var ps=all('.platform-pill');for(var z=0;z<ps.length;z+=1)if(ps[z].getAttribute('data-playlist-platform'))removeClass(ps[z],'active');
+      var selected=all('[data-playlist-platform="'+playlistPlatform+'"]');for(var y=0;y<selected.length;y+=1)addClass(selected[y],'active');
+    };
+
+    el('inline-save-settings').onclick=function(){saveInlineSettings(false);};
+    el('inline-reset-settings').onclick=function(){saveInlineSettings(true);};
+
+    var audio=el('audio');
+    if(audio)audio.ontimeupdate=function(){
+      var active= document.querySelector('.lyrics-line.active');
+      el('player-lyric').innerHTML=active?'歌词：'+active.innerHTML:'歌词：—';
+    };
+    setInterval(function(){
+      var title=el('player-title'),artist=el('player-artist');
+      if(title&&el('rail-title')){}
+      var status=el('status');
+      if(status&&el('bottom-play-status'))el('bottom-play-status').innerHTML=stripHtml(status.innerHTML).slice(0,32)||'就绪';
+      var lyric= document.querySelector('.lyrics-line.active');
+      el('player-lyric').innerHTML=lyric?'歌词：'+lyric.innerHTML:'歌词：—';
+      var activeSource=global.LXSourceManager&&global.LXSourceManager.getActive?global.LXSourceManager.getActive():null;
+      el('top-source-label').innerHTML=activeSource&&activeSource.name?escapeHtml(activeSource.name):'未导入音源';
+    },800);
+
+    function stripHtml(v){var d=document.createElement('div');d.innerHTML=v;return d.textContent||d.innerText||'';}
+
+    loadInlineSettings();
+    showView('search');
+  })(window);
   </script>
 </body>
 </html>
