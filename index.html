@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>Only Testing Online Music</title>
-  <link rel="stylesheet" href="styles.css?v=0.2.28">
+  <link rel="stylesheet" href="styles.css?v=0.2.29">
 </head>
 <body>
   <div id="app">
@@ -12,7 +12,7 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.28</span></div>
+          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.29</span></div>
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">Only Testing Online Music</span>
@@ -42,6 +42,7 @@
           </div>
           <div id="global-search-context" class="search-context">搜索歌曲</div>
         </div>
+        <div id="status" class="status global-status">等待导入音源或开始搜索。</div>
 
         <div class="view-container">
           <section id="view-search" class="view-panel active">
@@ -208,7 +209,7 @@
 
             <div class="settings-section">
               <h2>版本与兼容</h2>
-              <div class="version-detail"><strong id="version-current">v0.2.28</strong><span id="version-release-date">2026-10-06</span></div>
+              <div class="version-detail"><strong id="version-current">v0.2.29</strong><span id="version-release-date">2026-10-06</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
               <a class="button-link settings-link" href="./legacy-test.html">Android 4.4 / Via 兼容自检</a>
@@ -253,15 +254,15 @@
   <script src="src/promise-lite.js"></script>
   <script src="src/app-version.js"></script>
   <script src="src/version-check.js"></script>
-  <script src="src/source-transpiler.js?v=0.2.28"></script>
+  <script src="src/source-transpiler.js?v=0.2.29"></script>
   <script src="src/sha1.js"></script>
   <script src="src/play-settings.js"></script>
-  <script src="src/music-search.js?v=0.2.28"></script>
+  <script src="src/music-search.js?v=0.2.29"></script>
   <script src="src/lx-runtime.js"></script>
   <script src="src/source-manager.js"></script>
   <script src="src/music-library.js"></script>
   <script src="src/music-lyrics.js"></script>
-  <script src="src/app.js?v=0.2.28"></script>
+  <script src="src/app.js?v=0.2.29"></script>
   <script>
   (function (global) {
     'use strict';

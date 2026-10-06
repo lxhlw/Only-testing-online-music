@@ -188,3 +188,98 @@ h3{font-size:14px}
   .player-lyric{max-width:100px}
   h1{font-size:20px}
 }
+
+/* LX Music visual refinement v0.2.29 */
+.topbar{height:50px;background:#fff;color:#3f4b47;border-bottom:1px solid #dfe7e3}
+.topbar-inner{padding:0 14px}
+.brand{font-size:17px;color:#4a5b55}
+.subtitle{color:#93a09b;opacity:1}
+.topbar-chip{color:#71847b;background:#f2f7f5;border-color:#dce8e3}
+.lx-layout{min-height:calc(100vh - 50px);background:#fff}
+.nav-rail{width:58px;flex-basis:58px;background:#f2f7f5;border-right:1px solid #dde6e2;padding:5px 4px}
+.nav-brand{font-size:16px;letter-spacing:1px;font-weight:bold;color:#7bbca6;margin:4px 0 10px}
+.nav-item{height:42px;border-radius:5px;justify-content:center;padding:0;margin-bottom:2px;color:#7c8c86}
+.nav-item.active{background:#dff1e9;color:#4c9c7f}
+.nav-item:hover{background:#e7f2ee}
+.nav-item.active:hover{background:#dff1e9}
+.nav-symbol{width:auto;margin:0;font-size:18px}
+.nav-item span:last-child{display:none}
+.main-stage{background:#fff}
+.global-search-bar{top:50px;background:#fff;padding:9px 14px 6px;border-bottom:0}
+.global-search{height:38px;max-width:none;border:1px solid #cdd9d4;border-radius:4px;box-shadow:none}
+.global-search input{height:36px}
+.global-search button{background:#7abfa6}
+.search-context{font-size:10px;color:#93a09b}
+.global-status{margin:0 14px 5px;padding:5px 7px;border-radius:3px;border:0;background:#f3f7f5;color:#788780;font-size:10px;line-height:1.35}
+.global-status.ready{background:#edf8f2;color:#4c896f}
+.global-status.fail{background:#fff1f1;color:#a65d5d}
+.view-container{max-width:none;padding:9px 14px 20px}
+.view-header{margin:2px 1px 7px}
+h1{font-size:19px;font-weight:500}
+.view-tab,.my-tab{min-height:29px;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;color:#808c87;padding:0 11px}
+.view-tab.active,.my-tab.active{background:transparent;color:#4c9c7f;border-color:#7abfa6}
+.search-song-view,.search-playlist-view{border:1px solid #e0e8e4;border-radius:4px;box-shadow:none}
+.sub-toolbar{padding:7px 9px;border-bottom:1px solid #edf1ef;background:#fcfdfd}
+.channel-button{min-height:29px;padding:0 9px;border-radius:4px;background:#fff;border-color:#d5e0dc;color:#63706b;font-size:11px}
+.channel-button.active{background:#dff1e9;border-color:#b9daca;color:#4c9c7f}
+.quality-summary{color:#87938e;font-size:10px}
+.results-head{padding:8px 9px 6px;color:#4b5853}
+.results-list{padding:0 9px}
+.search-row{display:grid;grid-template-columns:28px minmax(230px,2.5fr) minmax(130px,1.2fr) 95px;align-items:center;min-height:42px;padding:0 3px;border-top:1px solid #edf1ef;background:#fff}
+.search-row:before{counter-increment:row;content:counter(row);color:#a4ada9;font-size:10px;text-align:center}
+.results-list{counter-reset:row}
+.search-row>span{margin:0;font-size:10px;color:#818d88;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search-row b{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search-row .search-source{display:inline-block;margin:0;padding:3px 5px;background:#eff5f2;color:#79928a;border-radius:3px;font-size:9px;width:max-content}
+.search-actions{margin-left:0;display:flex;justify-content:flex-end;white-space:nowrap}
+.search-actions button{min-height:27px;padding:0 6px;font-size:10px;margin-left:4px;border:1px solid #d5e0dc;background:transparent!important;color:#718079!important;border-radius:3px}
+.search-actions button:first-child{border-color:#b9daca;color:#4c9c7f!important}
+.playlist-grid{grid-template-columns:repeat(5,1fr);gap:9px;padding:9px}
+.playlist-card{border:1px solid #e0e8e4;border-radius:4px;padding:6px;background:#fff;box-shadow:none}
+.playlist-cover{height:116px;background:#eef3f1;border-radius:3px}
+.playlist-name{font-size:11px;font-weight:500}
+.playlist-meta{font-size:9px}
+.platform-pill,.category-pill{border:0;background:#f2f5f4;border-radius:4px}
+.platform-pill.active,.category-pill.active{background:#dff1e9;color:#4c9c7f}
+.ranking-layout{border:1px solid #e0e8e4;border-radius:4px;box-shadow:none}
+.ranking-sidebar{width:185px;flex-basis:185px;background:#f4f7f6;border-right:1px solid #e0e8e4}
+.ranking-item.active{background:#dff1e9;color:#4c9c7f}
+.my-panel,.queue-panel,.settings-section{border:1px solid #e0e8e4;border-radius:4px;box-shadow:none}
+.settings-section{padding:12px}
+.player-bar{height:64px;background:#fff;color:#4b5652;border-top:1px solid #dfe7e3;box-shadow:0 -2px 7px rgba(50,70,60,.05);padding:7px 12px}
+.player-art{background:#dff1e9;color:#4c9c7f}
+.player-control{background:#f1f5f3!important;color:#65736d!important}
+.player-lyric{color:#7f8c86}
+.player-status{color:#95a19c}
+@media(max-width:900px){
+  .nav-rail{width:54px;flex-basis:54px}
+  .playlist-grid{grid-template-columns:repeat(4,1fr)}
+  .search-row{grid-template-columns:24px minmax(180px,2fr) 1fr 80px}
+}
+@media(max-width:680px){
+  .topbar{height:47px}
+  .lx-layout{min-height:auto}
+  .nav-rail{width:100%;height:48px;padding:3px 5px;background:#fff;border-right:0;border-bottom:1px solid #dfe7e3}
+  .nav-brand{display:none}
+  .main-nav{display:flex;justify-content:space-around}
+  .nav-item{height:41px;min-width:57px}
+  .nav-item span:last-child{display:inline;font-size:10px}
+  .nav-symbol{font-size:14px;margin-right:3px}
+  .global-search-bar{top:47px;padding:7px 8px 5px}
+  .global-status{margin:0 8px 5px}
+  .view-container{padding:8px}
+  .search-row{display:flex;align-items:flex-start;flex-wrap:wrap;padding:8px 2px;min-height:0}
+  .search-row:before{display:none}
+  .search-row b{flex:1 0 100%}
+  .search-row>span{display:none}
+  .search-row .search-source{display:inline-block}
+  .search-actions{width:100%;justify-content:flex-start;margin-top:6px}
+  .playlist-grid{grid-template-columns:repeat(2,1fr)}
+  .playlist-cover{height:108px}
+  .player-bar{height:110px;display:block;padding:6px 8px}
+  .player-song{width:100%;height:35px}
+  .player-art{width:32px;height:32px;flex-basis:32px;font-size:16px}
+  .player-center{height:40px;justify-content:flex-start}
+  .player-center audio{width:52vw;max-width:none}
+  .player-lyric{flex:1;min-width:0}
+}
