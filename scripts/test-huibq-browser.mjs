@@ -18,6 +18,7 @@ try {
   })
 
   await page.goto(baseUrl + '/', { waitUntil: 'domcontentloaded', timeout: 30000 })
+  await page.locator('.nav-item[data-view="settings"]').click()
   await page.locator('#verified-install-btn').click()
 
   await page.waitForFunction(() => {
@@ -31,11 +32,13 @@ try {
   const unnamed = await page.locator('.source-name', { hasText: 'Unnamed LX Source' }).count()
   assert.equal(unnamed, 0, 'verified Huibq import must not create an unnamed source')
 
+  await page.locator('.nav-item[data-view="search"]').click()
+
   const wyButton = page.locator('#channel-list button[title="WY"]')
   await wyButton.waitFor({ state: 'visible', timeout: 5000 })
   await wyButton.click()
-  await page.fill('#search-input', '成都')
-  await page.locator('#search-btn').click()
+  await page.fill('#global-search-input', '成都')
+  await page.locator('#global-search-btn').click()
 
   await page.waitForFunction(() => {
     const results = document.getElementById('search-results')

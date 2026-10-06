@@ -108,7 +108,8 @@ await page.route(FALLBACK_AUDIO_URL, async route => {
 
 try {
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 })
-  assert.equal(await page.locator('#install-btn').isVisible(), true, 'App did not load')
+  await page.locator('.nav-item[data-view="settings"]').click()
+  assert.equal(await page.locator('#install-btn').isVisible(), true, 'Settings view did not load')
 
   await page.locator('#source-url').fill(SOURCE_URL)
   await page.locator('#install-btn').click()
@@ -167,6 +168,8 @@ try {
     }
   })
 
+  await page.locator('.nav-item[data-view="search"]').click()
+
   const txButton = page.locator('#channel-list .channel-button[title="TX"]')
   if (await txButton.count()) {
     await txButton.click()
@@ -174,8 +177,8 @@ try {
     await page.locator('#channel-list .channel-button').first().click()
   }
 
-  await page.locator('#search-input').fill(KEYWORD)
-  await page.locator('#search-btn').click()
+  await page.locator('#global-search-input').fill(KEYWORD)
+  await page.locator('#global-search-btn').click()
 
   await page.waitForFunction(
     () => document.querySelectorAll('#search-results .search-row').length > 0,

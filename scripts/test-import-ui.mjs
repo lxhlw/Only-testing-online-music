@@ -29,6 +29,7 @@ try {
     timeout: 30000,
   })
 
+  await page.locator('.nav-item[data-view="settings"]').click()
   await page.locator('#install-btn').waitFor({ state: 'visible', timeout: 5000 })
   await page.fill('#source-url', 'not-a-valid-source-url')
   await page.locator('#install-btn').click()
