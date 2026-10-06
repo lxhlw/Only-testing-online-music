@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>Only Testing Online Music</title>
-  <link rel="stylesheet" href="styles.css?v=0.2.33">
+  <link rel="stylesheet" href="styles.css?v=0.2.34">
 </head>
 <body>
   <div id="app">
@@ -12,7 +12,7 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.33</span></div>
+          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.34</span></div>
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">Only Testing Online Music</span>
@@ -25,11 +25,11 @@
       <aside class="nav-rail" aria-label="主导航">
         <div class="nav-brand">MUSIC</div>
         <nav class="main-nav">
-          <button type="button" class="nav-item active" data-view="search"><span class="nav-symbol">⌕</span><span>搜索</span></button>
-          <button type="button" class="nav-item" data-view="playlist"><span class="nav-symbol">▤</span><span>歌单</span></button>
-          <button type="button" class="nav-item" data-view="ranking"><span class="nav-symbol">↗</span><span>排行榜</span></button>
-          <button type="button" class="nav-item" data-view="mylist"><span class="nav-symbol">♡</span><span>我的列表</span></button>
-          <button type="button" class="nav-item" data-view="settings"><span class="nav-symbol">⚙</span><span>设置</span></button>
+          <a class="nav-item active" href="#search" data-view="search"><span class="nav-symbol">⌕</span><span>搜索</span></a>
+          <a class="nav-item" href="#playlist" data-view="playlist"><span class="nav-symbol">▤</span><span>歌单</span></a>
+          <a class="nav-item" href="#ranking" data-view="ranking"><span class="nav-symbol">↗</span><span>排行榜</span></a>
+          <a class="nav-item" href="#mylist" data-view="mylist"><span class="nav-symbol">♡</span><span>我的列表</span></a>
+          <a class="nav-item" href="#settings" data-view="settings"><span class="nav-symbol">⚙</span><span>设置</span></a>
         </nav>
       </aside>
 
@@ -233,7 +233,7 @@
 
             <div class="settings-section">
               <h2>版本与兼容</h2>
-              <div class="version-detail"><strong id="version-current">v0.2.33</strong><span id="version-release-date">2026-10-06</span></div>
+              <div class="version-detail"><strong id="version-current">v0.2.34</strong><span id="version-release-date">2026-10-06</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
               <a class="button-link settings-link" href="./legacy-test.html">Android 4.4 / Via 兼容自检</a>
@@ -668,8 +668,10 @@
     }
 
     function navigateFromNav(view,event){
-      try{if(event){if(event.preventDefault)event.preventDefault();if(event.stopPropagation)event.stopPropagation();}}catch(e){}
       showView(view);
+      try{
+        if(event&&event.type==='click'&&event.preventDefault) event.preventDefault();
+      }catch(e){}
       return false;
     }
 
