@@ -29,6 +29,7 @@ async function testViewport(browser, viewport, label) {
         scrollWidth: document.documentElement.scrollWidth,
       }
     })
+    console.log(`NAV STATE ${label}: ${JSON.stringify(state)}`)
     assert.equal(state.panelActive, true, `${label}: playlist view must stay active after navigation`)
     assert.equal(await page.evaluate(() => location.hash), '#playlist', `${label}: playlist navigation must persist in the URL hash`)
     assert.ok(state.scrollWidth <= state.viewportWidth + 2, `${label}: page must not overflow horizontally`)
