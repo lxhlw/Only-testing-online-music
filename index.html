@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>Only Testing Online Music</title>
-  <link rel="stylesheet" href="styles.css?v=0.2.29">
+  <link rel="stylesheet" href="styles.css?v=0.2.30">
 </head>
 <body>
   <div id="app">
@@ -12,7 +12,7 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.29</span></div>
+          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.30</span></div>
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">Only Testing Online Music</span>
@@ -87,7 +87,7 @@
                 <button type="button" class="category-pill" data-playlist-cat="摇滚">摇滚</button>
                 <button type="button" class="category-pill" data-playlist-cat="轻音乐">轻音乐</button>
               </div>
-              <div class="results-head"><strong>歌单</strong><span class="muted">搜索后显示歌单</span></div>
+              <div class="results-head"><strong>歌单</strong><span class="muted">点击“打开歌单”查看歌曲</span></div>
               <div id="playlist-results" class="playlist-grid"></div>
             </div>
           </section>
@@ -114,6 +114,31 @@
               <button type="button" class="category-pill" data-playlist-cat="轻音乐">轻音乐</button>
             </div>
             <div id="playlist-featured" class="playlist-grid"></div>
+
+            <section id="playlist-detail-panel" class="playlist-detail-panel hidden">
+              <div class="playlist-detail-toolbar">
+                <button id="playlist-back-btn" type="button" class="secondary compact-button">返回歌单</button>
+                <div class="playlist-detail-actions">
+                  <button id="playlist-play-all-btn" type="button">播放全部</button>
+                  <button id="playlist-favorite-btn" type="button" class="secondary">收藏歌单</button>
+                </div>
+              </div>
+              <div class="playlist-detail-header">
+                <div id="playlist-detail-cover" class="playlist-detail-cover">♫</div>
+                <div class="playlist-detail-meta">
+                  <div class="panel-kicker">PLAYLIST DETAIL</div>
+                  <h2 id="playlist-detail-name">未命名歌单</h2>
+                  <div id="playlist-detail-creator" class="playlist-detail-creator">创建者：—</div>
+                  <div id="playlist-detail-count" class="playlist-detail-count">0 首歌曲</div>
+                  <p id="playlist-detail-description" class="playlist-detail-description">—</p>
+                </div>
+              </div>
+              <div class="results-head playlist-song-head">
+                <strong>歌曲列表</strong>
+                <span id="playlist-detail-status" class="muted">正在读取……</span>
+              </div>
+              <div id="playlist-detail-songs" class="results-list"></div>
+            </section>
           </section>
 
           <section id="view-ranking" class="view-panel">
@@ -208,7 +233,7 @@
 
             <div class="settings-section">
               <h2>版本与兼容</h2>
-              <div class="version-detail"><strong id="version-current">v0.2.29</strong><span id="version-release-date">2026-10-06</span></div>
+              <div class="version-detail"><strong id="version-current">v0.2.30</strong><span id="version-release-date">2026-10-06</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
               <a class="button-link settings-link" href="./legacy-test.html">Android 4.4 / Via 兼容自检</a>
@@ -253,15 +278,15 @@
   <script src="src/promise-lite.js"></script>
   <script src="src/app-version.js"></script>
   <script src="src/version-check.js"></script>
-  <script src="src/source-transpiler.js?v=0.2.29"></script>
+  <script src="src/source-transpiler.js?v=0.2.30"></script>
   <script src="src/sha1.js"></script>
   <script src="src/play-settings.js"></script>
-  <script src="src/music-search.js?v=0.2.29"></script>
+  <script src="src/music-search.js?v=0.2.30"></script>
   <script src="src/lx-runtime.js"></script>
   <script src="src/source-manager.js"></script>
   <script src="src/music-library.js"></script>
   <script src="src/music-lyrics.js"></script>
-  <script src="src/app.js?v=0.2.29"></script>
+  <script src="src/app.js?v=0.2.30"></script>
   <script>
   (function (global) {
     'use strict';
@@ -274,6 +299,8 @@
     var rankingId = '';
     var myTab = 'history';
     var playlistFavoritesKey = 'only-testing-online-music.playlist-favorites';
+    var playlistDetailItem = null;
+    var playlistDetailSongs = [];
 
     function el(id){ return document.getElementById(id); }
     function all(selector){ return document.querySelectorAll(selector); }
@@ -301,6 +328,7 @@
         context.innerHTML=searchKind==='song'?'搜索歌曲':'搜索歌单';
       }else if(name==='playlist'){
         input.disabled=false; button.disabled=false; input.placeholder='搜索歌单'; context.innerHTML='搜索歌单';
+        if(!playlistDetailItem) loadFeaturedPlaylists();
       }else if(name==='ranking'){
         input.disabled=true; button.disabled=true; input.placeholder='排行榜不需要搜索'; context.innerHTML='选择排行榜';
       }else if(name==='mylist'){
@@ -392,13 +420,106 @@
       else img.innerHTML='♫';
       box.appendChild(img);
       var name=document.createElement('div'); name.className='playlist-name'; name.innerHTML=escapeHtml(item.name||'未命名歌单'); box.appendChild(name);
-      var meta=document.createElement('div'); meta.className='playlist-meta'; meta.innerHTML=escapeHtml((item.trackCount||0)+' 首歌曲'); box.appendChild(meta);
+      var meta=document.createElement('div'); meta.className='playlist-meta'; meta.innerHTML=escapeHtml((item.trackCount||0)+' 首歌曲 · '+(item.creator||'未知创建者')); box.appendChild(meta);
       var actions=document.createElement('div'); actions.className='playlist-card-actions';
+
+      var open=document.createElement('button'); open.type='button'; open.className='playlist-open-button'; open.innerHTML='打开歌单';
+      open.onclick=function(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();openPlaylist(item);};
+      actions.appendChild(open);
+
       var fav=document.createElement('button'); fav.type='button'; fav.className='secondary'; fav.innerHTML=playlistIsFavorite(item.id)?'取消收藏':'收藏';
-      fav.onclick=function(){togglePlaylistFavorite(item);};
+      fav.onclick=function(ev){
+        if(ev&&ev.stopPropagation)ev.stopPropagation();
+        togglePlaylistFavorite(item);
+        fav.innerHTML=playlistIsFavorite(item.id)?'取消收藏':'收藏';
+      };
       actions.appendChild(fav);
       box.appendChild(actions);
+      box.onclick=function(ev){
+        if(ev&&ev.target&&String(ev.target.tagName||'').toLowerCase()==='button')return;
+        openPlaylist(item);
+      };
       return box;
+    }
+
+    function openPlaylist(item){
+      if(!item||item.id==null)return;
+      showView('playlist');
+      playlistDetailItem=item;
+      playlistDetailSongs=[];
+      addClass(el('playlist-featured'),'hidden');
+      addClass(el('playlist-detail-panel'),'hidden');
+      removeClass(el('playlist-detail-panel'),'hidden');
+      el('playlist-detail-name').innerHTML=escapeHtml(item.name||'未命名歌单');
+      el('playlist-detail-creator').innerHTML='创建者：'+escapeHtml(item.creator||'—');
+      el('playlist-detail-count').innerHTML=escapeHtml((item.trackCount||0)+' 首歌曲');
+      el('playlist-detail-description').innerHTML=escapeHtml(item.description||'暂无简介');
+      el('playlist-detail-status').innerHTML='正在读取歌单歌曲……';
+      el('playlist-favorite-btn').innerHTML=playlistIsFavorite(item.id)?'取消收藏':'收藏歌单';
+      el('playlist-detail-songs').innerHTML='<div class="loading-note">正在读取歌曲……</div>';
+      var cover=el('playlist-detail-cover');
+      if(item.coverImgUrl){cover.style.backgroundImage='url("'+String(item.coverImgUrl).replace(/"/g,'%22')+'")';cover.innerHTML='';}
+      else{cover.style.backgroundImage='';cover.innerHTML='♫';}
+
+      requestJson('/api/netease-playlists?id='+encodeURIComponent(String(item.id))+'&limit=200',function(err,data){
+        if(!playlistDetailItem||String(playlistDetailItem.id)!==String(item.id))return;
+        if(err){
+          el('playlist-detail-status').innerHTML='加载失败：'+escapeHtml(err.message||err);
+          el('playlist-detail-songs').innerHTML='<div class="empty-note">无法读取歌单歌曲</div>';
+          return;
+        }
+        var playlist=data&&data.playlist?data.playlist:item;
+        playlistDetailSongs=data&&data.songs instanceof Array?data.songs:[];
+        el('playlist-detail-name').innerHTML=escapeHtml(playlist.name||item.name||'未命名歌单');
+        el('playlist-detail-creator').innerHTML='创建者：'+escapeHtml(playlist.creator||item.creator||'—');
+        el('playlist-detail-count').innerHTML=escapeHtml((playlist.trackCount||playlistDetailSongs.length)+' 首歌曲');
+        el('playlist-detail-description').innerHTML=escapeHtml(playlist.description||item.description||'暂无简介');
+        el('playlist-detail-status').innerHTML=playlistDetailSongs.length+' 首歌曲';
+        renderPlaylistSongs(playlistDetailSongs);
+      });
+    }
+
+    function closePlaylistDetail(){
+      playlistDetailItem=null;
+      playlistDetailSongs=[];
+      addClass(el('playlist-detail-panel'),'hidden');
+      removeClass(el('playlist-featured'),'hidden');
+      loadFeaturedPlaylists();
+    }
+
+    function renderPlaylistSongs(list){
+      var host=el('playlist-detail-songs');
+      host.innerHTML='';
+      if(!list.length){host.innerHTML='<div class="empty-note">该歌单没有可用歌曲</div>';return;}
+      for(var i=0;i<list.length;i+=1){
+        var item=list[i]||{};
+        var row=document.createElement('div'); row.className='playlist-song-row search-row';
+        var ms=Number(item.interval||0); var totalSeconds=ms>10000?Math.floor(ms/1000):Math.floor(ms);
+        var duration=totalSeconds>0?String(Math.floor(totalSeconds/60))+':'+('0'+String(totalSeconds%60)).slice(-2):'—';
+        row.innerHTML='<span class="playlist-song-index">'+String(i+1)+'</span>' +
+          '<div class="song-main"><b>'+escapeHtml(item.name||'未知歌曲')+'</b>' +
+          '<span>'+escapeHtml(item.singer||'未知歌手')+'</span>' +
+          '<small class="playlist-song-album">'+escapeHtml(item.albumName||'')+'</small></div>' +
+          '<span class="playlist-song-duration">'+escapeHtml(duration)+'</span>';
+        var actions=document.createElement('div'); actions.className='search-actions';
+        var play=document.createElement('button'); play.type='button'; play.innerHTML='播放';
+        play.onclick=(function(m){return function(){playRankOrPlaylistSong(m);};})(item);
+        actions.appendChild(play);
+        var queue=document.createElement('button'); queue.type='button'; queue.className='secondary'; queue.innerHTML='加入队列';
+        queue.onclick=(function(m){return function(){
+          if(global.OnlyTestingMusicApp&&global.OnlyTestingMusicApp.addToQueue)global.OnlyTestingMusicApp.addToQueue(m);
+          setStatus('已加入播放队列：'+escapeHtml(m.name||'未知歌曲'),'ready');
+        };})(item);
+        actions.appendChild(queue);
+        var fav=document.createElement('button'); fav.type='button'; fav.className='secondary';
+        fav.innerHTML=global.LXMusicLibrary&&global.LXMusicLibrary.isFavorite(item)?'取消收藏':'收藏';
+        fav.onclick=(function(m,btn){return function(){
+          if(global.LXMusicLibrary){global.LXMusicLibrary.toggleFavorite(m);btn.innerHTML=global.LXMusicLibrary.isFavorite(m)?'取消收藏':'收藏';}
+        };})(item,fav);
+        actions.appendChild(fav);
+        row.appendChild(actions);
+        host.appendChild(row);
+      }
     }
 
     function normalizePlaylistItems(raw){
@@ -483,23 +604,12 @@
     }
 
     function playRankOrPlaylistSong(item){
-      if(!item||!item.source)return;
-      var supported=global.LXSourceManager&&global.LXSourceManager.getActive?global.LXSourceManager.getActive():null;
-      var source=item.source;
-      if(supported&&supported.sources&&supported.sources[source]){global.__LXLastSearchResults=[item];if(global.OnlyTestingMusicApp&&global.OnlyTestingMusicApp.renderSources){}}
-      if(global.LXMusicSearch&&global.LXMusicSearch.search){
-        selectedSearchChannel(source||'wy',item.name||'',item);
+      if(!item)return;
+      if(global.OnlyTestingMusicApp&&typeof global.OnlyTestingMusicApp.playMusic==='function'){
+        global.OnlyTestingMusicApp.playMusic(item);
+        return;
       }
-    }
-
-    function selectedSearchChannel(source,keyword,item){
-      var active=global.LXSourceManager.getActive();
-      var supported=[];
-      if(active&&active.sources){for(var k in active.sources)if(Object.prototype.hasOwnProperty.call(active.sources,k))supported.push(k);}
-      if(supported.indexOf(source)<0) source=supported.indexOf('wy')>=0?'wy':supported[0];
-      var buttons=all('.channel-button');
-      for(var i=0;i<buttons.length;i+=1) if(buttons[i].title===String(source).toUpperCase()) buttons[i].click();
-      if(item && item.source===source && typeof global.__LXPlayMusicDirect==='function') global.__LXPlayMusicDirect(item);
+      setStatus('播放模块尚未就绪。','fail');
     }
 
     function escapeHtml(value){return String(value==null?'':value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -560,7 +670,7 @@
     for(var c=0;c<cats.length;c+=1) cats[c].onclick=(function(btn){return function(){
       playlistCategory=btn.getAttribute('data-playlist-cat');
       var allCats=all('.category-pill');for(var q=0;q<allCats.length;q+=1)removeClass(allCats[q],'active');
-      addClass(btn,'active'); if(currentView==='playlist')loadFeaturedPlaylists();
+      addClass(btn,'active'); if(currentView==='playlist'&&!playlistDetailItem)loadFeaturedPlaylists();
     };})(cats[c]);
     var plats=all('.platform-pill');
     for(var p=0;p<plats.length;p+=1) if(!hasClass(plats[p],'disabled')) plats[p].onclick=function(){
@@ -569,7 +679,22 @@
       var selected=all('[data-playlist-platform="'+playlistPlatform+'"]');for(var y=0;y<selected.length;y+=1)addClass(selected[y],'active');
     };
 
-    el('inline-save-settings').onclick=function(){saveInlineSettings(false);};
+    el('playlist-back-btn').onclick=function(){closePlaylistDetail();};
+    el('playlist-play-all-btn').onclick=function(){
+      if(!playlistDetailSongs.length){setStatus('当前歌单没有可播放歌曲。','warn');return;}
+      for(var qi=playlistDetailSongs.length-1;qi>=1;qi-=1){
+        if(global.OnlyTestingMusicApp&&global.OnlyTestingMusicApp.addToQueue)global.OnlyTestingMusicApp.addToQueue(playlistDetailSongs[qi]);
+      }
+      playRankOrPlaylistSong(playlistDetailSongs[0]);
+    };
+    el('playlist-favorite-btn').onclick=function(){
+      if(!playlistDetailItem)return;
+      togglePlaylistFavorite(playlistDetailItem);
+      el('playlist-favorite-btn').innerHTML=playlistIsFavorite(playlistDetailItem.id)?'取消收藏':'收藏歌单';
+      renderPlaylistFavorites();
+    };
+
+        el('inline-save-settings').onclick=function(){saveInlineSettings(false);};
     el('inline-reset-settings').onclick=function(){saveInlineSettings(true);};
 
     var audio=el('audio');

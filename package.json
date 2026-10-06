@@ -1,7 +1,7 @@
 {
   "name": "only-testing-online-music",
   "private": true,
-  "version": "0.2.29",
+  "version": "0.2.30",
   "description": "Online music testing for older devices",
   "type": "module",
   "scripts": {
@@ -13,7 +13,8 @@
     "test:import-ui": "node scripts/test-import-ui.mjs",
     "test:babel-proxy": "node scripts/test-babel-proxy.mjs",
     "test:legacy-transpiler": "node scripts/test-legacy-transpiler.mjs",
-    "test:huibq-browser": "node scripts/test-huibq-browser.mjs"
+    "test:huibq-browser": "node scripts/test-huibq-browser.mjs",
+    "test:playlist": "node scripts/test-playlist-browser.mjs"
   },
   "devDependencies": {
     "playwright": "1.63.0",

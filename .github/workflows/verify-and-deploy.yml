@@ -87,6 +87,9 @@ jobs:
       - name: Run settings test
         run: node scripts/test-settings.mjs
 
+      - name: Run playlist browser test
+        run: node scripts/test-playlist-browser.mjs
+
       - name: Run music library test
         run: node scripts/test-music-library.mjs
 
@@ -172,6 +175,12 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
         run: node scripts/test-babel-production.mjs
+
+      - name: Verify deployed playlist detail
+        env:
+          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
+          TEST_PLAYLIST_KEYWORD: å©°西
+        run: node scripts/test-playlist-browser.mjs
   live-smoke:
     name: Live Flower Five-Channel Smoke Test
     needs: deploy

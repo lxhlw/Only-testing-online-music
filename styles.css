@@ -66,6 +66,28 @@ h3{font-size:14px}
 .category-row{padding:9px 12px;border-bottom:1px solid #eceff2;font-size:10px;color:#7a8290}
 .category-row>span{margin-right:3px}
 .playlist-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:12px}
+.playlist-detail-panel{background:#fff;border:1px solid #dce1e7;border-radius:8px;overflow:hidden}
+.playlist-detail-panel.hidden{display:none}
+.playlist-detail-toolbar{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid #e8ebef;background:#f7f8fa}
+.playlist-detail-actions{display:flex;gap:6px}
+.playlist-detail-actions button{min-height:30px;font-size:11px}
+.playlist-detail-header{display:flex;gap:14px;padding:14px;background:#fff}
+.playlist-detail-cover{width:150px;height:150px;flex:0 0 150px;border-radius:8px;background:#e9ecf1;display:flex;align-items:center;justify-content:center;color:#858d99;font-size:38px;background-size:cover;background-position:center}
+.playlist-detail-meta{min-width:0;padding:4px 0}
+.playlist-detail-meta h2{font-size:19px;margin:4px 0 7px}
+.playlist-detail-creator,.playlist-detail-count{font-size:11px;color:#7d8691;margin-top:4px}
+.playlist-detail-description{font-size:11px;color:#727b88;line-height:1.55;margin:10px 0 0;max-height:66px;overflow:hidden}
+.playlist-song-head{padding-top:8px;padding-bottom:8px}
+.playlist-song-row{min-height:50px;padding-top:6px;padding-bottom:6px}
+.playlist-song-row .song-main{display:grid;grid-template-columns:minmax(150px,1fr) 150px 58px;align-items:center}
+.playlist-song-index{width:28px;color:#9aa2ad;font-size:10px;text-align:center;margin-right:6px}
+.playlist-song-album{font-size:10px;color:#969eaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-left:8px}
+.playlist-song-duration{font-size:10px;color:#9098a3;width:42px;text-align:right;margin-right:6px}
+@media (max-width:800px){
+  .playlist-grid{grid-template-columns:repeat(3,1fr)}
+  .playlist-detail-cover{width:118px;height:118px;flex-basis:118px}
+  .playlist-song-row .song-main{grid-template-columns:minmax(120px,1fr) 90px 50px}
+}
 .playlist-card{border:1px solid #e1e5ea;border-radius:7px;background:#fff;padding:8px;min-width:0}
 .playlist-cover{height:130px;border-radius:5px;background:#e9ecf1;display:flex;align-items:center;justify-content:center;color:#858d99;font-size:34px;background-size:cover;background-position:center}
 .playlist-name{font-size:12px;font-weight:bold;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

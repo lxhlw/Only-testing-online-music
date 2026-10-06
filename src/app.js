@@ -1495,7 +1495,20 @@
 
   global.OnlyTestingMusicApp = {
     renderSources: renderSources,
-    onSourceInited: onSourceInited
+    onSourceInited: onSourceInited,
+    playMusic: function (music) {
+      if (!music) return;
+      var source = music.source ? String(music.source).toLowerCase() : '';
+      if (source) selectedChannel = source;
+      renderChannelSelectors();
+      testMusic(music, true);
+    },
+    addToQueue: function (music) {
+      if (!music || !global.LXMusicLibrary) return;
+      global.LXMusicLibrary.addQueue(music);
+      renderLibrary();
+    },
+    renderLibraryListForExternal: renderLibraryList
   };
 
   var appStarted = false;
