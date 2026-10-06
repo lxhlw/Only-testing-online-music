@@ -301,6 +301,7 @@
     var playlistFavoritesKey = 'only-testing-online-music.playlist-favorites';
     var playlistDetailItem = null;
     var playlistDetailSongs = [];
+    var playlistSearchGeneration = {};
 
     function el(id){ return document.getElementById(id); }
     function all(selector){ return document.querySelectorAll(selector); }
@@ -459,6 +460,7 @@
 
     function openPlaylist(item){
       if(!item||item.id==null)return;
+      playlistSearchGeneration['playlist-featured']=(playlistSearchGeneration['playlist-featured']||0)+1;
       showView('playlist');
       playlistDetailItem=item;
       playlistDetailSongs=[];
@@ -558,9 +560,12 @@
 
     function searchPlaylists(keyword,hostId){
       var host=el(hostId); if(!host)return;
+      var generation=(playlistSearchGeneration[hostId]||0)+1;
+      playlistSearchGeneration[hostId]=generation;
       host.innerHTML='<div class="loading-note">正在搜索歌单……</div>';
       var q='?s='+encodeURIComponent(keyword||'')+'&offset=0&limit=20';
       requestJson('/api/netease-playlists'+q,function(err,data){
+        if(playlistSearchGeneration[hostId]!==generation)return;
         if(err){host.innerHTML='<div class="empty-note">歌单搜索失败：'+escapeHtml(err.message||err)+'</div>';return;}
         var list=normalizePlaylistItems(data);
         if(!list.length){host.innerHTML='<div class="empty-note">没有找到歌单</div>';return;}
