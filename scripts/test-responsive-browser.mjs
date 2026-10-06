@@ -15,43 +15,20 @@ async function testViewport(browser, viewport, label) {
   page.on('pageerror', error => errors.push(String(error)))
   try {
     await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded', timeout: 30000 })
-    const before = await page.evaluate(() => {
-      const nav = document.querySelector('.nav-item[data-view="playlist"]')
-      return {
-        href: nav ? nav.getAttribute('href') : '',
-        onclick: nav ? typeof nav.onclick : '',
-        touchend: nav ? typeof nav.ontouchend : '',
-        helper: typeof window.OnlyTestingNavigate,
-        panels: Array.prototype.map.call(document.querySelectorAll('.view-panel'), el => ({id: el.id, className: el.className})),
-      }
-    })
     await page.locator('.nav-item[data-view="playlist"]').click()
-    await page.waitForTimeout(200)
-    const clicked = await page.evaluate(() => ({
-      hash: location.hash,
-      panel: document.getElementById('view-playlist')?.className || '',
-      search: document.getElementById('view-search')?.className || '',
-      activeNav: document.querySelector('.nav-item.active')?.getAttribute('data-view') || '',
-    }))
-    console.log('NAV DIAGNOSTIC ' + label + ': before=' + JSON.stringify(before) + ' clicked=' + JSON.stringify(clicked))
-
-    await page.evaluate(() => {
-      if (window.OnlyTestingNavigate) window.OnlyTestingNavigate('playlist', { preventDefault: function () {} })
-    })
-    await page.waitForTimeout(100)
-    const afterHelper = await page.evaluate(() => ({
-      hash: location.hash,
-      panel: document.getElementById('view-playlist')?.className || '',
-      activeNav: document.querySelector('.nav-item.active')?.getAttribute('data-view') || '',
-    }))
-    console.log('NAV HELPER ' + label + ': ' + JSON.stringify(afterHelper))
-
+    await page.waitForTimeout(500)
     const state = await page.evaluate(() => {
       const panel = document.getElementById('view-playlist')
       const main = document.querySelector('.main-stage')
       const nav = document.querySelector('.nav-rail')
+      const activeNav = document.querySelector('.nav-item.active')
+      function hasActiveClass(node) {
+        return Boolean(node && String(node.className || '').split(/\s+/).indexOf('active') >= 0)
+      }
       return {
-        panelActive: Boolean(panel && /(^|\\s)active(\\s|$)/.test(panel.className)),
+        panelActive: hasActiveClass(panel),
+        activeNav: activeNav ? activeNav.getAttribute('data-view') : '',
+        hash: location.hash,
         navBottom: nav ? nav.getBoundingClientRect().bottom : 0,
         mainTop: main ? main.getBoundingClientRect().top : 0,
         viewportWidth: document.documentElement.clientWidth,
@@ -59,21 +36,24 @@ async function testViewport(browser, viewport, label) {
       }
     })
     assert.equal(state.panelActive, true, label + ': playlist view must stay active after navigation')
-    assert.equal(await page.evaluate(() => location.hash), '#playlist', label + ': playlist navigation must persist in the URL hash')
-    assert.ok(state.scrollWidth <= state.viewportWidth + 2, `${label}: page must not overflow horizontally`)
+    assert.equal(state.activeNav, 'playlist', label + ': playlist navigation item must remain active')
+    assert.equal(state.hash, '#playlist', label + ': playlist navigation must persist in the URL hash')
+    assert.ok(state.scrollWidth <= state.viewportWidth + 2, label + ': page must not overflow horizontally')
     if (viewport.width <= 680) {
-      assert.ok(state.mainTop >= state.navBottom - 2, `${label}: mobile main content must be below the top navigation`)
+      assert.ok(state.mainTop >= state.navBottom - 2, label + ': mobile main content must be below the top navigation')
     } else {
-      assert.ok(state.mainTop <= 5, `${label}: tablet/desktop main stage must stay beside the navigation`)
+      assert.ok(state.mainTop >= 45 && state.mainTop <= 70, label + ': tablet/desktop main content must begin below the top bar')
     }
+
     await page.locator('.nav-item[data-view="search"]').click()
+    await page.waitForTimeout(150)
+    assert.equal(await page.locator('#view-search').evaluate(el => String(el.className || '').split(/\s+/).indexOf('active') >= 0), true, label + ': search navigation must switch views')
     await page.locator('.nav-item[data-view="playlist"]').click()
     await page.waitForTimeout(250)
-    assert.equal(await page.locator('#view-playlist').evaluate(el => /(^|\\s)active(\\s|$)/.test(el.className)), true, `${label}: repeated playlist navigation must remain stable`)
-    assert.equal(await page.evaluate(() => location.hash), '#playlist', `${label}: repeated playlist navigation must keep playlist state`)
-    assert.equal(errors.length, 0, `${label}: browser page errors: ${errors.join(' | ')}`)
-    console.log(`PASS: responsive ${label}`)
-  } finally {
+    assert.equal(await page.locator('#view-playlist').evaluate(el => String(el.className || '').split(/\s+/).indexOf('active') >= 0), true, label + ': repeated playlist navigation must remain stable')
+    assert.equal(await page.evaluate(() => location.hash), '#playlist', label + ': repeated playlist navigation must keep playlist state')
+    assert.equal(errors.length, 0, label + ': browser page errors: ' + errors.join(' | '))
+    console.log('PASS: responsive ' + label)  } finally {
     await context.close()
   }
 }
