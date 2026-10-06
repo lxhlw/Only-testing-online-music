@@ -176,10 +176,13 @@ jobs:
           TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
         run: node scripts/test-babel-production.mjs
 
+      - name: Install Chromium for production playlist test
+        run: npx playwright install --with-deps chromium
+
       - name: Verify deployed playlist detail
         env:
           TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-          TEST_PLAYLIST_KEYWORD: å©°西
+          TEST_PLAYLIST_KEYWORD: '\u5468\u6770\u4f26'
         run: node scripts/test-playlist-browser.mjs
   live-smoke:
     name: Live Flower Five-Channel Smoke Test
