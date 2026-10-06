@@ -3,17 +3,28 @@ import { chromium } from 'playwright'
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8788'
 const KEYWORD = process.env.TEST_PLAYLIST_KEYWORD || String.fromCharCode(229,169,176,35199)
+const SOURCE_URL = process.env.LX_SOURCE_URL || 'https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js'
 
 const browser = await chromium.launch({
   headless: true,
   args: ['--autoplay-policy=no-user-gesture-required'],
 })
-const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+const page = await browser.newPage({ viewport: { width: 800, height: 1280 }, userAgent: 'Mozilla/5.0 (Linux; Android 4.4.2; L101 Build/L101_V1.0) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/49.0.2623.112 Mobile Safari/537.36 Via/5.3' })
 const pageErrors = []
 page.on('pageerror', error => pageErrors.push(String(error)))
 
 try {
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 })
+  await page.locator('.nav-item[data-view="settings"]').click()
+  await page.locator('#source-url').fill(SOURCE_URL)
+  await page.locator('#install-btn').click()
+
+  await page.waitForFunction(() => {
+    const list = document.getElementById('source-list')
+    const text = list ? list.textContent : ''
+    return text.indexOf('READY') >= 0 && text.indexOf('flower') >= 0
+  }, null, { timeout: 30000 })
+
   await page.locator('.nav-item[data-view="playlist"]').click()
   await page.locator('#global-search-input').fill(KEYWORD)
   await page.locator('#global-search-btn').click()
