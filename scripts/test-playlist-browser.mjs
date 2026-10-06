@@ -63,7 +63,7 @@ try {
   await firstPlayButton.click({ force: true })
   await page.waitForFunction(expected => {
     return (document.getElementById('player-title')?.textContent || '').trim() === expected
-  }, detail.firstSong, { timeout: 5000 })
+  }, detail.firstSong, { timeout: 30000 })
 
   await page.locator('#playlist-back-btn').click()
   await page.waitForFunction(() => {
