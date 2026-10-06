@@ -29,7 +29,7 @@ a{text-decoration:none}
 .global-search button{height:31px;min-height:31px;margin-right:5px;padding:0 15px}
 .global-search button:disabled{opacity:.55;cursor:default}
 .search-context{margin-left:10px;font-size:10px;color:#858d9a}
-.view-container{max-width:1020px;margin:0 auto;padding:15px 15px 24px}
+.view-container{max-width:1020px;margin:0 auto;padding:15px 15px 108px}
 .view-panel{display:none}
 .view-panel.active{display:block}
 .view-header{display:flex;align-items:flex-end;justify-content:space-between;margin:1px 1px 12px}

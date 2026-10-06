@@ -47,7 +47,9 @@ try {
   assert.ok(detail.count > 0, 'Playlist detail contains no songs')
   assert.ok(detail.firstSong, 'Playlist detail first song is missing')
 
-  await page.locator('#playlist-detail-songs .playlist-song-row').first().getByRole('button', { name: '播放' }).click()
+  const firstPlayButton = page.locator('#playlist-detail-songs .playlist-song-row').first().getByRole('button', { name: '播放' })
+  await firstPlayButton.scrollIntoViewIfNeeded()
+  await firstPlayButton.click({ force: true })
   await page.waitForFunction(expected => {
     return (document.getElementById('player-title')?.textContent || '').trim() === expected
   }, detail.firstSong, { timeout: 5000 })
