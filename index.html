@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>Only Testing Online Music</title>
-  <link rel="stylesheet" href="styles.css?v=0.2.26">
+  <link rel="stylesheet" href="styles.css?v=0.2.27">
 </head>
 <body>
   <div id="app">
@@ -12,207 +12,190 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.26</span></div>
+          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.27</span></div>
         </div>
         <div class="topbar-actions">
-          <span class="topbar-chip">在线音乐测试</span>
+          <span class="topbar-chip">成都 · 在线测试</span>
           <a class="topbar-link" href="./settings.html">设置</a>
         </div>
       </div>
     </header>
 
-    <main class="page">
-      <section class="hero-panel">
-        <div class="hero-copy">
-          <div class="eyebrow">ONLY TESTING ONLINE MUSIC</div>
-          <h1>在线音乐测试工作台</h1>
-          <p class="hero-text">直接导入原版 LX Music 音源脚本，按音源声明显示渠道，并把搜索、播放、歌词和播放库分成独立区域。</p>
-        </div>
-        <div class="version-panel">
-          <div>
-            <div class="version-label">当前版本</div>
-            <strong id="version-current">v0.2.26</strong>
-            <div id="version-release-date" class="version-release">2026-10-06</div>
+    <main class="app-shell">
+      <aside class="lx-sidebar">
+        <nav class="side-nav" aria-label="播放器导航">
+          <a class="side-nav-item active" href="#online-section"><span class="nav-icon">♫</span><span>在线音乐</span></a>
+          <a class="side-nav-item" href="#source-section"><span class="nav-icon">◈</span><span>音源管理</span></a>
+          <a class="side-nav-item" href="#library-area"><span class="nav-icon">♡</span><span>我的收藏</span></a>
+          <a class="side-nav-item" href="#tools-area"><span class="nav-icon">⚙</span><span>运行诊断</span></a>
+        </nav>
+
+        <section id="source-section" class="sidebar-card source-panel">
+          <div class="sidebar-title-row">
+            <div>
+              <div class="panel-kicker">SOURCE</div>
+              <h2>音源</h2>
+            </div>
+            <span id="source-count" class="badge">0</span>
           </div>
-          <div class="version-actions">
-            <span id="version-status" class="version-status">尚未检查最新版</span>
-            <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
+
+          <label for="source-url">LX 音源 URL</label>
+          <input id="source-url" type="text" autocapitalize="off" autocomplete="off"
+            spellcheck="false"
+            value="https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/latest.js">
+
+          <button id="install-btn" type="button" class="side-primary">导入音源</button>
+          <div class="side-button-row">
+            <button id="verified-install-btn" type="button" class="secondary">Huibq</button>
+            <button id="sixyin-install-btn" type="button" class="secondary">六音</button>
           </div>
-        </div>
-      </section>
+          <button id="clear-btn" type="button" class="ghost-button side-clear">清空音源</button>
 
-      <div class="workspace">
-        <aside class="sidebar">
-          <section class="panel source-panel">
-            <div class="panel-heading">
-              <div>
-                <div class="panel-kicker">SOURCE</div>
-                <h2>音源管理</h2>
-              </div>
-              <span id="source-count" class="badge">0</span>
+          <div id="status" class="status">等待导入。</div>
+
+          <div class="subsection-heading"><span>已安装</span></div>
+          <div id="source-list" class="source-list"></div>
+        </section>
+      </aside>
+
+      <section class="content-area">
+        <section id="online-section" class="music-page">
+          <div class="content-top">
+            <div>
+              <div class="panel-kicker">ONLINE MUSIC</div>
+              <h1>在线音乐</h1>
             </div>
-
-            <label for="source-url">LX 音源 URL</label>
-            <input id="source-url" type="text" autocapitalize="off" autocomplete="off"
-              spellcheck="false"
-              value="https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/latest.js">
-
-            <div class="source-action-stack">
-              <button id="install-btn" type="button">导入音源</button>
-              <button id="verified-install-btn" type="button" class="secondary">一键导入已验证 Huibq</button>
-              <button id="sixyin-install-btn" type="button" class="secondary">一键导入六音</button>
-              <button id="clear-btn" type="button" class="ghost-button">清空已安装音源</button>
+            <div class="version-mini">
+              <strong id="version-current">v0.2.27</strong>
+              <span id="version-release-date">2026-10-06</span>
+              <span id="version-status">未检查更新</span>
+              <button id="check-update-btn" type="button" class="secondary compact-button">检查</button>
             </div>
+          </div>
 
-            <div id="status" class="status">等待导入。</div>
-
-            <div class="subsection-heading">
-              <span>已安装音源</span>
-            </div>
-            <div id="source-list" class="source-list"></div>
-          </section>
-
-          <section class="panel channel-panel">
-            <div class="panel-kicker">CHANNEL</div>
-            <h2>播放渠道</h2>
-            <p class="muted">渠道根据当前 LX 音源动态显示。</p>
-            <div id="channel-list" class="channel-list"></div>
-
-            <div class="quality-block">
-              <div class="subsection-heading">
-                <span>当前音质</span>
-              </div>
-              <div id="quality-summary" class="quality-summary"></div>
-              <a class="button-link compact-link" href="./settings.html">打开音质设置</a>
-            </div>
-          </section>
-        </aside>
-
-        <section class="main-column">
-          <section class="panel search-panel">
-            <div class="panel-heading search-heading">
-              <div>
-                <div class="panel-kicker">SEARCH & PLAY</div>
-                <h2>搜索与播放</h2>
-              </div>
-              <div class="search-hint">测试词：成都</div>
-            </div>
-
-            <div class="search-bar">
+          <section class="search-toolbar">
+            <div class="search-box">
+              <span class="search-icon">⌕</span>
               <input id="search-input" type="text" value="成都"
                 autocapitalize="off" autocomplete="off" spellcheck="false"
                 aria-label="搜索关键词">
               <button id="search-btn" type="button">搜索</button>
-              <button id="quick-test-btn" type="button" class="secondary">一键测试</button>
             </div>
+            <button id="quick-test-btn" type="button" class="secondary quick-button">一键测试</button>
+          </section>
 
-            <div class="results-heading">
-              <span>搜索结果</span>
-              <span class="muted">选择歌曲后可播放、入队或收藏</span>
+          <section class="channel-strip">
+            <div class="strip-label">音乐平台</div>
+            <div id="channel-list" class="channel-list"></div>
+            <div class="quality-line">
+              <span>音质：</span><span id="quality-summary" class="quality-summary"></span>
+              <a href="./settings.html">设置</a>
+            </div>
+          </section>
+
+          <section class="results-panel">
+            <div class="results-toolbar">
+              <div>
+                <strong>搜索结果</strong>
+                <span class="muted">选择歌曲播放或加入队列</span>
+              </div>
             </div>
             <div id="search-results" class="results-list" aria-live="polite"></div>
           </section>
-
-          <section class="panel lyrics-card">
-            <div class="panel-heading">
-              <div>
-                <div class="panel-kicker">LYRICS</div>
-                <h2>歌词</h2>
-              </div>
-              <button id="lyrics-refresh-btn" type="button" class="secondary compact-button">刷新歌词</button>
-            </div>
-            <div id="lyrics-title" class="lyrics-title">未选择歌曲</div>
-            <div id="lyrics-status" class="lyrics-status">播放支持歌词的 LX 音源后会自动尝试加载歌词。</div>
-            <div id="lyrics-lines" class="lyrics-lines"></div>
-          </section>
         </section>
-      </div>
 
-      <section class="library-area">
-        <div class="section-heading">
-          <div>
-            <div class="panel-kicker">LIBRARY</div>
-            <h2>播放库</h2>
+        <section id="library-area" class="library-area">
+          <div class="section-heading">
+            <div>
+              <div class="panel-kicker">MY MUSIC</div>
+              <h2>我的音乐</h2>
+            </div>
           </div>
-          <span class="muted">内容保存在当前设备</span>
-        </div>
-
-        <div class="library-grid">
-          <section class="panel library-card">
-            <div class="library-heading">
-              <div>
-                <strong>播放队列</strong>
-                <div class="library-help">准备继续播放的歌曲</div>
+          <div class="library-grid">
+            <section class="library-block">
+              <div class="library-heading">
+                <div><strong>播放队列</strong><div class="library-help">准备继续播放</div></div>
+                <button id="clear-queue-btn" type="button" class="secondary compact-button">清空</button>
               </div>
-              <button id="clear-queue-btn" type="button" class="secondary compact-button">清空</button>
-            </div>
-            <div id="queue-list" class="library-list"></div>
-          </section>
-
-          <section class="panel library-card">
-            <div class="library-heading">
-              <div>
-                <strong>收藏</strong>
-                <div class="library-help">你主动保存的歌曲</div>
+              <div id="queue-list" class="library-list"></div>
+            </section>
+            <section class="library-block">
+              <div class="library-heading">
+                <div><strong>收藏</strong><div class="library-help">保存的歌曲</div></div>
+                <button id="clear-favorites-btn" type="button" class="secondary compact-button">清空</button>
               </div>
-              <button id="clear-favorites-btn" type="button" class="secondary compact-button">清空</button>
-            </div>
-            <div id="favorite-list" class="library-list"></div>
-          </section>
-
-          <section class="panel library-card">
-            <div class="library-heading">
-              <div>
-                <strong>最近播放</strong>
-                <div class="library-help">最近测试过的歌曲</div>
+              <div id="favorite-list" class="library-list"></div>
+            </section>
+            <section class="library-block">
+              <div class="library-heading">
+                <div><strong>最近播放</strong><div class="library-help">最近测试记录</div></div>
+                <button id="clear-history-btn" type="button" class="secondary compact-button">清空</button>
               </div>
-              <button id="clear-history-btn" type="button" class="secondary compact-button">清空</button>
+              <div id="history-list" class="library-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="tools-area" class="tools-area">
+          <div class="section-heading">
+            <div>
+              <div class="panel-kicker">TOOLS</div>
+              <h2>设备与运行诊断</h2>
             </div>
-            <div id="history-list" class="library-list"></div>
-          </section>
-        </div>
+          </div>
+          <div class="tools-grid">
+            <section class="tool-item">
+              <div class="panel-kicker">LEGACY DEVICE</div>
+              <h3>Android 4.4 / Via</h3>
+              <p class="muted">运行旧浏览器兼容性自检。</p>
+              <a class="button-link" href="./legacy-test.html">打开自检</a>
+            </section>
+            <section class="tool-item">
+              <div class="panel-kicker">BENCHMARK</div>
+              <h3>真实音源基准</h3>
+              <p class="muted">搜索基准：<strong>成都</strong></p>
+              <code>sixyin/latest.js</code>
+            </section>
+            <section class="tool-item">
+              <div class="panel-kicker">RUNTIME</div>
+              <h3>LX Runtime</h3>
+              <pre id="runtime-info" class="runtime-info"></pre>
+            </section>
+            <section class="tool-item">
+              <div class="panel-kicker">CHECKS</div>
+              <h3>状态</h3>
+              <div class="check-row"><span>静态网页</span><b class="ok">READY</b></div>
+              <div class="check-row"><span>原始 LX 源保存</span><b id="check-storage" class="pending">WAIT</b></div>
+              <div class="check-row"><span>globalThis.lx Runtime</span><b id="check-runtime" class="pending">WAIT</b></div>
+              <div class="check-row"><span>音源 inited</span><b id="check-inited" class="pending">WAIT</b></div>
+            </section>
+          </div>
+        </section>
       </section>
 
-      <section class="tools-area">
-        <div class="section-heading">
-          <div>
-            <div class="panel-kicker">TOOLS</div>
-            <h2>设备与运行状态</h2>
+      <aside class="right-rail">
+        <section class="now-playing">
+          <div class="rail-header">
+            <span>正在播放</span>
+            <span class="live-dot">●</span>
           </div>
-          <span class="muted">旧设备兼容与诊断</span>
-        </div>
+          <div class="cover-placeholder">♪</div>
+          <div id="rail-title" class="rail-title">未播放</div>
+          <div id="rail-artist" class="rail-artist">—</div>
+        </section>
 
-        <div class="tools-grid">
-          <section class="panel compact-panel">
-            <div class="panel-kicker">LEGACY DEVICE</div>
-            <h3>Android 4.4 / Via 真机测试</h3>
-            <p class="muted">先运行浏览器能力自检，再进入音乐测试页。</p>
-            <a class="button-link" href="./legacy-test.html">打开老浏览器自检</a>
-          </section>
+        <section class="lyrics-panel">
+          <div class="rail-header"><span>歌词</span><button id="lyrics-refresh-btn" type="button" class="secondary compact-button">刷新</button></div>
+          <div id="lyrics-title" class="lyrics-title">未选择歌曲</div>
+          <div id="lyrics-status" class="lyrics-status">播放支持歌词的 LX 音源后会自动尝试加载歌词。</div>
+          <div id="lyrics-lines" class="lyrics-lines"></div>
+        </section>
 
-          <section class="panel compact-panel">
-            <div class="panel-kicker">BENCHMARK</div>
-            <h3>真实音源测试基准</h3>
-            <p class="muted">原版 LX 音源搜索基准：<strong>成都</strong>。</p>
-            <code>sixyin/latest.js</code>
-          </section>
-
-          <section class="panel compact-panel">
-            <div class="panel-kicker">RUNTIME</div>
-            <h3>LX Runtime</h3>
-            <pre id="runtime-info" class="runtime-info"></pre>
-          </section>
-
-          <section class="panel compact-panel">
-            <div class="panel-kicker">CHECKS</div>
-            <h3>运行检查</h3>
-            <div class="check-row"><span>静态网页</span><b class="ok">READY</b></div>
-            <div class="check-row"><span>原始 LX 源保存</span><b id="check-storage" class="pending">WAIT</b></div>
-            <div class="check-row"><span>globalThis.lx Runtime</span><b id="check-runtime" class="pending">WAIT</b></div>
-            <div class="check-row"><span>音源 inited</span><b id="check-inited" class="pending">WAIT</b></div>
-          </section>
-        </div>
-      </section>
+        <section class="queue-mini">
+          <div class="rail-header"><span>播放队列</span><a href="#library-area">查看全部</a></div>
+          <div class="queue-mini-note">歌曲加入队列后会保存在当前设备。</div>
+        </section>
+      </aside>
     </main>
 
     <footer class="player">
@@ -235,14 +218,27 @@
   <script src="src/promise-lite.js"></script>
   <script src="src/app-version.js"></script>
   <script src="src/version-check.js"></script>
-  <script src="src/source-transpiler.js?v=0.2.26"></script>
+  <script src="src/source-transpiler.js?v=0.2.27"></script>
   <script src="src/sha1.js"></script>
   <script src="src/play-settings.js"></script>
-  <script src="src/music-search.js?v=0.2.26"></script>
+  <script src="src/music-search.js?v=0.2.27"></script>
   <script src="src/lx-runtime.js"></script>
   <script src="src/source-manager.js"></script>
   <script src="src/music-library.js"></script>
   <script src="src/music-lyrics.js"></script>
-  <script src="src/app.js?v=0.2.26"></script>
+  <script src="src/app.js?v=0.2.27"></script>
+  <script>
+  (function () {
+    var title = document.getElementById('player-title');
+    var artist = document.getElementById('player-artist');
+    var railTitle = document.getElementById('rail-title');
+    var railArtist = document.getElementById('rail-artist');
+    function sync() {
+      if (title && railTitle) railTitle.innerHTML = title.innerHTML;
+      if (artist && railArtist) railArtist.innerHTML = artist.innerHTML;
+    }
+    setInterval(sync, 500);
+  })();
+  </script>
 </body>
 </html>
