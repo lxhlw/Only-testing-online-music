@@ -369,6 +369,17 @@ function extractFlowerResolverPayload(body) {
 
   try {
     var parsed = JSON.parse(text);
+    var parsedData = parsed && parsed.data;
+    var parsedCode = parsed && parsed.code;
+    if ((parsedCode === 0 || String(parsedCode) === '0') &&
+        typeof parsedData === 'string' &&
+        /^https?:\/\//i.test(parsedData.trim())) {
+      return {
+        body: text,
+        contentType: 'application/json; charset=utf-8'
+      };
+    }
+
     var parsedUrl = findAudioUrl(parsed, 0);
     if (parsedUrl) {
       return {
