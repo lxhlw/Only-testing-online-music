@@ -15,8 +15,37 @@ async function testViewport(browser, viewport, label) {
   page.on('pageerror', error => errors.push(String(error)))
   try {
     await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded', timeout: 30000 })
+    const before = await page.evaluate(() => {
+      const nav = document.querySelector('.nav-item[data-view="playlist"]')
+      return {
+        href: nav ? nav.getAttribute('href') : '',
+        onclick: nav ? typeof nav.onclick : '',
+        touchend: nav ? typeof nav.ontouchend : '',
+        helper: typeof window.OnlyTestingNavigate,
+        panels: Array.prototype.map.call(document.querySelectorAll('.view-panel'), el => ({id: el.id, className: el.className})),
+      }
+    })
     await page.locator('.nav-item[data-view="playlist"]').click()
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(200)
+    const clicked = await page.evaluate(() => ({
+      hash: location.hash,
+      panel: document.getElementById('view-playlist')?.className || '',
+      search: document.getElementById('view-search')?.className || '',
+      activeNav: document.querySelector('.nav-item.active')?.getAttribute('data-view') || '',
+    }))
+    console.log('NAV DIAGNOSTIC ' + label + ': before=' + JSON.stringify(before) + ' clicked=' + JSON.stringify(clicked))
+
+    await page.evaluate(() => {
+      if (window.OnlyTestingNavigate) window.OnlyTestingNavigate('playlist', { preventDefault: function () {} })
+    })
+    await page.waitForTimeout(100)
+    const afterHelper = await page.evaluate(() => ({
+      hash: location.hash,
+      panel: document.getElementById('view-playlist')?.className || '',
+      activeNav: document.querySelector('.nav-item.active')?.getAttribute('data-view') || '',
+    }))
+    console.log('NAV HELPER ' + label + ': ' + JSON.stringify(afterHelper))
+
     const state = await page.evaluate(() => {
       const panel = document.getElementById('view-playlist')
       const main = document.querySelector('.main-stage')
@@ -29,9 +58,8 @@ async function testViewport(browser, viewport, label) {
         scrollWidth: document.documentElement.scrollWidth,
       }
     })
-    console.log(`NAV STATE ${label}: ${JSON.stringify(state)}`)
-    assert.equal(state.panelActive, true, `${label}: playlist view must stay active after navigation`)
-    assert.equal(await page.evaluate(() => location.hash), '#playlist', `${label}: playlist navigation must persist in the URL hash`)
+    assert.equal(state.panelActive, true, label + ': playlist view must stay active after navigation')
+    assert.equal(await page.evaluate(() => location.hash), '#playlist', label + ': playlist navigation must persist in the URL hash')
     assert.ok(state.scrollWidth <= state.viewportWidth + 2, `${label}: page must not overflow horizontally`)
     if (viewport.width <= 680) {
       assert.ok(state.mainTop >= state.navBottom - 2, `${label}: mobile main content must be below the top navigation`)
