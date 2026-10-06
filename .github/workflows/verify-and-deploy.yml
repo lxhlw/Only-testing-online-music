@@ -193,7 +193,7 @@ jobs:
       - name: Verify deployed playlist detail
         env:
           TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-          TEST_PLAYLIST_KEYWORD: '\u5468\u6770\u4f26'
+          TEST_PLAYLIST_KEYWORD: '周杰伦'
         run: node scripts/test-playlist-browser.mjs
   live-smoke:
     name: Live Flower Four-Channel Smoke Test
