@@ -185,8 +185,8 @@ try {
     assert.equal(await button.count(), 1, channel.toUpperCase() + ' channel button is missing')
     await button.click()
 
-    await page.locator('#search-input').fill(KEYWORD)
-    await page.locator('#search-btn').click()
+    await page.locator('#global-search-input').fill(KEYWORD)
+    await page.locator('#global-search-btn').click()
 
     await page.waitForFunction(
       () => {
