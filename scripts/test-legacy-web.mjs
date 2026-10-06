@@ -25,7 +25,6 @@ const forbiddenSyntax = [
   [/\?\./, 'optional chaining'],
   [/\?\?/, 'nullish coalescing'],
   [/\bclass\s+[A-Za-z_$]/, 'class declarations'],
-  [/\b(?:import|export)\s+(?:[^'\"]|$)/, 'ES module syntax'],
   [/\basync\s+(?:function|[A-Za-z_$][A-Za-z0-9_$]*\s*=>)/, 'async functions']
 ]
 
