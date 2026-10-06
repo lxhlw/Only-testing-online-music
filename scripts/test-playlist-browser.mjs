@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { chromium } from 'playwright'
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8788'
-const KEYWORD = process.env.TEST_PLAYLIST_KEYWORD || String.fromCharCode(229,169,176,35199)
+const KEYWORD = process.env.TEST_PLAYLIST_KEYWORD || '\u5468\u6770\u4f26'
 const SOURCE_URL = process.env.LX_SOURCE_URL || 'https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js'
 
 const browser = await chromium.launch({
