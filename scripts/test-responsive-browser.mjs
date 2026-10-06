@@ -30,6 +30,7 @@ async function testViewport(browser, viewport, label) {
       }
     })
     assert.equal(state.panelActive, true, `${label}: playlist view must stay active after navigation`)
+    assert.equal(await page.evaluate(() => location.hash), '#playlist', `${label}: playlist navigation must persist in the URL hash`)
     assert.ok(state.scrollWidth <= state.viewportWidth + 2, `${label}: page must not overflow horizontally`)
     if (viewport.width <= 680) {
       assert.ok(state.mainTop >= state.navBottom - 2, `${label}: mobile main content must be below the top navigation`)
@@ -40,6 +41,7 @@ async function testViewport(browser, viewport, label) {
     await page.locator('.nav-item[data-view="playlist"]').click()
     await page.waitForTimeout(250)
     assert.equal(await page.locator('#view-playlist').evaluate(el => /(^|\\s)active(\\s|$)/.test(el.className)), true, `${label}: repeated playlist navigation must remain stable`)
+    assert.equal(await page.evaluate(() => location.hash), '#playlist', `${label}: repeated playlist navigation must keep playlist state`)
     assert.equal(errors.length, 0, `${label}: browser page errors: ${errors.join(' | ')}`)
     console.log(`PASS: responsive ${label}`)
   } finally {

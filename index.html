@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>Only Testing Online Music</title>
-  <link rel="stylesheet" href="styles.css?v=0.2.32">
+  <link rel="stylesheet" href="styles.css?v=0.2.33">
 </head>
 <body>
   <div id="app">
@@ -12,7 +12,7 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.32</span></div>
+          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.33</span></div>
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">Only Testing Online Music</span>
@@ -233,7 +233,7 @@
 
             <div class="settings-section">
               <h2>版本与兼容</h2>
-              <div class="version-detail"><strong id="version-current">v0.2.32</strong><span id="version-release-date">2026-10-06</span></div>
+              <div class="version-detail"><strong id="version-current">v0.2.33</strong><span id="version-release-date">2026-10-06</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
               <a class="button-link settings-link" href="./legacy-test.html">Android 4.4 / Via 兼容自检</a>
@@ -308,8 +308,23 @@
     function addClass(node,name){ if(!hasClass(node,name)) node.className += ' '+name; }
     function removeClass(node,name){ node.className = node.className.replace(new RegExp('(^|\\s)'+name+'(?=\\s|$)','g'),' ').replace(/^\\s+|\\s+$/g,''); }
 
+    function isViewName(name){
+      return name==='search'||name==='playlist'||name==='ranking'||name==='mylist'||name==='settings';
+    }
+
+    function readViewFromHash(){
+      try{
+        var hash=String(global.location.hash||'').replace(/^#/,'');
+        return isViewName(hash)?hash:'';
+      }catch(e){return '';}
+    }
+
     function showView(name){
+      if(!isViewName(name)) name='search';
       currentView = name;
+      try{
+        if(global.location.hash!=='#'+name) global.location.hash=name;
+      }catch(e){}
       var panels = all('.view-panel');
       for(var i=0;i<panels.length;i+=1){
         if(panels[i].id === 'view-'+name) addClass(panels[i],'active');
@@ -723,7 +738,12 @@
     function stripHtml(v){var d=document.createElement('div');d.innerHTML=v;return d.textContent||d.innerText||'';}
 
     loadInlineSettings();
-    showView('search');
+    var initialView=readViewFromHash();
+    showView(initialView||'search');
+    global.onhashchange=function(){
+      var hashView=readViewFromHash();
+      if(hashView&&hashView!==currentView) showView(hashView);
+    };
   })(window);
   </script>
 </body>
