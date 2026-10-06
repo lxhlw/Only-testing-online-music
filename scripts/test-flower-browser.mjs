@@ -109,7 +109,8 @@ page.on('request', request => {
 
 try {
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 })
-  assert.equal(await page.locator('#install-btn').isVisible(), true, 'App did not load')
+  await page.locator('.nav-item[data-view="settings"]').click()
+  assert.equal(await page.locator('#install-btn').isVisible(), true, 'Settings view did not load')
 
   await page.evaluate(() => {
     const audio = document.getElementById('audio')
@@ -169,6 +170,7 @@ try {
   assert.equal(state.inited, true, 'Flower source did not initialize')
   assert.equal(state.env, 'desktop', 'Chromium must expose LX desktop environment')
   assert.ok(state.kg, 'Flower source did not expose the kg channel')
+  await page.locator('.nav-item[data-view="search"]').click()
   console.log('PASS: Flower initialized with LX desktop environment')
   console.log('Source:', state.name)
   console.log('Channels:', state.sources.join(', '))
