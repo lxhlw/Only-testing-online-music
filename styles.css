@@ -167,6 +167,14 @@ h3{font-size:14px}
   .view-container{padding-left:10px;padding-right:10px}
 }
 @media(max-width:820px){
+  .main-stage{min-width:0}
+  .global-search input{font-size:13px}
+  .player-bar{height:68px;padding:7px 9px}
+  .player-song{width:205px}
+  .player-center audio{width:220px;max-width:28vw}
+  .player-lyric{max-width:150px}
+}
+@media(max-width:820px){
   .playlist-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
   .search-row{grid-template-columns:24px minmax(0,1fr) 82px}
   .search-row>span{display:none}
@@ -178,6 +186,7 @@ h3{font-size:14px}
 }
 @media(max-width:680px){
   html,body{width:100%;min-width:0;overflow-x:hidden}
+  *{-webkit-tap-highlight-color:transparent}
   body{padding:0}
   #app{width:100%;min-width:0;padding-bottom:124px}
   .topbar{height:47px}
@@ -186,14 +195,14 @@ h3{font-size:14px}
   .brand{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .subtitle{font-size:9px;white-space:nowrap}
   .lx-layout{display:flex;flex-direction:column;min-height:calc(100vh - 47px);width:100%}
-  .nav-rail{position:sticky;top:47px;z-index:45;width:100%;height:48px;flex:0 0 48px;padding:3px 4px;background:#fff;border-right:0;border-bottom:1px solid #dfe7e3;box-sizing:border-box}
+  .nav-rail{position:relative;z-index:45;width:100%;height:48px;flex:0 0 48px;padding:3px 4px;background:#fff;border-right:0;border-bottom:1px solid #dfe7e3;box-sizing:border-box}
   .nav-brand{display:none}
   .main-nav{display:flex;width:100%;height:42px;overflow-x:auto;overflow-y:hidden;justify-content:space-around;-webkit-overflow-scrolling:touch}
-  .nav-item{flex:0 0 auto;width:auto;min-width:58px;height:41px;min-height:41px;justify-content:center;font-size:10px;padding:0 7px;margin:0 1px}
+  .nav-item{flex:1 1 0;width:auto;min-width:58px;max-width:100px;height:41px;min-height:41px;justify-content:center;font-size:10px;padding:0 7px;margin:0 1px;cursor:pointer}
   .nav-item .nav-symbol{width:auto;margin-right:3px;font-size:14px}
   .nav-item span:last-child{display:inline}
   .main-stage{width:100%;min-width:0;flex:1 1 auto}
-  .global-search-bar{position:sticky;top:0;z-index:40;padding:7px 7px 5px;background:#fff}
+  .global-search-bar{position:relative;z-index:40;padding:7px 7px 5px;background:#fff}
   .global-search{width:100%;height:38px;min-width:0}
   .global-search input{height:36px;min-width:0;font-size:14px}
   .global-search button{height:31px;min-height:31px;padding:0 11px;margin-right:4px}
@@ -281,7 +290,7 @@ h3{font-size:14px}
   .playlist-song-row .search-actions{padding-left:24px}
   .player-center audio{width:46%;flex-basis:46%}
 }
-/* LX Music visual refinement v0.2.31 */
+/* LX Music visual refinement v0.2.32 */
 .topbar{height:50px;background:#fff;color:#3f4b47;border-bottom:1px solid #dfe7e3}
 .topbar-inner{padding:0 14px}
 .brand{font-size:17px;color:#4a5b55}
@@ -305,7 +314,7 @@ h3{font-size:14px}
 .global-status{margin:0 14px 5px;padding:5px 7px;border-radius:3px;border:0;background:#f3f7f5;color:#788780;font-size:10px;line-height:1.35}
 .global-status.ready{background:#edf8f2;color:#4c896f}
 .global-status.fail{background:#fff1f1;color:#a65d5d}
-.view-container{max-width:none;padding:9px 14px 20px}
+.view-container{max-width:none;padding:9px 14px 90px}
 .view-header{margin:2px 1px 7px}
 h1{font-size:19px;font-weight:500}
 .view-tab,.my-tab{min-height:29px;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;color:#808c87;padding:0 11px}

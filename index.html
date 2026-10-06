@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>Only Testing Online Music</title>
-  <link rel="stylesheet" href="styles.css?v=0.2.31">
+  <link rel="stylesheet" href="styles.css?v=0.2.32">
 </head>
 <body>
   <div id="app">
@@ -12,7 +12,7 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.31</span></div>
+          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.32</span></div>
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">Only Testing Online Music</span>
@@ -233,7 +233,7 @@
 
             <div class="settings-section">
               <h2>版本与兼容</h2>
-              <div class="version-detail"><strong id="version-current">v0.2.31</strong><span id="version-release-date">2026-10-06</span></div>
+              <div class="version-detail"><strong id="version-current">v0.2.32</strong><span id="version-release-date">2026-10-06</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
               <a class="button-link settings-link" href="./legacy-test.html">Android 4.4 / Via 兼容自检</a>
@@ -652,8 +652,15 @@
       }
     }
 
+    function navigateFromNav(view,event){
+      try{if(event){if(event.preventDefault)event.preventDefault();if(event.stopPropagation)event.stopPropagation();}}catch(e){}
+      showView(view);
+      return false;
+    }
+
+    global.OnlyTestingNavigate=navigateFromNav;
     var navs=all('.nav-item');
-    for(var i=0;i<navs.length;i+=1) navs[i].onclick=(function(view){return function(){showView(view);};})(navs[i].getAttribute('data-view'));
+    for(var i=0;i<navs.length;i+=1) navs[i].onclick=(function(view){return function(event){return navigateFromNav(view,event||global.event);};})(navs[i].getAttribute('data-view'));
     var tabs=all('.view-tab');
     for(var j=0;j<tabs.length;j+=1) tabs[j].onclick=(function(btn){return function(){
       var kinds=all('.view-tab');for(var x=0;x<kinds.length;x+=1)removeClass(kinds[x],'active');
