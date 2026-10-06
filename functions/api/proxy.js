@@ -228,6 +228,10 @@ async function fetchFlowerResolverViaDirectFetch(target, request) {
 
 async function fetchFlowerResolverViaHost(target, request) {
   var bases = [
+    'http://ts.tempmusic.tk',
+    'http://tm.tempmusic.tk',
+    'https://ts.tempmusic.tk',
+    'https://tm.tempmusic.tk',
     'http://97-64-37-235.sslip.io',
     'http://97-64-37-235.nip.io',
     'https://97-64-37-235.sslip.io',
@@ -295,11 +299,14 @@ function flowerResolverTargets(target) {
     targets.push(url);
   }
 
-  // Keep the canonical raw-IP endpoint and add hostname-routed aliases.
-  // Cloudflare Workers may reject direct public-IP HTTP fetches, while
-  // wildcard-DNS hostnames still route to the same origin.
+  // Keep the canonical raw-IP endpoint, then try the current LX Music
+  // resolver host aliases before wildcard-DNS fallbacks.
   var path = target.pathname + target.search;
   add(target.toString());
+  add('http://ts.tempmusic.tk' + path.replace(/^\/flower\/v1\//, '/'));
+  add('http://tm.tempmusic.tk' + path.replace(/^\/flower\/v1\//, '/'));
+  add('http://ts.tempmusic.tk' + path);
+  add('http://tm.tempmusic.tk' + path);
   add('http://97-64-37-235.sslip.io' + path);
   add('http://97-64-37-235.nip.io' + path);
   return targets;
