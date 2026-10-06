@@ -1,4 +1,4 @@
-name: Representative Browser Smoke
+name: Representative Four-Channel Browser Smoke
 
 on:
   workflow_dispatch:
@@ -44,7 +44,8 @@ jobs:
       - name: Test Flower five-channel search and playback
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
-          LX_SOURCE_URL: https://ghproxy.net/raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js
+          LX_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js
+          TEST_CHANNELS: kw,kg,tx,wy
           INIT_TIMEOUT_MS: 30000
           SEARCH_TIMEOUT_MS: 60000
           PLAYBACK_TIMEOUT_MS: 15000

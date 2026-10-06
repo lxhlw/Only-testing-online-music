@@ -415,7 +415,7 @@
           hostname === 'kw-lv.kuwo.cn' ||
           hostname === 'bd-er.kuwo.cn' ||
           hostname === 'kwcdn.kuwo.cn';
-        var trustedKugouMediaHost = hostname.endsWith('.hw.kugou.com');
+        var trustedKugouMediaHost = hostname.indexOf('.hw.kugou.com') === hostname.length - '.hw.kugou.com'.length;
 
         // Signed Kuwo CDN URLs and Kugou HW CDN media can be used directly.
         // The Kugou resolver commonly returns an HTTP CDN URL; upgrading that
