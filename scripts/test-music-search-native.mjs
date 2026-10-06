@@ -230,15 +230,19 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
           songResultData: {
             totalCount: 1,
             result: [{
-              songId: '1106531626',
+              id: '1106531626',
               copyrightId: '6005861N71E',
               contentId: '600929000002562618',
               resourceType: '2',
               name: '成都',
-              singerList: [{ name: '赵雷' }],
-              album: '无法长大',
+              singers: [{ name: '赵雷' }],
+              albums: [{ id: '10001', name: '无法长大' }],
+              imgItems: [{ img: 'https://example.test/migu-chengdu.jpg' }],
               duration: 329,
-              audioFormats: [{ formatType: 'PQ', asize: '5242880' }]
+              newRateFormats: [
+                { formatType: 'PQ', androidSize: '5MB' },
+                { formatType: 'HQ', asize: '15728640' }
+              ]
             }]
           }
         })

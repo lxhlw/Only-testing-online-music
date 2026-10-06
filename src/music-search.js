@@ -901,47 +901,72 @@
       var groupItems = Array.isArray(group) ? group : [group];
       for (var j = 0; j < groupItems.length; j += 1) {
         var data = groupItems[j] || {};
-        if (!data.songId || !data.copyrightId) continue;
-        var key = String(data.copyrightId);
+        var songIdValue = data.songId || data.songid || data.songID || data.id || '';
+        var copyrightIdValue = data.copyrightId || data.copyright_id || '';
+        var contentIdValue = data.contentId || data.contentid || data.content_id || '';
+        var songId = String(songIdValue).replace(/^\s+|\s+$/g, '');
+        var copyrightId = String(copyrightIdValue).replace(/^\s+|\s+$/g, '');
+        var contentId = String(contentIdValue).replace(/^\s+|\s+$/g, '');
+        if (!songId || !copyrightId) continue;
+        var key = copyrightId;
         if (seen[key]) continue;
         seen[key] = true;
 
         var types = [];
-        var formats = Array.isArray(data.audioFormats) ? data.audioFormats : [];
+        var formats = [];
+        if (Array.isArray(data.audioFormats)) formats = formats.concat(data.audioFormats);
+        if (Array.isArray(data.newRateFormats)) formats = formats.concat(data.newRateFormats);
+        if (Array.isArray(data.rateFormats)) formats = formats.concat(data.rateFormats);
         for (var k = 0; k < formats.length; k += 1) {
           var format = formats[k] || {};
-          var formatType = String(format.formatType || '');
-          var sizeValue = format.asize != null ? format.asize : format.isize;
-          var size = Number(sizeValue);
+          var formatType = String(format.formatType || format.format || '');
+          var sizeValue = format.asize != null ? format.asize :
+            (format.isize != null ? format.isize :
+            (format.androidSize != null ? format.androidSize : format.size));
+          var size = Number(String(sizeValue == null ? '' : sizeValue).replace(/MB$/i, ''));
+          if (isFinite(size) && size > 0 && String(sizeValue).toUpperCase().indexOf('MB') >= 0) {
+            size = size * 1024 * 1024;
+          }
           var sizeText = isFinite(size) && size > 0
             ? String(Math.round(size / 1024 / 1024 * 10) / 10) + 'M'
             : '';
           if (formatType === 'PQ') types.push({ type: '128k', size: sizeText });
           else if (formatType === 'HQ') types.push({ type: '320k', size: sizeText });
           else if (formatType === 'SQ') types.push({ type: 'flac', size: sizeText });
-          else if (formatType === 'ZQ24') types.push({ type: 'flac24bit', size: sizeText });
+          else if (formatType === 'ZQ24' || formatType === 'ZQ') types.push({ type: 'flac24bit', size: sizeText });
         }
 
-        var singerList = Array.isArray(data.singerList) ? data.singerList : [];
+        var singerList = Array.isArray(data.singerList)
+          ? data.singerList
+          : (Array.isArray(data.singers) ? data.singers : []);
         var singerNames = [];
         for (var s = 0; s < singerList.length; s += 1) {
           if (singerList[s] && singerList[s].name) singerNames.push(String(singerList[s].name));
         }
 
+        var albumList = Array.isArray(data.albums) ? data.albums : [];
+        var firstAlbum = albumList.length > 0 ? (albumList[0] || {}) : {};
+        var albumName = data.albumName || data.album || firstAlbum.name || '';
+        var albumId = data.albumId || data.album_id || firstAlbum.id || '';
+
+        var imgList = Array.isArray(data.imgItems) ? data.imgItems : [];
+        var firstImg = imgList.length > 0 ? (imgList[0] || {}) : {};
+        var image = data.img3 || data.img2 || data.img1 || firstImg.img || firstImg.url || '';
+
         list.push(normalizeSong({
-          id: data.copyrightId,
-          songmid: data.songId,
-          copyrightId: data.copyrightId,
-          name: data.name,
+          id: copyrightId,
+          songmid: songId,
+          copyrightId: copyrightId,
+          name: data.name || data.title || '',
           singer: singerNames.join('、'),
-          albumName: data.album,
-          albumId: data.albumId,
+          albumName: albumName,
+          albumId: albumId,
           lowerQualityContentId: String(data.lowerQualityContentId || data.lower_quality_content_id || ''),
-          interval: data.duration,
-          image: data.img3 || data.img2 || data.img1 || '',
-          lyricId: data.lrcUrl || '',
+          interval: data.duration != null ? data.duration : (data.interval != null ? data.interval : ''),
+          image: image,
+          lyricId: data.lrcUrl || data.lyricUrl || '',
           types: types,
-          contentId: String(data.contentId || data.contentid || ''),
+          contentId: contentId,
           resourceType: String(data.resourceType || data.resource_type || '2'),
           raw: data
         }, 'mg'));
