@@ -90,6 +90,9 @@ jobs:
       - name: Run playlist browser test
         run: node scripts/test-playlist-browser.mjs
 
+      - name: Run responsive layout browser test
+        run: node scripts/test-responsive-browser.mjs
+
       - name: Run music library test
         run: node scripts/test-music-library.mjs
 
@@ -178,6 +181,11 @@ jobs:
 
       - name: Install Chromium for production playlist test
         run: npx playwright install --with-deps chromium
+
+      - name: Verify deployed responsive layout
+        env:
+          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
+        run: node scripts/test-responsive-browser.mjs
 
       - name: Verify deployed playlist detail
         env:
