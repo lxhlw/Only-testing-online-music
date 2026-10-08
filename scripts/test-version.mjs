@@ -25,7 +25,9 @@ assert.match(indexHtml, versionPattern)
 assert.match(settingsHtml, versionPattern)
 
 const cacheBustVersions = []
-const cacheBustPattern = /(?:src|href)="[^"]+\?v=(\d+\.\d+\.\d+)"/g
+// Allow extra HTML-escaped cache revision parameters while still enforcing
+// the package semantic version on every versioned asset reference.
+const cacheBustPattern = /(?:src|href)="[^"]+\?v=(\d+\.\d+\.\d+)(?:&amp;[^"]*)?"/g
 let cacheMatch
 while ((cacheMatch = cacheBustPattern.exec(indexHtml))) cacheBustVersions.push(cacheMatch[1])
 while ((cacheMatch = cacheBustPattern.exec(settingsHtml))) cacheBustVersions.push(cacheMatch[1])
