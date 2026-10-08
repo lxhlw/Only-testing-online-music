@@ -517,7 +517,7 @@
         el('playlist-detail-status').innerHTML='已加载 '+playlistDetailSongs.length+' 首歌曲';
         renderPlaylistSongs(playlistDetailSongs);
         if(playlistHasMore){more.innerHTML='加载更多歌曲';removeClass(more,'hidden');}
-      });
+      },25000);
 
     }
 
@@ -570,7 +570,7 @@
       return list instanceof Array?list:[];
     }
 
-    function requestJson(path,callback){
+    function requestJson(path,callback,timeoutMs){
       var xhr=new XMLHttpRequest(); var done=false;
       function finish(err,data){if(done)return;done=true;callback(err,data);}
       xhr.onreadystatechange=function(){
@@ -581,7 +581,7 @@
       };
       xhr.onerror=function(){finish(new Error('网络请求失败'));};
       try{xhr.open('GET',path,true);xhr.send(null);}catch(e){finish(e);}
-      setTimeout(function(){if(done)return;try{xhr.abort();}catch(e){};finish(new Error('请求超时'));},12000);
+      setTimeout(function(){if(done)return;try{xhr.abort();}catch(e){};finish(new Error('请求超时'));},timeoutMs||12000);
     }
 
     function searchPlaylists(keyword,hostId){
