@@ -77,6 +77,16 @@ jobs:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-playlist-pagination-browser.mjs
 
+      # This relies on third-party Flower and NetEase endpoints. Record the
+      # result for diagnostics without blocking deterministic regression checks.
+      - name: Live playlist integration smoke (informational)
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+          TEST_PLAYLIST_KEYWORD: '周杰伦'
+        run: node scripts/test-playlist-browser.mjs
+
       - name: Display local server logs on failure
         if: failure()
         run: cat /tmp/playlist-wrangler.log || true
