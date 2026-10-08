@@ -81,6 +81,14 @@ jobs:
       - name: Run Migu proxy decryption regression test
         run: node scripts/test-migu-proxy.mjs
 
+      - name: Run proxy security abuse and redirect regression
+        run: node scripts/test-proxy-security.mjs
+
+      - name: Verify Pages proxy rejects unsafe clients
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-proxy-production.mjs
+
       - name: Run deterministic search and resolver tests
         run: node scripts/test-music-search-native.mjs
 
@@ -193,6 +201,11 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
         run: node scripts/test-babel-production.mjs
+
+      - name: Verify deployed proxy rejects cross-origin and unsafe targets
+        env:
+          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
+        run: node scripts/test-proxy-production.mjs
 
       - name: Install Chromium for production playlist test
         run: npx playwright install --with-deps chromium
