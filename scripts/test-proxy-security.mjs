@@ -51,6 +51,37 @@ assert.equal(res.headers.get('Content-Type'), 'application/json; charset=utf-8')
 assert.equal(calls[0].redirect, 'manual')
 console.log('PASS: normal same-origin JSON response, restricted CORS, no upstream cookies')
 
+reset(async () => new Response('{"code":0,"url":"https://media.example.test/audio.mp3"}', {
+  status: 200, headers: { 'Content-Type': 'application/json' }
+}))
+res = await proxy('https://api.music.example.test/url/mg/song-id/128k', {
+  siteHeader: 'same-origin',
+  headers: {
+    'User-Agent': 'Mozilla/5.0 Browser Test Agent',
+    'X-LX-Headers': JSON.stringify({
+      'User-Agent': 'lx-music-desktop/2.0.0',
+      'X-Request-Key': 'test-fixture-key',
+      Accept: 'application/json'
+    })
+  }
+})
+assert.equal(res.status, 200)
+assert.equal(calls[0].headers['user-agent'], 'lx-music-desktop/2.0.0',
+  'Must not clobber the custom LX source User-Agent with browser UA')
+assert.equal(calls[0].headers['x-request-key'], 'test-fixture-key')
+assert.equal(calls[0].headers.accept, 'application/json')
+console.log('PASS: imported LX source request headers survive browser proxy forwarding')
+
+reset(async () => new Response('{"code":0}', { status: 200 }))
+res = await proxy('https://api.music.example.test/url/mg/another-song/128k', {
+  headers: { 'User-Agent': 'Mozilla/5.0 Browser Fallback Agent' }
+})
+assert.equal(res.status, 200)
+assert.equal(calls[0].headers['user-agent'], 'Mozilla/5.0 Browser Fallback Agent',
+  'Normal browser User-Agent still applies when the source did not request one')
+console.log('PASS: browser header fallback preserved for sources without custom headers')
+
+
 for (const browserOptions of [
   { origin: 'https://evil.example.test' },
   { origin: 'null' },

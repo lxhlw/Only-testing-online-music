@@ -667,6 +667,11 @@ function pickForwardHeaders(request) {
   var mediaHeaders = ['Range', 'If-Range', 'If-None-Match', 'If-Modified-Since', 'Accept', 'User-Agent'];
   for (var mi = 0; mi < mediaHeaders.length; mi += 1) {
     var mediaKey = mediaHeaders[mi];
+    // LX desktop's lx.request honors headers supplied by a selected source.
+    // When the browser requests this same-origin proxy, its own User-Agent
+    // must not overwrite the source's explicitly requested User-Agent.
+    // The same precedence applies to explicit media Range/Accept headers.
+    if (out.has(mediaKey)) continue;
     var mediaValue = request.headers.get(mediaKey);
     if (!mediaValue || mediaValue.length > 4096) continue;
     try { out.set(mediaKey, mediaValue); } catch (e) {}

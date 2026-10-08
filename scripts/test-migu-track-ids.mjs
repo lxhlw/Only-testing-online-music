@@ -27,21 +27,27 @@ const fixture = {
   raw: { albumId: 'fixture-album', singer: '赵雷' }
 }
 let info = build(fixture, 'mg')
-assert.equal(info.hash, '6005861N71E', 'Legacy LX source must receive an actual Migu copyright ID')
+assert.equal(Object.prototype.hasOwnProperty.call(info, 'hash'), false,
+  'LX Desktop Migu search does not invent hash=copyrightId; allow Huibq to use songmid')
 assert.equal(info.songmid, 'fixture-search-id')
 assert.equal(info.copyrightId, '6005861N71E')
 assert.equal(info.albumId, 'fixture-album')
 assert.equal(info.singer, '赵雷')
 assert.equal(fixture.hash, '', 'The search result must not be mutated')
-console.log('PASS: blank Migu hash is populated from copyrightId without modifying search data')
+const huibqPreferredId = item => item.hash ?? item.songmid
+assert.equal(huibqPreferredId(info), 'fixture-search-id',
+  'Huibq must request the actual songId, not the distinct copyrightId')
+console.log('PASS: Migu LX song information matches desktop and Huibq selects songmid')
 
 info = build({ songmid: 'real-migu-key', hash: 'hash-already-present', id: 'raw-id' }, 'mg')
-assert.equal(info.hash, 'hash-already-present', 'A valid existing hash must not be overwritten')
+assert.equal(info.hash, 'hash-already-present', 'A real existing hash must not be overwritten')
 info = build({ id: 'raw-id', copyright_id: 'second-copyright-id' }, 'mg')
-assert.equal(info.hash, 'second-copyright-id')
+assert.equal(Object.prototype.hasOwnProperty.call(info, 'hash'), false)
+assert.equal(huibqPreferredId(info), 'raw-id')
 info = build({ id: 'raw-id' }, 'mg')
-assert.equal(info.hash, 'raw-id')
-console.log('PASS: valid hashes remain intact and Migu identifier fallbacks are deterministic')
+assert.equal(Object.prototype.hasOwnProperty.call(info, 'hash'), false)
+assert.equal(huibqPreferredId(info), 'raw-id')
+console.log('PASS: genuine hashes preserved; blank hashes removed; songmid fallback safe')
 
 info = build({ id: 'kw-id', hash: '' }, 'kw')
 assert.equal(info.hash, '', 'Other platform fields must not be changed')

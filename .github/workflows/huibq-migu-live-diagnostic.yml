@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "scripts/test-huibq-migu-live.mjs"
+      - "scripts/test-lx-desktop-migu-parity-browser.mjs"
+      - "src/app.js"
       - "src/music-search.js"
       - "functions/api/proxy.js"
       - ".github/workflows/huibq-migu-live-diagnostic.yml"
@@ -44,18 +46,22 @@ jobs:
           cat /tmp/huibq-migu.log
           exit 1
 
-      - name: Verify Migu track ID and no-URL explanation in Chromium
+      - name: Verify desktop compatible Huibq Migu requests deterministically
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-lx-desktop-migu-parity-browser.mjs
+
+      - name: Probe real external Huibq Migu search and playback (informational)
+        continue-on-error: true
+        timeout-minutes: 3
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
           MIGU_EXPECT_VALID_ID: 'true'
+          MIGU_EXPECT_DESKTOP_PARITY: 'true'
           MIGU_REQUIRE_PLAYBACK: 'false'
           MIGU_PROBE_TIMEOUT_MS: 36000
           MIGU_REQUIRE_25S_BOUND: 'true'
-        run: |
-          for trial in 1 2 3; do
-            echo "HUIBQ MG REAL FAILURE LATENCY TRIAL: $trial / 3"
-            node scripts/test-huibq-migu-live.mjs
-          done
+        run: node scripts/test-huibq-migu-live.mjs
 
       - name: Report real production Migu availability (informational)
         continue-on-error: true
