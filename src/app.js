@@ -506,14 +506,14 @@
     if (!musicInfo.songmid && !musicInfo.hash && music.id != null) {
       musicInfo.songmid = String(music.id);
     }
-    // The legacy Huibq adapter selects hash whenever it is not null,
-    // including an empty string. Migu search results can expose hash=''
-    // alongside a valid copyrightId, producing /url/mg//320k (HTTP 404).
-    // Use the authoritative Migu copyright ID for that missing field only.
+    // LX Music Desktop passes Migu songmid (the search API songId) and
+    // copyrightId separately, without synthesizing a hash. Huibq's source
+    // resolves "musicInfo.hash ?? musicInfo.songmid"; setting an empty hash
+    // to copyrightId changes the requested track ID and can break playback.
+    // Our normalized search results always contain hash: '', so remove only
+    // blank hashes to restore the desktop source's songmid fallback.
     if (source === 'mg' && !String(musicInfo.hash == null ? '' : musicInfo.hash).trim()) {
-      var miguId = musicInfo.copyrightId || musicInfo.copyright_id ||
-        musicInfo.songmid || musicInfo.id;
-      if (miguId != null && String(miguId)) musicInfo.hash = String(miguId);
+      delete musicInfo.hash;
     }
     musicInfo.name = musicInfo.name || '';
     musicInfo.singer = musicInfo.singer || '';
