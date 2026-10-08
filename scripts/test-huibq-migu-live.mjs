@@ -211,6 +211,39 @@ try {
       (/暂无可用的播放地址/.test(snapshot.status) ? 'no_media_url' : 'other'),
     hasAudioProgress: Boolean(snapshot.currentTime > .3 && !snapshot.paused)
   }))
+  // Verify the exact LX source call, not only the application's native
+  // fallback. LX desktop's Migu SDK populates songmid with songId and keeps
+  // copyrightId separately. Huibq resolves hash ?? songmid.
+  const sourceCall = await page.evaluate(() => {
+    const song = window.__LXLastSearchResults?.[0]
+    const active = window.LXSourceManager?.getActive?.()
+    const list = active?.runtime?.__debugRequests || []
+    const request = list.findLast
+      ? list.findLast(item => /\/url\/mg\//.test(item.url))
+      : [...list].reverse().find(item => /\/url\/mg\//.test(item.url))
+    if (!song || !request) return { observed: false }
+    const url = new URL(request.url)
+    const match = url.pathname.match(/\/url\/mg\/([^/]+)\//)
+    const requested = match ? decodeURIComponent(match[1]) : ''
+    return {
+      observed: true,
+      songmidPresent: Boolean(song.songmid),
+      copyrightIdPresent: Boolean(song.copyrightId),
+      distinctIds: String(song.songmid) !== String(song.copyrightId),
+      usesSongmid: requested === String(song.songmid),
+      usesCopyrightId: requested === String(song.copyrightId),
+      customUserAgent: /^lx-music-/.test(String(request.headers?.['User-Agent'] || ''))
+    }
+  })
+  console.log('HUIBQ MG SOURCE PARITY:', JSON.stringify(sourceCall))
+  if (process.env.MIGU_EXPECT_DESKTOP_PARITY === 'true') {
+    if (!sourceCall.observed || !sourceCall.songmidPresent ||
+        !sourceCall.usesSongmid || !sourceCall.customUserAgent) {
+      throw new Error('The imported Huibq source request differs from LX Desktop: ' +
+        JSON.stringify(sourceCall))
+    }
+  }
+
   console.log('PROXY ERRORS:', JSON.stringify(failures))
   console.log('PROXY REQUEST SUMMARY:', JSON.stringify(requests.slice(-70)))
   console.log('RESOLVER 200 BODY SHAPES:', JSON.stringify(resolverReplies))
