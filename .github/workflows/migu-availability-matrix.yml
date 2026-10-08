@@ -1,0 +1,57 @@
+name: Migu Multi-Track Availability (PR)
+
+on:
+  pull_request:
+    paths:
+      - "scripts/migu-availability-classifier.mjs"
+      - "scripts/test-migu-availability-classifier.mjs"
+      - "scripts/test-migu-availability-matrix.mjs"
+      - ".github/workflows/migu-availability-matrix.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migu-matrix:
+    name: Migu availability - ${{ matrix.lx_source }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        lx_source: [huibq, flower]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Validate diagnostics and classifier
+        run: |
+          node --check scripts/test-migu-availability-matrix.mjs
+          node --check scripts/migu-availability-classifier.mjs
+          node scripts/test-migu-availability-classifier.mjs
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run actual same-platform Migu matrix
+        env:
+          TEST_BASE_URL: https://only-testing-online-music.pages.dev
+          MIGU_SOURCE: ${{ matrix.lx_source }}
+          MIGU_TEST_QUERIES: 成都,稻香
+          MIGU_TRACKS_PER_QUERY: '2'
+          MIGU_TRACK_TIMEOUT_MS: '13000'
+          MIGU_REPORT_FILE: migu-availability-${{ matrix.lx_source }}.json
+        run: node scripts/test-migu-availability-matrix.mjs
+      - name: Upload sanitized diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migu-availability-${{ matrix.lx_source }}
+          path: migu-availability-${{ matrix.lx_source }}.json
+          if-no-files-found: warn
+          retention-days: 14
