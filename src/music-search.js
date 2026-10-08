@@ -1098,40 +1098,48 @@
       return callback(new Error('No Migu songId/copyrightId/contentId for native playback'));
     }
 
-    function extractUrl(value, depth) {
+    // A successful JSON response can contain cover art, marketing pages and
+    // subscription dialogs while omitting an actual audio URL. Only named
+    // playback fields can supply media; never recurse into arbitrary values.
+    function extractUrl(value, depth, inMediaField) {
       if (depth > 8 || value == null) return '';
       if (typeof value === 'string') {
+        if (!inMediaField) return '';
         var text = value.replace(/^\s+|\s+$/g, '');
-        if (/^https?:\/\//i.test(text)) return text;
-        if (/^\/\//.test(text)) return 'https:' + text;
-        var matches = text.match(/https?:\/\/[^\s"'<>]+|\/\/[^\s"'<>]+/ig) || [];
-        if (!matches.length) return '';
-        var matched = matches[0].replace(/[),.;]+$/g, '');
-        return /^\/\//.test(matched) ? 'https:' + matched : matched;
+        if (/^\/\//.test(text)) text = 'https:' + text;
+        if (!/^https?:\/\//i.test(text)) return '';
+        // A thumbnail or HTML error page is not an audio asset, regardless
+        // of the response status or the name of the enclosing JSON key.
+        var path = text.split('?')[0].split('#')[0].toLowerCase();
+        if (/\.(?:png|jpe?g|gif|webp|svg|bmp|ico|html?|json|js|css|txt)$/.test(path)) return '';
+        return text;
       }
-      if (Array.isArray(value)) {
+      if (Object.prototype.toString.call(value) === '[object Array]') {
         for (var i = 0; i < value.length; i += 1) {
-          var foundArray = extractUrl(value[i], depth + 1);
-          if (foundArray) return foundArray;
+          var arrayUrl = extractUrl(value[i], depth + 1, inMediaField);
+          if (arrayUrl) return arrayUrl;
         }
         return '';
       }
-      if (typeof value === 'object') {
-        var preferred = [
-          'url', 'playUrl', 'play_url', 'musicUrl', 'music_url',
-          'audioUrl', 'audio_url', 'listenUrl', 'listen_url',
-          'playurl', 'mediaUrl', 'media_url'
-        ];
-        for (var p = 0; p < preferred.length; p += 1) {
-          if (!Object.prototype.hasOwnProperty.call(value, preferred[p])) continue;
-          var preferredUrl = extractUrl(value[preferred[p]], depth + 1);
-          if (preferredUrl) return preferredUrl;
-        }
-        for (var key in value) {
-          if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
-          var nested = extractUrl(value[key], depth + 1);
-          if (nested) return nested;
-        }
+      if (typeof value !== 'object') return '';
+      var mediaFields = [
+        'url', 'playUrl', 'play_url', 'musicUrl', 'music_url',
+        'audioUrl', 'audio_url', 'listenUrl', 'listen_url',
+        'playurl', 'mediaUrl', 'media_url'
+      ];
+      for (var m = 0; m < mediaFields.length; m += 1) {
+        if (!Object.prototype.hasOwnProperty.call(value, mediaFields[m])) continue;
+        var candidate = extractUrl(value[mediaFields[m]], depth + 1, true);
+        if (candidate) return candidate;
+      }
+      var containers = [
+        'data', 'body', 'result', 'response', 'music', 'song',
+        'audio', 'playInfo', 'play_info', 'resource', 'info'
+      ];
+      for (var n = 0; n < containers.length; n += 1) {
+        if (!Object.prototype.hasOwnProperty.call(value, containers[n])) continue;
+        var nested = extractUrl(value[containers[n]], depth + 1, false);
+        if (nested) return nested;
       }
       return '';
     }

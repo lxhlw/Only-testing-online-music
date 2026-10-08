@@ -1,0 +1,41 @@
+name: Migu Media URL Parser Regression (PR)
+
+on:
+  pull_request:
+    paths:
+      - "src/music-search.js"
+      - "scripts/test-music-search-native.mjs"
+      - "index.html"
+      - ".github/workflows/migu-media-parser-regression.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  parser-regression:
+    name: Migu media URL classification and legacy compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - name: Install test dependencies
+        run: npm install --no-audit --no-fund
+      - name: Validate project and ES5 syntax
+        run: |
+          node --check src/music-search.js
+          node --check scripts/test-music-search-native.mjs
+          node scripts/test-version.mjs
+          node scripts/test-legacy-web.mjs
+      - name: Check all five native search/playback resolvers
+        run: node scripts/test-music-search-native.mjs
+      - name: Check Migu track ID mapping and error behavior
+        run: node scripts/test-migu-track-ids.mjs
+      - name: Check source request and URL fallback behavior
+        run: node scripts/test-source-transpiler.mjs
