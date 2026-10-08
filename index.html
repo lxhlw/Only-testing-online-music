@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>Only Testing Online Music</title>
-  <link rel="stylesheet" href="styles.css?v=0.2.36&amp;layout=20261008">
+  <link rel="stylesheet" href="styles.css?v=0.2.36&amp;sourceui=20261008">
 </head>
 <body>
   <div id="app">
@@ -16,7 +16,7 @@
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">Only Testing Online Music</span>
-          <span id="top-source-label" class="topbar-chip">未导入音源</span>
+          <span id="top-source-label" class="topbar-chip top-source-indicator" title="当前音源：未选择">当前音源：未选择</span>
         </div>
       </div>
     </header>
@@ -229,6 +229,7 @@
                 <button id="sixyin-install-btn" type="button" class="secondary">一键导入六音</button>
                 <button id="clear-btn" type="button" class="ghost-button">清空</button>
               </div>
+              <div id="active-source-summary" class="active-source-summary" role="status" aria-live="polite"><span class="active-source-summary-label">当前使用音源</span><strong class="active-source-summary-name">尚未选择音源</strong></div>
               <div id="source-list" class="source-list"></div>
             </div>
 
@@ -287,7 +288,7 @@
   <script src="src/source-manager.js"></script>
   <script src="src/music-library.js"></script>
   <script src="src/music-lyrics.js"></script>
-  <script src="src/app.js?v=0.2.36"></script>
+  <script src="src/app.js?v=0.2.36&amp;sourceui=20261008"></script>
   <script>
   (function (global) {
     'use strict';
@@ -773,7 +774,12 @@
       var lyric= document.querySelector('.lyrics-line.active');
       el('player-lyric').innerHTML=lyric?'歌词：'+lyric.innerHTML:'歌词：—';
       var activeSource=global.LXSourceManager&&global.LXSourceManager.getActive?global.LXSourceManager.getActive():null;
-      el('top-source-label').innerHTML=activeSource&&activeSource.name?escapeHtml(activeSource.name):'未导入音源';
+      var currentSourceName=activeSource&&activeSource.name?String(activeSource.name):'未选择';
+      var topSourceLabel=el('top-source-label');
+      if(topSourceLabel){
+        topSourceLabel.textContent='当前音源：'+currentSourceName;
+        topSourceLabel.title='当前音源：'+currentSourceName;
+      }
     },800);
 
     function stripHtml(v){var d=document.createElement('div');d.innerHTML=v;return d.textContent||d.innerText||'';}
