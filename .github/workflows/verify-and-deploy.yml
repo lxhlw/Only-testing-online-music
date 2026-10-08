@@ -95,6 +95,9 @@ jobs:
       - name: Run quality fallback test
         run: node scripts/test-quality-fallback-browser.mjs
 
+      - name: Verify Migu 25-second deadline and stale callbacks
+        run: node scripts/test-migu-playback-deadline-browser.mjs
+
       - name: Run settings test
         run: node scripts/test-settings.mjs
 
@@ -227,6 +230,11 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
         run: node scripts/test-active-source-ui-browser.mjs
+
+      - name: Verify deployed Migu failure deadline
+        env:
+          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
+        run: node scripts/test-migu-playback-deadline-browser.mjs
 
       - name: Verify deployed playlist detail
         env:
