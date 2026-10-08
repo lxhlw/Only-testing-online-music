@@ -1,0 +1,33 @@
+name: Huibq Migu Live Diagnostic (PR)
+
+on:
+  pull_request:
+    paths:
+      - "scripts/test-huibq-migu-live.mjs"
+      - "src/music-search.js"
+      - "functions/api/proxy.js"
+      - ".github/workflows/huibq-migu-live-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migu:
+    name: Huibq MG production diagnostic and playback
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Verify Huibq MG playback against current deployment
+        env:
+          TEST_BASE_URL: https://only-testing-online-music.pages.dev
+          MIGU_PROBE_TIMEOUT_MS: 90000
+        run: node scripts/test-huibq-migu-live.mjs
