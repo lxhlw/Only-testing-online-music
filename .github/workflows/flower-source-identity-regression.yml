@@ -1,0 +1,46 @@
+name: Flower Source Identity Regression (PR)
+
+on:
+  pull_request:
+    paths:
+      - "scripts/test-flower-browser.mjs"
+      - "scripts/test-flower-source-identity-browser.mjs"
+      - ".github/workflows/flower-source-identity-regression.yml"
+      - ".github/workflows/verify-and-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-identity:
+    name: Flower mirror selected before attempting Migu playback
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - run: npm install --no-audit --no-fund
+      - name: Check JS and legacy application contract
+        run: |
+          node --check scripts/test-flower-browser.mjs
+          node --check scripts/test-flower-source-identity-browser.mjs
+          node scripts/test-version.mjs
+          node scripts/test-legacy-web.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Start local Cloudflare emulator
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/flower-identity.log 2>&1 &
+          for i in {1..45}; do
+            if curl -fsS http://127.0.0.1:8788/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/flower-identity.log
+          exit 1
+      - name: Verify exact Flower source identity and channel availability
+        run: node scripts/test-flower-source-identity-browser.mjs
+      - name: Show emulator logs on failure
+        if: failure()
+        run: cat /tmp/flower-identity.log || true
