@@ -63,6 +63,23 @@ jobs:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-babel-proxy.mjs
 
+      - name: Check deterministic LX search and request fallback
+        run: node scripts/test-music-search-native.mjs
+
+      - name: Install Chromium for LX integration
+        run: npx playwright install --with-deps chromium
+
+      - name: Check browser playback fallback with proxied requests
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-quality-fallback-browser.mjs
+
+      - name: Check Huibq import and WY music search
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-huibq-browser.mjs
+
+
       - name: Show server logs on failure
         if: failure()
         run: cat /tmp/proxy-security-wrangler.log || true
