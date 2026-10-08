@@ -7,6 +7,7 @@ on:
       - "src/app.js"
       - "index.html"
       - "scripts/test-default-sources-legacy-browser.mjs"
+      - "scripts/test-default-source-race-browser.mjs"
       - "scripts/test-playlist-via-navigation-browser.mjs"
       - ".github/workflows/default-sources-via-regression.yml"
   workflow_dispatch:
@@ -44,6 +45,8 @@ jobs:
           exit 1
       - name: Test new device auto import and Via 成都 search
         run: node scripts/test-default-sources-legacy-browser.mjs
+      - name: Test manually selected source wins over delayed defaults
+        run: node scripts/test-default-source-race-browser.mjs
       - name: Test Via playlist detail stays visible and tracks work
         run: node scripts/test-playlist-via-navigation-browser.mjs
       - name: Show logs on failure
