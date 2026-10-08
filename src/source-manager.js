@@ -277,8 +277,9 @@
     });
   }
 
-  function installFromUrl(url,callback) {
+  function installFromUrl(url,callback,options) {
     var originalUrl = String(url || '');
+    var expectedActiveId = options && options.expectedActiveId || '';
     var finished = false;
     var activeXhr = null;
     var timer = null;
@@ -304,6 +305,13 @@
       if (finished) return;
       finished = true;
       cleanup();
+      // An explicit manual import or source switch during a background
+      // bootstrap must win, even when the Flower download completes later.
+      // Do not execute/install unattended remote code after user intervention.
+      if (expectedActiveId && (!active || active.id !== expectedActiveId)) {
+        if (callback) callback(null, active);
+        return;
+      }
       if (err) return callback(err);
       if (!code || !String(code).replace(/\s+/g,'')) return callback(new Error('LX source code is empty'));
       installFromCode(String(code), originalUrl, function (installErr, item) {
@@ -440,6 +448,8 @@
         if (callback) callback(null);
         return;
       }
+      var intendedId = active && active.id || '';
+      var options = { expectedActiveId: intendedId };
       installFromUrl(DEFAULT_FLOWER_URL, function (err) {
         if (!err) {
           // A returning user should not have their chosen source changed.
@@ -452,8 +462,8 @@
         installFromUrl(DEFAULT_FLOWER_RAW_URL, function (rawErr) {
           if (hadExisting) restorePreferredSource(priorId);
           if (callback) callback(rawErr || null);
-        });
-      });
+        }, options);
+      }, options);
     }
 
     if (!hasDefaultHuibq()) {
