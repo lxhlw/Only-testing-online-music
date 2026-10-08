@@ -1452,6 +1452,17 @@
       document.getElementById('install-btn').click();
     };
 
+    var restoreSourcesButton = document.getElementById('restore-default-sources-btn');
+    if (restoreSourcesButton) restoreSourcesButton.onclick = function () {
+      restoreSourcesButton.disabled = true;
+      setStatus('正在恢复 Flower 与 Huibq 默认音源，请稍候……');
+      global.LXSourceManager.restoreDefaults(function (err) {
+        restoreSourcesButton.disabled = false;
+        if (err) setStatus('Huibq 已可用；Flower 导入暂时失败：' + escapeHtml(err.message || err), 'warn');
+        else setStatus('默认音源已就绪。可在上方选择当前音源。', 'ready');
+      });
+    };
+
     document.getElementById('clear-btn').onclick = function () {
       global.LXSourceManager.clear();
       setCheck('check-storage', 'pending');
