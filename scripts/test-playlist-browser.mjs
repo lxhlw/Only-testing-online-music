@@ -41,11 +41,30 @@ try {
   assert.ok(firstCardName, 'Playlist card has no name')
   await cards.first().locator('.playlist-open-button').click()
 
-  await page.waitForFunction(() => {
-    const panel = document.getElementById('playlist-detail-panel')
-    const songs = document.querySelectorAll('#playlist-detail-songs .playlist-song-row')
-    return Boolean(panel && songs.length > 0 && !/\bhidden\b/.test(panel.className))
-  }, null, { timeout: 30000 })
+  const detailApi = []
+  page.on('response', response => {
+    if (response.url().includes('/api/netease-playlists?id=')) {
+      detailApi.push({ status: response.status(), url: response.url() })
+    }
+  })
+  try {
+    await page.waitForFunction(() => {
+      const panel = document.getElementById('playlist-detail-panel')
+      const songs = document.querySelectorAll('#playlist-detail-songs .playlist-song-row')
+      const status = document.getElementById('playlist-detail-status')?.textContent || ''
+      return Boolean(panel && !/\\bhidden\\b/.test(panel.className) &&
+        (songs.length > 0 || /加载失败|已加载 0 首/.test(status)))
+    }, null, { timeout: 20000 })
+  } catch (error) {
+    const diagnostics = await page.evaluate(() => ({
+      status: document.getElementById('playlist-detail-status')?.textContent || '',
+      songs: document.querySelectorAll('#playlist-detail-songs .playlist-song-row').length,
+      panelClass: document.getElementById('playlist-detail-panel')?.className || ''
+    }))
+    throw new Error('Playlist detail did not settle: ' + JSON.stringify({ diagnostics, detailApi, pageErrors }) + '; ' + error.message)
+  }
+  const settled = await page.locator('#playlist-detail-status').textContent() || ''
+  assert.ok(!/加载失败/.test(settled), 'Playlist detail API failed: ' + settled + ' ' + JSON.stringify(detailApi))
 
   const detail = await page.evaluate(() => ({
     name: document.getElementById('playlist-detail-name')?.textContent?.trim() || '',
@@ -55,7 +74,7 @@ try {
   }))
 
   assert.equal(detail.name, firstCardName, 'Playlist detail name does not match selected card')
-  assert.ok(detail.count > 0, 'Playlist detail contains no songs')
+  assert.ok(detail.count > 0, 'Playlist detail returned no tracks; status=' + detail.status)
   assert.ok(detail.firstSong, 'Playlist detail first song is missing')
 
   const firstRow = page.locator('#playlist-detail-songs .playlist-song-row').first()
