@@ -19,7 +19,8 @@ try {
     localStorage.clear()
     const code = 'window.lx.send(window.lx.EVENT_NAMES.inited, {status: true, sources: {mg: {name: "咪咕音乐", actions: ["musicUrl"], qualitys: ["320k","128k"]}}});'
     localStorage.setItem('only-testing-online-music.lx-sources', JSON.stringify([
-      { id: 'fixture-mg-deadline', name: 'Migu Deadline Test', url: 'https://fixture.example/mg.js', code }
+      { id: 'fixture-mg-deadline', name: 'Migu Deadline Test', url: 'https://fixture.example/mg.js', code },
+      { id: 'fixture-mg-other', name: 'Other Migu Source', url: 'https://fixture.example/other.js', code }
     ]))
     localStorage.setItem('only-testing-online-music.active-source-id','fixture-mg-deadline')
   })
@@ -86,6 +87,20 @@ try {
   assert.match((await readState()).text, /咪咕播放已等待 25 秒/)
   assert.ok((await readState()).pending >= currentCallbacks + 1)
   console.log('PASS: clicking another song cancels previous deadline and permits new attempt')
+
+  await play('before-source-change')
+  await page.evaluate(() => window.LXSourceManager.activate('fixture-mg-other'))
+  await page.clock.runFor(26000)
+  const changed = await readState()
+  assert.doesNotMatch(changed.text, /咪咕播放已等待 25 秒/,
+    'Previously selected source must not overwrite the new source status')
+  assert.equal(changed.src, '')
+  await page.evaluate(() => {
+    const callbacks = window.__pendingAudioActions
+    callbacks[callbacks.length - 1](null, 'https://old-source.invalid/song.mp3')
+  })
+  assert.equal((await readState()).src, '', 'Late audio URL from deselected source must be ignored')
+  console.log('PASS: switching the LX source immediately invalidates its outstanding Migu playback')
 
   assert.deepEqual(errors, [], 'No uncaught errors on page')
 } finally {
