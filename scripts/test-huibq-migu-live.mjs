@@ -164,6 +164,22 @@ try {
   console.log('HUIBQ MG SEARCH:', JSON.stringify(initial))
   if (!initial.rows) throw new Error('Migu search returned no results')
 
+  // Observe the *first actual terminal UI transition*. Prior diagnostics
+  // incorrectly searched for "无法提供可用地址" but the page displays
+  // "暂无可用的播放地址", then kept polling until its own 45s cutoff.
+  await page.evaluate(() => {
+    const status = document.querySelector('#status')
+    const start = performance.now()
+    window.__miguTerminalTiming = { elapsedMs: null, textKind: '' }
+    new MutationObserver(() => {
+      const value = status?.textContent || ''
+      if (window.__miguTerminalTiming.elapsedMs !== null) return
+      if (/暂无可用的播放地址|无法提供可用地址|咪咕播放已等待|备用解析失败/.test(value)) {
+        window.__miguTerminalTiming.elapsedMs = Math.round(performance.now() - start)
+        window.__miguTerminalTiming.textKind = /咪咕播放已等待/.test(value) ? 'timeout' : 'no_media_url'
+      }
+    }).observe(status, {childList: true, characterData: true, subtree: true})
+  })
   const playStartedAt = Date.now()
   await page.locator('#search-results .search-row').first().locator('.search-actions button').first().click()
   const clickResolvedMs = Date.now() - playStartedAt
@@ -181,13 +197,15 @@ try {
       }
     })
     if ((snapshot.currentTime || 0) > .3 && !snapshot.paused) break
-    if (/当前音质无法播放|备用解析失败|无法提供可用地址|咪咕播放已等待/.test(snapshot.status)) break
+    if (/当前音质无法播放|备用解析失败|无法提供可用地址|暂无可用的播放地址|咪咕播放已等待/.test(snapshot.status)) break
     await page.waitForTimeout(1200)
   }
   console.log('HUIBQ MG PLAY RESULT:', JSON.stringify(snapshot))
   const elapsedMs = Date.now() - playStartedAt
+  const firstTerminal = await page.evaluate(() => window.__miguTerminalTiming)
   console.log('HUIBQ MG PLAY LATENCY:', JSON.stringify({
     elapsedMs,
+    firstTerminalMs: firstTerminal?.elapsedMs,
     clickResolvedMs,
     terminal: /咪咕播放已等待/.test(snapshot.status) ? 'playback_deadline' :
       (/暂无可用的播放地址/.test(snapshot.status) ? 'no_media_url' : 'other'),
@@ -202,9 +220,12 @@ try {
   console.log('MIGU DEADLINE TRACE:', JSON.stringify(timingTrace))
   if (process.env.MIGU_REQUIRE_25S_BOUND === 'true' &&
       !(snapshot.currentTime > .3 && !snapshot.paused)) {
-    if (elapsedMs > 32000) {
-      throw new Error('Real Migu click-to-failure exceeded 32s tolerance: ' +
-        elapsedMs + 'ms; deadline trace=' + JSON.stringify(timingTrace))
+    if (firstTerminal?.elapsedMs == null) {
+      throw new Error('Migu terminal UI state was not observed')
+    }
+    if (firstTerminal.elapsedMs > 32000 || elapsedMs > 34000) {
+      throw new Error('Migu terminal status exceeded 32s tolerance: ' +
+        JSON.stringify({elapsedMs, firstTerminalMs:firstTerminal.elapsedMs, timingTrace}))
     }
   }
   const playing = Boolean(snapshot && snapshot.currentTime > .3 && !snapshot.paused)
