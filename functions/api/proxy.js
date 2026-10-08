@@ -237,7 +237,9 @@ async function fetchFlowerResolverViaHost(target, request) {
     'https://97-64-37-235.sslip.io',
     'https://97-64-37-235.nip.io'
   ];
-  var forwarded = pickForwardHeaders(request);
+  // Alternative resolver domains are separate operators; do not send them
+  // source credentials or arbitrary X-LX-Headers from the original target.
+  var forwarded = new Headers({ 'Accept': 'application/json, text/plain, */*' });
   var lastError = null;
 
   for (var bi = 0; bi < bases.length; bi += 1) {
