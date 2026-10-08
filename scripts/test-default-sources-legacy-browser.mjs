@@ -15,6 +15,20 @@ await page.route(/(?:ghproxy\.net\/raw\.githubusercontent\.com|raw\.githubuserco
   flowerFetches++
   await route.fulfill({status:200, contentType:'text/javascript', headers:{'Access-Control-Allow-Origin':'*'},body:code})
 })
+await page.route('**/api/proxy?url=*',async route=>{
+  const target=new URL(route.request().url()).searchParams.get('url') || ''
+  if(target.includes('/v1.0/content/search_all.do')){
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+      code:'000000', songResultData:{totalCount:1,result:[{
+        songId:'123456',copyrightId:'6005861N71E',contentId:'600929000002562618',
+        name:'成都',singerList:[{name:'赵雷'}],resourceType:'2',
+        audioFormats:[{formatType:'PQ',asize:3400000}]
+      }]}
+    })})
+    return
+  }
+  await route.continue()
+})
 try {
   await page.goto(base+'/',{waitUntil:'domcontentloaded'})
   await page.waitForFunction(() =>
@@ -35,6 +49,15 @@ try {
   assert.equal(state.runtimeEnv,'desktop','Legacy Via must expose desktop LX API environment')
   assert.ok(state.supported.includes('MG'))
   assert.ok(state.supported.includes('WY'))
+  await page.locator('#channel-list button[title="MG"]').click()
+  await page.locator('#global-search-input').fill('成都')
+  await page.locator('#global-search-btn').click()
+  await page.waitForFunction(() => document.querySelectorAll('#search-results .search-row').length>0)
+  assert.equal(await page.locator('#search-results .search-row').count(),1,
+    'Via user must see Migu 成都 search result without manual importing')
+  assert.match(await page.locator('#search-results .search-row').first().textContent(),/成都/)
+  console.log('PASS: Android 4.4 Via search of 成都 works with default Flower')
+
   const fetchedOnce=flowerFetches
   await page.reload({waitUntil:'domcontentloaded'})
   await page.waitForFunction(() => window.LXSourceManager?.getActive?.()?.inited,null,{timeout:16000})
