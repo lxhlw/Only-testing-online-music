@@ -1689,3 +1689,81 @@ console.log('PASS: LX search routing stays channel-bound and never mixes provide
   assert.ok(calls.some(url => url.includes('strategy/pc/listen/v2.0')))
   console.log('PASS: Migu artwork, subscription and telemetry URLs cannot replace audio')
 }
+
+
+{
+  // Migu-specific bounded negative memo: duplicated attempts for the same
+  // track/quality must not replay the entire third-party resolver chain.
+  const clock = { now: 1800000000000 }
+  const responses = {
+    miguStrategyV24Url: { status: 200, body: JSON.stringify({ code: '201007' }) },
+    miguStrategyListenUrl: { status: 200, body: JSON.stringify({ code: '000000', data: {} }) },
+    miguPcListenUrl: { status: 200, body: JSON.stringify({ code: '000000', data: {} }) },
+    miguListenUrl: { status: 200, body: JSON.stringify({ code: '299999' }) },
+    miguLegacyListenSong: { status: 200, body: JSON.stringify({ code: '200000' }) },
+    huibq: { mg: {
+      status: 200,
+      body: JSON.stringify({ code: 0, url: 'https://panspace.kuwo.cn/not-migu.mp3' })
+    } },
+    search: { status: 403, body: '<html><title>Just a moment...</title></html>' }
+  }
+  const h = createHarness({ mg: { actions: ['musicUrl'] } }, () => {}, responses)
+  const OriginalDate = Date
+  h.sandbox.Date = class extends OriginalDate {
+    static now() { return clock.now }
+  }
+  const track = {
+    id: 'mg-retry-test',
+    songmid: 'mg-retry-test',
+    copyrightId: 'mg-copy-retry',
+    contentId: 'mg-content-retry',
+    resourceType: '2'
+  }
+  async function attempt(info, quality) {
+    return new Promise(resolve => {
+      h.sandbox.LXMusicSearch.resolveMusicUrl('mg', info, quality, (err, result) => resolve({ err, result }))
+    })
+  }
+  const proxyTargets = () => h.calls.filter(x => x.xhrUrl).map(x => {
+    try { return new URL(x.xhrUrl).searchParams.get('url') || '' } catch { return '' }
+  })
+  const gdCalls = () => proxyTargets().filter(x => x.includes('music-api.gdstudio.xyz/api.php')).length
+
+  assert.ok((await attempt(track, '320k')).err)
+  const firstCount = h.calls.length
+  assert.ok(firstCount >= 6, 'First attempt must actually check independent Migu resolvers')
+  assert.equal(gdCalls(), 1, 'A Cloudflare challenge must stop GD ID retries')
+  assert.ok((await attempt(track, '320k')).err)
+  assert.equal(h.calls.length, firstCount, 'Repeat same track/quality within 20s must not hit upstream')
+  console.log('PASS: repeated Migu terminal failure is memoized, no duplicate provider calls')
+
+  assert.ok((await attempt(track, '128k')).err)
+  assert.ok(h.calls.length > firstCount, 'First lower-quality attempt must still contact Migu providers')
+  assert.equal(gdCalls(), 1, 'GD challenge cooldown must apply across Migu bitrates')
+  console.log('PASS: lower-quality fallback remains available while GD 403 retry storm is suppressed')
+
+  const afterLower = h.calls.length
+  assert.ok((await attempt({ ...track, copyrightId: 'other-copyright-id' }, '320k')).err)
+  assert.ok(h.calls.length > afterLower, 'Different songs must never share terminal failure cache')
+
+  clock.now += 21000
+  responses.miguStrategyV24Url = {
+    status: 200,
+    body: JSON.stringify({ code: '000000', data: { playUrl: 'https://media.migu.cn/recovered.mp3' } })
+  }
+  const recovered = await attempt(track, '320k')
+  assert.equal(recovered.err, null)
+  assert.equal(recovered.result.url, 'https://media.migu.cn/recovered.mp3')
+  const successCount = h.calls.length
+  const secondSuccess = await attempt(track, '320k')
+  assert.equal(secondSuccess.err, null)
+  assert.ok(h.calls.length > successCount, 'Successful URLs must not be cached by the failure memo')
+  console.log('PASS: 20s expiry permits recovery and successful audio is never negative-cached')
+
+  responses.miguStrategyV24Url = { status: 200, body: JSON.stringify({ code: '201007' }) }
+  clock.now += 50000
+  const gdBefore = gdCalls()
+  assert.ok((await attempt({ ...track, copyrightId: 'third-copyright-id' }, '320k')).err)
+  assert.ok(gdCalls() > gdBefore, 'GD challenge cooldown must expire and allow a new provider check')
+  console.log('PASS: 45s GD challenge cooldown expires instead of blocking future requests')
+}

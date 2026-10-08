@@ -65,6 +65,45 @@
   var gdServerTime = '';
   var gdServerTimeExpiresAt = 0;
 
+  // Only Migu uses the following short-lived failure memo. Other four
+  // channels retain their existing retries and fallback behavior.
+  var MIGU_NEGATIVE_CACHE_MS = 20000;
+  var MIGU_GD_CHALLENGE_COOLDOWN_MS = 45000;
+  var miguResolveFailures = {};
+  var miguResolveFailureOrder = [];
+  var gdMiguChallengeUntil = 0;
+
+  function miguFailureKey(musicInfo, quality, skipProvider) {
+    var info = musicInfo || {};
+    var id = info.copyrightId || info.copyright_id ||
+      info.songmid || info.songId || info.id || '';
+    id = String(id).replace(/^\s+|\s+$/g, '');
+    if (!id) return '';
+    var active = global.LXSourceManager && global.LXSourceManager.getActive
+      ? global.LXSourceManager.getActive() : null;
+    var sourceId = active && (active.id || active.url) || '';
+    return String(sourceId) + '|' + id + '|' + String(quality || '').toLowerCase() +
+      '|' + String(skipProvider || '').toLowerCase();
+  }
+
+  function rememberMiguFailure(key, error) {
+    if (!key || !error) return;
+    // No storage, no music URLs, and a hard limit to prevent unbounded growth.
+    for (var i = 0; i < miguResolveFailureOrder.length; i += 1) {
+      if (miguResolveFailureOrder[i] === key) {
+        miguResolveFailureOrder.splice(i, 1);
+        break;
+      }
+    }
+    miguResolveFailureOrder.push(key);
+    miguResolveFailures[key] = {
+      until: (Date.now ? Date.now() : new Date().getTime()) + MIGU_NEGATIVE_CACHE_MS
+    };
+    while (miguResolveFailureOrder.length > 32) {
+      delete miguResolveFailures[miguResolveFailureOrder.shift()];
+    }
+  }
+
   function encodeForm(data) {
     var parts = [];
     for (var key in data) {
@@ -3071,6 +3110,11 @@
 
   function resolveGdStudioUrl(source, musicInfo, quality, callback) {
     source = String(source || '').toLowerCase();
+    // Cloudflare's challenge on the GD API is not a media URL. Suppress only
+    // repeat Migu attempts for a short period; do not affect KW/KG/TX/WY.
+    if (source === 'mg' && (Date.now ? Date.now() : new Date().getTime()) < gdMiguChallengeUntil) {
+      return callback(new Error('GD Studio access challenge is temporarily unavailable'));
+    }
     var mapped = SOURCE_MAP[source];
     if (!mapped) return callback(new Error('Unsupported playback source: ' + source));
 
@@ -3117,6 +3161,12 @@
           function (err, data) {
             if (err) {
               lastError = err;
+              if (source === 'mg' && /HTTP 403/i.test(String(err.message || err)) &&
+                  /Just a moment|cf-chl-|Cloudflare.*challenge/i.test(String(err.message || err))) {
+                gdMiguChallengeUntil =
+                  (Date.now ? Date.now() : new Date().getTime()) + MIGU_GD_CHALLENGE_COOLDOWN_MS;
+                return callback(err);
+              }
               return tryId(index + 1);
             }
 
@@ -3217,6 +3267,24 @@
     source = String(source || '').toLowerCase();
     options = options || {};
     var skipProvider = String(options.skipProvider || '').toLowerCase();
+
+    if (source === 'mg') {
+      var cacheKey = miguFailureKey(musicInfo, quality, skipProvider);
+      var memo = cacheKey && miguResolveFailures[cacheKey];
+      var now = Date.now ? Date.now() : new Date().getTime();
+      if (memo && memo.until > now) {
+        return callback(new Error('Migu resolver temporarily returned no audio; retry shortly'));
+      }
+      if (memo) delete miguResolveFailures[cacheKey];
+      var originalCallback = callback;
+      callback = function (err, result) {
+        if (cacheKey) {
+          if (err && !(result && result.url)) rememberMiguFailure(cacheKey, err);
+          else delete miguResolveFailures[cacheKey];
+        }
+        originalCallback(err, result);
+      };
+    }
 
     function finishGd(huibqErr, tuneErr) {
       if (skipProvider === 'gd-studio') {
