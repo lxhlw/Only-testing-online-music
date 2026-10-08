@@ -540,6 +540,8 @@
       var host=el('playlist-detail-songs');
       host.innerHTML='';
       if(!list.length){host.innerHTML='<div class="empty-note">该歌单没有可用歌曲</div>';return;}
+      // Build the 50-song page off-DOM, then append it in one operation.
+      var fragment=document.createDocumentFragment();
       for(var i=0;i<list.length;i+=1){
         var item=list[i]||{};
         var row=document.createElement('div'); row.className='playlist-song-row search-row';
@@ -567,8 +569,9 @@
         };})(item,fav);
         actions.appendChild(fav);
         row.appendChild(actions);
-        host.appendChild(row);
+        fragment.appendChild(row);
       }
+      host.appendChild(fragment);
     }
 
     function normalizePlaylistItems(raw){
