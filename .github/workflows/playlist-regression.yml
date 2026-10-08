@@ -1,0 +1,67 @@
+name: Playlist Regression (PR)
+
+on:
+  pull_request:
+    paths:
+      - "index.html"
+      - "functions/api/netease-playlists.js"
+      - "scripts/test-playlist-browser.mjs"
+      - "scripts/test-netease-playlists-api.mjs"
+      - "scripts/test-playlist-pagination-browser.mjs"
+      - ".github/workflows/playlist-regression.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  playlist:
+    name: Deterministic playlist API and browser regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Validate syntax
+        run: |
+          node --check functions/api/netease-playlists.js
+          node --check scripts/test-netease-playlists-api.mjs
+          node --check scripts/test-playlist-pagination-browser.mjs
+          node --check scripts/test-playlist-browser.mjs
+
+      - name: Test NetEase playlist API without external network
+        run: node scripts/test-netease-playlists-api.mjs
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start local Pages server
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/playlist-wrangler.log 2>&1 &
+          for i in {1..45}; do
+            if curl --fail --silent http://127.0.0.1:8788/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/playlist-wrangler.log
+          exit 1
+
+      - name: Test playlist UI with mocked API responses
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-playlist-pagination-browser.mjs
+
+      - name: Display local server logs on failure
+        if: failure()
+        run: cat /tmp/playlist-wrangler.log || true
