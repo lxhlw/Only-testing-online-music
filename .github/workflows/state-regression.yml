@@ -1,0 +1,43 @@
+name: Queue and Source State Regression (PR)
+
+on:
+  pull_request:
+    paths:
+      - "src/music-library.js"
+      - "src/source-manager.js"
+      - "scripts/test-music-library-bounds.mjs"
+      - "scripts/test-source-selection.mjs"
+      - ".github/workflows/state-regression.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  state-regression:
+    name: Queue bounds and active-source restoration
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+
+      - name: Validate legacy ES5 source syntax
+        run: |
+          node --check src/music-library.js
+          node --check src/source-manager.js
+          node scripts/test-legacy-web.mjs
+
+      - name: Existing music library regression
+        run: node scripts/test-music-library.mjs
+
+      - name: Queue boundary and persistence regression
+        run: node scripts/test-music-library-bounds.mjs
+
+      - name: Active LX source persistence regression
+        run: node scripts/test-source-selection.mjs
