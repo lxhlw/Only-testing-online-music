@@ -241,6 +241,16 @@ jobs:
           TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
           TEST_PLAYLIST_KEYWORD: '周杰伦'
         run: node scripts/test-playlist-browser.mjs
+
+      - name: Measure live Huibq Migu click-to-failure (informational)
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
+          MIGU_PROBE_TIMEOUT_MS: 36000
+          MIGU_REQUIRE_PLAYBACK: 'false'
+          MIGU_REQUIRE_25S_BOUND: 'true'
+        run: node scripts/test-huibq-migu-live.mjs
   live-smoke:
     name: Live Flower Four-Channel Smoke Test
     needs: deploy

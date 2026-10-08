@@ -20,6 +20,8 @@
   // Migu-only budget for a single user-visible play attempt, across all
   // qualities and fallback providers. Do not bound other four channels.
   var MIGU_PLAYBACK_MAX_WAIT_MS = 25000;
+  var MIGU_PLAYBACK_PROGRESS_FRESH_MS = 5000;
+  var MIGU_PLAYBACK_ESTABLISHED_SECONDS = 3;
 
   var CHANNEL_NAMES = {
     kw: '酷我音乐',
@@ -789,12 +791,42 @@
     setStatus(unavailablePlaybackMessage('mg'), 'fail');
   }
 
+  function noteMiguPlaybackProgress(state, audio) {
+    if (!state || state.source !== 'mg' || !audio) return;
+    var current = Number(audio.currentTime || 0);
+    if (!isFinite(current) || current < 0) return;
+    if (current > Number(state.miguLastAudioTime || 0) + 0.025) {
+      state.miguLastAudioTime = current;
+      state.miguLastProgressAt = Date.now ? Date.now() : new Date().getTime();
+    }
+  }
+
+  function isEstablishedMiguPlayback(state, audio) {
+    if (!state || !audio || !state.playing || audio.ended ||
+        audio.readyState < 2 || Number(audio.currentTime || 0) < MIGU_PLAYBACK_ESTABLISHED_SECONDS ||
+        isSuspiciousPlaybackDuration(Number(audio.duration || 0), state.expectedDuration)) return false;
+    // A user may pause genuine media manually. Otherwise it must still be
+    // making audio progress near the original 25-second deadline.
+    if (audio.paused) return true;
+    var now = Date.now ? Date.now() : new Date().getTime();
+    return Number(state.miguLastProgressAt || 0) > 0 &&
+      now - state.miguLastProgressAt <= MIGU_PLAYBACK_PROGRESS_FRESH_MS;
+  }
+
   function armMiguPlaybackDeadline(state) {
     if (!state || state.source !== 'mg') return;
     var token = state.token;
     clearMiguPlaybackDeadline(state);
     state.miguDeadlineTimer = global.setTimeout(function () {
-      if (playbackState !== state || playbackToken !== token || state.playing) return;
+      if (playbackState !== state || playbackToken !== token) return;
+      // A quarter-second of progress can come from a transient/error stream.
+      // Keep the original deadline alive until established audio is still
+      // progressing, rather than canceling it on the first 'playing' event.
+      var audio = document.getElementById('audio');
+      if (isEstablishedMiguPlayback(state, audio)) {
+        clearMiguPlaybackDeadline(state);
+        return;
+      }
       clearMiguPlaybackDeadline(state);
       clearPlaybackConfirmTimer(state);
       // Invalidate every pending LX-source/native/fallback callback. A stale
@@ -802,7 +834,6 @@
       playbackToken += 1;
       state.waitingForAudio = false;
       state.playing = false;
-      var audio = document.getElementById('audio');
       if (audio) {
         try { audio.pause(); } catch (e) {}
         audio.onerror = null;
@@ -1041,6 +1072,8 @@
       directProxyRetry: false,
       confirmTimer: null,
       miguDeadlineTimer: null,
+      miguLastAudioTime: 0,
+      miguLastProgressAt: 0,
       activeSourceId: String(active.id || active.url || '')
     };
 
@@ -1067,7 +1100,9 @@
     }
 
     clearPlaybackConfirmTimer(state);
-    clearMiguPlaybackDeadline(state);
+    // For Migu keep the 25-second deadline until continuous, plausible
+    // playback is established at that checkpoint (see Issue #13).
+    if (state.source !== 'mg') clearMiguPlaybackDeadline(state);
     state.waitingForAudio = false;
     state.playing = true;
     if (global.LXMusicLibrary) {
@@ -1086,9 +1121,11 @@
   function handleAudioPlaying(expectedToken, expectedUrl) {
     var state = playbackState;
     var audio = document.getElementById('audio');
-    if (!state || state.token !== playbackToken || !state.waitingForAudio || !audio) return;
+    if (!state || state.token !== playbackToken || !audio) return;
     if (expectedToken != null && expectedToken !== state.token) return;
     if (expectedUrl && state.url !== expectedUrl) return;
+    noteMiguPlaybackProgress(state, audio);
+    if (!state.waitingForAudio) return;
 
     if (isSuspiciousPlaybackDuration(
       Number(audio.duration || 0),

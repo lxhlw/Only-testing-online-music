@@ -49,8 +49,13 @@ jobs:
           TEST_BASE_URL: http://127.0.0.1:8788
           MIGU_EXPECT_VALID_ID: 'true'
           MIGU_REQUIRE_PLAYBACK: 'false'
-          MIGU_PROBE_TIMEOUT_MS: 45000
-        run: node scripts/test-huibq-migu-live.mjs
+          MIGU_PROBE_TIMEOUT_MS: 36000
+          MIGU_REQUIRE_25S_BOUND: 'true'
+        run: |
+          for trial in 1 2 3; do
+            echo "HUIBQ MG REAL FAILURE LATENCY TRIAL: $trial / 3"
+            node scripts/test-huibq-migu-live.mjs
+          done
 
       - name: Report real production Migu availability (informational)
         continue-on-error: true

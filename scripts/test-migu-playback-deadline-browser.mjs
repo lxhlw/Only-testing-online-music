@@ -55,11 +55,11 @@ try {
   assert.equal((await readState()).pending, 1)
   await page.clock.runFor(8001)
   assert.equal((await readState()).fallback, 1, 'Primary source should enter fallback after 8s')
-  await page.clock.runFor(16998)
+  await page.clock.runFor(16400)
   assert.doesNotMatch((await readState()).text, /已停止本次等待/,
-    'Deadline must not fire before 25s')
+    'Deadline must not fire well before 25s')
 
-  await page.clock.runFor(1)
+  await page.clock.runFor(700)
   let first = await readState()
   assert.match(first.text, /咪咕播放已等待 25 秒/)
   assert.equal(first.src, '')
@@ -101,6 +101,63 @@ try {
   })
   assert.equal((await readState()).src, '', 'Late audio URL from deselected source must be ignored')
   console.log('PASS: switching the LX source immediately invalidates its outstanding Migu playback')
+
+  // Prevent a real media connection; control the HTMLAudioElement properties
+  // to reproduce a provider stream reporting 0.35s of progress before
+  // stalling, which previously cleared the 25-second timer too early.
+  await page.route('https://media.migu.cn/mock.mp3', async () => {})
+  await page.evaluate(() => {
+    const audio = document.querySelector('#audio')
+    window.__mockMiguAudio = { time: 0, duration: 240, readyState: 3, paused: false, ended: false }
+    for (const name of ['currentTime', 'duration', 'readyState', 'paused', 'ended']) {
+      const key = name === 'currentTime' ? 'time' : name
+      Object.defineProperty(audio, name, {
+        configurable: true,
+        get() { return window.__mockMiguAudio[key] }
+      })
+    }
+    audio.load = function () {}
+    audio.pause = function () { window.__mockMiguAudio.paused = true }
+  })
+  const triggerSyntheticProgress = async value => {
+    await page.evaluate(seconds => {
+      const audio = document.querySelector('#audio')
+      window.__mockMiguAudio.time = seconds
+      window.__mockMiguAudio.paused = false
+      if (typeof audio.ontimeupdate === 'function') audio.ontimeupdate()
+    }, value)
+  }
+  await play('short-start-then-stall')
+  await page.evaluate(() => {
+    const calls = window.__pendingAudioActions
+    calls[calls.length - 1](null, 'https://media.migu.cn/mock.mp3')
+  })
+  await triggerSyntheticProgress(.35)
+  assert.match((await readState()).text, /正在播放/, '0.35s provisional audio first appears playing')
+  await page.clock.runFor(24000)
+  assert.doesNotMatch((await readState()).text, /已停止本次等待/)
+  await page.clock.runFor(1200)
+  assert.match((await readState()).text, /咪咕播放已等待 25 秒/,
+    '0.35s of fake progress must not cancel the original 25s deadline')
+  console.log('PASS: short transient audio progress does not suppress 25s Migu deadline')
+
+  await play('genuine-continuous-audio')
+  await page.evaluate(() => {
+    const calls = window.__pendingAudioActions
+    calls[calls.length - 1](null, 'https://media.migu.cn/mock.mp3')
+  })
+  await triggerSyntheticProgress(.5)
+  for (let i = 1; i <= 6; i += 1) {
+    await page.clock.runFor(4000)
+    await triggerSyntheticProgress(i * 4)
+  }
+  await page.clock.runFor(1000)
+  assert.match((await readState()).text, /正在播放/,
+    'Continuously advancing, plausible music must stay playing at 25s')
+  await page.clock.runFor(2000)
+  assert.doesNotMatch((await readState()).text, /已停止本次等待/,
+    'Genuine playback should not be interrupted by the Migu deadline')
+  console.log('PASS: genuine uninterrupted audio progress survives the 25s checkpoint')
 
   assert.deepEqual(errors, [], 'No uncaught errors on page')
 } finally {
