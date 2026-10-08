@@ -15,7 +15,6 @@ const readState = () => page.evaluate(() => ({
 }))
 
 try {
-  await page.clock.install({ time: new Date('2026-10-09T08:00:00+08:00') })
   await page.addInitScript(() => {
     localStorage.clear()
     const code = 'window.lx.send(window.lx.EVENT_NAMES.inited, {status: true, sources: {mg: {name: "咪咕音乐", actions: ["musicUrl"], qualitys: ["320k","128k"]}}});'
@@ -29,6 +28,7 @@ try {
     const a = window.LXSourceManager?.getActive?.()
     return Boolean(a?.inited && a?.sources?.mg && window.OnlyTestingMusicApp?.playMusic)
   }, null, { timeout: 12000 })
+  await page.clock.install({ time: new Date('2026-10-09T08:00:00+08:00') })
   await page.evaluate(() => {
     window.__pendingAudioActions = []
     window.__pendingFallbacks = []
