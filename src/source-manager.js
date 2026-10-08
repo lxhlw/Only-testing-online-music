@@ -2,6 +2,7 @@
   'use strict';
 
   var STORAGE_KEY = 'only-testing-online-music.lx-sources';
+  var ACTIVE_SOURCE_KEY = 'only-testing-online-music.active-source-id';
   var sources = [];
   var active = null;
 
@@ -37,6 +38,9 @@
         });
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
+      // Keep the existing array format intact for previously installed sources.
+      if (active && active.id) localStorage.setItem(ACTIVE_SOURCE_KEY, String(active.id));
+      else localStorage.removeItem(ACTIVE_SOURCE_KEY);
     } catch (e) {}
   }
 
@@ -46,6 +50,11 @@
       var value = raw ? JSON.parse(raw) : [];
       return value instanceof Array ? value : [];
     } catch (e) { return []; }
+  }
+
+  function loadActiveId() {
+    try { return String(localStorage.getItem(ACTIVE_SOURCE_KEY) || ''); }
+    catch (e) { return ''; }
   }
 
   function makeRequestHandler(runtime) {
@@ -382,8 +391,16 @@
   }
 
   function init() {
+    var savedId=loadActiveId();
     sources=loadRaw();
-    active=sources.length?sources[0]:null;
+    active=null;
+    for (var i=0;i<sources.length;i+=1) {
+      if (String(sources[i].id)===savedId) {
+        active=sources[i];
+        break;
+      }
+    }
+    if (!active) active=sources.length?sources[0]:null;
     persist(); notify();
 
     function next(index) {
@@ -409,13 +426,16 @@
 
   function clear() {
     sources=[]; active=null;
-    try{localStorage.removeItem(STORAGE_KEY);}catch(e){}
+    try{
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(ACTIVE_SOURCE_KEY);
+    }catch(e){}
     notify();
   }
 
   function activate(id) {
     for(var i=0;i<sources.length;i+=1)if(sources[i].id===id){
-      active=sources[i]; notify(); return active;
+      active=sources[i]; persist(); notify(); return active;
     }
     return null;
   }
