@@ -137,21 +137,26 @@ try {
   await page.locator('#source-url').fill(SOURCE_URL)
   await page.locator('#install-btn').click()
 
+  // A clean browser may auto-initialize Huibq first. Wait for the
+  // specifically imported Flower URL, not just any initialized LX runtime,
+  // otherwise the smoke test can probe Huibq while reporting Flower.
   await page.waitForFunction(
-    () => {
+    expectedUrl => {
       const manager = window.LXSourceManager
       const active = manager?.getActive?.()
       return Boolean(
         active &&
+        active.url === expectedUrl &&
         active.inited &&
         active.runtime &&
         active.sources &&
         active.sources.kg &&
+        active.sources.mg &&
         active.sources.kg.actions &&
         active.sources.kg.actions.indexOf('musicUrl') >= 0
       )
     },
-    null,
+    SOURCE_URL,
     { timeout: INIT_TIMEOUT_MS },
   )
 
@@ -168,6 +173,9 @@ try {
   })
 
   assert.equal(state.inited, true, 'Flower source did not initialize')
+  assert.ok(SOURCE_URL.includes('/flower/latest.js'),
+    'Only the explicitly selected Flower script is the target of this smoke test')
+  assert.ok(!/Huibq/i.test(state.name),'Huibq must not be treated as initialized Flower')
   assert.equal(state.env, 'desktop', 'Chromium must expose LX desktop environment')
   assert.ok(state.kg, 'Flower source did not expose the kg channel')
   await page.locator('.nav-item[data-view="search"]').click()

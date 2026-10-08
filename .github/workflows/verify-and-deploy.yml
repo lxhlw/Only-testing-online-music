@@ -324,7 +324,7 @@ jobs:
       - name: Run live Flower Migu search + playback
         env:
           TEST_BASE_URL: ${{ needs.deploy.outputs.deployment_url }}
-          LX_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js
+          LX_SOURCE_URL: https://ghproxy.net/raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js
           TEST_KEYWORD: 成都
           TEST_CHANNELS: mg
           REQUIRE_PLAUSIBLE_PLAYBACK: 'true'
