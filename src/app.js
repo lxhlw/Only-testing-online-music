@@ -185,7 +185,7 @@
       // Older Via browsers get the lighter same-origin NetEase search path
       // on first load; users can still switch to MG and all other channels.
       var legacyUa = String(global.navigator && global.navigator.userAgent || '');
-      var oldVia = /Android\\s*4[.]4|Via\\//i.test(legacyUa);
+      var oldVia = /Android 4[.]4|Via[/]/i.test(legacyUa);
       selectedChannel = oldVia && supported.indexOf('wy') >= 0
         ? 'wy' : (supported.indexOf('tx') >= 0 ? 'tx' : supported[0]);
     }
