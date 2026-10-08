@@ -187,10 +187,10 @@ async function fetchFlowerResolverViaSocket(target, request) {
 async function fetchFlowerResolverViaDirectFetch(target, request) {
   try {
     var forwarded = pickForwardHeaders(request);
-    var upstream = await fetch(target.toString(), {
+    var upstream = await fetchSafeUpstream(target.toString(), {
       method: String(request.method || 'GET').toUpperCase(),
       headers: forwarded,
-      redirect: 'follow'
+      redirect: 'manual'
     });
 
     var body = await upstream.text();
@@ -250,10 +250,10 @@ async function fetchFlowerResolverViaHost(target, request) {
     for (var pi = 0; pi < paths.length; pi += 1) {
       var endpoint = base + paths[pi] + target.search;
       try {
-        var upstream = await fetch(endpoint, {
+        var upstream = await fetchSafeUpstream(endpoint, {
           method: String(request.method || 'GET').toUpperCase(),
           headers: forwarded,
-          redirect: 'follow'
+          redirect: 'manual'
         });
         var body = await upstream.text();
         var trimmed = String(body || '').replace(/^\s+|\s+$/g, '');
@@ -421,7 +421,8 @@ async function fetchFlowerResolverViaHttpBridge(target, request) {
     }
   ];
 
-  var forwarded = pickForwardHeaders(request);
+  // Public bridge operators must never receive credentials or source-specific
+  // request headers. They only need Accept to read an unauthenticated URL.
   var lastError = null;
 
   for (var ti = 0; ti < targets.length; ti += 1) {
@@ -430,18 +431,9 @@ async function fetchFlowerResolverViaHttpBridge(target, request) {
       var bridgeUrl = bridges[bi](targetUrl);
 
       try {
-        var bridgeHeaders = new Headers();
-        forwarded.forEach(function (value, key) {
-          var lower = key.toLowerCase();
-          if (lower === 'host' || lower === 'content-length' || lower === 'connection') return;
-          try { bridgeHeaders.set(key, value); } catch (e) {}
-        });
-        bridgeHeaders.set('Accept', 'application/json, text/plain, */*');
-
-        var upstream = await fetch(bridgeUrl, {
+        var upstream = await fetchSafeUpstream(bridgeUrl, {
           method: 'GET',
-          headers: bridgeHeaders,
-          redirect: 'follow'
+          headers: { 'Accept': 'application/json, text/plain, */*' }
         });
 
         var body = await upstream.text();
@@ -479,34 +471,106 @@ async function fetchFlowerResolverViaHttpBridge(target, request) {
 }
 
 function corsHeaders(request) {
-  var origin = request.headers.get('Origin') || '*';
+  // This is a same-origin browser proxy, not an arbitrary CORS relay.
+  var selfOrigin = new URL(request.url).origin;
   return {
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
+    'Access-Control-Allow-Origin': selfOrigin,
+    'Access-Control-Allow-Methods': 'GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Range, If-Range, If-None-Match, If-Modified-Since, X-LX-Headers',
-    'Access-Control-Max-Age': '86400',
+    'Access-Control-Max-Age': '3600',
     'Vary': 'Origin'
   };
 }
 
+function sameOriginClient(request) {
+  var own = new URL(request.url).origin;
+  var origin = request.headers.get('Origin');
+  if (origin && origin !== own) return false;
+  var site = String(request.headers.get('Sec-Fetch-Site') || '').toLowerCase();
+  if (site === 'cross-site' || site === 'same-site') return false;
+  // Missing Fetch Metadata / Origin headers are allowed for older Android
+  // WebViews. This is a browser cross-origin barrier, not server authentication.
+  return true;
+}
+
 function isPrivateHost(hostname) {
-  var host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
-  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')
-      || host === 'metadata.google.internal' || host.endsWith('.internal')) return true;
+  var host = String(hostname || '').toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '');
+  if (!host || host === 'localhost' || host.endsWith('.localhost') ||
+      host.endsWith('.local') || host.endsWith('.internal') ||
+      host.endsWith('.onion') || host.indexOf('.') < 0) return true;
+
+  // No IPv6-literal origins are needed by the supported music providers.
+  // This also closes IPv4-mapped IPv6 metadata/loopback bypasses.
+  if (host.indexOf(':') >= 0) return true;
 
   var parts = host.split('.');
   if (parts.length === 4 && parts.every(function (part) { return /^\d+$/.test(part); })) {
     var a = Number(parts[0]), b = Number(parts[1]);
     var c = Number(parts[2]), d = Number(parts[3]);
     if ([a,b,c,d].some(function (n) { return n < 0 || n > 255; })) return true;
-    if (a === 10 || a === 127 || (a === 169 && b === 254)
-        || (a === 172 && b >= 16 && b <= 31)
-        || (a === 192 && b === 168)
-        || a === 0) return true;
+    if (a === 0 || a === 10 || a === 127 || a >= 224 ||
+        (a === 100 && b >= 64 && b <= 127) ||
+        (a === 169 && b === 254) ||
+        (a === 172 && b >= 16 && b <= 31) ||
+        (a === 192 && (b === 0 || (b === 168))) ||
+        (a === 198 && (b === 18 || b === 19))) return true;
   }
-
-  if (host === '::1' || host.indexOf('fe80:') === 0 || host.indexOf('fc') === 0 || host.indexOf('fd') === 0) return true;
   return false;
+}
+
+function validateProxyTarget(target) {
+  return !!target &&
+    (target.protocol === 'http:' || target.protocol === 'https:') &&
+    !target.username && !target.password &&
+    !isPrivateHost(target.hostname) &&
+    // Reject port-scanning to arbitrary services.
+    (!target.port || (target.protocol === 'http:' && target.port === '80') ||
+      (target.protocol === 'https:' && target.port === '443'));
+}
+
+// Validate *every* redirect hop. Native redirect:'follow' silently bypasses
+// checks made only against the original target URL.
+async function fetchSafeUpstream(input, options) {
+  var current = new URL(String(input));
+  var method = String(options && options.method || 'GET').toUpperCase();
+  var headers = new Headers(options && options.headers || {});
+  var body = options && options.body;
+  for (var hop = 0; hop <= 3; hop += 1) {
+    if (!validateProxyTarget(current)) throw new Error('Blocked unsafe upstream or redirect target');
+    var response = await fetch(current.toString(), {
+      method: method, headers: headers, body: body, redirect: 'manual'
+    });
+    if (response.status !== 301 && response.status !== 302 &&
+        response.status !== 303 && response.status !== 307 &&
+        response.status !== 308) return response;
+    var location = response.headers.get('Location');
+    if (!location || hop === 3) throw new Error('Upstream redirect missing or exceeded limit');
+    var next = new URL(location, current);
+    if (!validateProxyTarget(next)) throw new Error('Blocked unsafe upstream redirect target');
+    if (current.origin !== next.origin) {
+      // Never forward a music source's credentials to a different origin.
+      headers.delete('Authorization');
+      headers.delete('Proxy-Authorization');
+      headers.delete('X-Request-Key');
+      headers.delete('X-Api-Key');
+      headers.delete('X-Auth-Token');
+      headers.delete('Cookie');
+      headers.delete('Referer');
+      headers.delete('Origin');
+    }
+    if (response.status === 303 || ((response.status === 301 || response.status === 302) &&
+        method !== 'GET' && method !== 'HEAD')) {
+      method = 'GET';
+      body = undefined;
+      headers.delete('Content-Type');
+    } else if (method !== 'GET' && method !== 'HEAD') {
+      // Streaming POST bodies cannot be replayed safely after 307/308.
+      throw new Error('Redirected streaming request is not supported');
+    }
+    if (response.body) try { await response.body.cancel(); } catch (e) {}
+    current = next;
+  }
+  throw new Error('Redirect limit exceeded');
 }
 
 function isTencentMediaHost(hostname) {
@@ -612,10 +676,23 @@ function copyResponseHeaders(source, request) {
   var headers = new Headers();
   source.headers.forEach(function (value, key) {
     var lower = key.toLowerCase();
-    if (lower === 'content-encoding' || lower === 'content-length' || lower === 'transfer-encoding'
-        || lower === 'connection') return;
+    if (lower === 'content-encoding' || lower === 'content-length' || lower === 'transfer-encoding' ||
+        lower === 'connection' || lower === 'set-cookie' || lower === 'set-cookie2' ||
+        lower === 'www-authenticate' || lower === 'proxy-authenticate' ||
+        lower === 'location' || lower === 'refresh' || lower.indexOf('access-control-') === 0) return;
     headers.set(key, value);
   });
+  var contentType = String(headers.get('Content-Type') || '').toLowerCase();
+  // A same-origin music proxy must never serve arbitrary HTML/JS/SVG as an
+  // executable page/script. LX source imports use XHR responseText and work
+  // with text/plain while scripts and active content are not executable.
+  if (/text\/html|application\/xhtml\+xml|image\/svg\+xml|(?:java|ecma)script/i.test(contentType)) {
+    headers.set('Content-Type', 'text/plain; charset=utf-8');
+    headers.set('Content-Disposition', 'attachment');
+    headers.set('Content-Security-Policy', 'sandbox');
+  }
+  headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('Cache-Control', 'no-store');
   var cors = corsHeaders(request);
   for (var key in cors) headers.set(key, cors[key]);
   return headers;
@@ -658,11 +735,11 @@ function decodeMiguH5V24(bytes, signedResponse) {
 async function fetchMiguH5V24(target, request) {
   var targetHeaders = pickForwardHeaders(request);
   var method = String(request.method || 'GET').toUpperCase();
-  var init = { method: method, headers: targetHeaders, redirect: 'follow' };
+  var init = { method: method, headers: targetHeaders, redirect: 'manual' };
   if (method !== 'GET' && method !== 'HEAD') init.body = request.body;
 
   try {
-    var upstream = await fetch(target.toString(), init);
+    var upstream = await fetchSafeUpstream(target.toString(), init);
     if (upstream.status < 200 || upstream.status >= 300) {
       return new Response(upstream.body, {
         status: upstream.status,
@@ -712,12 +789,18 @@ async function fetchMiguH5V24(target, request) {
 }
 
 export async function onRequestOptions(context) {
+  if (!sameOriginClient(context.request)) return new Response(null, { status: 403 });
   return new Response(null, { status: 204, headers: corsHeaders(context.request) });
 }
 
 export async function onRequest(context) {
   var request = context.request;
   var url = new URL(request.url);
+  if (!sameOriginClient(request)) {
+    return new Response(JSON.stringify({ error: 'Cross-origin proxy use is not allowed' }), {
+      status: 403, headers: { 'Content-Type': 'application/json; charset=utf-8' }
+    });
+  }
 
   if (url.pathname !== '/api/proxy') {
     return new Response(JSON.stringify({ error: 'Not found' }), {
@@ -749,8 +832,8 @@ export async function onRequest(context) {
     });
   }
 
-  if (isPrivateHost(target.hostname)) {
-    return new Response(JSON.stringify({ error: 'Private or local targets are not allowed' }), {
+  if (!validateProxyTarget(target)) {
+    return new Response(JSON.stringify({ error: 'Unsafe target, credentials or nonstandard port are not allowed' }), {
       status: 403,
       headers: Object.assign({'Content-Type': 'application/json; charset=utf-8'}, corsHeaders(request))
     });
@@ -775,7 +858,7 @@ export async function onRequest(context) {
     if (!targetHeaders.has('Accept')) targetHeaders.set('Accept', 'audio/mpeg,audio/*;q=0.9,*/*;q=0.8');
   }
 
-  var init = { method: method, headers: targetHeaders, redirect: 'follow' };
+  var init = { method: method, headers: targetHeaders, redirect: 'manual' };
   if (method !== 'GET' && method !== 'HEAD') init.body = request.body;
 
   if (
@@ -842,7 +925,7 @@ export async function onRequest(context) {
   var lastError = null;
   for (var ci = 0; ci < candidateUrls.length; ci += 1) {
     try {
-      var upstream = await fetch(candidateUrls[ci], init);
+      var upstream = await fetchSafeUpstream(candidateUrls[ci], init);
       if (upstream.status >= 200 && upstream.status < 300) {
         return new Response(upstream.body, {
           status: upstream.status,
