@@ -504,7 +504,7 @@
     // including an empty string. Migu search results can expose hash=''
     // alongside a valid copyrightId, producing /url/mg//320k (HTTP 404).
     // Use the authoritative Migu copyright ID for that missing field only.
-    if (source === 'mg' && !String(musicInfo.hash == null ? '' : musicInfo.hash).replace(/^\\s+|\\s+$/g, '')) {
+    if (source === 'mg' && !String(musicInfo.hash == null ? '' : musicInfo.hash).trim()) {
       var miguId = musicInfo.copyrightId || musicInfo.copyright_id ||
         musicInfo.songmid || musicInfo.id;
       if (miguId != null && String(miguId)) musicInfo.hash = String(miguId);
