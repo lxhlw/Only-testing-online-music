@@ -138,6 +138,7 @@
                 <span id="playlist-detail-status" class="muted">正在读取……</span>
               </div>
               <div id="playlist-detail-songs" class="results-list"></div>
+              <button id="playlist-load-more-btn" type="button" class="secondary hidden">加载更多歌曲</button>
             </section>
           </section>
 
@@ -301,6 +302,9 @@
     var playlistFavoritesKey = 'only-testing-online-music.playlist-favorites';
     var playlistDetailItem = null;
     var playlistDetailSongs = [];
+    var playlistPageGeneration = 0;
+    var playlistNextOffset = 0;
+    var playlistHasMore = false;
     var playlistSearchGeneration = {};
 
     function el(id){ return document.getElementById(id); }
@@ -464,6 +468,10 @@
       showView('playlist');
       playlistDetailItem=item;
       playlistDetailSongs=[];
+      playlistPageGeneration+=1;
+      playlistNextOffset=0;
+      playlistHasMore=false;
+      addClass(el('playlist-load-more-btn'),'hidden');
       addClass(el('playlist-featured'),'hidden');
       addClass(el('playlist-detail-panel'),'hidden');
       removeClass(el('playlist-detail-panel'),'hidden');
@@ -478,25 +486,43 @@
       if(item.coverImgUrl){cover.style.backgroundImage='url("'+String(item.coverImgUrl).replace(/"/g,'%22')+'")';cover.innerHTML='';}
       else{cover.style.backgroundImage='';cover.innerHTML='♫';}
 
-      requestJson('/api/netease-playlists?id='+encodeURIComponent(String(item.id))+'&limit=200',function(err,data){
-        if(!playlistDetailItem||String(playlistDetailItem.id)!==String(item.id))return;
+      loadPlaylistPage(item, false);
+    }
+
+    function loadPlaylistPage(item, append){
+      if(!item || !playlistDetailItem || String(item.id)!==String(playlistDetailItem.id))return;
+      var generation=playlistPageGeneration;
+      var offset=append?playlistNextOffset:0;
+      var more=el('playlist-load-more-btn');
+      addClass(more,'hidden');
+      el('playlist-detail-status').innerHTML=append?'正在加载更多歌曲……':'正在读取歌单歌曲……';
+      requestJson('/api/netease-playlists?id='+encodeURIComponent(String(item.id))+'&offset='+offset+'&limit=50',function(err,data){
+        if(generation!==playlistPageGeneration || !playlistDetailItem || String(playlistDetailItem.id)!==String(item.id))return;
         if(err){
           el('playlist-detail-status').innerHTML='加载失败：'+escapeHtml(err.message||err);
-          el('playlist-detail-songs').innerHTML='<div class="empty-note">无法读取歌单歌曲</div>';
+          if(!append)el('playlist-detail-songs').innerHTML='<div class="empty-note">无法读取歌单歌曲</div>';
+          if(append){more.innerHTML='重试加载更多';removeClass(more,'hidden');}
           return;
         }
         var playlist=data&&data.playlist?data.playlist:item;
-        playlistDetailSongs=data&&data.songs instanceof Array?data.songs:[];
+        var pageSongs=data&&data.songs instanceof Array?data.songs:[];
+        playlistDetailSongs=append?playlistDetailSongs.concat(pageSongs):pageSongs;
+        playlistNextOffset=Number(data&&data.nextOffset);
+        if(!isFinite(playlistNextOffset)||playlistNextOffset<=offset)playlistNextOffset=offset+50;
+        playlistHasMore=Boolean(data&&data.hasMore);
         el('playlist-detail-name').innerHTML=escapeHtml(playlist.name||item.name||'未命名歌单');
         el('playlist-detail-creator').innerHTML='创建者：'+escapeHtml(playlist.creator||item.creator||'—');
         el('playlist-detail-count').innerHTML=escapeHtml((playlist.trackCount||playlistDetailSongs.length)+' 首歌曲');
         el('playlist-detail-description').innerHTML=escapeHtml(playlist.description||item.description||'暂无简介');
-        el('playlist-detail-status').innerHTML=playlistDetailSongs.length+' 首歌曲';
+        el('playlist-detail-status').innerHTML='已加载 '+playlistDetailSongs.length+' 首歌曲';
         renderPlaylistSongs(playlistDetailSongs);
-      });
+        if(playlistHasMore){more.innerHTML='加载更多歌曲';removeClass(more,'hidden');}
+      },25000);
+
     }
 
     function closePlaylistDetail(){
+      playlistPageGeneration+=1;
       playlistDetailItem=null;
       playlistDetailSongs=[];
       addClass(el('playlist-detail-panel'),'hidden');
@@ -544,7 +570,7 @@
       return list instanceof Array?list:[];
     }
 
-    function requestJson(path,callback){
+    function requestJson(path,callback,timeoutMs){
       var xhr=new XMLHttpRequest(); var done=false;
       function finish(err,data){if(done)return;done=true;callback(err,data);}
       xhr.onreadystatechange=function(){
@@ -555,7 +581,7 @@
       };
       xhr.onerror=function(){finish(new Error('网络请求失败'));};
       try{xhr.open('GET',path,true);xhr.send(null);}catch(e){finish(e);}
-      setTimeout(function(){if(done)return;try{xhr.abort();}catch(e){};finish(new Error('请求超时'));},12000);
+      setTimeout(function(){if(done)return;try{xhr.abort();}catch(e){};finish(new Error('请求超时'));},timeoutMs||12000);
     }
 
     function searchPlaylists(keyword,hostId){
@@ -698,6 +724,9 @@
     };})(tabs[j]);
     var mytabs=all('.my-tab');
     for(var m=0;m<mytabs.length;m+=1) mytabs[m].onclick=(function(btn){return function(){myTab=btn.getAttribute('data-my-tab');renderMyList();};})(mytabs[m]);
+    el('playlist-load-more-btn').onclick=function(){
+      if(playlistDetailItem&&playlistHasMore)loadPlaylistPage(playlistDetailItem,true);
+    };
     el('global-search-btn').onclick=doGlobalSearch;
     el('global-search-input').onkeydown=function(e){e=e||global.event;if(e&&e.keyCode===13)doGlobalSearch();};
     var cats=all('.category-pill');

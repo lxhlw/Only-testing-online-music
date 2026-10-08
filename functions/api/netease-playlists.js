@@ -18,9 +18,16 @@ export async function onRequest(context){
   var keyword=String(url.searchParams.get('s')||'').replace(/^\s+|\s+$/g,'');
   var id=String(url.searchParams.get('id')||'');
   var limit=Number(url.searchParams.get('limit')||20);
+  if(!isFinite(limit)||limit<1)limit=20;
+  limit=Math.floor(limit);
+  var offset=Number(url.searchParams.get('offset')||0);
+  if(!isFinite(offset)||offset<0)offset=0;
+  offset=Math.floor(offset);
   // NetEase's current public playlist endpoint is /api/v6/playlist/detail.
   // It exposes full trackIds, while tracks may contain only a short preview.
   if(id){
+    // Fetch one bounded page at a time. The UI can request subsequent pages.
+    limit=Math.min(limit,50);
     var detailUrl=new URL('https://music.163.com/api/v6/playlist/detail');
     detailUrl.searchParams.set('id',id);
     detailUrl.searchParams.set('n','100000');
@@ -36,14 +43,15 @@ export async function onRequest(context){
       var detail=detailData.playlist;
       var trackIds=Array.isArray(detail.trackIds)?detail.trackIds:[];
       var previewTracks=Array.isArray(detail.tracks)?detail.tracks:[];
-      var requestedLimit=Math.min(limit,trackIds.length||previewTracks.length||1);
+      var totalTracks=trackIds.length||previewTracks.length;
+      var requestedLimit=Math.min(limit,Math.max(0,totalTracks-offset));
       var ids=[];
       var seenIds={};
-      for(var ii=0;ii<trackIds.length&&ids.length<requestedLimit;ii+=1){
+      for(var ii=offset;ii<trackIds.length&&ids.length<requestedLimit;ii+=1){
         var trackId=trackIds[ii]&&trackIds[ii].id!=null?String(trackIds[ii].id):'';
         if(trackId&&!seenIds[trackId]){seenIds[trackId]=true;ids.push(trackId);}
       }
-      for(var pi=0;pi<previewTracks.length&&ids.length<requestedLimit;pi+=1){
+      for(var pi=trackIds.length?previewTracks.length:offset;pi<previewTracks.length&&ids.length<requestedLimit;pi+=1){
         var previewId=previewTracks[pi]&&previewTracks[pi].id!=null?String(previewTracks[pi].id):'';
         if(previewId&&!seenIds[previewId]){seenIds[previewId]=true;ids.push(previewId);}
       }
@@ -73,14 +81,20 @@ export async function onRequest(context){
       var songs=[];
       if(ids.length){
         // Keep batches modest for legacy-friendly request sizes.
-        for(var offset=0;offset<ids.length&&songs.length<requestedLimit;offset+=50){
-          var chunk=ids.slice(offset,offset+50);
+        for(var batchOffset=0;batchOffset<ids.length&&songs.length<requestedLimit;batchOffset+=50){
+          var chunk=ids.slice(batchOffset,batchOffset+50);
           var songUrl=new URL('https://music.163.com/api/song/detail');
           songUrl.searchParams.set('id',chunk[0]);
           songUrl.searchParams.set('ids','['+chunk.join(',')+']');
-          var songUpstream=await fetch(songUrl.toString(),{method:'GET',headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36','Referer':'https://music.163.com/','Accept':'application/json, text/plain, */*'}});
-          if(songUpstream.status<200||songUpstream.status>=300)continue;
-          var songText=await songUpstream.text();
+          var songText='';
+          var songController=new AbortController();
+          var songTimeoutId=setTimeout(function(){try{songController.abort();}catch(e){}},8000);
+          try{
+            var songUpstream=await fetch(songUrl.toString(),{method:'GET',headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36','Referer':'https://music.163.com/','Accept':'application/json, text/plain, */*'},signal:songController.signal});
+            if(songUpstream.status<200||songUpstream.status>=300)continue;
+            songText=await songUpstream.text();
+          }catch(e){continue;}
+          finally{clearTimeout(songTimeoutId);}
           var songData=null;
           try{songData=JSON.parse(String(songText||'').replace(/^\uFEFF/,'').replace(/^\s+|\s+$/g,''));}catch(e){}
           var songList=songData&&Array.isArray(songData.songs)?songData.songs:[];
@@ -93,7 +107,7 @@ export async function onRequest(context){
 
       // Fallback to the preview tracks for public or restricted playlists.
       if(!songs.length&&previewTracks.length){
-        for(var ri=0;ri<previewTracks.length&&songs.length<requestedLimit;ri+=1){
+        for(var ri=offset;ri<previewTracks.length&&songs.length<requestedLimit;ri+=1){
           var fallback=normalizeTrack(previewTracks[ri]);
           if(fallback.id&&fallback.name)songs.push(fallback);
         }
@@ -101,13 +115,15 @@ export async function onRequest(context){
       return jsonResponse({
         playlist:{id:String(detail.id),name:String(detail.name||''),description:String(detail.description||''),coverImgUrl:String(detail.coverImgUrl||''),trackCount:Number(detail.trackCount)||trackIds.length||songs.length,creator:detail.creator&&detail.creator.nickname?String(detail.creator.nickname):'',playCount:Number(detail.playCount)||0},
         songs:songs,
-        total:trackIds.length||Number(detail.trackCount)||songs.length
+        total:totalTracks,
+        nextOffset:Math.min(totalTracks,offset+requestedLimit),
+        hasMore:offset+requestedLimit<totalTracks
       },200,request);
     }catch(e){
       return jsonResponse({error:'NetEase playlist detail request failed',message:e&&e.name==='AbortError'?'NetEase playlist detail upstream timed out':(e&&e.message?e.message:'Unknown upstream error')},502,request);
     }finally{clearTimeout(detailTimeoutId);}
-  }  if(!isFinite(limit)||limit<1)limit=20;
-  limit=Math.min(Math.floor(limit),30);
+  }
+  limit=Math.min(limit,30);
   var target=new URL('https://music.163.com/api/cloudsearch/pc');
   var body=new URLSearchParams();
   body.set('s',keyword||'热门');
