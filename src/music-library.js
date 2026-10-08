@@ -86,7 +86,12 @@
     if (old >= 0) list.splice(old, 1);
     if (atFront) list.unshift(item);
     else list.push(item);
-    while (list.length > limit) list.pop();
+    // New queue entries are appended: evict the oldest entry, not the
+    // just-added song. History/favorites are prepended and retain pop().
+    while (list.length > limit) {
+      if (atFront) list.pop();
+      else list.shift();
+    }
     return true;
   }
 
