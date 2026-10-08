@@ -1,0 +1,51 @@
+name: Default Sources And Via Regression (PR)
+
+on:
+  pull_request:
+    paths:
+      - "src/source-manager.js"
+      - "src/app.js"
+      - "index.html"
+      - "scripts/test-default-sources-legacy-browser.mjs"
+      - "scripts/test-playlist-via-navigation-browser.mjs"
+      - ".github/workflows/default-sources-via-regression.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  via-defaults:
+    name: New-device auto sources and Via playlist/search
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - run: npm install --no-audit --no-fund
+      - name: Validate ES5, page assets and source selection
+        run: |
+          node --check src/source-manager.js
+          node --check src/app.js
+          node scripts/test-version.mjs
+          node scripts/test-legacy-web.mjs
+          node scripts/test-source-selection.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Start Pages simulator
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/default-via.log 2>&1 &
+          for i in {1..45}; do
+            if curl -fsS http://127.0.0.1:8788/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/default-via.log
+          exit 1
+      - name: Test new device auto import and Via 成都 search
+        run: node scripts/test-default-sources-legacy-browser.mjs
+      - name: Test Via playlist detail stays visible and tracks work
+        run: node scripts/test-playlist-via-navigation-browser.mjs
+      - name: Show logs on failure
+        if: failure()
+        run: cat /tmp/default-via.log || true
