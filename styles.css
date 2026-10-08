@@ -68,6 +68,8 @@ h3{font-size:14px}
 .playlist-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:12px}
 .playlist-detail-panel{background:#fff;border:1px solid #dce1e7;border-radius:8px;overflow:hidden}
 .playlist-detail-panel.hidden{display:none}
+#playlist-load-more-btn{display:block;margin:10px auto 16px;padding:8px 18px}
+#playlist-load-more-btn.hidden{display:none}
 .playlist-detail-toolbar{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid #e8ebef;background:#f7f8fa}
 .playlist-detail-actions{display:flex;gap:6px}
 .playlist-detail-actions button{min-height:30px;font-size:11px}
