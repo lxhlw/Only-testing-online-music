@@ -34,13 +34,38 @@
   function renderSources(items) {
     countEl.innerHTML = String(items.length);
     listEl.innerHTML = '';
+    var current = global.LXSourceManager && global.LXSourceManager.getActive ?
+      global.LXSourceManager.getActive() : null;
+    var selectedName = current && current.name ? String(current.name) : '未选择';
+    var summary = document.getElementById('active-source-summary');
+    if (summary) {
+      summary.className = 'active-source-summary' + (current ? ' is-selected' : '');
+      if (current) {
+        var currentState = current.inited ? '已就绪' : (current.error ? '初始化失败' : '正在初始化');
+        summary.innerHTML = '<span class="active-source-summary-label">当前使用音源</span>' +
+          '<strong class="active-source-summary-name">' + escapeHtml(selectedName) + '</strong>' +
+          '<span class="active-source-summary-state">状态：' + currentState + '</span>';
+      } else {
+        summary.innerHTML = '<span class="active-source-summary-label">当前使用音源</span>' +
+          '<strong class="active-source-summary-name">尚未选择音源</strong>';
+      }
+    }
+    var topSource = document.getElementById('top-source-label');
+    if (topSource) {
+      topSource.className = 'topbar-chip top-source-indicator' + (current ? ' is-selected' : '');
+      topSource.textContent = '当前音源：' + selectedName;
+      topSource.title = '当前音源：' + selectedName;
+    }
 
     for (var i = 0; i < items.length; i += 1) {
       var item = items[i];
+      var isCurrent = !!(current && String(current.id) === String(item.id));
       var box = document.createElement('div');
-      box.className = 'source-item';
+      box.className = 'source-item' + (isCurrent ? ' is-active-source' : '');
+      if (isCurrent) box.setAttribute('aria-current', 'true');
 
-      var meta = '<div class="source-name">' + escapeHtml(item.name) + '</div>';
+      var meta = '<div class="source-name-row"><div class="source-name">' + escapeHtml(item.name) + '</div>' +
+        (isCurrent ? '<span class="source-current-badge">✓ 当前使用中</span>' : '') + '</div>';
       meta += '<div class="source-meta">版本：' + escapeHtml(item.version || '—') + '</div>';
       meta += '<div class="source-meta">URL：' + escapeHtml(item.url) + '</div>';
       meta += '<div class="source-meta">初始化：' + (item.inited ? '<span class="ready">READY</span>' : '<span class="pending">WAIT</span>') + '</div>';
@@ -53,10 +78,14 @@
 
       var activate = document.createElement('button');
       activate.type = 'button';
-      activate.innerHTML = '设为当前';
+      activate.className = 'source-activate-button' + (isCurrent ? ' is-current' : '');
+      activate.innerHTML = isCurrent ? '✓ 当前使用中' : '设为当前音源';
+      activate.disabled = isCurrent;
+      activate.setAttribute('aria-label', (isCurrent ? '当前使用音源：' : '切换到音源：') + String(item.name || '未命名音源'));
       activate.onclick = (function (sourceItem) {
         return function () {
-          global.LXSourceManager.activate(sourceItem.id);
+          var selected = global.LXSourceManager.activate(sourceItem.id);
+          if (selected) setStatus('已切换当前音源：' + escapeHtml(selected.name), 'ready');
         };
       })(item);
       buttons.appendChild(activate);
