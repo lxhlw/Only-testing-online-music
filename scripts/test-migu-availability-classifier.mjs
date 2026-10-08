@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict'
+import { endpointLabel, summarizeResolver, classifyPlayback } from './migu-availability-classifier.mjs'
+
+assert.equal(endpointLabel('https://music.gdstudio.xyz/time?secret=redacted'), 'gd-clock')
+assert.equal(endpointLabel('https://lxmusicapi.onrender.com/url/mg/id/320k'), 'huibq-resolver')
+assert.equal(endpointLabel('https://app.c.nf.migu.cn/strategy/listen-url'), 'migu-official')
+const challenge = summarizeResolver(403, 'text/html', '<html><title>Just a moment...</title></html>', 'https://music.gdstudio.xyz/time')
+assert.equal(challenge.signal, 'upstream_access_challenge')
+assert.equal(challenge.businessCode, null)
+assert.equal(challenge.mediaHost, null)
+assert.equal(summarizeResolver(403, 'application/json', '{"error":"blocked"}', 'https://example.org').signal, 'upstream_http_error')
+console.log('PASS: third-party challenge is distinguished from ordinary HTTP failure')
+
+const rejected = summarizeResolver(200,'application/json','{"code":"201007","info":"restricted"}','https://app.c.nf.migu.cn/strategy/listen-url')
+assert.equal(rejected.signal, 'upstream_business_rejection')
+assert.equal(rejected.businessCode, '201007')
+const noUrl = summarizeResolver(200,'application/json','{"code":"000000","data":{"cannotCode":"x","dialogInfo":[]}}','https://c.musicapp.migu.cn/strategy/listen-url/h5/v2.4')
+assert.equal(noUrl.signal, 'no_media_url')
+assert.equal(summarizeResolver(200,'application/json','{"code":"000000","image":"https://image.test/cover.jpg"}','https://example.org').signal, 'no_media_url')
+console.log('PASS: business success without audio is never counted as playback')
+
+const wrong = summarizeResolver(200,'application/json','{"code":0,"url":"https://panspace.kuwo.cn/song.mp3?auth=secret"}','https://lxmusicapi.onrender.com/url/mg/id/128k')
+assert.equal(wrong.signal, 'cross_platform_media')
+assert.equal(wrong.mediaHost, 'panspace.kuwo.cn')
+assert.ok(!JSON.stringify(wrong).includes('secret'))
+const candidate = summarizeResolver(200,'application/json','{"code":0,"url":"https://media.migu.cn/audio.mp3?t=secret"}','https://lxmusicapi.onrender.com/url/mg/id/128k')
+assert.equal(candidate.signal, 'media_url_returned_unverified')
+assert.notEqual(classifyPlayback({ paused:true, currentTime:0, readyState:0, outcomes:[candidate] }), 'confirmed_audio_progress')
+console.log('PASS: only sanitized hosts are logged and a returned URL does not equal playback')
+
+assert.equal(classifyPlayback({paused:false,ended:false,currentTime:1.8,readyState:3,duration:190,outcomes:[challenge]}),'confirmed_audio_progress')
+assert.equal(classifyPlayback({paused:false,ended:false,currentTime:1.8,readyState:3,duration:11,outcomes:[]}), 'playback_not_confirmed')
+assert.equal(classifyPlayback({paused:true,currentTime:0,readyState:0,outcomes:[wrong]}), 'cross_platform_fallback_rejected')
+assert.equal(classifyPlayback({paused:true,currentTime:0,readyState:0,outcomes:[rejected]}), 'upstream_business_rejection')
+assert.equal(classifyPlayback({paused:true,currentTime:0,readyState:0,outcomes:[noUrl]}), 'upstream_no_audio_url')
+console.log('PASS: audio progress classification excludes 11-second prompt/error audio')
