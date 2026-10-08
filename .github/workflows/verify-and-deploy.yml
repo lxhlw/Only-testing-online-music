@@ -96,6 +96,9 @@ jobs:
       - name: Run responsive layout browser test
         run: node scripts/test-responsive-browser.mjs
 
+      - name: Run search results overflow regression
+        run: node scripts/test-search-layout-browser.mjs
+
       - name: Run music library test
         run: node scripts/test-music-library.mjs
 
@@ -189,6 +192,11 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
         run: node scripts/test-responsive-browser.mjs
+
+      - name: Verify deployed search actions are on screen
+        env:
+          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
+        run: node scripts/test-search-layout-browser.mjs
 
       - name: Verify deployed playlist detail
         env:
