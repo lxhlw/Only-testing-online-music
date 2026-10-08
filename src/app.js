@@ -508,7 +508,7 @@
     }
     // LX Music Desktop passes Migu songmid (the search API songId) and
     // copyrightId separately, without synthesizing a hash. Huibq's source
-    // resolves "musicInfo.hash ?? musicInfo.songmid"; setting an empty hash
+    // prefers a defined musicInfo.hash over musicInfo.songmid; an empty hash
     // to copyrightId changes the requested track ID and can break playback.
     // Our normalized search results always contain hash: '', so remove only
     // blank hashes to restore the desktop source's songmid fallback.
