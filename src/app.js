@@ -475,6 +475,13 @@
     return value;
   }
 
+  function unavailablePlaybackMessage(source) {
+    if (source === 'mg') {
+      return '咪咕这首歌曲暂无可用的播放地址：当前音源和官方解析接口未能提供有效音频，可能受到授权、地区或接口可用性限制。请试试同平台其他歌曲或稍后重试。';
+    }
+    return '';
+  }
+
   function buildMusicInfo(music, source) {
     var musicInfo = {};
     var key;
@@ -492,6 +499,15 @@
     musicInfo.songId = musicInfo.songId || music.id;
     if (!musicInfo.songmid && !musicInfo.hash && music.id != null) {
       musicInfo.songmid = String(music.id);
+    }
+    // The legacy Huibq adapter selects hash whenever it is not null,
+    // including an empty string. Migu search results can expose hash=''
+    // alongside a valid copyrightId, producing /url/mg//320k (HTTP 404).
+    // Use the authoritative Migu copyright ID for that missing field only.
+    if (source === 'mg' && !String(musicInfo.hash == null ? '' : musicInfo.hash).replace(/^\\s+|\\s+$/g, '')) {
+      var miguId = musicInfo.copyrightId || musicInfo.copyright_id ||
+        musicInfo.songmid || musicInfo.id;
+      if (miguId != null && String(miguId)) musicInfo.hash = String(miguId);
     }
     musicInfo.name = musicInfo.name || '';
     musicInfo.singer = musicInfo.singer || '';
@@ -816,6 +832,7 @@
               return requestQuality(music, source, musicInfo, plan, index + 1, token);
             }
 
+            if (source === 'mg') return setStatus(unavailablePlaybackMessage(source), 'fail');
             return setStatus(
               'musicUrl 备用解析失败（' + escapeHtml(quality) + '）：'
               + escapeHtml(
@@ -1119,7 +1136,11 @@
           var resolverErrorCode = resolverAudio && resolverAudio.error && resolverAudio.error.code
             ? '（错误码 ' + resolverAudio.error.code + '）'
             : '';
-          setStatus('当前音质无法播放，备用解析器也无法提供可用地址' + resolverErrorCode + '。', 'fail');
+          if (state.source === 'mg') {
+            setStatus(unavailablePlaybackMessage(state.source), 'fail');
+          } else {
+            setStatus('当前音质无法播放，备用解析器也无法提供可用地址' + resolverErrorCode + '。', 'fail');
+          }
         },
         { skipProvider: failedProvider === 'lx-source' ? '' : failedProvider }
       );
