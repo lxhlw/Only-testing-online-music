@@ -1,0 +1,66 @@
+name: Search Layout Regression (PR)
+
+on:
+  pull_request:
+    paths:
+      - "styles.css"
+      - "index.html"
+      - "settings.html"
+      - "scripts/test-search-layout-browser.mjs"
+      - ".github/workflows/search-layout-regression.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  search-layout:
+    name: Search result overflow and responsive regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Check project version and legacy syntax
+        run: |
+          node scripts/test-version.mjs
+          node scripts/test-legacy-web.mjs
+          node --check scripts/test-search-layout-browser.mjs
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start local Pages server
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/search-layout-server.log 2>&1 &
+          for i in {1..45}; do
+            if curl --fail --silent http://127.0.0.1:8788/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/search-layout-server.log
+          exit 1
+
+      - name: Test search results visibility at eight viewport widths
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-search-layout-browser.mjs
+
+      - name: Test existing responsive navigation
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-responsive-browser.mjs
+
+      - name: Display server logs on failure
+        if: failure()
+        run: cat /tmp/search-layout-server.log || true

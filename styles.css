@@ -386,3 +386,93 @@ h1{font-size:19px;font-weight:500}
   .player-center audio{width:52vw;max-width:none}
   .player-lyric{flex:1;min-width:0}
 }
+
+
+/* Search results: keep all five items (row number, title, singer, source,
+   action buttons) inside the viewport. Flexbox also supports legacy WebView.
+   Scoped rules avoid changing playlist detail and ranking rows. */
+#search-results > .search-row{
+  display:flex;
+  align-items:center;
+  min-width:0;
+  max-width:100%;
+  padding:7px 4px;
+}
+#search-results > .search-row:before{
+  display:block;
+  flex:0 0 25px;
+  margin-right:6px;
+}
+#search-results > .search-row > b{
+  display:block;
+  flex:2 1 0;
+  min-width:0;
+  margin-right:9px;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+#search-results > .search-row > span{
+  display:block;
+  flex:1 1 0;
+  min-width:0;
+  margin-right:9px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#search-results > .search-row > .search-source{
+  display:block;
+  flex:0 0 70px;
+  width:70px;
+  max-width:70px;
+  margin-right:9px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#search-results > .search-row > .search-actions{
+  display:flex;
+  flex:0 0 auto;
+  align-items:center;
+  justify-content:flex-end;
+  min-width:0;
+  margin:0;
+  white-space:nowrap;
+}
+@media(max-width:820px){
+  #search-results > .search-row > span{display:none}
+}
+@media(max-width:680px){
+  #search-results > .search-row{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:flex-start;
+    padding:8px 2px;
+  }
+  #search-results > .search-row:before{display:none}
+  #search-results > .search-row > b{
+    flex:1 0 100%;
+    margin:0 0 5px;
+  }
+  #search-results > .search-row > span{display:none}
+  #search-results > .search-row > .search-source{
+    flex:0 0 auto;
+    width:auto;
+    max-width:100%;
+    margin:0;
+  }
+  #search-results > .search-row > .search-actions{
+    flex:1 1 100%;
+    width:100%;
+    margin-top:6px;
+    justify-content:flex-start;
+    flex-wrap:wrap;
+    white-space:normal;
+  }
+  #search-results > .search-row > .search-actions button{
+    margin-left:0;
+    margin-right:4px;
+    min-height:31px;
+  }
+}
