@@ -119,6 +119,9 @@ jobs:
       - name: Run active LX source persistence test
         run: node scripts/test-source-selection.mjs
 
+      - name: Verify Migu musicInfo ID mapping and clear no-URL errors
+        run: node scripts/test-migu-track-ids.mjs
+
       - name: Run lyrics test
         run: node scripts/test-music-lyrics.mjs
 
