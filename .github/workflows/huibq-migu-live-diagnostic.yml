@@ -48,6 +48,7 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
           MIGU_EXPECT_VALID_ID: 'true'
+          MIGU_EXPECT_DESKTOP_PARITY: 'true'
           MIGU_REQUIRE_PLAYBACK: 'false'
           MIGU_PROBE_TIMEOUT_MS: 36000
           MIGU_REQUIRE_25S_BOUND: 'true'
