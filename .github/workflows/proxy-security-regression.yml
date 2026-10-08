@@ -5,6 +5,7 @@ on:
     paths:
       - "functions/api/proxy.js"
       - "scripts/test-proxy-security.mjs"
+      - "scripts/test-lx-desktop-migu-parity-browser.mjs"
       - "scripts/test-proxy-production.mjs"
       - ".github/workflows/proxy-security-regression.yml"
   workflow_dispatch:
@@ -73,6 +74,11 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-quality-fallback-browser.mjs
+
+      - name: Validate Huibq Migu desktop-compatible URL and headers
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-lx-desktop-migu-parity-browser.mjs
 
       - name: Check Huibq import and WY music search
         env:
