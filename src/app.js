@@ -1625,6 +1625,7 @@
 
   function renderSearchResults(items) {
     resultsEl.innerHTML = '';
+    var fragment = document.createDocumentFragment();
     for (var i = 0; i < items.length; i += 1) {
       var item = items[i];
       var row = document.createElement('div');
@@ -1669,8 +1670,9 @@
       actions.appendChild(favoriteButton);
 
       row.appendChild(actions);
-      resultsEl.appendChild(row);
+      fragment.appendChild(row);
     }
+    resultsEl.appendChild(fragment);
   }
 
   global.OnlyTestingMusicApp = {
