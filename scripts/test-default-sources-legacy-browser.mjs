@@ -49,6 +49,8 @@ try {
   assert.equal(state.runtimeEnv,'desktop','Legacy Via must expose desktop LX API environment')
   assert.ok(state.supported.includes('MG'))
   assert.ok(state.supported.includes('WY'))
+  assert.equal(await page.locator('#channel-list .channel-button.active').getAttribute('title'),'WY',
+    'Android 4.4 Via should initially search the lighter same-origin WY channel')
   await page.locator('#channel-list button[title="MG"]').click()
   await page.locator('#global-search-input').fill('成都')
   await page.locator('#global-search-btn').click()
