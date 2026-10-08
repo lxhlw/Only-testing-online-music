@@ -39,14 +39,13 @@ try {
 
   const firstCardName = (await cards.first().locator('.playlist-name').textContent() || '').trim()
   assert.ok(firstCardName, 'Playlist card has no name')
-  await cards.first().locator('.playlist-open-button').click()
-
   const detailApi = []
   page.on('response', response => {
     if (response.url().includes('/api/netease-playlists?id=')) {
       detailApi.push({ status: response.status(), url: response.url() })
     }
   })
+  await cards.first().locator('.playlist-open-button').click()
   try {
     await page.waitForFunction(() => {
       const panel = document.getElementById('playlist-detail-panel')
@@ -54,7 +53,7 @@ try {
       const status = document.getElementById('playlist-detail-status')?.textContent || ''
       return Boolean(panel && !/\\bhidden\\b/.test(panel.className) &&
         (songs.length > 0 || /加载失败|已加载 0 首/.test(status)))
-    }, null, { timeout: 20000 })
+    }, null, { timeout: 30000 })
   } catch (error) {
     const diagnostics = await page.evaluate(() => ({
       status: document.getElementById('playlist-detail-status')?.textContent || '',
