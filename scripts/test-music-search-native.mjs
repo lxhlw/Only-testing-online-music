@@ -1636,3 +1636,56 @@ console.log('PASS: LX search routing stays channel-bound and never mixes provide
   }).length, 1)
 }
 
+
+
+{
+  // Migu may return HTTP 200 with artwork and subscription pages, but no
+  // media. The fallback must ignore those and continue to a real audio URL.
+  const h = createHarness(
+    { mg: { actions: ['musicUrl'] } },
+    () => {},
+    {
+      miguStrategyV24Url: {
+        status: 200,
+        body: JSON.stringify({
+          code: '000000',
+          data: {
+            cover: 'https://images.example.test/song-cover.jpg',
+            dialogInfo: [{ url: 'https://promo.example.test/subscribe.html' }],
+            requestLogUrl: 'https://metrics.example.test/collect'
+          }
+        })
+      },
+      miguStrategyListenUrl: {
+        status: 200,
+        body: JSON.stringify({
+          code: '000000',
+          data: { url: 'https://images.example.test/album.webp' }
+        })
+      },
+      miguPcListenUrl: {
+        status: 200,
+        body: JSON.stringify({
+          code: '000000',
+          data: { playUrl: 'https://audio.example.test/verified-migu.mp3?sig=test' }
+        })
+      }
+    }
+  )
+
+  const result = await new Promise((resolve, reject) => {
+    h.sandbox.LXMusicSearch.resolveMusicUrl('mg', {
+      id: 'mg-song-566', songmid: 'mg-song-566', copyrightId: 'mg-copy-566',
+      contentId: 'mg-content-566', resourceType: '2'
+    }, '128k', (err, value) => err ? reject(err) : resolve(value))
+  })
+  assert.equal(result.provider, 'migu-native-pc-v2.0')
+  assert.equal(result.url, 'https://audio.example.test/verified-migu.mp3?sig=test')
+  const calls = h.calls.map(call => {
+    try { return new URL(call.xhrUrl).searchParams.get('url') || '' }
+    catch { return '' }
+  })
+  assert.ok(calls.some(url => url.includes('strategy/listen-url/h5/v2.4')))
+  assert.ok(calls.some(url => url.includes('strategy/pc/listen/v2.0')))
+  console.log('PASS: Migu artwork, subscription and telemetry URLs cannot replace audio')
+}
