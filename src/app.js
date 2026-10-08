@@ -39,6 +39,7 @@
     listEl.innerHTML = '';
     var current = global.LXSourceManager && global.LXSourceManager.getActive ?
       global.LXSourceManager.getActive() : null;
+    cancelStaleMiguPlaybackOnSourceChange(current);
     var selectedName = current && current.name ? String(current.name) : '未选择';
     var summary = document.getElementById('active-source-summary');
     if (summary) {
@@ -751,6 +752,28 @@
     );
   }
 
+  function cancelStaleMiguPlaybackOnSourceChange(active) {
+    var state = playbackState;
+    if (!state || state.source !== 'mg' || state.token !== playbackToken) return;
+    var currentId = String(active && (active.id || active.url) || '');
+    if (String(state.activeSourceId || '') === currentId) return;
+    clearMiguPlaybackDeadline(state);
+    clearPlaybackConfirmTimer(state);
+    playbackToken += 1;
+    state.waitingForAudio = false;
+    state.playing = false;
+    var audio = document.getElementById('audio');
+    if (!audio) return;
+    try { audio.pause(); } catch (e) {}
+    audio.onerror = null;
+    audio.onplaying = null;
+    audio.ontimeupdate = null;
+    audio.onloadedmetadata = null;
+    audio.onended = null;
+    try { audio.removeAttribute('src'); } catch (e) {}
+    try { if (typeof audio.load === 'function') audio.load(); } catch (e) {}
+  }
+
   function clearMiguPlaybackDeadline(state) {
     if (!state || !state.miguDeadlineTimer) return;
     try { global.clearTimeout(state.miguDeadlineTimer); } catch (e) {}
@@ -1017,7 +1040,8 @@
       sourceUrl: '',
       directProxyRetry: false,
       confirmTimer: null,
-      miguDeadlineTimer: null
+      miguDeadlineTimer: null,
+      activeSourceId: String(active.id || active.url || '')
     };
 
     armMiguPlaybackDeadline(playbackState);
