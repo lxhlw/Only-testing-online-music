@@ -16,7 +16,7 @@ function hostOfUrl(value) {
   try { return new URL(value).hostname.toLowerCase() } catch { return null }
 }
 export function summarizeResolver(status, contentType, body, target) {
-  const out = { endpoint: endpointLabel(target), httpStatus: Number(status), signal: 'unclassified', businessCode: null, mediaHost: null }
+  const out = { endpoint: endpointLabel(target), httpStatus: Number(status), signal: 'unclassified', businessCode: null, mediaHost: null, restrictionMetadataPresent: false }
   if (status >= 400) {
     out.signal = status === 403 && /just a moment|cf-chl-|cloudflare.*challenge/i.test(String(body || ''))
       ? 'upstream_access_challenge' : 'upstream_http_error'
@@ -29,7 +29,7 @@ export function summarizeResolver(status, contentType, body, target) {
   try { data = JSON.parse(body) }
   catch { out.signal = 'non_json_content'; return out }
   if (!data || typeof data !== 'object') { out.signal = 'no_media_url'; return out }
-  if (data.code != null) out.businessCode = String(data.code).slice(0, 24)
+  out.restrictionMetadataPresent = Boolean(data.data && typeof data.data === 'object' &&\n    (data.data.cannotCode !== undefined || data.data.dialogInfo !== undefined || data.data.freeListenType !== undefined))\n  if (data.code != null) out.businessCode = String(data.code).slice(0, 24)
   else if (data.status != null) out.businessCode = String(data.status).slice(0, 24)
   // Covers, artworks and URLs embedded in general search data are NOT media.
   for (const obj of [data, data.data, data.result, data.data?.data]) {
