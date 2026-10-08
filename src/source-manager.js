@@ -257,7 +257,7 @@
     persist(); notify();
   }
 
-  function installFromCode(code,url,callback) {
+  function installFromCode(code,url,callback,options) {
     var meta=parseMeta(code,url);
     var item={
       id:String(Date.now())+'-'+Math.floor(Math.random()*100000),
@@ -270,6 +270,13 @@
       if (err) {
         persist();
         if (callback) callback(err,item);
+        return;
+      }
+      if (options && options.expectedActiveId &&
+          (!active || active.id !== options.expectedActiveId)) {
+        // A user selected/imported another source while the auto-imported
+        // Flower source was being transpiled. Do not replace their choice.
+        if (callback) callback(null,active);
         return;
       }
       addOrReplace(item);
@@ -315,10 +322,10 @@
       if (err) return callback(err);
       if (!code || !String(code).replace(/\s+/g,'')) return callback(new Error('LX source code is empty'));
       installFromCode(String(code), originalUrl, function (installErr, item) {
-        if (item) item.transport = transport || null;
+        if (item && item.url === originalUrl) item.transport = transport || null;
         if (!installErr) persist();
         callback(installErr, item);
-      });
+      }, options);
     }
 
     function request(requestUrl, allowProxyFallback, transport) {
