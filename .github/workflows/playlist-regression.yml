@@ -39,6 +39,16 @@ jobs:
           node --check scripts/test-playlist-pagination-browser.mjs
           node --check scripts/test-playlist-browser.mjs
 
+      - name: Test existing project contracts and core modules
+        run: |
+          node scripts/test-version.mjs
+          node scripts/test-legacy-web.mjs
+          node scripts/test-music-library.mjs
+          node scripts/test-music-lyrics.mjs
+          node scripts/test-settings.mjs
+          node scripts/test-music-search-native.mjs
+          node scripts/test-source-transpiler.mjs
+
       - name: Test NetEase playlist API without external network
         run: node scripts/test-netease-playlists-api.mjs
 
@@ -56,6 +66,11 @@ jobs:
           done
           cat /tmp/playlist-wrangler.log
           exit 1
+
+      - name: Test responsive layout
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-responsive-browser.mjs
 
       - name: Test playlist UI with mocked API responses
         env:
