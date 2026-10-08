@@ -47,6 +47,8 @@ jobs:
         run: node scripts/test-default-sources-legacy-browser.mjs
       - name: Test manually selected source wins over delayed defaults
         run: node scripts/test-default-source-race-browser.mjs
+      - name: Verify actual 320k to 128k audio quality fallback
+        run: node scripts/test-quality-fallback-browser.mjs
       - name: Test Via playlist detail stays visible and tracks work
         run: node scripts/test-playlist-via-navigation-browser.mjs
       - name: Show logs on failure
