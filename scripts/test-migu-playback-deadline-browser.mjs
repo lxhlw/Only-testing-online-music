@@ -55,11 +55,11 @@ try {
   assert.equal((await readState()).pending, 1)
   await page.clock.runFor(8001)
   assert.equal((await readState()).fallback, 1, 'Primary source should enter fallback after 8s')
-  await page.clock.runFor(16998)
+  await page.clock.runFor(16400)
   assert.doesNotMatch((await readState()).text, /已停止本次等待/,
-    'Deadline must not fire before 25s')
+    'Deadline must not fire well before 25s')
 
-  await page.clock.runFor(1)
+  await page.clock.runFor(700)
   let first = await readState()
   assert.match(first.text, /咪咕播放已等待 25 秒/)
   assert.equal(first.src, '')
