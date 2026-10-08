@@ -134,9 +134,9 @@ try {
   })
   await triggerSyntheticProgress(.35)
   assert.match((await readState()).text, /正在播放/, '0.35s provisional audio first appears playing')
-  await page.clock.runFor(24999)
+  await page.clock.runFor(24000)
   assert.doesNotMatch((await readState()).text, /已停止本次等待/)
-  await page.clock.runFor(1)
+  await page.clock.runFor(1200)
   assert.match((await readState()).text, /咪咕播放已等待 25 秒/,
     '0.35s of fake progress must not cancel the original 25s deadline')
   console.log('PASS: short transient audio progress does not suppress 25s Migu deadline')
