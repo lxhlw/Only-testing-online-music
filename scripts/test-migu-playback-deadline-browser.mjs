@@ -147,11 +147,11 @@ try {
     calls[calls.length - 1](null, 'https://media.migu.cn/mock.mp3')
   })
   await triggerSyntheticProgress(.5)
-  for (let i = 1; i <= 5; i += 1) {
+  for (let i = 1; i <= 6; i += 1) {
     await page.clock.runFor(4000)
     await triggerSyntheticProgress(i * 4)
   }
-  await page.clock.runFor(5000)
+  await page.clock.runFor(1000)
   assert.match((await readState()).text, /正在播放/,
     'Continuously advancing, plausible music must stay playing at 25s')
   await page.clock.runFor(2000)
