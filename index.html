@@ -222,11 +222,12 @@
               <div class="section-header"><h2>音源管理</h2><span id="source-count" class="badge">0</span></div>
               <label for="source-url">LX 音源 URL</label>
               <input id="source-url" type="text" autocapitalize="off" autocomplete="off" spellcheck="false"
-                value="https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/latest.js">
+                value="https://ghproxy.net/raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js">
               <div class="source-setting-actions">
                 <button id="install-btn" type="button">导入音源</button>
                 <button id="verified-install-btn" type="button" class="secondary">一键导入 Huibq</button>
                 <button id="sixyin-install-btn" type="button" class="secondary">一键导入六音</button>
+                <button id="restore-default-sources-btn" type="button" class="secondary">恢复默认音源（Flower + Huibq）</button>
                 <button id="clear-btn" type="button" class="ghost-button">清空</button>
               </div>
               <div id="active-source-summary" class="active-source-summary" role="status" aria-live="polite"><span class="active-source-summary-label">当前使用音源</span><strong class="active-source-summary-name">尚未选择音源</strong></div>
@@ -465,9 +466,12 @@
 
     function openPlaylist(item){
       if(!item||item.id==null)return;
+      // Publish detail state BEFORE navigation. Otherwise showView('playlist')
+      // launches another featured-list search on slow legacy devices, which
+      // can re-render cards during the touch/click transition.
+      playlistDetailItem=item;
       playlistSearchGeneration['playlist-featured']=(playlistSearchGeneration['playlist-featured']||0)+1;
       showView('playlist');
-      playlistDetailItem=item;
       playlistDetailSongs=[];
       playlistPageGeneration+=1;
       playlistNextOffset=0;
@@ -523,6 +527,7 @@
     }
 
     function closePlaylistDetail(){
+      if (!playlistDetailItem) return;
       playlistPageGeneration+=1;
       playlistDetailItem=null;
       playlistDetailSongs=[];
@@ -602,6 +607,7 @@
     }
 
     function loadFeaturedPlaylists(){
+      if (playlistDetailItem) return;
       var host=el('playlist-featured'); if(!host)return;
       host.innerHTML='<div class="loading-note">正在读取推荐歌单……</div>';
       var q='?s='+encodeURIComponent(playlistCategory==='all'?'热门':playlistCategory)+'&offset=0&limit=12';
@@ -711,8 +717,9 @@
     var navs=all('.nav-item');
     for(var i=0;i<navs.length;i+=1){
       (function(view,node){
+        // A single click handler covers both mouse and synthesized mobile
+        // taps. Binding touchend as well causes double navigation in Via.
         node.onclick=function(event){return navigateFromNav(view,event||global.event);};
-        node.ontouchend=function(event){return navigateFromNav(view,event||global.event);};
       })(navs[i].getAttribute('data-view'),navs[i]);
     }
     var tabs=all('.view-tab');
@@ -743,7 +750,11 @@
       var selected=all('[data-playlist-platform="'+playlistPlatform+'"]');for(var y=0;y<selected.length;y+=1)addClass(selected[y],'active');
     };
 
-    el('playlist-back-btn').onclick=function(){closePlaylistDetail();};
+    el('playlist-back-btn').onclick=function(event){
+      if(event&&event.preventDefault)event.preventDefault();
+      closePlaylistDetail();
+      return false;
+    };
     el('playlist-play-all-btn').onclick=function(){
       if(!playlistDetailSongs.length){setStatus('当前歌单没有可播放歌曲。','warn');return;}
       for(var qi=playlistDetailSongs.length-1;qi>=1;qi-=1){
@@ -766,21 +777,30 @@
       var active= document.querySelector('.lyrics-line.active');
       el('player-lyric').innerHTML=active?'歌词：'+active.innerHTML:'歌词：—';
     };
+    var previousStatusText='',previousLyricText='',previousSourceName='';
     setInterval(function(){
+      if (document.hidden || document.webkitHidden) return;
       var title=el('player-title'),artist=el('player-artist');
       if(title&&el('rail-title')){}
       var status=el('status');
-      if(status&&el('bottom-play-status'))el('bottom-play-status').innerHTML=stripHtml(status.innerHTML).slice(0,32)||'就绪';
-      var lyric= document.querySelector('.lyrics-line.active');
-      el('player-lyric').innerHTML=lyric?'歌词：'+lyric.innerHTML:'歌词：—';
+      var statusText=status?stripHtml(status.innerHTML).slice(0,32)||'就绪':'';
+      if(statusText!==previousStatusText&&el('bottom-play-status')){
+        previousStatusText=statusText;el('bottom-play-status').textContent=statusText;
+      }
+      var lyric=document.querySelector('.lyrics-line.active');
+      var lyricText=lyric?'歌词：'+lyric.textContent:'歌词：—';
+      if(lyricText!==previousLyricText){
+        previousLyricText=lyricText;el('player-lyric').textContent=lyricText;
+      }
       var activeSource=global.LXSourceManager&&global.LXSourceManager.getActive?global.LXSourceManager.getActive():null;
       var currentSourceName=activeSource&&activeSource.name?String(activeSource.name):'未选择';
       var topSourceLabel=el('top-source-label');
-      if(topSourceLabel){
+      if(topSourceLabel&&currentSourceName!==previousSourceName){
+        previousSourceName=currentSourceName;
         topSourceLabel.textContent='当前音源：'+currentSourceName;
         topSourceLabel.title='当前音源：'+currentSourceName;
       }
-    },800);
+    },1200);
 
     function stripHtml(v){var d=document.createElement('div');d.innerHTML=v;return d.textContent||d.innerText||'';}
 
