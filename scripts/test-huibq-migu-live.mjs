@@ -102,6 +102,24 @@ try {
     return Boolean(row) || /搜索失败/.test(status)
   }, null, { timeout: 45000 })
 
+  // An occasional HTTP 0 from the external Migu search endpoint is a
+  // transient network failure and not evidence about the playback deadline.
+  // Retry once, then fail explicitly if the provider remains unavailable.
+  const firstSearch = await page.evaluate(() => ({
+    rows: document.querySelectorAll('#search-results .search-row').length,
+    status: document.querySelector('#status')?.textContent || ''
+  }))
+  if (!firstSearch.rows && /Search API HTTP 0/.test(firstSearch.status)) {
+    console.log('HUIBQ MG SEARCH NETWORK RETRY: first search returned HTTP 0')
+    await page.waitForTimeout(800)
+    await page.locator('#global-search-btn').click()
+    await page.waitForFunction(() => {
+      const rows = document.querySelectorAll('#search-results .search-row').length
+      const status = document.querySelector('#status')?.textContent || ''
+      return rows > 0 || /搜索失败/.test(status)
+    }, null, { timeout: 45000 })
+  }
+
   const initial = await page.evaluate(() => {
     const result = window.__LXLastSearchResults?.[0] || null
     const active = window.LXSourceManager?.getActive?.()
