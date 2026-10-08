@@ -101,6 +101,12 @@ jobs:
       - name: Run settings test
         run: node scripts/test-settings.mjs
 
+      - name: Run curated first-visit Via default sources and search test
+        run: node scripts/test-default-sources-legacy-browser.mjs
+
+      - name: Run Via playlist detail stability test
+        run: node scripts/test-playlist-via-navigation-browser.mjs
+
       - name: Run playlist browser test
         run: node scripts/test-playlist-browser.mjs
 
@@ -235,6 +241,11 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
         run: node scripts/test-migu-playback-deadline-browser.mjs
+
+      - name: Verify deployed Via first-visit defaults and 成都 search
+        env:
+          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
+        run: node scripts/test-default-sources-legacy-browser.mjs
 
       - name: Verify deployed playlist detail
         env:

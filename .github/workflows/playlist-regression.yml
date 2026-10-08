@@ -8,6 +8,7 @@ on:
       - "scripts/test-playlist-browser.mjs"
       - "scripts/test-netease-playlists-api.mjs"
       - "scripts/test-playlist-pagination-browser.mjs"
+      - "scripts/test-playlist-via-navigation-browser.mjs"
       - ".github/workflows/playlist-regression.yml"
   workflow_dispatch:
 
@@ -71,6 +72,9 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-responsive-browser.mjs
+
+      - name: Verify Via touch navigation holds the playlist detail
+        run: node scripts/test-playlist-via-navigation-browser.mjs
 
       - name: Test playlist UI with mocked API responses
         env:

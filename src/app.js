@@ -182,7 +182,12 @@
     }
 
     if (supported.indexOf(selectedChannel) < 0) {
-      selectedChannel = supported.indexOf('tx') >= 0 ? 'tx' : supported[0];
+      // Older Via browsers get the lighter same-origin NetEase search path
+      // on first load; users can still switch to MG and all other channels.
+      var legacyUa = String(global.navigator && global.navigator.userAgent || '');
+      var oldVia = /Android 4[.]4|Via[/]/i.test(legacyUa);
+      selectedChannel = oldVia && supported.indexOf('wy') >= 0
+        ? 'wy' : (supported.indexOf('tx') >= 0 ? 'tx' : supported[0]);
     }
 
     for (var i = 0; i < supported.length; i += 1) {
@@ -1452,6 +1457,17 @@
       document.getElementById('install-btn').click();
     };
 
+    var restoreSourcesButton = document.getElementById('restore-default-sources-btn');
+    if (restoreSourcesButton) restoreSourcesButton.onclick = function () {
+      restoreSourcesButton.disabled = true;
+      setStatus('正在恢复 Flower 与 Huibq 默认音源，请稍候……');
+      global.LXSourceManager.restoreDefaults(function (err) {
+        restoreSourcesButton.disabled = false;
+        if (err) setStatus('Huibq 已可用；Flower 导入暂时失败：' + escapeHtml(err.message || err), 'warn');
+        else setStatus('默认音源已就绪。可在上方选择当前音源。', 'ready');
+      });
+    };
+
     document.getElementById('clear-btn').onclick = function () {
       global.LXSourceManager.clear();
       setCheck('check-storage', 'pending');
@@ -1614,6 +1630,7 @@
 
   function renderSearchResults(items) {
     resultsEl.innerHTML = '';
+    var fragment = document.createDocumentFragment();
     for (var i = 0; i < items.length; i += 1) {
       var item = items[i];
       var row = document.createElement('div');
@@ -1658,8 +1675,9 @@
       actions.appendChild(favoriteButton);
 
       row.appendChild(actions);
-      resultsEl.appendChild(row);
+      fragment.appendChild(row);
     }
+    resultsEl.appendChild(fragment);
   }
 
   global.OnlyTestingMusicApp = {

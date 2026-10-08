@@ -3,6 +3,13 @@
 
   var STORAGE_KEY = 'only-testing-online-music.lx-sources';
   var ACTIVE_SOURCE_KEY = 'only-testing-online-music.active-source-id';
+  var DEFAULT_SOURCE_LAST_ATTEMPT_KEY = 'only-testing-online-music.default-source-attempt';
+  var DEFAULT_SOURCE_DISABLED_KEY = 'only-testing-online-music.default-source-disabled';
+  // User-confirmed Flower mirror, with the matching maintainer GitHub raw URL
+  // as a transport fallback. Never auto-import arbitrary repository contents.
+  var DEFAULT_FLOWER_URL = 'https://ghproxy.net/raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js';
+  var DEFAULT_FLOWER_RAW_URL = 'https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js';
+  var DEFAULT_RETRY_MS = 12 * 60 * 60 * 1000;
   var sources = [];
   var active = null;
 
@@ -171,9 +178,10 @@
     try {
       ua = String(global.navigator && global.navigator.userAgent || '');
     } catch (e) {}
-    return /android|iphone|ipad|ipod|mobile|windows phone/i.test(ua)
-      ? 'mobile'
-      : 'desktop';
+    // LX user scripts run within our desktop API compatibility shim on
+    // mobile, too. A "mobile" LX environment can make scripts skip working
+    // desktop playback endpoints even though the page runs in a phone browser.
+    return 'desktop';
   }
 
   function executeSource(item, callback) {
@@ -380,6 +388,82 @@
     });
   }
 
+  function hasDefaultFlower() {
+    for (var i = 0; i < sources.length; i += 1) {
+      var url = String(sources[i].url || '');
+      if (url.indexOf('pdone/lx-music-source/main/flower/latest.js') >= 0) return true;
+    }
+    return false;
+  }
+
+  function hasDefaultHuibq() {
+    for (var i = 0; i < sources.length; i += 1) {
+      if (String(sources[i].url || '') === BUILTIN_HUIBQ_URL) return true;
+    }
+    return false;
+  }
+
+  function restorePreferredSource(id) {
+    if (!id) return;
+    for (var i = 0; i < sources.length; i += 1) {
+      if (sources[i].id === id) {
+        active = sources[i]; persist(); notify(); return;
+      }
+    }
+  }
+
+  function ensureDefaultSources(force, callback) {
+    // Only a clean new device receives automatic imports. Never modify the
+    // existing source list or active selection of a returning user.
+    if (!force && sources.length) {
+      if (callback) callback(null);
+      return;
+    }
+    try {
+      if (!force && localStorage.getItem(DEFAULT_SOURCE_DISABLED_KEY) === '1') {
+        if (callback) callback(null); return;
+      }
+      var last = Number(localStorage.getItem(DEFAULT_SOURCE_LAST_ATTEMPT_KEY) || 0);
+      var now = Date.now ? Date.now() : new Date().getTime();
+      if (!force && sources.length && last && now - last < DEFAULT_RETRY_MS) {
+        if (callback) callback(null); return;
+      }
+      localStorage.setItem(DEFAULT_SOURCE_LAST_ATTEMPT_KEY, String(now));
+    } catch (e) {}
+
+    var priorId = active && active.id;
+    var hadExisting = sources.length > 0;
+
+    function addFlower() {
+      if (hasDefaultFlower()) {
+        restorePreferredSource(priorId);
+        if (callback) callback(null);
+        return;
+      }
+      installFromUrl(DEFAULT_FLOWER_URL, function (err) {
+        if (!err) {
+          // A returning user should not have their chosen source changed.
+          if (hadExisting) restorePreferredSource(priorId);
+          if (callback) callback(null);
+          return;
+        }
+        // A mirror outage must not stop fresh devices from using the
+        // built-in ES5 Huibq source. Try upstream GitHub only once.
+        installFromUrl(DEFAULT_FLOWER_RAW_URL, function (rawErr) {
+          if (hadExisting) restorePreferredSource(priorId);
+          if (callback) callback(rawErr || null);
+        });
+      });
+    }
+
+    if (!hasDefaultHuibq()) {
+      installBuiltinHuibq(function () {
+        restorePreferredSource(priorId);
+        addFlower();
+      });
+    } else addFlower();
+  }
+
   function rehydrate(item, callback) {
     if (!item || typeof item.code!=='string') {
       if (callback) callback();
@@ -406,6 +490,9 @@
     function next(index) {
       if (index >= sources.length) {
         persist(); notify();
+        // Do not stall the search UI while remote Flower imports on a slow
+        // Android 4.4 device; Huibq initializes from a tiny bundled adapter.
+        global.setTimeout(function () { ensureDefaultSources(false); }, 80);
         return;
       }
       rehydrate(sources[index],function(){
@@ -429,8 +516,17 @@
     try{
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(ACTIVE_SOURCE_KEY);
+      localStorage.setItem(DEFAULT_SOURCE_DISABLED_KEY, '1');
     }catch(e){}
     notify();
+  }
+
+  function restoreDefaults(callback) {
+    try {
+      localStorage.removeItem(DEFAULT_SOURCE_DISABLED_KEY);
+      localStorage.removeItem(DEFAULT_SOURCE_LAST_ATTEMPT_KEY);
+    } catch (e) {}
+    ensureDefaultSources(true, callback);
   }
 
   function activate(id) {
@@ -453,7 +549,7 @@
 
   global.LXSourceManager={
     init:init,installFromUrl:installFromUrl,installFromCode:installFromCode,
-    installBuiltinHuibq:installBuiltinHuibq,
+    installBuiltinHuibq:installBuiltinHuibq,restoreDefaults:restoreDefaults,
     remove:remove,clear:clear,activate:activate,requestAction:requestAction,
     getSources:function(){return sources.slice();},
     getActive:function(){return active;}
