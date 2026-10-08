@@ -413,6 +413,12 @@
   }
 
   function ensureDefaultSources(force, callback) {
+    // Only a clean new device receives automatic imports. Never modify the
+    // existing source list or active selection of a returning user.
+    if (!force && sources.length) {
+      if (callback) callback(null);
+      return;
+    }
     try {
       if (!force && localStorage.getItem(DEFAULT_SOURCE_DISABLED_KEY) === '1') {
         if (callback) callback(null); return;
