@@ -1,0 +1,52 @@
+import assert from 'node:assert/strict'
+import { chromium } from 'playwright'
+
+const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:8788'
+const browser = await chromium.launch({ headless: true })
+const context = await browser.newContext({
+  userAgent: 'Mozilla/5.0 (Linux; Android 4.4.2; Via) AppleWebKit/537.36 Mobile Safari/537.36'
+})
+const page = await context.newPage()
+const errors = []
+page.on('pageerror', e => errors.push(String(e)))
+const code = '/* @name Flower Fixture @version 1 */\nwindow.lx.send(window.lx.EVENT_NAMES.inited, {status:true,sources:{wy:{name:"网易云",actions:["musicUrl"],qualitys:["128k"]},mg:{name:"咪咕",actions:["musicUrl"],qualitys:["128k"]}}});'
+let flowerFetches = 0
+await page.route(/(?:ghproxy\.net\/raw\.githubusercontent\.com|raw\.githubusercontent\.com)\/pdone\/lx-music-source\/main\/flower\/latest\.js/, async route => {
+  flowerFetches++
+  await route.fulfill({status:200, contentType:'text/javascript', headers:{'Access-Control-Allow-Origin':'*'},body:code})
+})
+try {
+  await page.goto(base+'/',{waitUntil:'domcontentloaded'})
+  await page.waitForFunction(() =>
+    window.LXSourceManager?.getSources?.().length >= 2 &&
+    window.LXSourceManager?.getActive?.()?.inited,
+    null,{timeout:30000}
+  )
+  const state = await page.evaluate(() => ({
+    list: window.LXSourceManager.getSources().map(x=>({name:x.name,url:x.url,inited:x.inited})),
+    active: window.LXSourceManager.getActive().url,
+    runtimeEnv: window.LXSourceManager.getActive().runtime?.env,
+    supported: Array.from(document.querySelectorAll('#channel-list button')).map(x=>x.title)
+  }))
+  assert.equal(state.list.length,2,'New devices need exactly two curated defaults')
+  assert.ok(state.list.some(x=>x.url.includes('/flower/latest.js')))
+  assert.ok(state.list.some(x=>x.url.includes('/huibq/latest.js')))
+  assert.ok(state.active.includes('/flower/latest.js'))
+  assert.equal(state.runtimeEnv,'desktop','Legacy Via must expose desktop LX API environment')
+  assert.ok(state.supported.includes('MG'))
+  assert.ok(state.supported.includes('WY'))
+  const fetchedOnce=flowerFetches
+  await page.reload({waitUntil:'domcontentloaded'})
+  await page.waitForFunction(() => window.LXSourceManager?.getActive?.()?.inited,null,{timeout:16000})
+  assert.equal(await page.evaluate(()=>window.LXSourceManager.getSources().length),2,'Reload cannot duplicate defaults')
+  assert.equal(flowerFetches,fetchedOnce,'Cached source must run locally without network re-import')
+  await page.locator('.nav-item[data-view="settings"]').click()
+  assert.ok(await page.locator('#restore-default-sources-btn').isVisible())
+  await page.locator('#clear-btn').click()
+  await page.reload({waitUntil:'domcontentloaded'})
+  await page.waitForTimeout(500)
+  assert.equal(await page.evaluate(()=>window.LXSourceManager.getSources().length),0,
+    'Explicit clear must not silently reinstate third-party scripts')
+  console.log('PASS: Android Via first visit auto-seeds Flower/Huibq, caches once and respects clear')
+  assert.deepEqual(errors,[],'Unexpected browser errors')
+} finally { await browser.close() }
