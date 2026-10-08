@@ -1,0 +1,55 @@
+name: Migu Playback Deadline Regression (PR)
+
+on:
+  pull_request:
+    paths:
+      - "src/app.js"
+      - "index.html"
+      - "scripts/test-migu-playback-deadline-browser.mjs"
+      - "scripts/test-huibq-migu-live.mjs"
+      - ".github/workflows/migu-failure-deadline-regression.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migu-deadline:
+    name: Bound Migu wait, ignore stale callbacks and preserve track switching
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Check syntax, version and Migu identifiers
+        run: |
+          node --check src/app.js
+          node --check scripts/test-migu-playback-deadline-browser.mjs
+          node --check scripts/test-huibq-migu-live.mjs
+          node scripts/test-version.mjs
+          node scripts/test-legacy-web.mjs
+          node scripts/test-migu-track-ids.mjs
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Start local Pages emulator
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/migu-deadline.log 2>&1 &
+          for i in {1..45}; do
+            if curl --fail --silent http://127.0.0.1:8788/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/migu-deadline.log
+          exit 1
+      - name: Verify end-to-end deadline, late callbacks and new song selection
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-migu-playback-deadline-browser.mjs
+      - name: Log server errors
+        if: failure()
+        run: cat /tmp/migu-deadline.log || true

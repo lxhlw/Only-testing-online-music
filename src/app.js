@@ -17,6 +17,9 @@
   var MIN_CONFIRMED_PLAYBACK_PROGRESS_SECONDS = 0.25;
   var PLAYBACK_CONFIRM_TIMEOUT_MS = 3500;
   var PLAYBACK_CONNECT_TIMEOUT_MS = 7000;
+  // Migu-only budget for a single user-visible play attempt, across all
+  // qualities and fallback providers. Do not bound other four channels.
+  var MIGU_PLAYBACK_MAX_WAIT_MS = 25000;
 
   var CHANNEL_NAMES = {
     kw: '酷我音乐',
@@ -36,6 +39,7 @@
     listEl.innerHTML = '';
     var current = global.LXSourceManager && global.LXSourceManager.getActive ?
       global.LXSourceManager.getActive() : null;
+    cancelStaleMiguPlaybackOnSourceChange(current);
     var selectedName = current && current.name ? String(current.name) : '未选择';
     var summary = document.getElementById('active-source-summary');
     if (summary) {
@@ -748,6 +752,75 @@
     );
   }
 
+  function cancelStaleMiguPlaybackOnSourceChange(active) {
+    var state = playbackState;
+    if (!state || state.source !== 'mg' || state.token !== playbackToken) return;
+    var currentId = String(active && (active.id || active.url) || '');
+    if (String(state.activeSourceId || '') === currentId) return;
+    clearMiguPlaybackDeadline(state);
+    clearPlaybackConfirmTimer(state);
+    playbackToken += 1;
+    state.waitingForAudio = false;
+    state.playing = false;
+    var audio = document.getElementById('audio');
+    if (!audio) return;
+    try { audio.pause(); } catch (e) {}
+    audio.onerror = null;
+    audio.onplaying = null;
+    audio.ontimeupdate = null;
+    audio.onloadedmetadata = null;
+    audio.onended = null;
+    try { audio.removeAttribute('src'); } catch (e) {}
+    try { if (typeof audio.load === 'function') audio.load(); } catch (e) {}
+  }
+
+  function clearMiguPlaybackDeadline(state) {
+    if (!state || !state.miguDeadlineTimer) return;
+    try { global.clearTimeout(state.miguDeadlineTimer); } catch (e) {}
+    state.miguDeadlineTimer = null;
+  }
+
+  function concludeMiguUnavailable(token) {
+    var state = playbackState;
+    if (!state || state.token !== token || playbackToken !== token) return;
+    clearMiguPlaybackDeadline(state);
+    state.waitingForAudio = false;
+    state.playing = false;
+    setStatus(unavailablePlaybackMessage('mg'), 'fail');
+  }
+
+  function armMiguPlaybackDeadline(state) {
+    if (!state || state.source !== 'mg') return;
+    var token = state.token;
+    clearMiguPlaybackDeadline(state);
+    state.miguDeadlineTimer = global.setTimeout(function () {
+      if (playbackState !== state || playbackToken !== token || state.playing) return;
+      clearMiguPlaybackDeadline(state);
+      clearPlaybackConfirmTimer(state);
+      // Invalidate every pending LX-source/native/fallback callback. A stale
+      // audio URL must never start after this attempt has finished.
+      playbackToken += 1;
+      state.waitingForAudio = false;
+      state.playing = false;
+      var audio = document.getElementById('audio');
+      if (audio) {
+        try { audio.pause(); } catch (e) {}
+        audio.onerror = null;
+        audio.onplaying = null;
+        audio.ontimeupdate = null;
+        audio.onloadedmetadata = null;
+        audio.onended = null;
+        try { audio.removeAttribute('src'); } catch (e) {}
+        try { if (typeof audio.load === 'function') audio.load(); } catch (e) {}
+      }
+      setStatus(
+        '咪咕播放已等待 ' + Math.round(MIGU_PLAYBACK_MAX_WAIT_MS / 1000) +
+        ' 秒，仍未成功开始播放。已停止本次等待；可稍后重试或尝试其他歌曲。',
+        'fail'
+      );
+    }, MIGU_PLAYBACK_MAX_WAIT_MS);
+  }
+
   var SOURCE_RESOLVE_TIMEOUT_MS = 8000;
 
   function requestQuality(music, source, musicInfo, plan, index, token) {
@@ -832,7 +905,7 @@
               return requestQuality(music, source, musicInfo, plan, index + 1, token);
             }
 
-            if (source === 'mg') return setStatus(unavailablePlaybackMessage(source), 'fail');
+            if (source === 'mg') return concludeMiguUnavailable(token);
             return setStatus(
               'musicUrl 备用解析失败（' + escapeHtml(quality) + '）：'
               + escapeHtml(
@@ -850,6 +923,7 @@
         return requestQuality(music, source, musicInfo, plan, index + 1, token);
       }
 
+      if (source === 'mg') return concludeMiguUnavailable(token);
       return setStatus('当前音质无法播放，且没有可用的备用解析器。', 'fail');
     }
 
@@ -932,6 +1006,9 @@
       return;
     }
 
+    // A new click owns a new deadline; the previous track must not be able
+    // to time out and overwrite its status.
+    clearMiguPlaybackDeadline(playbackState);
     var audio = document.getElementById('audio');
     if (audio) {
       audio.pause();
@@ -962,9 +1039,12 @@
       transport: '',
       sourceUrl: '',
       directProxyRetry: false,
-      confirmTimer: null
+      confirmTimer: null,
+      miguDeadlineTimer: null,
+      activeSourceId: String(active.id || active.url || '')
     };
 
+    armMiguPlaybackDeadline(playbackState);
     requestQuality(music, source, buildMusicInfo(music, source), plan, 0, token);
   }
 
@@ -987,6 +1067,7 @@
     }
 
     clearPlaybackConfirmTimer(state);
+    clearMiguPlaybackDeadline(state);
     state.waitingForAudio = false;
     state.playing = true;
     if (global.LXMusicLibrary) {
@@ -1137,7 +1218,7 @@
             ? '（错误码 ' + resolverAudio.error.code + '）'
             : '';
           if (state.source === 'mg') {
-            setStatus(unavailablePlaybackMessage(state.source), 'fail');
+            concludeMiguUnavailable(state.token);
           } else {
             setStatus('当前音质无法播放，备用解析器也无法提供可用地址' + resolverErrorCode + '。', 'fail');
           }
@@ -1165,6 +1246,7 @@
     }
 
     var audio = document.getElementById('audio');
+    if (state.source === 'mg') return concludeMiguUnavailable(state.token);
     var errorCode = audio.error && audio.error.code ? '（错误码 ' + audio.error.code + '）' : '';
     setStatus('当前音质无法播放，且没有可用的更低音质可切换' + errorCode + '。', 'fail');
   }

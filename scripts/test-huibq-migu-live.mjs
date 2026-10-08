@@ -102,6 +102,24 @@ try {
     return Boolean(row) || /搜索失败/.test(status)
   }, null, { timeout: 45000 })
 
+  // An occasional HTTP 0 from the external Migu search endpoint is a
+  // transient network failure and not evidence about the playback deadline.
+  // Retry once, then fail explicitly if the provider remains unavailable.
+  const firstSearch = await page.evaluate(() => ({
+    rows: document.querySelectorAll('#search-results .search-row').length,
+    status: document.querySelector('#status')?.textContent || ''
+  }))
+  if (!firstSearch.rows && /Search API HTTP 0/.test(firstSearch.status)) {
+    console.log('HUIBQ MG SEARCH NETWORK RETRY: first search returned HTTP 0')
+    await page.waitForTimeout(800)
+    await page.locator('#global-search-btn').click()
+    await page.waitForFunction(() => {
+      const rows = document.querySelectorAll('#search-results .search-row').length
+      const status = document.querySelector('#status')?.textContent || ''
+      return rows > 0 || /搜索失败/.test(status)
+    }, null, { timeout: 45000 })
+  }
+
   const initial = await page.evaluate(() => {
     const result = window.__LXLastSearchResults?.[0] || null
     const active = window.LXSourceManager?.getActive?.()
@@ -119,6 +137,7 @@ try {
   console.log('HUIBQ MG SEARCH:', JSON.stringify(initial))
   if (!initial.rows) throw new Error('Migu search returned no results')
 
+  const playStartedAt = Date.now()
   await page.locator('#search-results .search-row').first().locator('.search-actions button').first().click()
   const deadline = Date.now() + maxWaitMs
   let snapshot
@@ -134,10 +153,16 @@ try {
       }
     })
     if ((snapshot.currentTime || 0) > .3 && !snapshot.paused) break
-    if (/当前音质无法播放|备用解析失败|无法提供可用地址/.test(snapshot.status)) break
+    if (/当前音质无法播放|备用解析失败|无法提供可用地址|咪咕播放已等待/.test(snapshot.status)) break
     await page.waitForTimeout(1200)
   }
   console.log('HUIBQ MG PLAY RESULT:', JSON.stringify(snapshot))
+  console.log('HUIBQ MG PLAY LATENCY:', JSON.stringify({
+    elapsedMs: Date.now() - playStartedAt,
+    terminal: /咪咕播放已等待/.test(snapshot.status) ? 'playback_deadline' :
+      (/暂无可用的播放地址/.test(snapshot.status) ? 'no_media_url' : 'other'),
+    hasAudioProgress: Boolean(snapshot.currentTime > .3 && !snapshot.paused)
+  }))
   console.log('PROXY ERRORS:', JSON.stringify(failures))
   console.log('PROXY REQUEST SUMMARY:', JSON.stringify(requests.slice(-70)))
   console.log('RESOLVER 200 BODY SHAPES:', JSON.stringify(resolverReplies))
@@ -153,7 +178,7 @@ try {
     if (process.env.MIGU_REQUIRE_PLAYBACK !== 'false') {
       throw new Error('Huibq MG playback not confirmed. Upstream business codes and errors are printed above.')
     }
-    if (!/咪咕.*暂无可用的播放地址/.test(snapshot.status)) {
+    if (!/咪咕.*(?:暂无可用的播放地址|播放已等待)/.test(snapshot.status)) {
       throw new Error('Player must show an actionable Migu no-URL explanation: ' + snapshot.status)
     }
     console.log('PASS: unavailable Migu playback is explained without claiming success')
