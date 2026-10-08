@@ -102,6 +102,12 @@ jobs:
       - name: Run music library test
         run: node scripts/test-music-library.mjs
 
+      - name: Run queue limit boundary test
+        run: node scripts/test-music-library-bounds.mjs
+
+      - name: Run active LX source persistence test
+        run: node scripts/test-source-selection.mjs
+
       - name: Run lyrics test
         run: node scripts/test-music-lyrics.mjs
 
