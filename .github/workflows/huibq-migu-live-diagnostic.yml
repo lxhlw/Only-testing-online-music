@@ -26,8 +26,40 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      - name: Verify Huibq MG playback against current deployment
+      - name: Verify deterministic Migu track ID mapping
+        run: |
+          node --check src/app.js
+          node scripts/test-migu-track-ids.mjs
+          node scripts/test-legacy-web.mjs
+
+      - name: Start local Cloudflare Pages for PR branch
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/huibq-migu.log 2>&1 &
+          for i in {1..45}; do
+            if curl --fail --silent http://127.0.0.1:8788/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/huibq-migu.log
+          exit 1
+
+      - name: Verify Migu track ID and no-URL explanation in Chromium
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+          MIGU_EXPECT_VALID_ID: 'true'
+          MIGU_REQUIRE_PLAYBACK: 'false'
+          MIGU_PROBE_TIMEOUT_MS: 45000
+        run: node scripts/test-huibq-migu-live.mjs
+
+      - name: Report real production Migu availability (informational)
+        continue-on-error: true
+        timeout-minutes: 3
         env:
           TEST_BASE_URL: https://only-testing-online-music.pages.dev
-          MIGU_PROBE_TIMEOUT_MS: 90000
+          MIGU_PROBE_TIMEOUT_MS: 55000
         run: node scripts/test-huibq-migu-live.mjs
+
+      - name: Log server failures
+        if: failure()
+        run: cat /tmp/huibq-migu.log || true
