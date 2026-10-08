@@ -29,7 +29,9 @@ export function summarizeResolver(status, contentType, body, target) {
   try { data = JSON.parse(body) }
   catch { out.signal = 'non_json_content'; return out }
   if (!data || typeof data !== 'object') { out.signal = 'no_media_url'; return out }
-  out.restrictionMetadataPresent = Boolean(data.data && typeof data.data === 'object' &&\n    (data.data.cannotCode !== undefined || data.data.dialogInfo !== undefined || data.data.freeListenType !== undefined))\n  if (data.code != null) out.businessCode = String(data.code).slice(0, 24)
+  out.restrictionMetadataPresent = Boolean(data.data && typeof data.data === 'object' &&
+    (data.data.cannotCode !== undefined || data.data.dialogInfo !== undefined || data.data.freeListenType !== undefined))
+  if (data.code != null) out.businessCode = String(data.code).slice(0, 24)
   else if (data.status != null) out.businessCode = String(data.status).slice(0, 24)
   // Covers, artworks and URLs embedded in general search data are NOT media.
   for (const obj of [data, data.data, data.result, data.data?.data]) {
