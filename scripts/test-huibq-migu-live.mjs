@@ -33,6 +33,33 @@ console.log('DIRECT NODE PROXY TIME:', JSON.stringify(direct))
 
 const browser = await chromium.launch({ headless: true, args: ['--autoplay-policy=no-user-gesture-required'] })
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+await page.addInitScript(() => {
+  const events = []
+  const timers = {}
+  const nativeSet = window.setTimeout
+  const nativeClear = window.clearTimeout
+  window.__miguDeadlineTrace = events
+  window.setTimeout = function (callback, delay) {
+    if (Number(delay) !== 25000) return nativeSet.apply(this, arguments)
+    let id
+    const wrapped = function () {
+      events.push({ event: 'fire', elapsed: Math.round(performance.now()) })
+      delete timers[id]
+      return callback.apply(this, arguments)
+    }
+    id = nativeSet.call(this, wrapped, delay)
+    timers[id] = true
+    events.push({ event: 'arm', elapsed: Math.round(performance.now()) })
+    return id
+  }
+  window.clearTimeout = function (id) {
+    if (timers[id]) {
+      events.push({ event: 'clear', elapsed: Math.round(performance.now()) })
+      delete timers[id]
+    }
+    return nativeClear.apply(this, arguments)
+  }
+})
 page.on('pageerror', error => errors.push(String(error)))
 page.on('response', async response => {
   if (!response.url().includes('/api/proxy?url=')) {
@@ -139,6 +166,7 @@ try {
 
   const playStartedAt = Date.now()
   await page.locator('#search-results .search-row').first().locator('.search-actions button').first().click()
+  const clickResolvedMs = Date.now() - playStartedAt
   const deadline = Date.now() + maxWaitMs
   let snapshot
   while (Date.now() < deadline) {
@@ -157,8 +185,10 @@ try {
     await page.waitForTimeout(1200)
   }
   console.log('HUIBQ MG PLAY RESULT:', JSON.stringify(snapshot))
+  const elapsedMs = Date.now() - playStartedAt
   console.log('HUIBQ MG PLAY LATENCY:', JSON.stringify({
-    elapsedMs: Date.now() - playStartedAt,
+    elapsedMs,
+    clickResolvedMs,
     terminal: /咪咕播放已等待/.test(snapshot.status) ? 'playback_deadline' :
       (/暂无可用的播放地址/.test(snapshot.status) ? 'no_media_url' : 'other'),
     hasAudioProgress: Boolean(snapshot.currentTime > .3 && !snapshot.paused)
@@ -168,6 +198,15 @@ try {
   console.log('RESOLVER 200 BODY SHAPES:', JSON.stringify(resolverReplies))
   console.log('MEDIA FAILURES:', JSON.stringify(mediaFailures))
   console.log('BROWSER ERRORS:', JSON.stringify(errors))
+  const timingTrace = await page.evaluate(() => window.__miguDeadlineTrace || [])
+  console.log('MIGU DEADLINE TRACE:', JSON.stringify(timingTrace))
+  if (process.env.MIGU_REQUIRE_25S_BOUND === 'true' &&
+      !(snapshot.currentTime > .3 && !snapshot.paused)) {
+    if (elapsedMs > 32000) {
+      throw new Error('Real Migu click-to-failure exceeded 32s tolerance: ' +
+        elapsedMs + 'ms; deadline trace=' + JSON.stringify(timingTrace))
+    }
+  }
   const playing = Boolean(snapshot && snapshot.currentTime > .3 && !snapshot.paused)
   if (process.env.MIGU_EXPECT_VALID_ID === 'true') {
     const badIds = requests.filter(item => /\/url\/mg\/\//.test(item.target))
