@@ -173,7 +173,7 @@ try {
   })
 
   assert.equal(state.inited, true, 'Flower source did not initialize')
-  assert.ok(/flower\\/latest\\.js/.test(SOURCE_URL),
+  assert.ok(SOURCE_URL.includes('/flower/latest.js'),
     'Only the explicitly selected Flower script is the target of this smoke test')
   assert.ok(!/Huibq/i.test(state.name),'Huibq must not be treated as initialized Flower')
   assert.equal(state.env, 'desktop', 'Chromium must expose LX desktop environment')
