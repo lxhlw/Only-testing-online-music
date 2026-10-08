@@ -143,10 +143,23 @@ try {
   console.log('RESOLVER 200 BODY SHAPES:', JSON.stringify(resolverReplies))
   console.log('MEDIA FAILURES:', JSON.stringify(mediaFailures))
   console.log('BROWSER ERRORS:', JSON.stringify(errors))
-  if (!snapshot || !(snapshot.currentTime > .3 && !snapshot.paused)) {
-    throw new Error('Huibq MG playback not confirmed. Diagnostics above identify the upstream or proxy failure.')
+  const playing = Boolean(snapshot && snapshot.currentTime > .3 && !snapshot.paused)
+  if (process.env.MIGU_EXPECT_VALID_ID === 'true') {
+    const badIds = requests.filter(item => /\/url\/mg\/\//.test(item.target))
+    if (badIds.length) throw new Error('Huibq Migu playback sent a request with an empty song ID')
+    console.log('PASS: all Huibq Migu playback requests contain a real platform ID')
   }
-  console.log('PASS: Huibq Migu search and real audio playback succeeded')
+  if (!playing) {
+    if (process.env.MIGU_REQUIRE_PLAYBACK !== 'false') {
+      throw new Error('Huibq MG playback not confirmed. Upstream business codes and errors are printed above.')
+    }
+    if (!/咪咕.*暂无可用的播放地址/.test(snapshot.status)) {
+      throw new Error('Player must show an actionable Migu no-URL explanation: ' + snapshot.status)
+    }
+    console.log('PASS: unavailable Migu playback is explained without claiming success')
+  } else {
+    console.log('PASS: Huibq Migu search and real audio playback succeeded')
+  }
 } finally {
   await page.close()
   await browser.close()
