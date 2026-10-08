@@ -81,8 +81,8 @@ export async function onRequest(context){
       var songs=[];
       if(ids.length){
         // Keep batches modest for legacy-friendly request sizes.
-        for(var offset=0;offset<ids.length&&songs.length<requestedLimit;offset+=50){
-          var chunk=ids.slice(offset,offset+50);
+        for(var batchOffset=0;batchOffset<ids.length&&songs.length<requestedLimit;batchOffset+=50){
+          var chunk=ids.slice(batchOffset,batchOffset+50);
           var songUrl=new URL('https://music.163.com/api/song/detail');
           songUrl.searchParams.set('id',chunk[0]);
           songUrl.searchParams.set('ids','['+chunk.join(',')+']');
