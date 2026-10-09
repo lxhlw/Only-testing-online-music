@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "index.html"
+      - "styles.css"
+      - "scripts/test-playlist-sticky-scroll-browser.mjs"
       - "src/app.js"
       - "src/music-library.js"
       - "scripts/test-music-library.mjs"
@@ -44,6 +46,7 @@ jobs:
           node --check scripts/test-playlist-pagination-browser.mjs
           node --check scripts/test-playlist-browser.mjs
           node --check scripts/test-playlist-playall-browser.mjs
+          node --check scripts/test-playlist-sticky-scroll-browser.mjs
 
       - name: Test existing project contracts and core modules
         run: |
@@ -77,6 +80,9 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-responsive-browser.mjs
+
+      - name: Verify persistent scroll controls (desktop and Via)
+        run: node scripts/test-playlist-sticky-scroll-browser.mjs
 
       - name: Verify Via touch navigation holds the playlist detail
         run: node scripts/test-playlist-via-navigation-browser.mjs
