@@ -10,6 +10,7 @@ on:
       - "scripts/test-default-source-race-browser.mjs"
       - "scripts/test-playlist-via-navigation-browser.mjs"
       - "scripts/test-via44-search-playback-browser.mjs"
+      - "scripts/test-via44-no-source-browser.mjs"
       - ".github/workflows/default-sources-via-regression.yml"
   workflow_dispatch:
 
@@ -52,6 +53,8 @@ jobs:
         run: node scripts/test-quality-fallback-browser.mjs
       - name: Test Via playlist detail stays visible and tracks work
         run: node scripts/test-playlist-via-navigation-browser.mjs
+      - name: Test Via search/playback when GitHub defaults are offline
+        run: node scripts/test-via44-no-source-browser.mjs
       - name: Test Via search failure retry and compressed default audio
         run: node scripts/test-via44-search-playback-browser.mjs
       - name: Show logs on failure
