@@ -54,6 +54,10 @@ async function test(viewport, legacy){
   await page.locator('.nav-item[data-view="playlist"]').click()
   await page.locator('#playlist-featured .playlist-open-button').first().click()
   await page.locator('#playlist-detail-songs .playlist-song-row').first().click()
+  await page.waitForFunction(()=>{
+    const a=document.getElementById('audio')
+    return a && a.getAttribute('src') && typeof a.onloadedmetadata==='function'
+  },null,{timeout:5000})
   await page.evaluate(()=>{
     const a=document.getElementById('audio')
     if(a.onloadedmetadata)a.onloadedmetadata()
@@ -63,6 +67,12 @@ async function test(viewport, legacy){
   assert.equal(await page.locator('#player-title').textContent(),'Playback mode song 1')
   assert.equal(await page.locator('#player-duration').textContent(),'3:20')
   assert.equal(await page.locator('#player-seek').isEnabled(),true,'Seek must enable after confirmed playback')
+  console.log('TRANSPORT',await page.evaluate(()=>{
+    const a=document.getElementById('audio')
+    return {paused:a.paused,playCount:window.__playCount,src:a.getAttribute('src'),
+      aria:document.getElementById('player-toggle-btn').getAttribute('aria-label'),
+      seekDisabled:document.getElementById('player-seek').disabled}
+  }))
   assert.equal(await page.locator('#player-toggle-btn').getAttribute('aria-label'),'暂停')
   assert.equal(await page.locator('#player-volume').inputValue(),'80','Default audio volume must not be muted')
   await page.locator('#player-toggle-btn').click()
