@@ -396,6 +396,10 @@
     // Preserve some previous tracks for Back, then leave room for the next
     // tracks. Only rewrite persistent storage when moving outside the window.
     var start = Math.max(0, trackIndex - 15);
+    // Near the playlist tail, slide the window back to retain the last
+    // hundred tracks instead of shrinking it to only a few songs.
+    var maximumStart = Math.max(0, session.tracks.length - 100);
+    if (start > maximumStart) start = maximumStart;
     global.LXMusicLibrary.replaceQueue(session.tracks.slice(start, start + 100));
   }
 
