@@ -881,6 +881,9 @@ button:focus,.playlist-song-row:focus{outline:2px solid #6fc8a0;outline-offset:1
 .player-icon-btn:hover{background:#dff4e8!important;color:#259966!important}
 .player-icon-btn:focus{outline:2px solid #6dca9d;outline-offset:2px}
 .player-icon-btn svg{display:block;flex:0 0 auto}
+/* Only one transport glyph must render. The general SVG display:block rule
+   previously overrode the hidden class, showing play and pause together. */
+.player-icon-btn svg.hidden{display:none!important}
 .player-main-toggle{
   height:44px;min-height:44px;width:44px;min-width:44px;
   background:#43b880!important;color:#fff!important;
