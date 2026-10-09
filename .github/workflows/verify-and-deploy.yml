@@ -104,6 +104,8 @@ jobs:
       - name: Run curated first-visit Via default sources and search test
         run: node scripts/test-default-sources-legacy-browser.mjs
 
+      - name: Verify fixed navigation and playlist filters during scroll
+        run: node scripts/test-playlist-sticky-scroll-browser.mjs
       - name: Run Via playlist detail stability test
         run: node scripts/test-playlist-via-navigation-browser.mjs
 
@@ -250,6 +252,8 @@ jobs:
           TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
         run: node scripts/test-default-sources-legacy-browser.mjs
 
+      - name: Verify deployed sticky playlist navigation
+        run: node scripts/test-playlist-sticky-scroll-browser.mjs
       - name: Verify deployed playlist detail
         env:
           TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
