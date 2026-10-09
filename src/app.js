@@ -658,6 +658,21 @@
 
     var playRequested = false;
 
+    function requireManualPlayback(error) {
+      if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
+      // On Android 4.4, resolving a URL asynchronously consumes the original
+      // tap gesture. The browser can reject the subsequent play() even for a
+      // valid stream. Do not discard that valid URL and retry all resolvers.
+      playbackState.manualPlaybackRequired = true;
+      clearPlaybackConfirmTimer(playbackState);
+      clearMiguPlaybackDeadline(playbackState);
+      setStatus(
+        '歌曲地址已获得，但旧版浏览器阻止自动播放。请直接点击下方播放器的 ▶ 播放按钮。' +
+        (error && error.name === 'NotSupportedError' ? ' 如仍无法播放，请切换较低音质。' : ''),
+        'warn'
+      );
+    }
+
     function startAudioPlayback() {
       if (playRequested) return;
       if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
@@ -666,29 +681,21 @@
       try {
         var playResult = audio.play();
         if (playResult && typeof playResult.catch === 'function') {
-          playResult.catch(function () {
+          playResult.catch(function (error) {
             if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
             if (audio.error && settings.autoFallback) {
               playRequested = false;
               handleAudioError(token, playableUrl);
               return;
             }
-            setStatus(
-              '已验证 ' + escapeHtml(quality) + ' 播放地址，但浏览器拒绝自动播放。可点击播放器继续播放。',
-              'warn'
-            );
+            requireManualPlayback(error);
           });
         }
       } catch (e) {
         if (audio.error && settings.autoFallback) {
           playRequested = false;
           handleAudioError(token, playableUrl);
-        } else {
-          setStatus(
-            '已验证 ' + escapeHtml(quality) + ' 播放地址，但浏览器未能自动播放。可点击播放器继续播放。',
-            'warn'
-          );
-        }
+        } else requireManualPlayback(e);
       }
     }
 
