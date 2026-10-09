@@ -163,7 +163,25 @@
   function getQualityPlan(activeSource, channel) {
     if (!activeSource || !activeSource.sources || !activeSource.sources[channel]) return [];
     var available = activeSource.sources[channel].qualitys || [];
-    if (global.LXPlaySettings) return global.LXPlaySettings.buildPlan(available, getPlaySettings());
+    if (global.LXPlaySettings) {
+      var settings = getPlaySettings();
+      // Android 4.4 browsers often cannot decode FLAC/Hi-Res streams.
+      // On the default automatic setting, prefer an MP3-sized stream first;
+      // never override a quality explicitly chosen by the listener.
+      var ua = String(global.navigator && global.navigator.userAgent || '');
+      if (/Android 4[.]4/i.test(ua) && settings.qualityMode === 'highest') {
+        var low = '';
+        for (var qi = 0; qi < available.length; qi += 1) {
+          var q = String(available[qi] || '').toLowerCase();
+          if (q === '128k') { low = available[qi]; break; }
+          if (!low && q === '320k') low = available[qi];
+        }
+        if (low) return global.LXPlaySettings.buildPlan(available, {
+          qualityMode:'fixed', fixedQuality:low, autoFallback:settings.autoFallback
+        });
+      }
+      return global.LXPlaySettings.buildPlan(available, settings);
+    }
     return available instanceof Array ? available.slice() : [];
   }
 
@@ -1621,7 +1639,13 @@
     global.LXMusicSearch.search(channel, keyword, 1, 20, function (err, result) {
       if (token !== searchToken || channel !== selectedChannel) return;
 
-      if (err) return setStatus('搜索失败：' + escapeHtml(err.message || err), 'fail');
+      if (err) {
+        setStatus('搜索失败：' + escapeHtml(err.message || err) + '。可点击“重新搜索”重试。', 'fail');
+        resultsEl.innerHTML = '<div class="empty-note">网络或音源暂时不可用。<button type="button" id="retry-song-search">重新搜索</button></div>';
+        var retry = document.getElementById('retry-song-search');
+        if (retry) retry.onclick = function () { searchAndRender(keyword); };
+        return;
+      }
       setStatus('搜索完成：' + result.list.length + ' 条结果。', 'ready');
       global.__LXLastSearchResults = result.list.slice();
       renderSearchResults(result.list);
