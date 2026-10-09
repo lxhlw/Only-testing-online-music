@@ -30,6 +30,33 @@ async function test(viewport, legacy){
  }))
  try{
   await page.goto(BASE+'/',{waitUntil:'domcontentloaded'})
+  // Verify actual rendered SVG visibility, not only the button's aria-label.
+  // This reproduces the reported screenshot where Play and Pause overlapped.
+  const assertSingleIcon = async (expected) => {
+    const icons = await page.evaluate(()=>{
+      const btn=document.getElementById('player-toggle-btn')
+      const play=btn.querySelector('.player-play-icon')
+      const pause=btn.querySelector('.player-pause-icon')
+      return {
+        label:btn.getAttribute('aria-label'),
+        play:getComputedStyle(play).display,
+        pause:getComputedStyle(pause).display,
+        playWidth:play.getBoundingClientRect().width,
+        pauseWidth:pause.getBoundingClientRect().width
+      }
+    })
+    assert.equal(icons.label,expected)
+    if(expected==='播放'){
+      assert.notEqual(icons.play,'none','Play icon must render only in paused state')
+      assert.equal(icons.pause,'none','Pause icon must be hidden in paused state')
+      assert.equal(icons.pauseWidth,0,'Pause SVG must occupy no layout space')
+    }else{
+      assert.equal(icons.play,'none','Play icon must be hidden in playing state')
+      assert.equal(icons.playWidth,0,'Play SVG must occupy no layout space')
+      assert.notEqual(icons.pause,'none','Pause icon must render only while playing')
+    }
+  }
+  await assertSingleIcon('播放')
   await page.evaluate(()=>{
    window.LXSourceManager.getActive=function(){return null}
    window.LXMusicSearch.resolveMusicUrl=function(source,info,quality,cb){
@@ -85,12 +112,13 @@ async function test(viewport, legacy){
   assert.equal(await page.locator('#player-title').textContent(),'Playback mode song 1')
   assert.equal(await page.locator('#player-duration').textContent(),'3:20')
   assert.equal(await page.locator('#player-seek').isEnabled(),true,'Seek must enable after confirmed playback')
-  assert.equal(await page.locator('#player-toggle-btn').getAttribute('aria-label'),'暂停')
+  await assertSingleIcon('暂停')
   assert.equal(await page.locator('#player-volume').inputValue(),'80','Default audio volume must not be muted')
   await page.locator('#player-toggle-btn').click()
-  assert.equal(await page.locator('#player-toggle-btn').getAttribute('aria-label'),'播放')
+  await assertSingleIcon('播放')
   await page.locator('#player-toggle-btn').click()
-  assert.equal(await page.locator('#player-toggle-btn').getAttribute('aria-label'),'暂停')
+  await assertSingleIcon('暂停')
+  console.log('PASS: only one SVG icon is visible at a time on '+viewport.width+'px')
   console.log('PASS: '+viewport.width+' transport pause/play and volume defaults')
 
   await page.evaluate(()=>{
