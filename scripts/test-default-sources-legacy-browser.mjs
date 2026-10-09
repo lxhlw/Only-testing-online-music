@@ -11,6 +11,10 @@ const errors = []
 page.on('pageerror', e => errors.push(String(e)))
 const code = '/* @name Flower Fixture @version 1 */\nwindow.lx.send(window.lx.EVENT_NAMES.inited, {status:true,sources:{wy:{name:"网易云",actions:["musicUrl"],qualitys:["128k"]},mg:{name:"咪咕",actions:["musicUrl"],qualitys:["128k"]}}});'
 let flowerFetches = 0
+const huibqCode='/* @name Huibq Fixture @version 1 */\nwindow.lx.send(window.lx.EVENT_NAMES.inited, {status:true,sources:{wy:{actions:["musicUrl"],qualitys:["128k"]},mg:{actions:["musicUrl"],qualitys:["128k"]}}});'
+await page.route(/raw\\.githubusercontent\\.com\\/pdone\\/lx-music-source\\/main\\/huibq\\/latest\\.js/, async route => {
+  await route.fulfill({status:200,contentType:'text/javascript',headers:{'Access-Control-Allow-Origin':'*'},body:huibqCode})
+})
 await page.route(/(?:ghproxy\.net\/raw\.githubusercontent\.com|raw\.githubusercontent\.com)\/pdone\/lx-music-source\/main\/flower\/latest\.js/, async route => {
   flowerFetches++
   await route.fulfill({status:200, contentType:'text/javascript', headers:{'Access-Control-Allow-Origin':'*'},body:code})
@@ -42,9 +46,10 @@ try {
     runtimeEnv: window.LXSourceManager.getActive().runtime?.env,
     supported: Array.from(document.querySelectorAll('#channel-list button')).map(x=>x.title)
   }))
-  assert.equal(state.list.length,2,'New devices need exactly two curated defaults')
+  assert.equal(state.list.length,2,'New devices need exactly two real default LX scripts')
   assert.ok(state.list.some(x=>x.url.includes('/flower/latest.js')))
   assert.ok(state.list.some(x=>x.url.includes('/huibq/latest.js')))
+  assert.ok(await page.evaluate(() => window.LXSourceManager.getSources().every(x => x.inited && !x.code.includes('verified built-in adapter marker'))),'Defaults must contain initialized original LX code, never placeholder metadata')
   assert.ok(state.active.includes('/flower/latest.js'))
   assert.equal(state.runtimeEnv,'desktop','Legacy Via must expose desktop LX API environment')
   assert.ok(state.supported.includes('MG'))
