@@ -11,6 +11,7 @@ on:
       - "scripts/test-playlist-via-navigation-browser.mjs"
       - "scripts/test-via44-search-playback-browser.mjs"
       - "scripts/test-via44-no-source-browser.mjs"
+      - "scripts/test-import-ui.mjs"
       - ".github/workflows/default-sources-via-regression.yml"
   workflow_dispatch:
 
@@ -48,6 +49,8 @@ jobs:
           done
           cat /tmp/default-via.log
           exit 1
+      - name: Verify legacy import-button click without source-bootstrap races
+        run: node scripts/test-import-ui.mjs
       - name: Test new device auto import and Via 成都 search
         run: node scripts/test-default-sources-legacy-browser.mjs
       - name: Test manually selected source wins over delayed defaults
