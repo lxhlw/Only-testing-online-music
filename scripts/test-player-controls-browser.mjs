@@ -64,6 +64,14 @@ async function test(viewport, legacy){
     if(a.onplaying)a.onplaying()
     a.dispatchEvent(new Event('timeupdate'))
   })
+  console.log('INITIAL PLAYER STATE',await page.evaluate(()=>{
+    const a=document.getElementById('audio')
+    return {paused:a.paused,playCount:window.__playCount,src:a.getAttribute('src'),
+      duration:a.duration,time:a.currentTime,readyState:a.readyState,
+      seekDisabled:document.getElementById('player-seek').disabled,
+      aria:document.getElementById('player-toggle-btn').getAttribute('aria-label'),
+      status:document.getElementById('status').textContent}
+  }))
   assert.equal(await page.locator('#player-title').textContent(),'Playback mode song 1')
   assert.equal(await page.locator('#player-duration').textContent(),'3:20')
   assert.equal(await page.locator('#player-seek').isEnabled(),true,'Seek must enable after confirmed playback')
