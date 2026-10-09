@@ -188,6 +188,34 @@ try {
   assert.equal(mobileLayout.artistDisplay, 'none', 'Small screens hide secondary columns for uncluttered touch targets')
   console.log('PASS: Via mobile playlist controls remain within viewport')
 
+  await page.setViewportSize({ width: 1320, height: 850 })
+  const desktopLayout = await page.evaluate(() => {
+    const row = document.querySelector('#playlist-detail-songs .playlist-song-row')
+    const header = document.querySelector('.playlist-table-heading')
+    const artist = row.querySelector('.playlist-song-artist')
+    const album = row.querySelector('.playlist-song-album')
+    const actions = row.querySelector('.playlist-song-actions')
+    const title = row.querySelector('.song-main b')
+    return {
+      rowDisplay: getComputedStyle(row).display,
+      rowWidth: row.getBoundingClientRect().width,
+      headingVisible: getComputedStyle(header).display,
+      artistVisible: getComputedStyle(artist).display,
+      albumVisible: getComputedStyle(album).display,
+      fontSize: parseFloat(getComputedStyle(title).fontSize),
+      actionsRight: actions.getBoundingClientRect().right,
+      viewportWidth: document.documentElement.clientWidth
+    }
+  })
+  assert.equal(desktopLayout.rowDisplay, 'flex', 'Desktop songs must use aligned flex columns')
+  assert.notEqual(desktopLayout.headingVisible, 'none')
+  assert.notEqual(desktopLayout.artistVisible, 'none', 'Artist column must remain visible on desktop')
+  assert.notEqual(desktopLayout.albumVisible, 'none', 'Album column must remain visible on desktop')
+  assert.ok(desktopLayout.fontSize >= 14, 'Song typography must not remain microscopic')
+  assert.ok(desktopLayout.actionsRight <= desktopLayout.viewportWidth + 1)
+  console.log('PASS: LX-inspired desktop playlist table has readable aligned columns')
+
+
   assert.deepEqual(errors, [])
 } finally {
   await browser.close()
