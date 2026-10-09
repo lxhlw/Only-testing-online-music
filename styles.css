@@ -786,3 +786,66 @@ button:focus,.playlist-song-row:focus{outline:2px solid #6fc8a0;outline-offset:1
     overflow:hidden;text-overflow:ellipsis
   }
 }
+
+/* Scroll-persistent navigation: keep controls visible above the long song
+   list. Fixed sidebar works on Android 4.4; sticky layers are progressively
+   enhanced by an ES5 fallback on WebViews without position:sticky. */
+.topbar{
+  position:fixed;left:0;right:0;top:0;
+  z-index:90;width:100%
+}
+.lx-layout{padding-top:58px;box-sizing:border-box;min-height:100vh}
+.nav-rail{
+  position:fixed;top:58px;left:0;bottom:78px;
+  height:auto;z-index:60;overflow-y:auto;
+  -webkit-overflow-scrolling:touch
+}
+.main-stage{margin-left:70px;min-width:0}
+.persistent-top-stack{
+  position:-webkit-sticky;position:sticky;top:58px;
+  z-index:50;background:#fff;border-bottom:1px solid #dcebe2;
+  box-shadow:0 2px 7px rgba(38,103,71,.045)
+}
+.persistent-top-stack .global-search-bar{
+  position:relative;top:auto;z-index:1
+}
+.persistent-top-stack .global-status{
+  position:relative;top:auto;margin-bottom:8px;
+  white-space:normal;min-height:26px
+}
+.playlist-filter-stack{
+  position:-webkit-sticky;position:sticky;top:156px;
+  z-index:44;background:#fff;border-bottom:1px solid #dcece3;
+  box-shadow:0 2px 6px rgba(44,102,68,.035)
+}
+#view-playlist>.playlist-filter-stack>.sub-toolbar{
+  background:#f9fcfa;border-bottom:1px solid #ecf2ed
+}
+#view-playlist>.playlist-filter-stack>.category-row{
+  background:#fff;border-bottom:0
+}
+.legacy-sticky-spacer{padding:0;margin:0;border:0}
+@media(max-width:680px){
+  .topbar{height:48px}
+  .lx-layout{
+    display:flex;flex-direction:column;
+    padding-top:98px;min-height:100vh
+  }
+  .nav-rail{
+    position:fixed;top:48px;left:0;right:0;bottom:auto;
+    height:50px;max-height:50px;width:100%;z-index:75;
+    overflow:hidden;background:#eff9f3;border-bottom:1px solid #cee8d8
+  }
+  .main-stage{margin:0;width:100%;min-width:0}
+  .persistent-top-stack{top:98px}
+  .persistent-top-stack .global-search-bar{
+    position:relative;top:auto
+  }
+  .persistent-top-stack .global-status{
+    padding:5px 9px;min-height:23px;line-height:1.35;
+    max-height:53px;overflow:hidden
+  }
+  .playlist-filter-stack{top:177px}
+  #view-playlist>.playlist-filter-stack>.sub-toolbar{padding:6px 7px}
+  #view-playlist>.playlist-filter-stack>.category-row{padding:6px 7px}
+}

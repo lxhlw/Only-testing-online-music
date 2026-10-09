@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>Only Testing Online Music</title>
-  <link rel="stylesheet" href="styles.css?v=0.2.36&amp;lx-ui=20261009">
+  <link rel="stylesheet" href="styles.css?v=0.2.36&amp;sticky-layout=20261009">
 </head>
 <body>
   <div id="app">
@@ -34,6 +34,7 @@
       </aside>
 
       <section class="main-stage">
+        <div id="persistent-top-stack" class="persistent-top-stack">
         <div class="global-search-bar">
           <div class="global-search">
             <span class="search-icon">⌕</span>
@@ -43,6 +44,7 @@
           <div id="global-search-context" class="search-context">搜索歌曲</div>
         </div>
         <div id="status" class="status global-status">等待导入音源或开始搜索。</div>
+        </div>
 
         <div class="view-container">
           <section id="view-search" class="view-panel active">
@@ -97,7 +99,8 @@
               <div><div class="panel-kicker">PLAYLISTS</div><h1>歌单</h1></div>
               <span class="view-note">歌单分类 · 平台选择 · 歌单收藏</span>
             </div>
-            <div class="sub-toolbar">
+            <div id="playlist-filter-stack" class="playlist-filter-stack">
+          <div class="sub-toolbar">
               <span>选择渠道</span>
               <div class="platform-pills">
                 <button type="button" class="platform-pill active" data-playlist-platform="wy">网易云音乐</button>
@@ -113,6 +116,7 @@
               <button type="button" class="category-pill" data-playlist-cat="摇滚">摇滚</button>
               <button type="button" class="category-pill" data-playlist-cat="轻音乐">轻音乐</button>
             </div>
+          </div>
             <div id="playlist-featured" class="playlist-grid"></div>
 
             <section id="playlist-detail-panel" class="playlist-detail-panel hidden">
@@ -337,6 +341,103 @@
     global.OnlyTestingPlaylistUI={onTrackChange:highlightPlaylistSong};
 
     function el(id){ return document.getElementById(id); }
+
+    // The sidebar never scrolls away. The search/status and channel/category
+    // bars are CSS-sticky on modern browsers. Android 4.4 WebView lacks
+    // reliable sticky support, so only that legacy case uses a small fixed-
+    // positioning fallback with placeholders to avoid jumping content.
+    // Browser sticky layers leave their containing block at the last row,
+    // especially on narrow screens. Use one consistent fixed+spacer approach
+    // for every browser, so scrolling the playlist cannot dismiss controls.
+    var stickyLegacy = true;
+    var stickyTopNode = document.getElementById('persistent-top-stack');
+    var stickyFilterNode = document.getElementById('playlist-filter-stack');
+    var stickyTopPlaceholder = null;
+    var stickyFilterPlaceholder = null;
+    var stickyFilterFixed = false;
+    var stickyLayoutPending = false;
+
+    function stickyPlaceholder(node){
+      var placeholder=document.createElement('div');
+      placeholder.className='legacy-sticky-spacer';
+      placeholder.style.display='none';
+      node.parentNode.insertBefore(placeholder,node);
+      return placeholder;
+    }
+    function clearLegacyFixed(node,placeholder){
+      if(!node)return;
+      node.style.position='';
+      node.style.left='';
+      node.style.width='';
+      node.style.top='';
+      node.style.zIndex='';
+      if(placeholder)placeholder.style.display='none';
+    }
+    function refreshStickyLayout(){
+      if(!stickyTopNode||!stickyFilterNode)return;
+      var topbar=document.querySelector('.topbar');
+      var rail=document.querySelector('.nav-rail');
+      var main=document.querySelector('.main-stage');
+      if(!topbar||!main)return;
+      var topbarHeight=topbar.offsetHeight||58;
+      var mobile=global.innerWidth<=680;
+      var railHeight=mobile&&rail?rail.offsetHeight:0;
+      var headerTop=topbarHeight+railHeight;
+      var mainRect=main.getBoundingClientRect();
+      var mainWidth=mainRect.width;
+      stickyTopNode.style.top=headerTop+'px';
+      if(stickyLegacy){
+        if(!stickyTopPlaceholder)stickyTopPlaceholder=stickyPlaceholder(stickyTopNode);
+        stickyTopPlaceholder.style.display='block';
+        stickyTopPlaceholder.style.height=stickyTopNode.offsetHeight+'px';
+        stickyTopNode.style.position='fixed';
+        stickyTopNode.style.left=mainRect.left+'px';
+        stickyTopNode.style.width=mainWidth+'px';
+        stickyTopNode.style.top=headerTop+'px';
+        stickyTopNode.style.zIndex='40';
+      }
+      var filterTop=headerTop+stickyTopNode.offsetHeight;
+      if(!stickyLegacy){
+        stickyFilterNode.style.top=filterTop+'px';
+        return;
+      }
+      if(!stickyFilterPlaceholder)stickyFilterPlaceholder=stickyPlaceholder(stickyFilterNode);
+      var shouldShow=currentView==='playlist';
+      if(!shouldShow){
+        clearLegacyFixed(stickyFilterNode,stickyFilterPlaceholder);
+        stickyFilterFixed=false;
+        return;
+      }
+      var rect=stickyFilterFixed?
+        stickyFilterPlaceholder.getBoundingClientRect():
+        stickyFilterNode.getBoundingClientRect();
+      var fix=rect.top<=filterTop && stickyFilterNode.offsetHeight>0;
+      if(fix){
+        var w=main.getBoundingClientRect();
+        stickyFilterPlaceholder.style.height=stickyFilterNode.offsetHeight+'px';
+        stickyFilterPlaceholder.style.display='block';
+        stickyFilterNode.style.position='fixed';
+        stickyFilterNode.style.left=w.left+'px';
+        stickyFilterNode.style.width=w.width+'px';
+        stickyFilterNode.style.top=filterTop+'px';
+        stickyFilterNode.style.zIndex='38';
+        stickyFilterFixed=true;
+      }else{
+        clearLegacyFixed(stickyFilterNode,stickyFilterPlaceholder);
+        stickyFilterFixed=false;
+      }
+    }
+    function requestStickyLayout(){
+      if(stickyLayoutPending)return;
+      stickyLayoutPending=true;
+      var next=global.requestAnimationFrame||function(fn){return global.setTimeout(fn,32);};
+      next(function(){stickyLayoutPending=false;refreshStickyLayout();});
+    }
+    if(global.addEventListener){
+      global.addEventListener('scroll',requestStickyLayout,false);
+      global.addEventListener('resize',requestStickyLayout,false);
+    }
+
     // Playlist controls live in the navigation script, while app.js owns its
     // own private status helper. Keep playlist status updates self-contained
     // instead of leaking a ReferenceError on Queue/Favorite actions.
@@ -397,6 +498,7 @@
       if(name==='ranking') loadRankings();
       if(name==='mylist') renderMyList();
       if(name==='settings') loadInlineSettings();
+      requestStickyLayout();
     }
 
     function renderMyList(){
@@ -959,6 +1061,7 @@
     loadInlineSettings();
     var initialView=readViewFromHash();
     showView(initialView||'search');
+    refreshStickyLayout();
     global.onhashchange=function(){
       var hashView=readViewFromHash();
       // A delayed hashchange from an earlier navigation must never dismiss
@@ -968,6 +1071,7 @@
         return;
       }
       if(hashView&&hashView!==currentView) showView(hashView);
+      requestStickyLayout();
     };
   })(window);
   </script>
