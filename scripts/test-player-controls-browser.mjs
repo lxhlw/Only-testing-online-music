@@ -30,7 +30,45 @@ async function test(viewport, legacy){
  }))
  try{
   await page.goto(BASE+'/',{waitUntil:'domcontentloaded'})
-  // Verify actual rendered SVG visibility, not only the button's aria-label.
+  // Selected playback mode is represented by exactly one matching SVG,
+   // with no blue repeat emoji, on desktop and Android 4.4-sized Via.
+   const assertModeGlyph = async (expected) => {
+     const data=await page.evaluate((mode)=>{
+       const current=document.getElementById('player-mode-btn')
+       const menu=document.getElementById('player-mode-menu')
+       const selected=menu.querySelector('button[data-mode="'+mode+'"]')
+       const icon=current.querySelector('svg')
+       const reference=selected.querySelector('.mode-glyph svg')
+       const color=getComputedStyle(selected.querySelector('.mode-glyph')).color
+       return {
+         currentMode:current.getAttribute('data-mode'),
+         title:current.title,
+         count:current.querySelectorAll('svg').length,
+         sameIcon:!!icon && !!reference && icon.outerHTML===reference.outerHTML,
+         emoji:menu.textContent.indexOf('🔁')>=0 || menu.textContent.indexOf('🔀')>=0,
+         color:color
+       }
+     },expected)
+     assert.equal(data.currentMode,expected)
+     assert.equal(data.count,1,'Transport must render only one playback-mode SVG')
+     assert.equal(data.sameIcon,true,'Bottom button must match the selected menu icon')
+     assert.equal(data.emoji,false,'Menu must not contain blue emoji glyphs')
+     assert.ok(data.color==='rgb(32, 141, 92)' || data.color==='rgb(66, 170, 120)',
+       'Mode glyph must use matching mint green: '+data.color)
+   }
+   await assertModeGlyph('sequence')
+   const navGeometry=await page.evaluate(()=>{
+     const nav=document.querySelector('.nav-rail')
+     return {overflowX:getComputedStyle(nav).overflowX,
+       navWidth:nav.clientWidth,scrollWidth:nav.scrollWidth,
+       pageWidth:document.documentElement.clientWidth,
+       documentWidth:document.documentElement.scrollWidth}
+   })
+   assert.equal(navGeometry.overflowX,'hidden','Sidebar must not expose horizontal drag scrollbar')
+   assert.ok(navGeometry.documentWidth<=navGeometry.pageWidth+2,
+     'Document must not gain horizontal scroll: '+JSON.stringify(navGeometry))
+   console.log('PASS: '+viewport.width+' sidebar has no horizontal scrollbar')
+   // Verify actual rendered SVG visibility, not only the button's aria-label.
   // This reproduces the reported screenshot where Play and Pause overlapped.
   const assertSingleIcon = async (expected) => {
     const icons = await page.evaluate(()=>{
@@ -151,7 +189,7 @@ async function test(viewport, legacy){
   assert.equal(await page.locator('#player-mode-menu').isVisible(),true)
   await page.locator('#player-mode-menu button[data-mode="list-loop"]').click()
   assert.equal(await page.locator('#player-mode-menu').isVisible(),false)
-  assert.equal(await page.locator('#player-mode-btn').getAttribute('data-mode'),'list-loop')
+  await assertModeGlyph('list-loop')
   assert.equal(await page.evaluate(()=>localStorage.getItem('only-testing-online-music.player-mode')),'list-loop')
   await page.locator('#playlist-detail-songs .playlist-song-row').nth(2).click()
   await page.locator('#next-track-btn').click()
@@ -162,10 +200,12 @@ async function test(viewport, legacy){
 
   await page.locator('#player-mode-btn').click()
   await page.locator('#player-mode-menu button[data-mode="sequence"]').click()
+  await assertModeGlyph('sequence')
   await page.locator('#next-track-btn').click()
   assert.equal(await page.locator('#player-title').textContent(),'Playback mode song 3','Sequence must stop at last song')
   await page.locator('#player-mode-btn').click()
   await page.locator('#player-mode-menu button[data-mode="single-loop"]').click()
+  await assertModeGlyph('single-loop')
   await page.evaluate(()=>{
     const a=document.getElementById('audio')
     window.__simulatedTime=199
@@ -181,6 +221,7 @@ async function test(viewport, legacy){
 
   await page.locator('#player-mode-btn').click()
   await page.locator('#player-mode-menu button[data-mode="shuffle"]').click()
+  await assertModeGlyph('shuffle')
   await page.locator('#playlist-detail-songs .playlist-song-row').first().click()
   await page.evaluate(()=>{window.__savedRandom=Math.random; Math.random=function(){return 0.8}})
   await page.locator('#next-track-btn').click()
@@ -213,5 +254,6 @@ async function test(viewport, legacy){
 }
 try {
  await test({width:1280,height:840},false)
+ await test({width:1792,height:850},false)
  await test({width:390,height:844},true)
 }finally{await browser.close()}
