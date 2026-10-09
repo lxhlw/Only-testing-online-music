@@ -40,6 +40,14 @@ await page.route('**/api/netease-playlists?*', async route => {
     })
   })
 })
+await page.route('**/api/proxy?url=*', async route => {
+  const target = new URL(route.request().url()).searchParams.get('url') || ''
+  if (target.includes('playlist-audio.invalid')) {
+    await route.fulfill({ status: 200, contentType: 'audio/mpeg', body: '' })
+    return
+  }
+  await route.continue()
+})
 await page.route('https://playlist-audio.invalid/**', route =>
   route.fulfill({ status: 200, contentType: 'audio/mpeg', body: '' }))
 try {
@@ -90,15 +98,15 @@ try {
   console.log('PASS: ending track 1 automatically starts track 2')
 
   await page.evaluate(() => {
-    for (let i = 0; i < 40; i++) document.getElementById('next-track-btn').click()
+    for (let i = 0; i < 41; i++) document.getElementById('next-track-btn').click()
   })
-  assert.equal(await page.locator('#player-title').textContent(), 'Song 42')
+  assert.equal(await page.locator('#player-title').textContent(), 'Song 43')
   // The next page is requested when we are within eight tracks of the end.
   await page.waitForTimeout(400)
   assert.equal(loadedSecondPage, 1, 'The 51st song page should be fetched once, near track 50')
 
   await page.evaluate(() => {
-    for (let i = 0; i < 9; i++) document.getElementById('next-track-btn').click()
+    for (let i = 0; i < 8; i++) document.getElementById('next-track-btn').click()
   })
   await page.waitForFunction(() => document.getElementById('player-title').textContent === 'Song 51')
   const after = await page.evaluate(() => ({
