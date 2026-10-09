@@ -337,6 +337,15 @@
     global.OnlyTestingPlaylistUI={onTrackChange:highlightPlaylistSong};
 
     function el(id){ return document.getElementById(id); }
+    // Playlist controls live in the navigation script, while app.js owns its
+    // own private status helper. Keep playlist status updates self-contained
+    // instead of leaking a ReferenceError on Queue/Favorite actions.
+    function setStatus(text,type){
+      var node=el('status');
+      if(!node)return;
+      node.className='status global-status'+(type?' '+type:'');
+      node.innerHTML=text;
+    }
     function all(selector){ return document.querySelectorAll(selector); }
     function hasClass(node, name){ return (' '+node.className+' ').indexOf(' '+name+' ') >= 0; }
     function addClass(node,name){ if(!hasClass(node,name)) node.className += ' '+name; }
