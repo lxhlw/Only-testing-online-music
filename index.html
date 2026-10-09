@@ -768,14 +768,21 @@
       var selected=all('[data-playlist-platform="'+playlistPlatform+'"]');for(var y=0;y<selected.length;y+=1)addClass(selected[y],'active');
     };
 
-    el('playlist-back-btn').onclick=function(event){
+    var backGestureStartedAt=0;
+    var backButton=el('playlist-back-btn');
+    function recordBackGesture(){
+      backGestureStartedAt=Date.now?Date.now():(new Date()).getTime();
+    }
+    backButton.ontouchstart=recordBackGesture;
+    backButton.onmousedown=recordBackGesture;
+    backButton.onclick=function(event){
       if(event&&event.preventDefault)event.preventDefault();
       if(event&&event.stopPropagation)event.stopPropagation();
-      // Old WebView may retarget a delayed click from "打开歌单" to the
-      // newly inserted Back button. A genuine back click works after this
-      // short touch/click deduplication window.
+      // A ghost click retargeted from the old playlist card has no matching
+      // touchstart/mousedown on Back. An intentional quick tap DOES.
       var now=Date.now?Date.now():(new Date()).getTime();
-      if(lastPlaylistOpenAt&&now-lastPlaylistOpenAt<700)return false;
+      if(lastPlaylistOpenAt&&now-lastPlaylistOpenAt<700 &&
+          backGestureStartedAt<lastPlaylistOpenAt)return false;
       closePlaylistDetail();
       return false;
     };
