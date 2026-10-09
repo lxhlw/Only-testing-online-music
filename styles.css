@@ -896,11 +896,7 @@ button:focus,.playlist-song-row:focus{outline:2px solid #6fc8a0;outline-offset:1
   height:1px!important;overflow:hidden!important
 }
 .player-mode-wrap{position:relative;display:flex;align-items:center}
-.mode-control[data-mode="single-loop"]:after{
-  content:"1";position:absolute;font-size:9px;font-weight:bold;
-  right:0;bottom:2px;color:#238950;background:#fff;border-radius:5px;
-  line-height:12px;min-width:11px
-}
+/* The single-repeat SVG draws its own "1". Do not overlay a second badge. */
 .mode-control[data-mode="shuffle"]{color:#208f61!important}
 .player-mode-menu{
   position:absolute;left:-13px;bottom:47px;z-index:120;
@@ -1020,4 +1016,29 @@ button:focus,.playlist-song-row:focus{outline:2px solid #6fc8a0;outline-offset:1
   .player-transport{gap:11px}
   .player-timeline{gap:5px}
   .player-time{flex-basis:34px;min-width:34px}
+}
+
+/* Keep sidebar scrolling vertical only. Its narrow "MUSIC" wordmark used to
+   overflow horizontally, showing a short gray drag bar above the player. */
+.nav-rail{overflow-x:hidden!important;box-sizing:border-box}
+.nav-rail .nav-brand{
+  max-width:100%;min-width:0;overflow:hidden;
+  white-space:nowrap;text-overflow:clip;letter-spacing:1px
+}
+/* The mode menu and the bottom button share the exact same SVG glyph.
+   Never show browser-color emoji (notably the blue repeat arrows). */
+.player-mode-menu .mode-glyph{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:23px;min-width:23px;height:23px;color:#42aa78;
+}
+.player-mode-menu .mode-glyph svg{
+  width:19px;height:19px;flex:0 0 19px;
+  display:block;stroke:currentColor;fill:none;
+}
+.player-mode-menu button.is-selected .mode-glyph{color:#208d5c}
+.player-mode-wrap .mode-control svg{
+  display:block;width:20px;height:20px;flex:0 0 20px;color:inherit
+}
+@media(max-width:680px){
+  .nav-rail{overflow-x:hidden!important}
 }
