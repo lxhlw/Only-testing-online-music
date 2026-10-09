@@ -107,6 +107,16 @@ async function test(viewport, legacy){
   assert.ok(Math.abs(seeked-120)<0.01,'The actual HTMLAudioElement currentTime must be changed')
   assert.equal(await page.locator('#player-seek-preview').isVisible(),false)
   assert.equal(await page.locator('#player-current-time').textContent(),'2:00')
+  // Exercise the native range control with real pointer movement as well,
+  // not only JavaScript-dispatched input/change events.
+  const seekBox=await page.locator('#player-seek').boundingBox()
+  assert.ok(seekBox && seekBox.width>80)
+  await page.mouse.move(seekBox.x+seekBox.width*0.75,seekBox.y+seekBox.height/2)
+  await page.mouse.down()
+  await page.mouse.move(seekBox.x+seekBox.width*0.25,seekBox.y+seekBox.height/2,{steps:8})
+  await page.mouse.up()
+  await page.waitForFunction(()=>Math.abs(window.__simulatedTime-50)<12,null,{timeout:3000})
+  console.log('PASS: real range drag moves HTMLAudioElement currentTime')
   console.log('PASS: range tap/drag commits real audio currentTime')
 
   await page.locator('#player-mode-btn').click()
