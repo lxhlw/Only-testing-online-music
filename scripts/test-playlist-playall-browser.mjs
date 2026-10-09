@@ -137,7 +137,7 @@ try {
   })
   assert.equal(await page.locator('#player-title').textContent(), 'Song 101')
   const finalQueue = await page.evaluate(() => window.LXMusicLibrary.snapshot().queue)
-  assert.ok(finalQueue.length <= 100, 'Old Via devices must keep a bounded queue')
+  assert.equal(finalQueue.length, 100, 'Old Via devices should retain the most useful 100-track window')
   assert.ok(finalQueue.some(track => track.id === '101'), 'Rolling queue must include track 101')
   await page.locator('#prev-track-btn').click()
   assert.equal(await page.locator('#player-title').textContent(), 'Song 100')
