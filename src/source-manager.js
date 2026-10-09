@@ -345,13 +345,19 @@
         global.clearTimeout(timer);
         timer = null;
       }
-      activeXhr = new XMLHttpRequest();
+      // Keep a stable XHR reference per attempt. A failed direct request can
+      // fire extra onreadystatechange/onerror events AFTER the proxy retry
+      // replaces activeXhr or after cleanup sets it to null.
+      var xhr = new XMLHttpRequest();
+      activeXhr = xhr;
 
       function succeed(code) {
+        if (finished || activeXhr !== xhr) return;
         finish(null, code, transport);
       }
 
       function fail(message) {
+        if (finished || activeXhr !== xhr) return;
         if (allowProxyFallback) {
           request(proxyUrl, false, 'proxy');
           return;
@@ -359,30 +365,29 @@
         finish(new Error(message));
       }
 
-      activeXhr.onreadystatechange = function(){
-        if(activeXhr.readyState!==4)return;
-        if(activeXhr.status>=200&&activeXhr.status<300) {
-          succeed(activeXhr.responseText);
-        } else if (activeXhr.status === 0) {
+      xhr.onreadystatechange = function() {
+        if (finished || activeXhr !== xhr || xhr.readyState !== 4) return;
+        if (xhr.status >= 200 && xhr.status < 300) {
+          succeed(xhr.responseText);
+        } else if (xhr.status === 0) {
           fail('Network request failed (HTTP status 0)');
         } else {
-          fail('HTTP '+activeXhr.status);
+          fail('HTTP ' + xhr.status);
         }
       };
-      activeXhr.onerror=function(){fail('Network request failed');};
-      activeXhr.ontimeout=function(){fail('Request timeout after '+TIMEOUT_MS+' ms');};
+      xhr.onerror = function() { fail('Network request failed'); };
+      xhr.ontimeout = function() { fail('Request timeout after ' + TIMEOUT_MS + ' ms'); };
 
-      timer = global.setTimeout(function () {
-        if (!finished && activeXhr) {
-          try { activeXhr.abort(); } catch (e) {}
-          fail('Request timeout after '+TIMEOUT_MS+' ms');
-        }
+      timer = global.setTimeout(function() {
+        if (finished || activeXhr !== xhr) return;
+        try { xhr.abort(); } catch (e) {}
+        fail('Request timeout after ' + TIMEOUT_MS + ' ms');
       }, TIMEOUT_MS);
 
       try {
-        activeXhr.open('GET',requestUrl,true);
-        if (activeXhr.timeout !== undefined) activeXhr.timeout = TIMEOUT_MS;
-        activeXhr.send(null);
+        xhr.open('GET', requestUrl, true);
+        if (xhr.timeout !== undefined) xhr.timeout = TIMEOUT_MS;
+        xhr.send(null);
       } catch (e) {
         fail(e && e.message ? e.message : String(e));
       }
