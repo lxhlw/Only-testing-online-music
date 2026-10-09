@@ -454,6 +454,8 @@
     var priorId = active && active.id;
     var hadExisting = sources.length > 0;
     var failures = [];
+    var lastAutoId = active && active.id || '';
+    var userIntervened = false;
 
     function finish() {
       if (hadExisting) restorePreferredSource(priorId);
@@ -463,30 +465,44 @@
     function optionsForCurrentSelection() {
       return {
         autoDefault: true,
-        preserveActive: hadExisting,
+        preserveActive: hadExisting || userIntervened,
         expectedActiveId: active && active.id || ''
       };
+    }
+
+    function syncManualSelection(expectedId) {
+      var currentId = active && active.id || '';
+      if (currentId !== expectedId) {
+        userIntervened = true;
+        return true;
+      }
+      return false;
     }
 
     function addFlower() {
       if (hasDefaultFlower()) return finish();
       var opts = optionsForCurrentSelection();
       installFromUrl(DEFAULT_FLOWER_URL, function (err) {
+        if (syncManualSelection(opts.expectedActiveId)) return finish();
         if (!err) return finish();
         // The user-confirmed mirror may be unavailable in another region.
+        var rawOptions = optionsForCurrentSelection();
         installFromUrl(DEFAULT_FLOWER_RAW_URL, function (rawErr) {
+          if (syncManualSelection(rawOptions.expectedActiveId)) return finish();
           if (rawErr) failures.push('Flower: ' + (rawErr.message || rawErr));
           finish();
-        }, optionsForCurrentSelection());
+        }, rawOptions);
       }, opts);
     }
 
     if (!hasDefaultHuibq()) {
+      var huibqOptions = optionsForCurrentSelection();
       installBuiltinHuibq(function (err) {
+        if (syncManualSelection(huibqOptions.expectedActiveId)) return finish();
         if (err) failures.push('Huibq: ' + (err.message || err));
         if (hadExisting) restorePreferredSource(priorId);
         addFlower();
-      }, optionsForCurrentSelection());
+      }, huibqOptions);
     } else addFlower();
   }
 
