@@ -253,6 +253,8 @@ jobs:
         run: node scripts/test-default-sources-legacy-browser.mjs
 
       - name: Verify deployed sticky playlist navigation
+        env:
+          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
         run: node scripts/test-playlist-sticky-scroll-browser.mjs
       - name: Verify deployed playlist detail
         env:
