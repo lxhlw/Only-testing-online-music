@@ -210,8 +210,11 @@
     var volumeButton = get('player-volume-btn');
     var level = 80;
     try {
-      var stored = Number(global.localStorage.getItem(STORAGE_VOLUME));
-      if (isFinite(stored) && stored >= 0 && stored <= 100) level = stored;
+      var storedValue = global.localStorage.getItem(STORAGE_VOLUME);
+      if (storedValue !== null && storedValue !== '') {
+        var stored = Number(storedValue);
+        if (isFinite(stored) && stored >= 0 && stored <= 100) level = stored;
+      }
     } catch (e) {}
     volume.value = String(level);
     try { audio.volume = level / 100; } catch (e) {}
