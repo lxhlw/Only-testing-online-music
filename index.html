@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>Only Testing Online Music</title>
-  <link rel="stylesheet" href="styles.css?v=0.2.36&amp;mode-icons=20261009-3">
+  <link rel="stylesheet" href="styles.css?v=0.2.36&amp;page-redesign=20261009">
 </head>
 <body>
   <div id="app">
@@ -68,7 +68,8 @@
                 <div id="channel-list" class="channel-list"></div>
                 <span id="quality-summary" class="quality-summary"></span>
               </div>
-              <div class="results-head"><strong>歌曲</strong><span class="muted">按当前渠道搜索并播放</span></div>
+              <div class="results-head search-section-heading"><strong>搜索结果</strong><span class="muted">选择歌曲直接播放，也可加入播放队列</span></div>
+              <div class="search-table-heading" aria-hidden="true"><span>#</span><span>歌曲名称</span><span>艺术家</span><span>音源</span><span>操作</span></div>
               <div id="search-results" class="results-list" aria-live="polite"></div>
             </div>
 
@@ -89,7 +90,7 @@
                 <button type="button" class="category-pill" data-playlist-cat="摇滚">摇滚</button>
                 <button type="button" class="category-pill" data-playlist-cat="轻音乐">轻音乐</button>
               </div>
-              <div class="results-head"><strong>歌单</strong><span class="muted">点击“打开歌单”查看歌曲</span></div>
+              <div class="results-head playlist-section-heading"><strong>歌单搜索结果</strong><span class="muted">点击封面或打开歌单，查看完整曲目</span></div>
               <div id="playlist-results" class="playlist-grid"></div>
             </div>
           </section>
@@ -117,6 +118,7 @@
               <button type="button" class="category-pill" data-playlist-cat="轻音乐">轻音乐</button>
             </div>
           </div>
+            <div class="results-head playlist-section-heading"><strong>精选歌单</strong><span class="muted">发现音乐，点击卡片进入歌单</span></div>
             <div id="playlist-featured" class="playlist-grid"></div>
 
             <section id="playlist-detail-panel" class="playlist-detail-panel hidden">
@@ -165,8 +167,20 @@
                 <div id="ranking-list" class="ranking-list"></div>
               </div>
               <div class="ranking-content">
-                <div id="ranking-title" class="ranking-title">请选择排行榜</div>
-                <div id="ranking-songs" class="results-list"></div>
+                <div class="ranking-hero">
+                  <div id="ranking-cover" class="ranking-cover" aria-hidden="true">♫</div>
+                  <div class="ranking-hero-copy">
+                    <div class="panel-kicker">MUSIC CHART</div>
+                    <h2 id="ranking-title" class="ranking-title">请选择排行榜</h2>
+                    <div id="ranking-summary" class="ranking-summary">热门榜单 · 实时曲目</div>
+                    <div class="ranking-hero-actions">
+                      <button id="ranking-retry-btn" type="button" class="secondary">刷新榜单歌曲</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="ranking-song-section-heading"><strong>榜单歌曲</strong><span id="ranking-song-count" class="muted">选择榜单查看曲目</span></div>
+                <div class="ranking-table-heading" aria-hidden="true"><span>排名</span><span>歌曲名称</span><span>艺术家</span><span>专辑</span><span>操作</span></div>
+                <div id="ranking-songs" class="results-list" aria-live="polite"></div>
               </div>
             </div>
           </section>
@@ -335,7 +349,7 @@
   <script src="src/music-library.js?playlist-queue=20261009"></script>
   <script src="src/music-lyrics.js"></script>
   <script src="src/player-controls.js?v=20261009-mode-icons"></script>
-  <script src="src/app.js?v=0.2.36&amp;player-ui=20261009"></script>
+  <script src="src/app.js?v=0.2.36&amp;page-redesign=20261009"></script>
   <script>
   (function (global) {
     'use strict';
@@ -346,6 +360,13 @@
     var playlistCategory = 'all';
     var rankingSource = 'wy';
     var rankingId = '';
+    var rankingListCache = [];
+    var rankingListLoaded = false;
+    var rankingListLoading = false;
+    var rankingLoadGeneration = 0;
+    var rankingSongsGeneration = 0;
+    var rankingSongsCache = {};
+    var currentRankingItem = null;
     var myTab = 'history';
     var playlistFavoritesKey = 'only-testing-online-music.playlist-favorites';
     var playlistDetailItem = null;
@@ -894,46 +915,177 @@
       searchPlaylists(playlistCategory==='all'?'热门':playlistCategory,'playlist-featured');
     }
 
+    function rankingItemById(id){
+      for(var i=0;i<rankingListCache.length;i++){
+        if(String(rankingListCache[i].id)===String(id))return rankingListCache[i];
+      }
+      return null;
+    }
+    function refreshRankingSelection(){
+      var buttons=all('#ranking-list .ranking-item');
+      for(var i=0;i<buttons.length;i++){
+        var selected=buttons[i].getAttribute('data-ranking-id')===String(rankingId);
+        if(selected){addClass(buttons[i],'active');buttons[i].setAttribute('aria-current','true');}
+        else{removeClass(buttons[i],'active');buttons[i].removeAttribute('aria-current');}
+      }
+    }
+    function renderRankingChoices(){
+      var listHost=el('ranking-list');if(!listHost)return;
+      listHost.innerHTML='';
+      var fragment=document.createDocumentFragment();
+      for(var i=0;i<rankingListCache.length;i++){
+        var item=rankingListCache[i]||{};
+        var b=document.createElement('button');
+        b.type='button';
+        b.className='ranking-item';
+        b.setAttribute('data-ranking-id',String(item.id));
+        var indexNumber=i+1;
+        b.innerHTML='<span class="ranking-nav-number">'+(indexNumber<10?'0':'')+indexNumber+'</span><span class="ranking-nav-name">'+escapeHtml(item.name||'未命名榜单')+'</span>';
+        b.onclick=(function(choice){return function(){ selectRanking(choice); };})(item);
+        fragment.appendChild(b);
+      }
+      listHost.appendChild(fragment);
+      refreshRankingSelection();
+    }
     function loadRankings(){
       var listHost=el('ranking-list');
       if(!listHost)return;
-      listHost.innerHTML='<div class="loading-note">正在读取榜单……</div>';
-      requestJson('/api/netease-toplist',function(err,data){
-        if(err){listHost.innerHTML='<div class="empty-note">排行榜加载失败：'+escapeHtml(err.message||err)+'</div>';return;}
-        var list=data&&data.list instanceof Array?data.list:[];
-        listHost.innerHTML='';
-        if(!list.length){listHost.innerHTML='<div class="empty-note">暂无榜单</div>';return;}
-        for(var i=0;i<list.length;i+=1){
-          var item=list[i]||{};
-          var b=document.createElement('button');b.type='button';b.className='ranking-item'+(String(item.id)===String(rankingId)?' active':'');
-          b.innerHTML=escapeHtml(item.name||'未命名榜单');
-          b.onclick=(function(id,name){return function(){rankingId=String(id);loadRankingSongs(id,name);loadRankings();};})(item.id,item.name);
-          listHost.appendChild(b);
-        }
-        if(!rankingId&&list[0]){rankingId=String(list[0].id);loadRankingSongs(list[0].id,list[0].name);}
-      });
-    }
-
-    function loadRankingSongs(id,name){
-      el('ranking-title').innerHTML=escapeHtml(name||'排行榜');
-      var host=el('ranking-songs');host.innerHTML='<div class="loading-note">正在读取榜单歌曲……</div>';
-      requestJson('/api/netease-toplist?id='+encodeURIComponent(String(id))+'&limit=30',function(err,data){
-        if(err){host.innerHTML='<div class="empty-note">榜单歌曲加载失败：'+escapeHtml(err.message||err)+'</div>';return;}
-        var songs=data&&data.songs instanceof Array?data.songs:[];
-        host.innerHTML='';
-        if(!songs.length){host.innerHTML='<div class="empty-note">该榜单没有可用歌曲</div>';return;}
-        renderSongListInto(host,songs);
-      });
-    }
-
-    function renderSongListInto(host,list){
-      for(var i=0;i<list.length;i+=1){
-        var item=list[i]||{}; 
-        var row=document.createElement('div');row.className='search-row';
-        row.innerHTML='<div class="song-main"><b>'+escapeHtml(item.name||'未知歌曲')+'</b><span>'+escapeHtml(item.singer||'未知歌手')+'</span></div>';
-        var action=document.createElement('button');action.type='button';action.innerHTML='播放';action.onclick=(function(m){return function(){playRankOrPlaylistSong(m);};})(item);
-        row.appendChild(action);host.appendChild(row);
+      if(rankingListLoaded&&rankingListCache.length){
+        renderRankingChoices();
+        if(!rankingId)selectRanking(rankingListCache[0]);
+        return;
       }
+      if(rankingListLoading)return;
+      rankingListLoading=true;
+      var requestGeneration=++rankingLoadGeneration;
+      listHost.innerHTML='<div class="loading-note">正在读取网易云榜单……</div>';
+      requestJson('/api/netease-toplist',function(err,data){
+        if(requestGeneration!==rankingLoadGeneration)return;
+        rankingListLoading=false;
+        if(err){
+          listHost.innerHTML='<div class="empty-note">榜单加载失败：'+escapeHtml(err.message||err)+'</div>';
+          return;
+        }
+        rankingListCache=data&&data.list instanceof Array?data.list:[];
+        rankingListLoaded=true;
+        if(!rankingListCache.length){
+          listHost.innerHTML='<div class="empty-note">暂无可用榜单，请稍后重试。</div>';
+          return;
+        }
+        if(!rankingItemById(rankingId))rankingId='';
+        renderRankingChoices();
+        if(!rankingId)selectRanking(rankingListCache[0]);
+        else if(!currentRankingItem)selectRanking(rankingItemById(rankingId));
+      });
+    }
+    function selectRanking(item){
+      if(!item||item.id==null)return;
+      var requestedId=String(item.id);
+      if(requestedId===String(rankingId)&&currentRankingItem&&
+         el('ranking-songs').getAttribute('data-loaded-ranking')===requestedId)return;
+      rankingId=requestedId;
+      currentRankingItem=item;
+      refreshRankingSelection();
+      var cover=el('ranking-cover');
+      if(item.coverImgUrl){
+        cover.style.backgroundImage='url("'+String(item.coverImgUrl).replace(/"/g,'%22')+'")';
+        cover.innerHTML='';
+      }else{
+        cover.style.backgroundImage='';
+        cover.innerHTML='♫';
+      }
+      el('ranking-summary').textContent=(item.updateFrequency||'网易云音乐')+' · 音乐排行榜';
+      loadRankingSongs(requestedId,item.name);
+    }
+    function rankingEmptyState(host,heading,details,retry){
+      host.innerHTML='';
+      var panel=document.createElement('div');panel.className='ranking-state';
+      panel.innerHTML='<strong>'+escapeHtml(heading)+'</strong><span>'+escapeHtml(details||'')+'</span>';
+      if(retry){
+        var button=document.createElement('button');button.type='button';button.className='secondary';
+        button.textContent='重新加载';
+        button.onclick=function(){loadRankingSongs(rankingId,currentRankingItem&&currentRankingItem.name);};
+        panel.appendChild(button);
+      }
+      host.appendChild(panel);
+    }
+    function loadRankingSongs(id,name){
+      var host=el('ranking-songs');if(!host)return;
+      var requestedId=String(id||'');
+      var requestGeneration=++rankingSongsGeneration;
+      el('ranking-title').textContent=name||'排行榜';
+      el('ranking-song-count').textContent='正在获取歌曲…';
+      host.removeAttribute('data-loaded-ranking');
+      host.innerHTML='<div class="loading-note">正在读取榜单歌曲……</div>';
+      var cached=rankingSongsCache[requestedId];
+      if(cached&&cached.length){
+        host.innerHTML='';
+        renderSongListInto(host,cached);
+        el('ranking-song-count').textContent='共 '+cached.length+' 首歌曲';
+        host.setAttribute('data-loaded-ranking',requestedId);
+        return;
+      }
+      requestJson('/api/netease-toplist?id='+encodeURIComponent(requestedId)+'&limit=30',function(err,data){
+        if(requestGeneration!==rankingSongsGeneration||String(rankingId)!==requestedId)return;
+        if(err){
+          el('ranking-song-count').textContent='读取失败';
+          rankingEmptyState(host,'暂时无法读取歌曲','榜单服务返回异常：'+(err.message||err),true);
+          return;
+        }
+        var songs=data&&data.songs instanceof Array?data.songs:[];
+        if(!songs.length){
+          el('ranking-song-count').textContent='暂无曲目';
+          rankingEmptyState(host,'暂无可展示曲目','当前榜单尚未返回歌曲信息，可稍后重试。',true);
+          return;
+        }
+        rankingSongsCache[requestedId]=songs;
+        host.innerHTML='';
+        renderSongListInto(host,songs);
+        el('ranking-song-count').textContent='已加载 '+songs.length+' 首歌曲';
+        host.setAttribute('data-loaded-ranking',requestedId);
+      });
+    }
+    function renderSongListInto(host,list){
+      var fragment=document.createDocumentFragment();
+      for(var i=0;i<list.length;i++){
+        var item=list[i]||{};
+        var row=document.createElement('div');
+        row.className='ranking-song-row';
+        row.setAttribute('data-ranking-song-id',String(item.id||''));
+        var rank=i+1;
+        var ms=Number(item.interval||0);
+        var seconds=ms>10000?Math.floor(ms/1000):Math.floor(ms);
+        var duration=seconds>0?String(Math.floor(seconds/60))+':'+('0'+String(seconds%60)).slice(-2):'—';
+        row.innerHTML='<span class="ranking-song-number'+(rank<=3?' top-three':'')+'">'+rank+'</span>'+
+          '<span class="ranking-track-name">'+escapeHtml(item.name||'未知歌曲')+
+          '<small>'+escapeHtml(item.albumName||'')+'</small></span>'+
+          '<span class="ranking-track-singer">'+escapeHtml(item.singer||'未知歌手')+'</span>'+
+          '<span class="ranking-track-album">'+escapeHtml(item.albumName||'—')+'</span>';
+        var buttons=document.createElement('div');buttons.className='ranking-track-actions';
+        var play=document.createElement('button');play.type='button';play.className='ranking-play-btn';
+        play.textContent='播放';play.setAttribute('aria-label','播放 '+String(item.name||'歌曲'));
+        play.onclick=(function(m){return function(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();playRankOrPlaylistSong(m);};})(item);
+        buttons.appendChild(play);
+        var queue=document.createElement('button');queue.type='button';queue.className='secondary ranking-queue-btn';
+        queue.textContent='＋';queue.title='加入队列';queue.setAttribute('aria-label','加入队列');
+        queue.onclick=(function(m){return function(ev){
+          if(ev&&ev.stopPropagation)ev.stopPropagation();
+          if(global.OnlyTestingMusicApp&&global.OnlyTestingMusicApp.addToQueue){
+            global.OnlyTestingMusicApp.addToQueue(m);
+            setStatus('已加入播放队列：'+escapeHtml(m.name||'未知歌曲'),'ready');
+          }
+        };})(item);
+        buttons.appendChild(queue);
+        var time=document.createElement('span');time.className='ranking-track-duration';time.textContent=duration;
+        row.appendChild(time);
+        row.appendChild(buttons);
+        row.onclick=(function(m){return function(ev){
+          if(ev&&ev.target&&String(ev.target.tagName||'').toLowerCase()==='button')return;
+          playRankOrPlaylistSong(m);
+        };})(item);
+        fragment.appendChild(row);
+      }
+      host.appendChild(fragment);
     }
 
     function playRankOrPlaylistSong(item){
@@ -1049,6 +1201,10 @@
       return false;
     };
     el('playlist-play-all-btn').onclick=function(){playPlaylistAt(0);};
+    el('ranking-retry-btn').onclick=function(){
+      if(rankingId)loadRankingSongs(rankingId,currentRankingItem&&currentRankingItem.name);
+      else{rankingListLoaded=false;loadRankings();}
+    };
 
     el('playlist-favorite-btn').onclick=function(){
       if(!playlistDetailItem)return;
