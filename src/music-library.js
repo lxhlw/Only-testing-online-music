@@ -101,6 +101,23 @@
     return changed;
   }
 
+  // Play-all starts an ordered queue in a single write. Calling addQueue()
+  // repeatedly in reverse order makes the first song appear at the end.
+  // Keep only a bounded window for low-memory Android 4.4 devices; playlist
+  // navigation can retain the complete loaded track sequence separately.
+  function replaceQueue(items) {
+    if (!(items instanceof Array)) return false;
+    var next = [];
+    for (var i = 0; i < items.length && next.length < MAX_QUEUE; i += 1) {
+      var item = normalizeMusic(items[i]);
+      if (!item || findIndex(next, item) >= 0) continue;
+      next.push(item);
+    }
+    state.queue = next;
+    persist();
+    return true;
+  }
+
   function removeQueue(music) {
     var index = findIndex(state.queue, music);
     if (index < 0) return false;
@@ -159,6 +176,7 @@
   global.LXMusicLibrary = {
     snapshot: snapshot,
     addQueue: addQueue,
+    replaceQueue: replaceQueue,
     removeQueue: removeQueue,
     clearQueue: clearQueue,
     addHistory: addHistory,
