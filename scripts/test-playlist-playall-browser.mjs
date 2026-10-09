@@ -146,6 +146,76 @@ try {
   await page.locator('#next-track-btn').click()
   assert.match(await page.locator('#status').textContent(), /已经是歌单最后一首/)
   console.log('PASS: track 100 to 101 with bounded queue, Back and real last-track guard')
+  // Any song row is directly clickable. Selecting one midway must start
+  // from that position, show an active-row state and retain song order.
+  await page.locator('#playlist-detail-songs .playlist-song-row').nth(6).click()
+  assert.equal(await page.locator('#player-title').textContent(), 'Song 7')
+  assert.equal(await page.locator('#playlist-detail-songs .playlist-song-row.is-playing').count(), 1)
+  assert.equal(await page.locator('#playlist-detail-songs .playlist-song-row.is-playing').getAttribute('data-track-index'), '6')
+  await page.locator('#next-track-btn').click()
+  assert.equal(await page.locator('#player-title').textContent(), 'Song 8')
+  assert.equal(await page.locator('#playlist-detail-songs .playlist-song-row.is-playing').getAttribute('data-track-index'), '7')
+  await page.locator('#prev-track-btn').click()
+  assert.equal(await page.locator('#player-title').textContent(), 'Song 7')
+  console.log('PASS: click a middle playlist row, highlight it and keep Next/Previous in song order')
+
+  const seventh = page.locator('#playlist-detail-songs .playlist-song-row').nth(6)
+  await seventh.locator('.playlist-add-queue').click()
+  assert.equal(await page.locator('#player-title').textContent(), 'Song 7', 'Queue-only button must not launch playback')
+  await seventh.locator('.playlist-fav-song').click()
+  assert.equal(await page.locator('#player-title').textContent(), 'Song 7', 'Favorite button must not launch playback')
+  await page.locator('#playlist-detail-songs .playlist-song-row').nth(9).focus()
+  await page.keyboard.press('Enter')
+  assert.equal(await page.locator('#player-title').textContent(), 'Song 10')
+  await page.locator('#playlist-detail-songs .playlist-song-row').nth(3).locator('.playlist-song-play').click()
+  assert.equal(await page.locator('#player-title').textContent(), 'Song 4')
+  console.log('PASS: keyboard and explicit Play button select arbitrary tracks without duplicate click playback')
+
+  const mobileLayout = await page.evaluate(() => {
+    const row = document.querySelector('#playlist-detail-songs .playlist-song-row')
+    const actions = row.querySelector('.playlist-song-actions')
+    const title = row.querySelector('.song-main')
+    return {
+      rowWidth: row.getBoundingClientRect().width,
+      actionsRight: actions.getBoundingClientRect().right,
+      titleRight: title.getBoundingClientRect().right,
+      viewportWidth: document.documentElement.clientWidth,
+      artistDisplay: getComputedStyle(row.querySelector('.playlist-song-artist')).display
+    }
+  })
+  assert.ok(mobileLayout.actionsRight <= mobileLayout.viewportWidth + 1, 'All playlist controls must fit old mobile screens')
+  assert.ok(mobileLayout.titleRight <= mobileLayout.actionsRight, 'Song title must not overlap buttons')
+  assert.equal(mobileLayout.artistDisplay, 'none', 'Small screens hide secondary columns for uncluttered touch targets')
+  console.log('PASS: Via mobile playlist controls remain within viewport')
+
+  await page.setViewportSize({ width: 1320, height: 850 })
+  const desktopLayout = await page.evaluate(() => {
+    const row = document.querySelector('#playlist-detail-songs .playlist-song-row')
+    const header = document.querySelector('.playlist-table-heading')
+    const artist = row.querySelector('.playlist-song-artist')
+    const album = row.querySelector('.playlist-song-album')
+    const actions = row.querySelector('.playlist-song-actions')
+    const title = row.querySelector('.song-main b')
+    return {
+      rowDisplay: getComputedStyle(row).display,
+      rowWidth: row.getBoundingClientRect().width,
+      headingVisible: getComputedStyle(header).display,
+      artistVisible: getComputedStyle(artist).display,
+      albumVisible: getComputedStyle(album).display,
+      fontSize: parseFloat(getComputedStyle(title).fontSize),
+      actionsRight: actions.getBoundingClientRect().right,
+      viewportWidth: document.documentElement.clientWidth
+    }
+  })
+  assert.equal(desktopLayout.rowDisplay, 'flex', 'Desktop songs must use aligned flex columns')
+  assert.notEqual(desktopLayout.headingVisible, 'none')
+  assert.notEqual(desktopLayout.artistVisible, 'none', 'Artist column must remain visible on desktop')
+  assert.notEqual(desktopLayout.albumVisible, 'none', 'Album column must remain visible on desktop')
+  assert.ok(desktopLayout.fontSize >= 14, 'Song typography must not remain microscopic')
+  assert.ok(desktopLayout.actionsRight <= desktopLayout.viewportWidth + 1)
+  console.log('PASS: LX-inspired desktop playlist table has readable aligned columns')
+
+
   assert.deepEqual(errors, [])
 } finally {
   await browser.close()

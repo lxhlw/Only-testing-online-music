@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>Only Testing Online Music</title>
-  <link rel="stylesheet" href="styles.css?v=0.2.36&amp;playlist-detail=20261009">
+  <link rel="stylesheet" href="styles.css?v=0.2.36&amp;lx-ui=20261009">
 </head>
 <body>
   <div id="app">
@@ -134,8 +134,16 @@
                 </div>
               </div>
               <div class="results-head playlist-song-head">
-                <strong>歌曲列表</strong>
+                <strong>歌曲列表 <span class="playlist-hint">点击任意歌曲即可播放</span></strong>
                 <span id="playlist-detail-status" class="muted">正在读取……</span>
+              </div>
+              <div class="playlist-table-heading" aria-hidden="true">
+                <span class="playlist-th-index">#</span>
+                <span class="playlist-th-title">歌曲名</span>
+                <span class="playlist-th-artist">艺术家</span>
+                <span class="playlist-th-album">专辑</span>
+                <span class="playlist-th-duration">时长</span>
+                <span class="playlist-th-actions">操作</span>
               </div>
               <div id="playlist-detail-songs" class="results-list"></div>
               <button id="playlist-load-more-btn" type="button" class="secondary hidden">加载更多歌曲</button>
@@ -289,7 +297,7 @@
   <script src="src/source-manager.js?v=0.2.36&amp;defaults=20261009-real"></script>
   <script src="src/music-library.js?playlist-queue=20261009"></script>
   <script src="src/music-lyrics.js"></script>
-  <script src="src/app.js?v=0.2.36&amp;playlist-next=20261009"></script>
+  <script src="src/app.js?v=0.2.36&amp;row-select=20261009"></script>
   <script>
   (function (global) {
     'use strict';
@@ -309,8 +317,35 @@
     var playlistHasMore = false;
     var playlistSearchGeneration = {};
     var lastPlaylistOpenAt = 0;
+    var selectedPlaylistMusicKey = '';
+    function playlistSongKey(item){
+      if(!item)return '';
+      var id=item.id||item.songId||item.songmid||item.mid||item.hash||'';
+      return String(item.source||'').toLowerCase()+':'+String(id);
+    }
+    function highlightPlaylistSong(item){
+      selectedPlaylistMusicKey=playlistSongKey(item);
+      var rows=all('#playlist-detail-songs .playlist-song-row');
+      for(var i=0;i<rows.length;i+=1){
+        var same=selectedPlaylistMusicKey&&rows[i].getAttribute('data-song-key')===selectedPlaylistMusicKey;
+        if(same){addClass(rows[i],'is-playing');rows[i].setAttribute('aria-current','true');}
+        else{removeClass(rows[i],'is-playing');rows[i].removeAttribute('aria-current');}
+        var play=rows[i].querySelector('.playlist-song-play');
+        if(play)play.setAttribute('aria-label',same?'正在播放':'播放该歌曲');
+      }
+    }
+    global.OnlyTestingPlaylistUI={onTrackChange:highlightPlaylistSong};
 
     function el(id){ return document.getElementById(id); }
+    // Playlist controls live in the navigation script, while app.js owns its
+    // own private status helper. Keep playlist status updates self-contained
+    // instead of leaking a ReferenceError on Queue/Favorite actions.
+    function setStatus(text,type){
+      var node=el('status');
+      if(!node)return;
+      node.className='status global-status'+(type?' '+type:'');
+      node.innerHTML=text;
+    }
     function all(selector){ return document.querySelectorAll(selector); }
     function hasClass(node, name){ return (' '+node.className+' ').indexOf(' '+name+' ') >= 0; }
     function addClass(node,name){ if(!hasClass(node,name)) node.className += ' '+name; }
@@ -551,42 +586,133 @@
       loadFeaturedPlaylists();
     }
 
+    function playPlaylistAt(startIndex){
+      if(!playlistDetailSongs.length){setStatus('当前歌单没有可播放歌曲。','warn');return;}
+      var app=global.OnlyTestingMusicApp;
+      if(!app||typeof app.playPlaylist!=='function'){
+        setStatus('歌单播放模块尚未就绪。','fail');
+        return;
+      }
+      var item=playlistDetailItem;
+      var capturedGeneration=playlistPageGeneration;
+      var nextOffset=playlistNextOffset;
+      var hasMore=playlistHasMore;
+      var playlistId=item&&item.id!=null?String(item.id):'';
+      var options={
+        startIndex:startIndex,
+        hasMore:hasMore&&!!playlistId,
+        loadMore:function(done){
+          if(!playlistId||!hasMore)return done(null,{songs:[],hasMore:false});
+          var previousOffset=nextOffset;
+          requestJson('/api/netease-playlists?id='+encodeURIComponent(playlistId)+
+            '&offset='+previousOffset+'&limit=50',function(err,data){
+            if(err)return done(err);
+            var next=Number(data&&data.nextOffset);
+            nextOffset=isFinite(next)&&next>previousOffset?next:previousOffset+50;
+            hasMore=Boolean(data&&data.hasMore);
+            var pageSongs=data&&data.songs instanceof Array?data.songs:[];
+            // Keep the visible song table in sync with pages fetched by
+            // playback; reopening or switching playlists never paints stale
+            // asynchronous results into another playlist.
+            if(playlistDetailItem&&String(playlistDetailItem.id)===playlistId&&
+              capturedGeneration===playlistPageGeneration){
+              var seen={};
+              for(var k=0;k<playlistDetailSongs.length;k++)seen[playlistSongKey(playlistDetailSongs[k])]=true;
+              var changed=false;
+              for(var j=0;j<pageSongs.length;j++){
+                var key=playlistSongKey(pageSongs[j]);
+                if(key&&key!==':'&&!seen[key]){
+                  playlistDetailSongs.push(pageSongs[j]);seen[key]=true;changed=true;
+                }
+              }
+              playlistNextOffset=nextOffset;
+              playlistHasMore=hasMore;
+              el('playlist-detail-status').innerHTML='已加载 '+playlistDetailSongs.length+' 首歌曲';
+              if(changed)renderPlaylistSongs(playlistDetailSongs);
+              if(hasMore)removeClass(el('playlist-load-more-btn'),'hidden');
+              else addClass(el('playlist-load-more-btn'),'hidden');
+            }
+            done(null,{songs:pageSongs,hasMore:hasMore});
+          },25000);
+        }
+      };
+      if(!app.playPlaylist(playlistDetailSongs,options)){
+        setStatus('无法播放所选歌曲。','fail');
+      }
+    }
+
     function renderPlaylistSongs(list){
       var host=el('playlist-detail-songs');
       host.innerHTML='';
       if(!list.length){host.innerHTML='<div class="empty-note">该歌单没有可用歌曲</div>';return;}
-      // Build the 50-song page off-DOM, then append it in one operation.
+      // DOM fragment + one append prevents large playlists from flashing on
+      // old Via WebViews; each row is keyboard- and touch-operable.
       var fragment=document.createDocumentFragment();
       for(var i=0;i<list.length;i+=1){
         var item=list[i]||{};
-        var row=document.createElement('div'); row.className='playlist-song-row search-row';
-        var ms=Number(item.interval||0); var totalSeconds=ms>10000?Math.floor(ms/1000):Math.floor(ms);
+        var row=document.createElement('div');
+        row.className='playlist-song-row search-row';
+        row.setAttribute('data-song-key',playlistSongKey(item));
+        row.setAttribute('data-track-index',String(i));
+        row.setAttribute('tabindex','0');
+        row.setAttribute('aria-label','播放 '+String(item.name||'未知歌曲'));
+        var ms=Number(item.interval||0);
+        var totalSeconds=ms>10000?Math.floor(ms/1000):Math.floor(ms);
         var duration=totalSeconds>0?String(Math.floor(totalSeconds/60))+':'+('0'+String(totalSeconds%60)).slice(-2):'—';
-        row.innerHTML='<span class="playlist-song-index">'+String(i+1)+'</span>' +
-          '<div class="song-main"><b>'+escapeHtml(item.name||'未知歌曲')+'</b>' +
-          '<span>'+escapeHtml(item.singer||'未知歌手')+'</span>' +
-          '<small class="playlist-song-album">'+escapeHtml(item.albumName||'')+'</small></div>' +
+        row.innerHTML='<span class="playlist-song-index">'+String(i+1)+'</span>'+
+          '<div class="song-main"><b>'+escapeHtml(item.name||'未知歌曲')+'</b><small class="playlist-song-mobile-meta">'+escapeHtml(item.singer||'未知歌手')+' · '+escapeHtml(duration)+'</small></div>'+
+          '<span class="playlist-song-artist">'+escapeHtml(item.singer||'未知歌手')+'</span>'+
+          '<span class="playlist-song-album">'+escapeHtml(item.albumName||'—')+'</span>'+
           '<span class="playlist-song-duration">'+escapeHtml(duration)+'</span>';
-        var actions=document.createElement('div'); actions.className='search-actions';
-        var play=document.createElement('button'); play.type='button'; play.innerHTML='播放';
-        play.onclick=(function(m){return function(){playRankOrPlaylistSong(m);};})(item);
+        var actions=document.createElement('div');
+        actions.className='search-actions playlist-song-actions';
+        var play=document.createElement('button');
+        play.type='button';play.className='playlist-song-play';play.innerHTML='播放';
+        play.setAttribute('aria-label','播放该歌曲');
+        play.onclick=(function(index){return function(ev){
+          if(ev&&ev.stopPropagation)ev.stopPropagation();
+          playPlaylistAt(index);
+        };})(i);
         actions.appendChild(play);
-        var queue=document.createElement('button'); queue.type='button'; queue.className='secondary'; queue.innerHTML='加入队列';
-        queue.onclick=(function(m){return function(){
+        var queue=document.createElement('button');
+        queue.type='button';queue.className='secondary playlist-add-queue';queue.innerHTML='＋';
+        queue.title='加入播放队列';queue.setAttribute('aria-label','加入播放队列');
+        queue.onclick=(function(m){return function(ev){
+          if(ev&&ev.stopPropagation)ev.stopPropagation();
           if(global.OnlyTestingMusicApp&&global.OnlyTestingMusicApp.addToQueue)global.OnlyTestingMusicApp.addToQueue(m);
           setStatus('已加入播放队列：'+escapeHtml(m.name||'未知歌曲'),'ready');
         };})(item);
         actions.appendChild(queue);
-        var fav=document.createElement('button'); fav.type='button'; fav.className='secondary';
-        fav.innerHTML=global.LXMusicLibrary&&global.LXMusicLibrary.isFavorite(item)?'取消收藏':'收藏';
-        fav.onclick=(function(m,btn){return function(){
-          if(global.LXMusicLibrary){global.LXMusicLibrary.toggleFavorite(m);btn.innerHTML=global.LXMusicLibrary.isFavorite(m)?'取消收藏':'收藏';}
+        var fav=document.createElement('button');
+        fav.type='button';fav.className='secondary playlist-fav-song';
+        fav.innerHTML=global.LXMusicLibrary&&global.LXMusicLibrary.isFavorite(item)?'♥':'♡';
+        fav.title='收藏歌曲';fav.setAttribute('aria-label','收藏歌曲');
+        fav.onclick=(function(m,btn){return function(ev){
+          if(ev&&ev.stopPropagation)ev.stopPropagation();
+          if(global.LXMusicLibrary){
+            global.LXMusicLibrary.toggleFavorite(m);
+            btn.innerHTML=global.LXMusicLibrary.isFavorite(m)?'♥':'♡';
+          }
         };})(item,fav);
         actions.appendChild(fav);
         row.appendChild(actions);
+        row.onclick=(function(index){return function(ev){
+          if(ev&&ev.target&&String(ev.target.tagName||'').toLowerCase()==='button')return;
+          playPlaylistAt(index);
+        };})(i);
+        row.onkeydown=(function(index){return function(ev){
+          ev=ev||global.event;
+          var key=ev.keyCode||ev.which;
+          if((key===13||key===32)&&ev.target===this){
+            if(ev.preventDefault)ev.preventDefault();
+            playPlaylistAt(index);
+          }
+        };})(i);
         fragment.appendChild(row);
       }
       host.appendChild(fragment);
+      if(selectedPlaylistMusicKey)highlightPlaylistSong({source:selectedPlaylistMusicKey.split(':')[0],
+        id:selectedPlaylistMusicKey.substring(selectedPlaylistMusicKey.indexOf(':')+1)});
     }
 
     function normalizePlaylistItems(raw){
@@ -786,39 +912,8 @@
       closePlaylistDetail();
       return false;
     };
-    el('playlist-play-all-btn').onclick=function(){
-      if(!playlistDetailSongs.length){setStatus('当前歌单没有可播放歌曲。','warn');return;}
-      var app=global.OnlyTestingMusicApp;
-      if(!app||typeof app.playPlaylist!=='function'){
-        setStatus('歌单播放模块尚未就绪。','fail');
-        return;
-      }
-      // Queue the tracks in original order, without moving track 1 to the
-      // tail. Older Via devices should never download hundreds of tracks at
-      // once; more pages are fetched only as playback approaches the end.
-      var item=playlistDetailItem;
-      var nextOffset=playlistNextOffset;
-      var hasMore=playlistHasMore;
-      var playlistId=item&&item.id!=null?String(item.id):'';
-      if(!app.playPlaylist(playlistDetailSongs,{
-        hasMore:hasMore&&!!playlistId,
-        loadMore:function(done){
-          if(!playlistId||!hasMore)return done(null,{songs:[],hasMore:false});
-          var previousOffset=nextOffset;
-          requestJson('/api/netease-playlists?id='+encodeURIComponent(playlistId)+
-            '&offset='+previousOffset+'&limit=50',function(err,data){
-            if(err)return done(err);
-            var next=Number(data&&data.nextOffset);
-            nextOffset=isFinite(next)&&next>previousOffset?next:previousOffset+50;
-            hasMore=Boolean(data&&data.hasMore);
-            done(null,{
-              songs:data&&data.songs instanceof Array?data.songs:[],
-              hasMore:hasMore
-            });
-          },25000);
-        }
-      }))setStatus('无法建立当前歌单的播放队列。','fail');
-    };
+    el('playlist-play-all-btn').onclick=function(){playPlaylistAt(0);};
+
     el('playlist-favorite-btn').onclick=function(){
       if(!playlistDetailItem)return;
       togglePlaylistFavorite(playlistDetailItem);

@@ -459,15 +459,26 @@
     }
     if (!tracks.length) return false;
     options = options || {};
+    var requestedIndex = Math.floor(Number(options.startIndex || 0));
+    if (!isFinite(requestedIndex) || requestedIndex < 0 ||
+        requestedIndex >= items.length) return false;
+    var selectedTrack = items[requestedIndex];
+    var startIndex = findPlaylistSongIndex(tracks, selectedTrack);
+    if (startIndex < 0) return false;
     playlistPlayback = {
-      tracks: tracks, index: 0,
+      tracks: tracks, index: startIndex,
       hasMore: options.hasMore === true,
       loadMore: options.loadMore,
       loading: false, pendingNext: false
     };
-    global.LXMusicLibrary.replaceQueue(tracks.slice(0, 100));
+    // Starting halfway through an already-loaded long playlist must put
+    // the requested song inside the bounded persistent queue as well.
+    var windowStart = Math.max(0, startIndex - 15);
+    var maximumStart = Math.max(0, tracks.length - 100);
+    if (windowStart > maximumStart) windowStart = maximumStart;
+    global.LXMusicLibrary.replaceQueue(tracks.slice(windowStart, windowStart + 100));
     renderLibrary();
-    playLibraryMusic(tracks[0]);
+    playLibraryMusic(tracks[startIndex]);
     maybePrefetchPlaylist(playlistPlayback);
     return true;
   }
@@ -1189,6 +1200,13 @@
       // channel's playback attempt.
       try { audio.removeAttribute('src'); } catch (e) {}
       try { if (typeof audio.load === 'function') audio.load(); } catch (e) {}
+    }
+
+    // Keep the visible playlist selection synchronized with the current
+    // player when a row, Next, Previous or audio-ended starts a new track.
+    if (global.OnlyTestingPlaylistUI &&
+        typeof global.OnlyTestingPlaylistUI.onTrackChange === 'function') {
+      global.OnlyTestingPlaylistUI.onTrackChange(music);
     }
 
     var plan = getQualityPlan(active, source);
