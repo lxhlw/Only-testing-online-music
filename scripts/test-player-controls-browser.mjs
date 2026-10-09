@@ -165,7 +165,9 @@ async function test(viewport, legacy){
   assert.ok(dimensions.mode.left>=0,'Mode button cannot overflow')
   await page.locator('#player-mode-btn').click()
   assert.equal(await page.locator('#player-mode-menu').isVisible(),true)
-  await page.locator('#player-title').click()
+  // Choose a true outside target. On a narrow Via screen the menu quite
+  // intentionally overlays the album/track-title area above the player.
+  await page.locator('#player-duration').click()
   assert.equal(await page.locator('#player-mode-menu').isVisible(),false,'Clicking outside closes mode menu')
   assert.deepEqual(errors,[])
   console.log('PASS: '+viewport.width+' custom player layout, mode menu and no runtime errors')
