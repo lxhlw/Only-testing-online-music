@@ -9,17 +9,23 @@ const page=await browser.newPage({
 const errors=[]
 page.on('pageerror',e=>errors.push(String(e)))
 let searches=0
-await page.route('**/api/netease-search?*',async route=>{
- searches++
- if(searches===1) return route.fulfill({status:502,contentType:'application/json',body:'{"error":"temporary upstream failure"}'})
- // Avoid relying on network while exercising the legacy UI.
- return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({result:{songs:[{
-  id:1234,name:'成都',ar:[{name:'赵雷'}],al:{name:'测试专辑'},dt:300000
- }],songCount:1}})})
-})
 try {
  await page.goto(base+'/',{waitUntil:'domcontentloaded'})
  await page.waitForFunction(()=>window.LXSourceManager?.getActive?.()?.inited,{},{timeout:25000})
+ await page.evaluate(() => {
+  const original=window.LXMusicSearch.search
+  window.__viaSearchAttempts=0
+  window.LXMusicSearch.search=function(channel,keyword,page,limit,callback){
+    window.__viaSearchAttempts++
+    if(window.__viaSearchAttempts===1){
+      callback(new Error('Search API HTTP 0'))
+      return
+    }
+    callback(null,{source:channel,list:[{
+      source:channel,id:'1234',name:'成都',singer:'赵雷',interval:310000
+    }]})
+  }
+ })
  await page.locator('#channel-list .channel-button[title="WY"]').click()
  await page.locator('#global-search-input').fill('成都')
  await page.locator('#global-search-btn').click()
@@ -28,7 +34,7 @@ try {
  await page.locator('#retry-song-search').click()
  await page.waitForFunction(()=>document.querySelectorAll('#search-results .search-row').length>0,{},{timeout:25000})
  assert.equal(await page.locator('#search-results .search-row').count(),1)
- assert.ok(searches>=2)
+ assert.equal(await page.evaluate(()=>window.__viaSearchAttempts),2)
  console.log('PASS: Via legacy search failure exposes retry; retry restores 成都 result')
  const qualities=await page.evaluate(()=>{
   const p=window.LXPlaySettings
