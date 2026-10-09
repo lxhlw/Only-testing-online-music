@@ -40,6 +40,13 @@ async function test(viewport, legacy){
    window.__playCount=0
    window.__paused=true
    audio.load=function(){}
+   // Keep the fixture fully in-memory. A real request to the proxy returning
+   // non-audio/empty bytes may raise a codec error and race the simulated
+   // playback state, which this UI test is not intended to exercise.
+   Object.defineProperty(audio,'src',{configurable:true,
+     get:function(){return this.__testSrc || ''},
+     set:function(value){this.__testSrc=String(value)}
+   })
    Object.defineProperty(audio,'duration',{configurable:true,get:function(){return 200}})
    Object.defineProperty(audio,'currentTime',{
      configurable:true,get:function(){return window.__simulatedTime},
@@ -59,7 +66,7 @@ async function test(viewport, legacy){
   await page.locator('#playlist-detail-songs .playlist-song-row').first().click()
   await page.waitForFunction(()=>{
     const a=document.getElementById('audio')
-    return a && a.getAttribute('src') && typeof a.onloadedmetadata==='function'
+    return a && a.src && typeof a.onloadedmetadata==='function'
   },null,{timeout:5000})
   await page.evaluate(()=>{
     const a=document.getElementById('audio')
