@@ -1452,7 +1452,7 @@
     document.getElementById('verified-install-btn').onclick = function () {
       document.getElementById('source-url').value =
         'https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/latest.js';
-      setStatus('正在载入内置已验证 Huibq v1.2.0……');
+      setStatus('正在获取并初始化 GitHub 上的 Huibq 原始音源……');
       var button = document.getElementById('verified-install-btn');
       button.disabled = true;
       setCheck('check-inited', 'pending');
@@ -1464,8 +1464,8 @@
           return;
         }
         setCheck('check-storage', 'ok');
-        setStatus('已导入并初始化 Huibq：' + escapeHtml(item.name) + ' v' +
-          escapeHtml(item.version || '1.2.0') + '（内置 ES5 适配器）', 'ready');
+        setStatus('已导入 Huibq 原始 LX 音源：' + escapeHtml(item.name) + ' ' +
+          escapeHtml(item.version || '') + '（实际播放能力依赖上游服务）', 'ready');
       });
     };
 
@@ -1481,7 +1481,7 @@
       setStatus('正在恢复 Flower 与 Huibq 默认音源，请稍候……');
       global.LXSourceManager.restoreDefaults(function (err) {
         restoreSourcesButton.disabled = false;
-        if (err) setStatus('Huibq 已可用；Flower 导入暂时失败：' + escapeHtml(err.message || err), 'warn');
+        if (err) setStatus('部分默认音源导入失败：' + escapeHtml(err.message || err), 'warn');
         else setStatus('默认音源已就绪。可在上方选择当前音源。', 'ready');
       });
     };
