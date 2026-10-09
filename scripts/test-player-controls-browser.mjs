@@ -64,9 +64,17 @@ async function test(viewport, legacy){
   await page.evaluate(()=>{
     const a=document.getElementById('audio')
     if(a.onloadedmetadata)a.onloadedmetadata()
+    // The synthetic HTMLAudioElement does not have a real codec/decoder.
+    // Explicitly signal the confirmed playing state as the browser would.
+    a.play()
     if(a.onplaying)a.onplaying()
     a.dispatchEvent(new Event('timeupdate'))
   })
+  await page.waitForFunction(()=>{
+    const a=document.getElementById('audio')
+    return !a.paused && !document.getElementById('player-seek').disabled &&
+      document.getElementById('player-toggle-btn').getAttribute('aria-label')==='暂停'
+  },null,{timeout:4000})
   assert.equal(await page.locator('#player-title').textContent(),'Playback mode song 1')
   assert.equal(await page.locator('#player-duration').textContent(),'3:20')
   assert.equal(await page.locator('#player-seek').isEnabled(),true,'Seek must enable after confirmed playback')
