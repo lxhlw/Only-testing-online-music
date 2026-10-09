@@ -12,13 +12,14 @@ page.on('pageerror', e => errors.push(String(e)))
 await page.addInitScript(() => {
   localStorage.setItem('only-testing-online-music.default-source-disabled', '1')
 })
-const songs = Array.from({ length: 51 }, (_, index) => ({
+const songs = Array.from({ length: 101 }, (_, index) => ({
   id: String(index + 1), songId: String(index + 1),
   name: 'Song ' + (index + 1), singer: 'Test Singer',
   source: 'wy', interval: 180000
 }))
-const playlist = { id: 'all-51', name: 'Sequence test', trackCount: 51, creator: 'Test' }
+const playlist = { id: 'all-51', name: 'Sequence test', trackCount: 101, creator: 'Test' }
 let loadedSecondPage = 0
+let loadedThirdPage = 0
 await page.route('**/api/netease-playlists?*', async route => {
   const url = new URL(route.request().url())
   if (!url.searchParams.has('id')) {
@@ -30,6 +31,7 @@ await page.route('**/api/netease-playlists?*', async route => {
   }
   const offset = Number(url.searchParams.get('offset') || 0)
   if (offset === 50) loadedSecondPage++
+  if (offset === 100) loadedThirdPage++
   await route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify({
@@ -119,9 +121,31 @@ try {
   assert.equal(await page.locator('#player-title').textContent(), 'Song 50')
   await page.locator('#next-track-btn').click()
   assert.equal(await page.locator('#player-title').textContent(), 'Song 51')
+  console.log('PASS: crossing track 50 to 51 without resetting the playlist')
+
+  // A playlist longer than the 100-track persisted queue must still reach
+  // track 101 and allow Back/Next without reordering the active session.
+  await page.locator('#next-track-btn').click()
+  await page.evaluate(() => {
+    for (let i = 0; i < 41; i++) document.getElementById('next-track-btn').click()
+  })
+  assert.equal(await page.locator('#player-title').textContent(), 'Song 93')
+  await page.waitForTimeout(400)
+  assert.equal(loadedThirdPage, 1, 'The third page should be prefetched near track 100')
+  await page.evaluate(() => {
+    for (let i = 0; i < 8; i++) document.getElementById('next-track-btn').click()
+  })
+  assert.equal(await page.locator('#player-title').textContent(), 'Song 101')
+  const finalQueue = await page.evaluate(() => window.LXMusicLibrary.snapshot().queue)
+  assert.ok(finalQueue.length <= 100, 'Old Via devices must keep a bounded queue')
+  assert.ok(finalQueue.some(track => track.id === '101'), 'Rolling queue must include track 101')
+  await page.locator('#prev-track-btn').click()
+  assert.equal(await page.locator('#player-title').textContent(), 'Song 100')
+  await page.locator('#next-track-btn').click()
+  assert.equal(await page.locator('#player-title').textContent(), 'Song 101')
   await page.locator('#next-track-btn').click()
   assert.match(await page.locator('#status').textContent(), /已经是歌单最后一首/)
-  console.log('PASS: crossing track 50 to 51, Back and end-of-playlist boundary')
+  console.log('PASS: track 100 to 101 with bounded queue, Back and real last-track guard')
   assert.deepEqual(errors, [])
 } finally {
   await browser.close()
