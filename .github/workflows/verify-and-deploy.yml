@@ -58,6 +58,8 @@ jobs:
           node --check src/music-lyrics.js
           node --check src/music-search.js
           node --check src/play-settings.js
+          node --check src/player-controls.js
+          node --check scripts/test-player-controls-browser.mjs
           node --check src/promise-lite.js
           node --check src/sha1.js
           node --check src/source-manager.js
@@ -104,6 +106,8 @@ jobs:
       - name: Run curated first-visit Via default sources and search test
         run: node scripts/test-default-sources-legacy-browser.mjs
 
+      - name: Verify draggable progress and four playback modes
+        run: node scripts/test-player-controls-browser.mjs
       - name: Verify fixed navigation and playlist filters during scroll
         run: node scripts/test-playlist-sticky-scroll-browser.mjs
       - name: Run Via playlist detail stability test
@@ -252,6 +256,10 @@ jobs:
           TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
         run: node scripts/test-default-sources-legacy-browser.mjs
 
+      - name: Verify deployed player progress and playback modes
+        env:
+          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
+        run: node scripts/test-player-controls-browser.mjs
       - name: Verify deployed sticky playlist navigation
         env:
           TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}

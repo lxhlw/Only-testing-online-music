@@ -12,6 +12,8 @@
   var selectedChannel = null;
   var playbackState = null;
   var playlistPlayback = null;
+  var shuffleHistory = [];
+  var shuffleCursor = -1;
   var playbackToken = 0;
   var searchToken = 0;
   var MIN_UNKNOWN_MEDIA_DURATION_SECONDS = 15;
@@ -465,6 +467,7 @@
     var selectedTrack = items[requestedIndex];
     var startIndex = findPlaylistSongIndex(tracks, selectedTrack);
     if (startIndex < 0) return false;
+    resetShuffleHistory(tracks[startIndex]);
     playlistPlayback = {
       tracks: tracks, index: startIndex,
       hasMore: options.hasMore === true,
@@ -1463,6 +1466,7 @@
       return;
     }
 
+    if (addToQueue !== false) resetShuffleHistory(music);
     if (addToQueue !== false && global.LXMusicLibrary) {
       global.LXMusicLibrary.addQueue(music);
       renderLibrary();
@@ -1470,23 +1474,105 @@
     startPlayback(music, source);
   }
 
+  function getPlaybackMode() {
+    return global.LXPlayerControls && global.LXPlayerControls.getMode ?
+      global.LXPlayerControls.getMode() : 'sequence';
+  }
+
+  function resetShuffleHistory(music) {
+    shuffleHistory = music ? [musicKey(music)] : [];
+    shuffleCursor = shuffleHistory.length ? 0 : -1;
+  }
+
+  function moveToTrackInList(track, items) {
+    if (!track) return;
+    var session = playlistPlayback;
+    if (session && session.tracks[session.index] &&
+        musicKey(playbackState.music) === musicKey(session.tracks[session.index])) {
+      var index = findPlaylistSongIndex(session.tracks, track);
+      if (index >= 0) {
+        session.index = index;
+        ensurePlaylistQueueWindow(session, index);
+        playLibraryMusic(session.tracks[index]);
+        maybePrefetchPlaylist(session);
+        return;
+      }
+    }
+    playLibraryMusic(track);
+  }
+
+  function playShuffleOffset(offset) {
+    if (!playbackState || !global.LXMusicLibrary) return;
+    var session = playlistPlayback;
+    var sessionCurrent = !!(session && session.tracks[session.index] &&
+      musicKey(playbackState.music) === musicKey(session.tracks[session.index]));
+    var list = sessionCurrent ? session.tracks : global.LXMusicLibrary.snapshot().queue;
+    var currentKey = musicKey(playbackState.music);
+    if (!shuffleHistory.length || shuffleHistory[shuffleCursor] !== currentKey) {
+      resetShuffleHistory(playbackState.music);
+    }
+    if (offset < 0) {
+      if (shuffleCursor <= 0) {
+        setStatus('已经是随机播放记录中的第一首。', 'ready');
+        return;
+      }
+      shuffleCursor -= 1;
+    } else if (shuffleCursor + 1 < shuffleHistory.length) {
+      shuffleCursor += 1;
+    } else {
+      if (list.length < 2) {
+        if (sessionCurrent && session.hasMore) {
+          session.pendingNext = true;
+          fetchMorePlaylistTracks(session);
+          return;
+        }
+        setStatus('播放队列中没有其他可随机播放的歌曲。', 'ready');
+        return;
+      }
+      var currentIndex = findPlaylistSongIndex(list, playbackState.music);
+      var nextIndex = Math.floor(Math.random() * (list.length - 1));
+      if (currentIndex >= 0 && nextIndex >= currentIndex) nextIndex += 1;
+      shuffleHistory = shuffleHistory.slice(0, shuffleCursor + 1);
+      shuffleHistory.push(musicKey(list[nextIndex]));
+      if (shuffleHistory.length > 200) shuffleHistory.shift();
+      shuffleCursor = shuffleHistory.length - 1;
+    }
+    var key = shuffleHistory[shuffleCursor];
+    for (var i = 0; i < list.length; i += 1) {
+      if (musicKey(list[i]) === key) {
+        moveToTrackInList(list[i], list);
+        return;
+      }
+    }
+    setStatus('随机播放记录中的歌曲暂不在当前队列。', 'warn');
+  }
+
   function playQueuedOffset(offset) {
     if (!global.LXMusicLibrary || !playbackState) return;
+    var mode = getPlaybackMode();
+    if (mode === 'shuffle') return playShuffleOffset(offset);
     var session = playlistPlayback;
     if (session && session.tracks[session.index] &&
         musicKey(playbackState.music) === musicKey(session.tracks[session.index])) {
       var nextIndex = session.index + offset;
       if (nextIndex < 0) {
-        setStatus('已经是歌单第一首。', 'ready');
-        return;
+        if (mode === 'list-loop') nextIndex = session.tracks.length - 1;
+        else {
+          setStatus('已经是歌单第一首。', 'ready');
+          return;
+        }
       }
       if (nextIndex >= session.tracks.length) {
         if (offset > 0 && session.hasMore) {
           session.pendingNext = true;
           setStatus('正在读取歌单下一页歌曲……');
           fetchMorePlaylistTracks(session);
-        } else setStatus('已经是歌单最后一首。', 'ready');
-        return;
+        } else if (mode === 'list-loop') nextIndex = 0;
+        else {
+          setStatus('已经是歌单最后一首。', 'ready');
+          return;
+        }
+        if (session.hasMore) return;
       }
       session.index = nextIndex;
       ensurePlaylistQueueWindow(session, nextIndex);
@@ -1512,17 +1598,45 @@
 
     var targetIndex = currentIndex + offset;
     if (targetIndex < 0) {
-      setStatus('已经是播放队列第一首。', 'ready');
-      return;
+      if (mode === 'list-loop') targetIndex = queue.length - 1;
+      else {
+        setStatus('已经是播放队列第一首。', 'ready');
+        return;
+      }
     }
     if (targetIndex >= queue.length) {
-      setStatus('已经是播放队列最后一首。', 'ready');
-      return;
+      if (mode === 'list-loop') targetIndex = 0;
+      else {
+        setStatus('已经是播放队列最后一首。', 'ready');
+        return;
+      }
     }
     playLibraryMusic(queue[targetIndex]);
   }
 
   function playNextQueued() {
+    if (!playbackState) return;
+    if (getPlaybackMode() === 'single-loop') {
+      var audio = document.getElementById('audio');
+      if (!audio || !playbackState.url) return;
+      try {
+        audio.currentTime = 0;
+        var nextPlay = audio.play();
+        playbackState.playing = true;
+        if (nextPlay && typeof nextPlay.catch === 'function') {
+          var state = playbackState;
+          nextPlay.catch(function () {
+            if (playbackState !== state) return;
+            state.playing = false;
+            setStatus('单曲循环需要手动启动，请点击播放器中的播放按钮。', 'warn');
+          });
+        }
+      } catch (e) {
+        playbackState.playing = false;
+        setStatus('当前音频无法从头重新播放，请手动点击播放。', 'warn');
+      }
+      return;
+    }
     playQueuedOffset(1);
   }
 
@@ -1585,6 +1699,19 @@
 
     var audio = document.getElementById('audio');
     if (audio) {
+      if (global.LXPlayerControls) {
+        global.LXPlayerControls.init(audio, {
+          getState: function () { return playbackState; },
+          onMessage: setStatus,
+          onModeChange: function (mode) {
+            if (mode === 'shuffle' && playbackState) resetShuffleHistory(playbackState.music);
+            setStatus('播放模式已切换为：' +
+              (mode === 'sequence' ? '顺序播放' :
+               mode === 'list-loop' ? '列表循环' :
+               mode === 'single-loop' ? '单曲循环' : '随机播放'), 'ready');
+          }
+        });
+      }
       audio.onerror = function () {
         var state = playbackState;
         if (state) handleAudioError(state.token, state.url);
@@ -1648,6 +1775,7 @@
     document.getElementById('clear-queue-btn').onclick = function () {
       if (global.LXMusicLibrary) {
         playlistPlayback = null;
+        resetShuffleHistory(null);
         global.LXMusicLibrary.clearQueue();
         renderLibrary();
         setStatus('已清空播放队列。', 'ready');
@@ -1860,6 +1988,7 @@
     playMusic: function (music) {
       if (!music) return;
       playlistPlayback = null;
+      resetShuffleHistory(music);
       var source = music.source ? String(music.source).toLowerCase() : '';
       if (source) selectedChannel = source;
       renderChannelSelectors();
