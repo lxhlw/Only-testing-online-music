@@ -1,3 +1,4 @@
+import { onRequest as playlistDetailRequest } from './netease-playlists.js';
 function corsHeaders(request) {
   return {'Access-Control-Allow-Origin':request.headers.get('Origin')||'*','Access-Control-Allow-Methods':'GET,OPTIONS','Access-Control-Allow-Headers':'Content-Type,Range,If-Range,If-None-Match,If-Modified-Since,X-LX-Headers','Cache-Control':'no-store','Vary':'Origin'};
 }
@@ -27,17 +28,40 @@ export async function onRequest(context){
       }
       return jsonResponse({list:slim},200,request);
     }
-    var detail=await fetchJson('https://music.163.com/api/playlist/detail?id='+encodeURIComponent(id)+'&limit='+String(limit),controller.signal);
-    var playlist=detail&&detail.playlist?detail.playlist:{};
-    var tracks=playlist&&Array.isArray(playlist.tracks)?playlist.tracks:[];
-    var songs=[];
-    for(var t=0;t<tracks.length&&songs.length<limit;t+=1){
-      var song=tracks[t]||{};if(song.id==null||!song.name)continue;
-      var artists=Array.isArray(song.ar)?song.ar:[];var names=[];
-      for(var a=0;a<artists.length;a+=1)if(artists[a]&&artists[a].name)names.push(artists[a].name);
-      songs.push({id:String(song.id),name:String(song.name),singer:names.join('、'),source:'wy',albumName:song.al&&song.al.name?String(song.al.name):'',albumId:song.al&&song.al.id?String(song.al.id):'',interval:song.dt?Math.round(Number(song.dt)/1000):0,lyricId:String(song.id)});
+    // Rankings are NetEase playlists, but the legacy /api/playlist/detail
+    // endpoint often omits playlist.tracks. Delegate to the working V6
+    // playlist handler which follows trackIds and resolves /api/song/detail.
+    // Reuse the handler directly (no recursive Cloudflare/HTTP roundtrip).
+    var detailUrl=new URL(request.url);
+    detailUrl.pathname='/api/netease-playlists';
+    detailUrl.search='';
+    detailUrl.searchParams.set('id',id);
+    detailUrl.searchParams.set('offset','0');
+    detailUrl.searchParams.set('limit',String(limit));
+    var detailRequest=new Request(detailUrl.toString(),request);
+    var detailResponse=await playlistDetailRequest(Object.assign({},context,{request:detailRequest}));
+    var detailData=await detailResponse.json();
+    if(!detailResponse.ok){
+      return jsonResponse({
+        error:'NetEase ranking track lookup failed',
+        message:String(detailData&&detailData.message||detailData&&detailData.error||'Detail unavailable')
+      },detailResponse.status,request);
     }
-    return jsonResponse({playlist:{id:id,name:playlist.name||'',coverImgUrl:playlist.coverImgUrl||''},songs:songs},200,request);
+    var songs=detailData&&Array.isArray(detailData.songs)?detailData.songs:[];
+    var total=Number(detailData&&detailData.total)||Number(detailData&&detailData.playlist&&detailData.playlist.trackCount)||songs.length;
+    if(!songs.length&&total>0){
+      return jsonResponse({
+        error:'NetEase ranking track metadata unavailable',
+        message:'The ranking exists, but song details could not be loaded. Please retry.'
+      },502,request);
+    }
+    return jsonResponse({
+      playlist:detailData&&detailData.playlist||{id:id,name:''},
+      songs:songs,
+      total:total,
+      hasMore:Boolean(detailData&&detailData.hasMore),
+      nextOffset:Number(detailData&&detailData.nextOffset)||songs.length
+    },200,request);
   }catch(e){
     return jsonResponse({error:'NetEase ranking request failed',message:e&&e.name==='AbortError'?'NetEase ranking upstream timed out':(e&&e.message?e.message:'Request failed')},502,request);
   }finally{clearTimeout(timer);}
