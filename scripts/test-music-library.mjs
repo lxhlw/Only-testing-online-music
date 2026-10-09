@@ -86,4 +86,18 @@ reloaded.clearQueue()
 assert.equal(changeCount > 0, true)
 assert.equal(reloaded.snapshot().queue.length, 0)
 
+// Play all must keep the first song at index 0; a repeated song cannot be
+// appended to the tail. Persistence is a single atomic queue update.
+assert.equal(reloaded.replaceQueue([song1, song2, song1]), true)
+assert.deepEqual(Array.from(reloaded.snapshot().queue.map(item => item.id)), ['1', '2'])
+const bulk = Array.from({ length: 140 }, (_, i) => ({
+  id: String(i + 1), source: 'wy', name: 'Song ' + (i + 1)
+}))
+reloaded.replaceQueue(bulk)
+assert.equal(reloaded.snapshot().queue.length, 100, 'Queue window must remain small on Android 4.4')
+assert.equal(reloaded.snapshot().queue[0].id, '1')
+assert.equal(reloaded.snapshot().queue[99].id, '100')
+assert.equal(createLibrary(storage).snapshot().queue[0].id, '1')
+console.log('PASS: ordered atomic playlist queue keeps first 100 tracks and persists without reordering')
+
 console.log('PASS: music library queue/history/favorites persistence')
