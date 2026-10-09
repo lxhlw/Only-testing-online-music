@@ -47,6 +47,9 @@ async function test(viewport, legacy){
    })
    Object.defineProperty(audio,'readyState',{configurable:true,get:function(){return 4}})
    Object.defineProperty(audio,'paused',{configurable:true,get:function(){return window.__paused}})
+   // A real playing stream cannot already be ended. The empty synthetic
+   // audio fixture otherwise exposes a native ended=true state.
+   Object.defineProperty(audio,'ended',{configurable:true,get:function(){return false}})
    audio.pause=function(){window.__paused=true;audio.dispatchEvent(new Event('pause'))}
    audio.play=function(){window.__paused=false;window.__playCount++;
      audio.dispatchEvent(new Event('play'));return Promise.resolve()}
@@ -64,23 +67,9 @@ async function test(viewport, legacy){
     if(a.onplaying)a.onplaying()
     a.dispatchEvent(new Event('timeupdate'))
   })
-  console.log('INITIAL PLAYER STATE',await page.evaluate(()=>{
-    const a=document.getElementById('audio')
-    return {paused:a.paused,playCount:window.__playCount,src:a.getAttribute('src'),
-      duration:a.duration,time:a.currentTime,readyState:a.readyState,
-      seekDisabled:document.getElementById('player-seek').disabled,
-      aria:document.getElementById('player-toggle-btn').getAttribute('aria-label'),
-      status:document.getElementById('status').textContent}
-  }))
   assert.equal(await page.locator('#player-title').textContent(),'Playback mode song 1')
   assert.equal(await page.locator('#player-duration').textContent(),'3:20')
   assert.equal(await page.locator('#player-seek').isEnabled(),true,'Seek must enable after confirmed playback')
-  console.log('TRANSPORT',await page.evaluate(()=>{
-    const a=document.getElementById('audio')
-    return {paused:a.paused,playCount:window.__playCount,src:a.getAttribute('src'),
-      aria:document.getElementById('player-toggle-btn').getAttribute('aria-label'),
-      seekDisabled:document.getElementById('player-seek').disabled}
-  }))
   assert.equal(await page.locator('#player-toggle-btn').getAttribute('aria-label'),'暂停')
   assert.equal(await page.locator('#player-volume').inputValue(),'80','Default audio volume must not be muted')
   await page.locator('#player-toggle-btn').click()
