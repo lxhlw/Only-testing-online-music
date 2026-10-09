@@ -11,6 +11,7 @@
   var lyricsState = null;
   var selectedChannel = null;
   var playbackState = null;
+  var playlistPlayback = null;
   var playbackToken = 0;
   var searchToken = 0;
   var MIN_UNKNOWN_MEDIA_DURATION_SECONDS = 15;
@@ -372,6 +373,99 @@
     var source = String(music.source || '').toLowerCase();
     var id = String(music.id || music.songId || music.songmid || music.mid || music.hash || '');
     return source + ':' + id;
+  }
+
+  // A play-all session is independent of the 100-item persistent queue.
+  // Fetch the next 50 songs only near a page boundary, keeping Via responsive
+  // even for playlists with hundreds of tracks.
+  function findPlaylistSongIndex(list, music) {
+    var key = musicKey(music);
+    if (!key) return -1;
+    for (var i = 0; i < list.length; i += 1) {
+      if (musicKey(list[i]) === key) return i;
+    }
+    return -1;
+  }
+
+  function ensurePlaylistQueueWindow(session, trackIndex) {
+    if (!global.LXMusicLibrary || !global.LXMusicLibrary.replaceQueue) return;
+    var queue = global.LXMusicLibrary.snapshot().queue;
+    var needed = session.tracks[trackIndex];
+    if (!needed) return;
+    if (findPlaylistSongIndex(queue, needed) >= 0) return;
+    // Preserve some previous tracks for Back, then leave room for the next
+    // tracks. Only rewrite persistent storage when moving outside the window.
+    var start = Math.max(0, trackIndex - 15);
+    global.LXMusicLibrary.replaceQueue(session.tracks.slice(start, start + 100));
+  }
+
+  function fetchMorePlaylistTracks(session) {
+    if (!session || playlistPlayback !== session || !session.hasMore ||
+        session.loading || typeof session.loadMore !== 'function') return;
+    session.loading = true;
+    session.loadMore(function (err, page) {
+      if (playlistPlayback !== session) return;
+      session.loading = false;
+      if (err) {
+        if (session.pendingNext) {
+          session.pendingNext = false;
+          setStatus('下一页歌曲加载失败：' + escapeHtml(err.message || err) + '。可再次点击下一首重试。', 'warn');
+        }
+        return;
+      }
+      page = page || {};
+      var additions = page.songs instanceof Array ? page.songs : [];
+      var seen = {};
+      for (var i = 0; i < session.tracks.length; i += 1) {
+        seen[musicKey(session.tracks[i])] = true;
+      }
+      for (var j = 0; j < additions.length; j += 1) {
+        var song = additions[j], key = musicKey(song);
+        if (song && key && key !== ':' && !seen[key]) {
+          seen[key] = true;
+          session.tracks.push(song);
+        }
+      }
+      session.hasMore = page.hasMore === true;
+      if (session.pendingNext) {
+        session.pendingNext = false;
+        playQueuedOffset(1);
+      }
+    });
+  }
+
+  function maybePrefetchPlaylist(session) {
+    if (session && session.hasMore &&
+        session.tracks.length - session.index <= 8) {
+      fetchMorePlaylistTracks(session);
+    }
+  }
+
+  function startPlaylistPlayback(items, options) {
+    if (!(items instanceof Array) || !items.length ||
+        !global.LXMusicLibrary || !global.LXMusicLibrary.replaceQueue) return false;
+    var tracks = [];
+    var seen = {};
+    for (var i = 0; i < items.length; i += 1) {
+      var track = items[i], key = musicKey(track);
+      if (track && key && key !== ':' && !seen[key]) {
+        seen[key] = true;
+        tracks.push(track);
+      }
+    }
+    if (!tracks.length) return false;
+    options = options || {};
+    playlistPlayback = {
+      tracks: tracks, index: 0,
+      hasMore: options.hasMore === true,
+      loadMore: options.loadMore,
+      loading: false, pendingNext: false
+    };
+    global.LXMusicLibrary.replaceQueue(tracks.slice(0, 100));
+    renderLibrary();
+    playLibraryMusic(tracks[0]);
+    maybePrefetchPlaylist(playlistPlayback);
+    return true;
   }
 
   function playLibraryMusic(music) {
@@ -1356,6 +1450,28 @@
 
   function playQueuedOffset(offset) {
     if (!global.LXMusicLibrary || !playbackState) return;
+    var session = playlistPlayback;
+    if (session && session.tracks[session.index] &&
+        musicKey(playbackState.music) === musicKey(session.tracks[session.index])) {
+      var nextIndex = session.index + offset;
+      if (nextIndex < 0) {
+        setStatus('已经是歌单第一首。', 'ready');
+        return;
+      }
+      if (nextIndex >= session.tracks.length) {
+        if (offset > 0 && session.hasMore) {
+          session.pendingNext = true;
+          setStatus('正在读取歌单下一页歌曲……');
+          fetchMorePlaylistTracks(session);
+        } else setStatus('已经是歌单最后一首。', 'ready');
+        return;
+      }
+      session.index = nextIndex;
+      ensurePlaylistQueueWindow(session, nextIndex);
+      playLibraryMusic(session.tracks[nextIndex]);
+      maybePrefetchPlaylist(session);
+      return;
+    }
     var queue = global.LXMusicLibrary.snapshot().queue;
     var currentKey = musicKey(playbackState.music);
     var currentIndex = -1;
@@ -1509,6 +1625,7 @@
 
     document.getElementById('clear-queue-btn').onclick = function () {
       if (global.LXMusicLibrary) {
+        playlistPlayback = null;
         global.LXMusicLibrary.clearQueue();
         renderLibrary();
         setStatus('已清空播放队列。', 'ready');
@@ -1717,8 +1834,10 @@
   global.OnlyTestingMusicApp = {
     renderSources: renderSources,
     onSourceInited: onSourceInited,
+    playPlaylist: startPlaylistPlayback,
     playMusic: function (music) {
       if (!music) return;
+      playlistPlayback = null;
       var source = music.source ? String(music.source).toLowerCase() : '';
       if (source) selectedChannel = source;
       renderChannelSelectors();
