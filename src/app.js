@@ -1115,7 +1115,7 @@
       miguDeadlineTimer: null,
       miguLastAudioTime: 0,
       miguLastProgressAt: 0,
-      activeSourceId: String(active.id || active.url || '')
+      activeSourceId: String(active && (active.id || active.url) || '')
     };
 
     armMiguPlaybackDeadline(playbackState);
