@@ -835,7 +835,7 @@
       var hashView=readViewFromHash();
       // A delayed hashchange from an earlier navigation must never dismiss
       // an actively displayed playlist; explicit nav clicks still work.
-      if(playlistDetailItem&&hashView!=='playlist'){
+      if(playlistDetailItem&&currentView==='playlist'&&hashView!=='playlist'){
         try{global.location.replace('#playlist');}catch(e){}
         return;
       }
