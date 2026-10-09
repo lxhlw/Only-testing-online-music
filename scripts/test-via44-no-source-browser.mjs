@@ -9,7 +9,7 @@ const page=await browser.newPage({
 })
 const errors=[]
 page.on('pageerror',e=>errors.push(String(e)))
-await page.route(/(?:ghproxy\\.net\\/raw\\.githubusercontent\\.com|raw\\.githubusercontent\\.com)\\/pdone\\/lx-music-source\\/main\\/(?:flower|huibq)\\/latest\\.js/,async route=>{
+await page.route(/(?:ghproxy\.net\/raw\.githubusercontent\.com|raw\.githubusercontent\.com)\/pdone\/lx-music-source\/main\/(?:flower|huibq)\/latest\.js/,async route=>{
   await route.abort('failed')
 })
 await page.route('**/api/netease-search?*',async route=>{
