@@ -32,6 +32,9 @@ jobs:
         run: |
           node --check src/source-manager.js
           node --check src/app.js
+          node --check scripts/test-default-sources-legacy-browser.mjs
+          node --check scripts/test-default-source-race-browser.mjs
+          node --check scripts/test-via44-no-source-browser.mjs
           node scripts/test-version.mjs
           node scripts/test-legacy-web.mjs
           node scripts/test-source-selection.mjs
