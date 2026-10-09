@@ -1,0 +1,120 @@
+import assert from 'node:assert/strict'
+import { chromium } from 'playwright'
+
+const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:8788'
+const browser = await chromium.launch({ headless: true })
+const page = await browser.newPage({
+  viewport: { width: 360, height: 640 },
+  userAgent: 'Mozilla/5.0 (Linux; Android 4.4.2; Via) AppleWebKit/537.36 Mobile Safari/537.36'
+})
+const errors = []
+page.on('pageerror', e => errors.push(String(e)))
+await page.addInitScript(() => {
+  localStorage.setItem('only-testing-online-music.default-source-disabled', '1')
+})
+const songs = Array.from({ length: 51 }, (_, index) => ({
+  id: String(index + 1), songId: String(index + 1),
+  name: 'Song ' + (index + 1), singer: 'Test Singer',
+  source: 'wy', interval: 180000
+}))
+const playlist = { id: 'all-51', name: 'Sequence test', trackCount: 51, creator: 'Test' }
+let loadedSecondPage = 0
+await page.route('**/api/netease-playlists?*', async route => {
+  const url = new URL(route.request().url())
+  if (!url.searchParams.has('id')) {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ result: { playlists: [playlist], playlistCount: 1 } })
+    })
+    return
+  }
+  const offset = Number(url.searchParams.get('offset') || 0)
+  if (offset === 50) loadedSecondPage++
+  await route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      playlist,
+      songs: songs.slice(offset, offset + 50),
+      hasMore: offset + 50 < songs.length,
+      nextOffset: Math.min(offset + 50, songs.length)
+    })
+  })
+})
+await page.route('https://playlist-audio.invalid/**', route =>
+  route.fulfill({ status: 200, contentType: 'audio/mpeg', body: '' }))
+try {
+  await page.goto(base + '/', { waitUntil: 'domcontentloaded' })
+  await page.evaluate(() => {
+    // The page's native same-platform resolver can be deterministically
+    // exercised without depending on current third-party music availability.
+    window.LXSourceManager.getActive = function () { return null }
+    window.LXMusicSearch.resolveMusicUrl = function (source, info, quality, cb) {
+      cb(null, { url: 'https://playlist-audio.invalid/song.mp3', provider: 'netease-native' })
+    }
+    const audio = document.getElementById('audio')
+    audio.load = function () {}
+    audio.play = function () { return Promise.resolve() }
+  })
+  await page.locator('.nav-item[data-view="playlist"]').click()
+  await page.locator('#playlist-featured .playlist-open-button').first().click()
+  await page.waitForFunction(() =>
+    document.querySelectorAll('#playlist-detail-songs .playlist-song-row').length === 50)
+  await page.locator('#playlist-play-all-btn').click()
+  const first = await page.evaluate(() => ({
+    ids: window.LXMusicLibrary.snapshot().queue.map(track => track.id),
+    title: document.getElementById('player-title').textContent
+  }))
+  assert.equal(first.ids.length, 50)
+  assert.deepEqual(first.ids.slice(0, 4), ['1', '2', '3', '4'])
+  assert.equal(first.ids[49], '50')
+  assert.equal(first.title, 'Song 1')
+  console.log('PASS: playlist Play All queues 1..50 in the original order')
+
+  await page.locator('#next-track-btn').click()
+  assert.equal(await page.locator('#player-title').textContent(), 'Song 2')
+  await page.locator('#prev-track-btn').click()
+  assert.equal(await page.locator('#player-title').textContent(), 'Song 1')
+  console.log('PASS: Next and Previous navigate in correct track order')
+
+  // Simulate genuine media progress followed by the native ended event;
+  // this must use the same session next-track sequence as the Next button.
+  await page.evaluate(() => {
+    const audio = document.getElementById('audio')
+    Object.defineProperty(audio, 'readyState', { configurable: true, get: () => 4 })
+    Object.defineProperty(audio, 'duration', { configurable: true, get: () => 180 })
+    Object.defineProperty(audio, 'currentTime', { configurable: true, get: () => 175 })
+    if (audio.onplaying) audio.onplaying()
+    if (audio.onended) audio.onended()
+  })
+  assert.equal(await page.locator('#player-title').textContent(), 'Song 2')
+  console.log('PASS: ending track 1 automatically starts track 2')
+
+  await page.evaluate(() => {
+    for (let i = 0; i < 40; i++) document.getElementById('next-track-btn').click()
+  })
+  assert.equal(await page.locator('#player-title').textContent(), 'Song 42')
+  // The next page is requested when we are within eight tracks of the end.
+  await page.waitForTimeout(400)
+  assert.equal(loadedSecondPage, 1, 'The 51st song page should be fetched once, near track 50')
+
+  await page.evaluate(() => {
+    for (let i = 0; i < 9; i++) document.getElementById('next-track-btn').click()
+  })
+  await page.waitForFunction(() => document.getElementById('player-title').textContent === 'Song 51')
+  const after = await page.evaluate(() => ({
+    title: document.getElementById('player-title').textContent,
+    ids: window.LXMusicLibrary.snapshot().queue.map(x => x.id)
+  }))
+  assert.equal(after.title, 'Song 51')
+  assert.ok(after.ids.includes('51'), 'The next queue window must include song 51')
+  await page.locator('#prev-track-btn').click()
+  assert.equal(await page.locator('#player-title').textContent(), 'Song 50')
+  await page.locator('#next-track-btn').click()
+  assert.equal(await page.locator('#player-title').textContent(), 'Song 51')
+  await page.locator('#next-track-btn').click()
+  assert.match(await page.locator('#status').textContent(), /已经是歌单最后一首/)
+  console.log('PASS: crossing track 50 to 51, Back and end-of-playlist boundary')
+  assert.deepEqual(errors, [])
+} finally {
+  await browser.close()
+}
