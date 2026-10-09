@@ -8,7 +8,7 @@ let release
 const blocked=new Promise(resolve=>{ release=resolve })
 const code='/* @name Flower Fixture */\nwindow.lx.send(window.lx.EVENT_NAMES.inited, {status:true,sources:{mg:{actions:["musicUrl"],qualitys:["128k"]}}});'
 const huibqCode='/* @name Huibq Fixture @version 1 */\nwindow.lx.send(window.lx.EVENT_NAMES.inited, {status:true,sources:{wy:{actions:["musicUrl"],qualitys:["128k"]},mg:{actions:["musicUrl"],qualitys:["128k"]}}});'
-await page.route(/raw\\.githubusercontent\\.com\\/pdone\\/lx-music-source\\/main\\/huibq\\/latest\\.js/, async route => {
+await page.route(/raw\.githubusercontent\.com\/pdone\/lx-music-source\/main\/huibq\/latest\.js/, async route => {
   await route.fulfill({status:200,contentType:'text/javascript',headers:{'Access-Control-Allow-Origin':'*'},body:huibqCode})
 })
 await page.route(/(?:ghproxy\.net\/raw\.githubusercontent\.com|raw\.githubusercontent\.com)\/pdone\/lx-music-source\/main\/flower\/latest\.js/,async route=>{
