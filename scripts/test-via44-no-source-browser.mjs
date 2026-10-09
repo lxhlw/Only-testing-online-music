@@ -43,6 +43,7 @@ try{
       status:document.querySelector('#status').textContent
     }
   })
+  console.log('DIAGNOSTIC OFFLINE PLAYBACK',JSON.stringify({result,errors,selected:await page.locator('#channel-list .channel-button.active').getAttribute('title')}))
   assert.equal(result.calls.length,1,'Playback should attempt native resolution when LX source is unavailable')
   assert.equal(result.calls[0].source,'wy')
   assert.ok(result.src.includes('chengdu.mp3'),'Resolved URL must reach the HTML5 audio element')
