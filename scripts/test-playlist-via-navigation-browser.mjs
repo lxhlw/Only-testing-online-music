@@ -26,6 +26,9 @@ await page.waitForFunction(() => document.querySelectorAll('#playlist-featured .
 const button=page.locator('#playlist-featured .playlist-open-button').first()
 await button.dispatchEvent('touchend')
 await button.click()
+await page.locator('#playlist-back-btn').evaluate(b => b.click())
+assert.equal(await page.locator('#playlist-detail-panel').evaluate(x => x.className.includes('hidden')),false,
+  'A synthetic click on newly inserted Back button must not instantly close details')
 await page.evaluate(() => {
   // Simulate an old WebView firing another delayed click after touchend.
   const b=document.querySelector('#playlist-featured .playlist-open-button')
