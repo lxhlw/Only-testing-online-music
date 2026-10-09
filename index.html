@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>Only Testing Online Music</title>
-  <link rel="stylesheet" href="styles.css?v=0.2.36&amp;sourceui=20261008">
+  <link rel="stylesheet" href="styles.css?v=0.2.36&amp;playlist-detail=20261009">
 </head>
 <body>
   <div id="app">
@@ -225,7 +225,7 @@
                 value="https://ghproxy.net/raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js">
               <div class="source-setting-actions">
                 <button id="install-btn" type="button">导入音源</button>
-                <button id="verified-install-btn" type="button" class="secondary">一键导入 Huibq</button>
+                <button id="verified-install-btn" type="button" class="secondary">一键导入 Huibq（真实音源）</button>
                 <button id="sixyin-install-btn" type="button" class="secondary">一键导入六音</button>
                 <button id="restore-default-sources-btn" type="button" class="secondary">恢复默认音源（Flower + Huibq）</button>
                 <button id="clear-btn" type="button" class="ghost-button">清空</button>
@@ -286,10 +286,10 @@
   <script src="src/play-settings.js"></script>
   <script src="src/music-search.js?v=0.2.36&amp;mgretry=20261009"></script>
   <script src="src/lx-runtime.js"></script>
-  <script src="src/source-manager.js?v=0.2.36&amp;defaults=20261009"></script>
+  <script src="src/source-manager.js?v=0.2.36&amp;defaults=20261009-real"></script>
   <script src="src/music-library.js"></script>
   <script src="src/music-lyrics.js"></script>
-  <script src="src/app.js?v=0.2.36&amp;viafix=20261009"></script>
+  <script src="src/app.js?v=0.2.36&amp;viafix=20261009-play"></script>
   <script>
   (function (global) {
     'use strict';
@@ -308,6 +308,7 @@
     var playlistNextOffset = 0;
     var playlistHasMore = false;
     var playlistSearchGeneration = {};
+    var lastPlaylistOpenAt = 0;
 
     function el(id){ return document.getElementById(id); }
     function all(selector){ return document.querySelectorAll(selector); }
@@ -446,20 +447,13 @@
       var actions=document.createElement('div'); actions.className='playlist-card-actions';
 
       var open=document.createElement('button'); open.type='button'; open.className='playlist-open-button'; open.innerHTML='打开歌单';
-      // Some Android 4.4 WebViews dispatch both touchend and a delayed
-      // synthetic click. Never let the second event reopen/repaint the panel.
-      var lastTouchOpenAt=0;
-      open.ontouchend=function(ev){
+      // Opening on touchend moves the "返回歌单" button under the finger
+      // before legacy Via emits its synthetic click. That ghost click can
+      // immediately hit Back and make the detail panel flash/disappear.
+      // Open ONLY on click; never mutate the layout during touchend.
+      open.onclick=function(ev){
         if(ev&&ev.preventDefault)ev.preventDefault();
         if(ev&&ev.stopPropagation)ev.stopPropagation();
-        lastTouchOpenAt=Date.now?Date.now():(new Date()).getTime();
-        openPlaylist(item);
-        return false;
-      };
-      open.onclick=function(ev){
-        if(ev&&ev.stopPropagation)ev.stopPropagation();
-        var now=Date.now?Date.now():(new Date()).getTime();
-        if(lastTouchOpenAt&&now-lastTouchOpenAt<900)return false;
         openPlaylist(item);
         return false;
       };
@@ -475,7 +469,6 @@
       box.appendChild(actions);
       box.onclick=function(ev){
         if(ev&&ev.target&&String(ev.target.tagName||'').toLowerCase()==='button')return;
-        if(lastTouchOpenAt&&((Date.now?Date.now():(new Date()).getTime())-lastTouchOpenAt)<900)return;
         openPlaylist(item);
       };
       return box;
@@ -491,6 +484,7 @@
       // launches another featured-list search on slow legacy devices, which
       // can re-render cards during the touch/click transition.
       playlistDetailItem=item;
+      lastPlaylistOpenAt=Date.now?Date.now():(new Date()).getTime();
       playlistSearchGeneration['playlist-featured']=(playlistSearchGeneration['playlist-featured']||0)+1;
       showView('playlist');
       playlistDetailSongs=[];
@@ -774,8 +768,21 @@
       var selected=all('[data-playlist-platform="'+playlistPlatform+'"]');for(var y=0;y<selected.length;y+=1)addClass(selected[y],'active');
     };
 
-    el('playlist-back-btn').onclick=function(event){
+    var backGestureStartedAt=0;
+    var backButton=el('playlist-back-btn');
+    function recordBackGesture(){
+      backGestureStartedAt=Date.now?Date.now():(new Date()).getTime();
+    }
+    backButton.ontouchstart=recordBackGesture;
+    backButton.onmousedown=recordBackGesture;
+    backButton.onclick=function(event){
       if(event&&event.preventDefault)event.preventDefault();
+      if(event&&event.stopPropagation)event.stopPropagation();
+      // A ghost click retargeted from the old playlist card has no matching
+      // touchstart/mousedown on Back. An intentional quick tap DOES.
+      var now=Date.now?Date.now():(new Date()).getTime();
+      if(lastPlaylistOpenAt&&now-lastPlaylistOpenAt<700 &&
+          backGestureStartedAt<lastPlaylistOpenAt)return false;
       closePlaylistDetail();
       return false;
     };
@@ -833,6 +840,12 @@
     showView(initialView||'search');
     global.onhashchange=function(){
       var hashView=readViewFromHash();
+      // A delayed hashchange from an earlier navigation must never dismiss
+      // an actively displayed playlist; explicit nav clicks still work.
+      if(playlistDetailItem&&currentView==='playlist'&&hashView!=='playlist'){
+        try{global.location.replace('#playlist');}catch(e){}
+        return;
+      }
       if(hashView&&hashView!==currentView) showView(hashView);
     };
   })(window);

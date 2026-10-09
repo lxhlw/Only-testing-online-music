@@ -26,6 +26,9 @@ await page.waitForFunction(() => document.querySelectorAll('#playlist-featured .
 const button=page.locator('#playlist-featured .playlist-open-button').first()
 await button.dispatchEvent('touchend')
 await button.click()
+await page.locator('#playlist-back-btn').evaluate(b => b.click())
+assert.equal(await page.locator('#playlist-detail-panel').evaluate(x => x.className.includes('hidden')),false,
+  'A synthetic click on newly inserted Back button must not instantly close details')
 await page.evaluate(() => {
   // Simulate an old WebView firing another delayed click after touchend.
   const b=document.querySelector('#playlist-featured .playlist-open-button')
@@ -43,6 +46,8 @@ const state=await page.evaluate(()=>({
  songs:document.querySelectorAll('#playlist-detail-songs .playlist-song-row').length
 }))
 assert.equal(state.visible,true,'Playlist details may not disappear after opening')
+assert.equal(await page.locator('#playlist-featured').isVisible(),false,
+  'Opening details must hide the card grid rather than leaving songs below it')
 assert.match(state.view,/active/)
 assert.equal(state.title,'成都测试歌单')
 assert.equal(state.songs,2)

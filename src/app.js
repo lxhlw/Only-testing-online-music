@@ -142,12 +142,18 @@
   function getSupportedChannels() {
     var active = global.LXSourceManager.getActive();
     var supported = [];
-    var sources = active && active.sources ? active.sources : {};
+    var sources = active && active.inited && active.sources ? active.sources : {};
+    // Search uses platform APIs, not the third-party LX playback script.
+    // These two channels must remain available even when a fresh/legacy
+    // device has not yet downloaded its default Flower/Huibq scripts.
+    supported.push('wy');
+    supported.push('mg');
     for (var key in sources) {
       if (!Object.prototype.hasOwnProperty.call(sources, key)) continue;
       var info = sources[key] || {};
       var actions = info.actions || [];
-      if (actions.indexOf('musicUrl') >= 0 || !info.actions) supported.push(key);
+      if ((actions.indexOf('musicUrl') >= 0 || !info.actions) &&
+          supported.indexOf(key) < 0) supported.push(key);
     }
     return supported;
   }
@@ -192,9 +198,8 @@
     channelListEl.innerHTML = '';
     if (qualitySummaryEl) qualitySummaryEl.innerHTML = '';
 
-    if (!active || !active.inited || !supported.length) {
-      channelListEl.innerHTML = '<span class="muted">当前音源没有可用的在线音乐渠道。</span>';
-      if (qualitySummaryEl) qualitySummaryEl.innerHTML = '<span class="muted">暂无音质设置。</span>';
+    if (!supported.length) {
+      channelListEl.innerHTML = '<span class="muted">当前没有可用的音乐搜索渠道。</span>';
       selectedChannel = null;
       return;
     }
@@ -210,7 +215,7 @@
 
     for (var i = 0; i < supported.length; i += 1) {
       var key = supported[i];
-      var channelInfo = active.sources[key] || {};
+      var channelInfo = active && active.sources ? (active.sources[key] || {}) : {};
       var button = document.createElement('button');
       button.type = 'button';
       button.className = 'channel-button' + (key === selectedChannel ? ' active' : '');
@@ -230,12 +235,15 @@
       channelListEl.appendChild(button);
     }
 
-    var channelInfo = active.sources[selectedChannel] || {};
+    var channelInfo = active && active.sources ? (active.sources[selectedChannel] || {}) : {};
     var available = channelInfo.qualitys instanceof Array ? channelInfo.qualitys : [];
     var plan = getQualityPlan(active, selectedChannel);
     if (qualitySummaryEl) {
       if (!available.length) {
-        qualitySummaryEl.innerHTML = '<span class="muted">当前渠道未声明音质列表，运行时将使用默认音质。</span>';
+        qualitySummaryEl.innerHTML = '<span class="muted">' +
+          (!active || !active.inited || !active.sources || !active.sources[selectedChannel]
+            ? '音源正在准备；搜索可直接使用，播放将尝试同平台备用解析。'
+            : '当前渠道未声明音质列表，运行时将使用默认音质。') + '</span>';
       } else {
         var settingsLabel = global.LXPlaySettings ?
           global.LXPlaySettings.getLabel(getPlaySettings()) : '最高音质优先（失败自动降级）';
@@ -370,7 +378,7 @@
     var source = music && music.source ? String(music.source).toLowerCase() : '';
     var supported = getSupportedChannels();
     if (!source || supported.indexOf(source) < 0) {
-      setStatus('当前音源无法播放已保存歌曲：' + escapeHtml(music && music.name || '未知歌曲'), 'fail');
+      setStatus('当前渠道无法播放已保存歌曲：' + escapeHtml(music && music.name || '未知歌曲'), 'fail');
       return;
     }
     selectedChannel = source;
@@ -650,6 +658,21 @@
 
     var playRequested = false;
 
+    function requireManualPlayback(error) {
+      if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
+      // On Android 4.4, resolving a URL asynchronously consumes the original
+      // tap gesture. The browser can reject the subsequent play() even for a
+      // valid stream. Do not discard that valid URL and retry all resolvers.
+      playbackState.manualPlaybackRequired = true;
+      clearPlaybackConfirmTimer(playbackState);
+      clearMiguPlaybackDeadline(playbackState);
+      setStatus(
+        '歌曲地址已获得，但旧版浏览器阻止自动播放。请直接点击下方播放器的 ▶ 播放按钮。' +
+        (error && error.name === 'NotSupportedError' ? ' 如仍无法播放，请切换较低音质。' : ''),
+        'warn'
+      );
+    }
+
     function startAudioPlayback() {
       if (playRequested) return;
       if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
@@ -658,29 +681,21 @@
       try {
         var playResult = audio.play();
         if (playResult && typeof playResult.catch === 'function') {
-          playResult.catch(function () {
+          playResult.catch(function (error) {
             if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
             if (audio.error && settings.autoFallback) {
               playRequested = false;
               handleAudioError(token, playableUrl);
               return;
             }
-            setStatus(
-              '已验证 ' + escapeHtml(quality) + ' 播放地址，但浏览器拒绝自动播放。可点击播放器继续播放。',
-              'warn'
-            );
+            requireManualPlayback(error);
           });
         }
       } catch (e) {
         if (audio.error && settings.autoFallback) {
           playRequested = false;
           handleAudioError(token, playableUrl);
-        } else {
-          setStatus(
-            '已验证 ' + escapeHtml(quality) + ' 播放地址，但浏览器未能自动播放。可点击播放器继续播放。',
-            'warn'
-          );
-        }
+        } else requireManualPlayback(e);
       }
     }
 
@@ -880,7 +895,7 @@
   function requestQuality(music, source, musicInfo, plan, index, token) {
     var active = global.LXSourceManager.getActive();
     var settings = getPlaySettings();
-    if (!active || !active.runtime || token !== playbackToken) return;
+    if (token !== playbackToken) return;
 
     var quality = plan[index];
     playbackState.index = index;
@@ -991,6 +1006,12 @@
     // resolved URL can be stale or protected even when the exact Flower result
     // is playable in LX Music. The timeout below still falls back to the same
     // channel's native resolver when the Flower source cannot respond.
+    if (!active || !active.inited || !active.runtime ||
+        !active.sources || !active.sources[source]) {
+      runFallback('该渠道 LX 音源尚未就绪，正在尝试同平台备用解析……');
+      return;
+    }
+
     sourceTimer = global.setTimeout(function () {
       if (!isCurrentAttempt() || settled) return;
       runFallback(
@@ -1055,11 +1076,8 @@
 
   function startPlayback(music, source) {
     var active = global.LXSourceManager.getActive();
-    if (!active || !active.runtime || !active.inited) {
-      setStatus('请先导入并初始化 LX 音源。', 'fail');
-      return;
-    }
-
+    // The platform search and its fallback resolver work independently of
+    // LX source bootstrap. Do not block a real user gesture on old Via.
     // A new click owns a new deadline; the previous track must not be able
     // to time out and overwrite its status.
     clearMiguPlaybackDeadline(playbackState);
@@ -1097,7 +1115,7 @@
       miguDeadlineTimer: null,
       miguLastAudioTime: 0,
       miguLastProgressAt: 0,
-      activeSourceId: String(active.id || active.url || '')
+      activeSourceId: String(active && (active.id || active.url) || '')
     };
 
     armMiguPlaybackDeadline(playbackState);
@@ -1316,10 +1334,6 @@
   function testMusic(music, addToQueue) {
     var active = global.LXSourceManager.getActive();
     var supported = getSupportedChannels();
-    if (!active || !active.runtime || !active.inited) {
-      setStatus('请先导入并初始化 LX 音源。', 'fail');
-      return;
-    }
     if (!selectedChannel || supported.indexOf(selectedChannel) < 0) {
       setStatus('当前音源没有可用的播放渠道。', 'fail');
       return;
@@ -1452,7 +1466,7 @@
     document.getElementById('verified-install-btn').onclick = function () {
       document.getElementById('source-url').value =
         'https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/latest.js';
-      setStatus('正在载入内置已验证 Huibq v1.2.0……');
+      setStatus('正在获取并初始化 GitHub 上的 Huibq 原始音源……');
       var button = document.getElementById('verified-install-btn');
       button.disabled = true;
       setCheck('check-inited', 'pending');
@@ -1464,8 +1478,8 @@
           return;
         }
         setCheck('check-storage', 'ok');
-        setStatus('已导入并初始化 Huibq：' + escapeHtml(item.name) + ' v' +
-          escapeHtml(item.version || '1.2.0') + '（内置 ES5 适配器）', 'ready');
+        setStatus('已导入 Huibq 原始 LX 音源：' + escapeHtml(item.name) + ' ' +
+          escapeHtml(item.version || '') + '（实际播放能力依赖上游服务）', 'ready');
       });
     };
 
@@ -1481,7 +1495,7 @@
       setStatus('正在恢复 Flower 与 Huibq 默认音源，请稍候……');
       global.LXSourceManager.restoreDefaults(function (err) {
         restoreSourcesButton.disabled = false;
-        if (err) setStatus('Huibq 已可用；Flower 导入暂时失败：' + escapeHtml(err.message || err), 'warn');
+        if (err) setStatus('部分默认音源导入失败：' + escapeHtml(err.message || err), 'warn');
         else setStatus('默认音源已就绪。可在上方选择当前音源。', 'ready');
       });
     };
@@ -1544,10 +1558,6 @@
     };
 
     document.getElementById('quick-test-btn').onclick = function () {
-      var active = global.LXSourceManager.getActive();
-      if (!active || !active.runtime || !active.inited) {
-        return setStatus('请先导入并初始化 LX 音源。', 'fail');
-      }
       if (!selectedChannel) {
         return setStatus('当前音源没有可用的播放渠道。', 'fail');
       }

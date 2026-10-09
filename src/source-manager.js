@@ -5,11 +5,14 @@
   var ACTIVE_SOURCE_KEY = 'only-testing-online-music.active-source-id';
   var DEFAULT_SOURCE_LAST_ATTEMPT_KEY = 'only-testing-online-music.default-source-attempt';
   var DEFAULT_SOURCE_DISABLED_KEY = 'only-testing-online-music.default-source-disabled';
+  var DEFAULT_BOOTSTRAP_KEY = 'only-testing-online-music.default-source-bootstrap';
   // User-confirmed Flower mirror, with the matching maintainer GitHub raw URL
   // as a transport fallback. Never auto-import arbitrary repository contents.
   var DEFAULT_FLOWER_URL = 'https://ghproxy.net/raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js';
   var DEFAULT_FLOWER_RAW_URL = 'https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js';
   var DEFAULT_RETRY_MS = 12 * 60 * 60 * 1000;
+  var BUILTIN_HUIBQ_URL = 'https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/latest.js';
+  var LEGACY_HUIBQ_MARKER = 'only-testing-online-music verified built-in adapter marker';
   var sources = [];
   var active = null;
 
@@ -248,12 +251,19 @@
     return item;
   }
 
-  function addOrReplace(item) {
+  function addOrReplace(item, preserveActive) {
     var next=[];
-    for (var i=0;i<sources.length;i+=1) if (sources[i].url!==item.url) next.push(sources[i]);
+    var replacingActive=false;
+    for (var i=0;i<sources.length;i+=1) {
+      if (sources[i].url===item.url) {
+        if (active && active.id===sources[i].id) replacingActive=true;
+      } else next.push(sources[i]);
+    }
     next.push(item);
     sources=next;
-    active=item;
+    // Background defaults never steal a user's selected source. Replacing an
+    // obsolete placeholder still updates its selected entry to the real one.
+    if (!preserveActive || !active || replacingActive) active=item;
     persist(); notify();
   }
 
@@ -272,14 +282,14 @@
         if (callback) callback(err,item);
         return;
       }
-      if (options && options.expectedActiveId &&
-          (!active || active.id !== options.expectedActiveId)) {
+      if (options && Object.prototype.hasOwnProperty.call(options, 'expectedActiveId') &&
+          String(active && active.id || '') !== String(options.expectedActiveId || '')) {
         // A user selected/imported another source while the auto-imported
         // Flower source was being transpiled. Do not replace their choice.
         if (callback) callback(null,active);
         return;
       }
-      addOrReplace(item);
+      addOrReplace(item, !!(options && options.preserveActive));
       if (callback) callback(null,item);
     });
   }
@@ -290,7 +300,8 @@
     var finished = false;
     var activeXhr = null;
     var timer = null;
-    var TIMEOUT_MS = 12000;
+    // Defaults should not delay an old Via browser for 12s before trying the proxy.
+    var TIMEOUT_MS = options && options.autoDefault ? 5000 : 12000;
     var proxyUrl;
 
     try {
@@ -315,7 +326,8 @@
       // An explicit manual import or source switch during a background
       // bootstrap must win, even when the Flower download completes later.
       // Do not execute/install unattended remote code after user intervention.
-      if (expectedActiveId && (!active || active.id !== expectedActiveId)) {
+      if (options && Object.prototype.hasOwnProperty.call(options, 'expectedActiveId') &&
+          String(active && active.id || '') !== String(expectedActiveId)) {
         if (callback) callback(null, active);
         return;
       }
@@ -333,13 +345,19 @@
         global.clearTimeout(timer);
         timer = null;
       }
-      activeXhr = new XMLHttpRequest();
+      // Keep a stable XHR reference per attempt. A failed direct request can
+      // fire extra onreadystatechange/onerror events AFTER the proxy retry
+      // replaces activeXhr or after cleanup sets it to null.
+      var xhr = new XMLHttpRequest();
+      activeXhr = xhr;
 
       function succeed(code) {
+        if (finished || activeXhr !== xhr) return;
         finish(null, code, transport);
       }
 
       function fail(message) {
+        if (finished || activeXhr !== xhr) return;
         if (allowProxyFallback) {
           request(proxyUrl, false, 'proxy');
           return;
@@ -347,30 +365,29 @@
         finish(new Error(message));
       }
 
-      activeXhr.onreadystatechange = function(){
-        if(activeXhr.readyState!==4)return;
-        if(activeXhr.status>=200&&activeXhr.status<300) {
-          succeed(activeXhr.responseText);
-        } else if (activeXhr.status === 0) {
+      xhr.onreadystatechange = function() {
+        if (finished || activeXhr !== xhr || xhr.readyState !== 4) return;
+        if (xhr.status >= 200 && xhr.status < 300) {
+          succeed(xhr.responseText);
+        } else if (xhr.status === 0) {
           fail('Network request failed (HTTP status 0)');
         } else {
-          fail('HTTP '+activeXhr.status);
+          fail('HTTP ' + xhr.status);
         }
       };
-      activeXhr.onerror=function(){fail('Network request failed');};
-      activeXhr.ontimeout=function(){fail('Request timeout after '+TIMEOUT_MS+' ms');};
+      xhr.onerror = function() { fail('Network request failed'); };
+      xhr.ontimeout = function() { fail('Request timeout after ' + TIMEOUT_MS + ' ms'); };
 
-      timer = global.setTimeout(function () {
-        if (!finished && activeXhr) {
-          try { activeXhr.abort(); } catch (e) {}
-          fail('Request timeout after '+TIMEOUT_MS+' ms');
-        }
+      timer = global.setTimeout(function() {
+        if (finished || activeXhr !== xhr) return;
+        try { xhr.abort(); } catch (e) {}
+        fail('Request timeout after ' + TIMEOUT_MS + ' ms');
       }, TIMEOUT_MS);
 
       try {
-        activeXhr.open('GET',requestUrl,true);
-        if (activeXhr.timeout !== undefined) activeXhr.timeout = TIMEOUT_MS;
-        activeXhr.send(null);
+        xhr.open('GET', requestUrl, true);
+        if (xhr.timeout !== undefined) xhr.timeout = TIMEOUT_MS;
+        xhr.send(null);
       } catch (e) {
         fail(e && e.message ? e.message : String(e));
       }
@@ -385,35 +402,36 @@
     };
   }
 
-  var BUILTIN_HUIBQ_URL = 'https://raw.githubusercontent.com/pdone/lx-music-source/main/huibq/latest.js';
-  var BUILTIN_HUIBQ_CODE =
-    '/*!\\n' +
-    ' * @name Huibq_lxmusic源\\n' +
-    ' * @description Github搜索“洛雪音乐音源”，禁止批量下载！\\n' +
-    ' * @version v1.2.0\\n' +
-    ' * @author Huibq\\n' +
-    ' */\\n' +
-    '/* only-testing-online-music verified built-in adapter marker */';
-
-  function installBuiltinHuibq(callback) {
-    installFromCode(BUILTIN_HUIBQ_CODE, BUILTIN_HUIBQ_URL, function (err, item) {
-      if (item) item.transport = 'builtin';
-      if (!err) persist();
-      if (callback) callback(err, item);
-    });
+  // These are the actual unmodified third-party LX scripts, never a fake
+  // metadata-only "Huibq" adapter. Import their code once and cache locally.
+  // On each new device the app fetches them automatically; a reload does not.
+  function installBuiltinHuibq(callback, options) {
+    installFromUrl(BUILTIN_HUIBQ_URL, callback, options);
   }
 
   function hasDefaultFlower() {
     for (var i = 0; i < sources.length; i += 1) {
-      var url = String(sources[i].url || '');
-      if (url.indexOf('pdone/lx-music-source/main/flower/latest.js') >= 0) return true;
+      var item = sources[i];
+      if (String(item.url || '').indexOf('pdone/lx-music-source/main/flower/latest.js') >= 0 &&
+          typeof item.code === 'string' && item.code.length > 100) return true;
+    }
+    return false;
+  }
+
+  function hasLegacyPlaceholderHuibq() {
+    for (var i = 0; i < sources.length; i += 1) {
+      if (String(sources[i].url || '') === BUILTIN_HUIBQ_URL &&
+          String(sources[i].code || '').indexOf(LEGACY_HUIBQ_MARKER) >= 0) return true;
     }
     return false;
   }
 
   function hasDefaultHuibq() {
     for (var i = 0; i < sources.length; i += 1) {
-      if (String(sources[i].url || '') === BUILTIN_HUIBQ_URL) return true;
+      var item = sources[i];
+      if (String(item.url || '') === BUILTIN_HUIBQ_URL &&
+          typeof item.code === 'string' && item.code.length > 100 &&
+          item.code.indexOf(LEGACY_HUIBQ_MARKER) < 0) return true;
     }
     return false;
   }
@@ -428,16 +446,28 @@
   }
 
   function ensureDefaultSources(force, callback) {
-    // Only a clean new device receives automatic imports. Never modify the
-    // existing source list or active selection of a returning user.
-    if (!force && sources.length) {
-      if (callback) callback(null);
-      return;
-    }
     try {
       if (!force && localStorage.getItem(DEFAULT_SOURCE_DISABLED_KEY) === '1') {
         if (callback) callback(null); return;
       }
+    } catch (e) {}
+    // Automatically repair only an earlier managed bootstrap, an existing
+    // Flower default, or an obsolete placeholder. Never inject extra scripts
+    // into a purely user-managed pre-existing LX source collection.
+    var managedBootstrap = false;
+    try { managedBootstrap = localStorage.getItem(DEFAULT_BOOTSTRAP_KEY) === '1'; }
+    catch (e) {}
+    if (!force && sources.length && !managedBootstrap &&
+        !hasDefaultFlower() && !hasLegacyPlaceholderHuibq()) {
+      if (callback) callback(null); return;
+    }
+    if (!sources.length) {
+      try { localStorage.setItem(DEFAULT_BOOTSTRAP_KEY, '1'); } catch (e) {}
+    }
+    if (hasDefaultFlower() && hasDefaultHuibq()) {
+      if (callback) callback(null); return;
+    }
+    try {
       var last = Number(localStorage.getItem(DEFAULT_SOURCE_LAST_ATTEMPT_KEY) || 0);
       var now = Date.now ? Date.now() : new Date().getTime();
       if (!force && sources.length && last && now - last < DEFAULT_RETRY_MS) {
@@ -448,36 +478,56 @@
 
     var priorId = active && active.id;
     var hadExisting = sources.length > 0;
+    var failures = [];
+    var userIntervened = false;
+
+    function finish() {
+      if (hadExisting) restorePreferredSource(priorId);
+      if (callback) callback(failures.length ? new Error(failures.join('；')) : null);
+    }
+
+    function optionsForCurrentSelection() {
+      return {
+        autoDefault: true,
+        preserveActive: hadExisting || userIntervened,
+        expectedActiveId: active && active.id || ''
+      };
+    }
+
+    function syncManualSelection(expectedId, installedUrl) {
+      var currentId = active && active.id || '';
+      if (currentId !== expectedId &&
+          String(active && active.url || '') !== String(installedUrl || '')) {
+        userIntervened = true;
+        return true;
+      }
+      return false;
+    }
 
     function addFlower() {
-      if (hasDefaultFlower()) {
-        restorePreferredSource(priorId);
-        if (callback) callback(null);
-        return;
-      }
-      var intendedId = active && active.id || '';
-      var options = { expectedActiveId: intendedId };
+      if (hasDefaultFlower()) return finish();
+      var opts = optionsForCurrentSelection();
       installFromUrl(DEFAULT_FLOWER_URL, function (err) {
-        if (!err) {
-          // A returning user should not have their chosen source changed.
-          if (hadExisting) restorePreferredSource(priorId);
-          if (callback) callback(null);
-          return;
-        }
-        // A mirror outage must not stop fresh devices from using the
-        // built-in ES5 Huibq source. Try upstream GitHub only once.
+        if (syncManualSelection(opts.expectedActiveId, DEFAULT_FLOWER_URL)) return finish();
+        if (!err) return finish();
+        // The user-confirmed mirror may be unavailable in another region.
+        var rawOptions = optionsForCurrentSelection();
         installFromUrl(DEFAULT_FLOWER_RAW_URL, function (rawErr) {
-          if (hadExisting) restorePreferredSource(priorId);
-          if (callback) callback(rawErr || null);
-        }, options);
-      }, options);
+          if (syncManualSelection(rawOptions.expectedActiveId, DEFAULT_FLOWER_RAW_URL)) return finish();
+          if (rawErr) failures.push('Flower: ' + (rawErr.message || rawErr));
+          finish();
+        }, rawOptions);
+      }, opts);
     }
 
     if (!hasDefaultHuibq()) {
-      installBuiltinHuibq(function () {
-        restorePreferredSource(priorId);
+      var huibqOptions = optionsForCurrentSelection();
+      installBuiltinHuibq(function (err) {
+        if (syncManualSelection(huibqOptions.expectedActiveId, BUILTIN_HUIBQ_URL)) return finish();
+        if (err) failures.push('Huibq: ' + (err.message || err));
+        if (hadExisting) restorePreferredSource(priorId);
         addFlower();
-      });
+      }, huibqOptions);
     } else addFlower();
   }
 
@@ -534,6 +584,7 @@
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(ACTIVE_SOURCE_KEY);
       localStorage.setItem(DEFAULT_SOURCE_DISABLED_KEY, '1');
+      localStorage.removeItem(DEFAULT_BOOTSTRAP_KEY);
     }catch(e){}
     notify();
   }
@@ -542,6 +593,7 @@
     try {
       localStorage.removeItem(DEFAULT_SOURCE_DISABLED_KEY);
       localStorage.removeItem(DEFAULT_SOURCE_LAST_ATTEMPT_KEY);
+      localStorage.setItem(DEFAULT_BOOTSTRAP_KEY, '1');
     } catch (e) {}
     ensureDefaultSources(true, callback);
   }
