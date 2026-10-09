@@ -46,6 +46,8 @@ const state=await page.evaluate(()=>({
  songs:document.querySelectorAll('#playlist-detail-songs .playlist-song-row').length
 }))
 assert.equal(state.visible,true,'Playlist details may not disappear after opening')
+assert.equal(await page.locator('#playlist-featured').isVisible(),false,
+  'Opening details must hide the card grid rather than leaving songs below it')
 assert.match(state.view,/active/)
 assert.equal(state.title,'成都测试歌单')
 assert.equal(state.songs,2)
