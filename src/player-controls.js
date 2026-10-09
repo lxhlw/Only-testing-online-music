@@ -59,13 +59,21 @@
     if (!button) return;
     button.setAttribute('aria-label', playing ? '暂停' : '播放');
     button.title = playing ? '暂停' : '播放';
+    var playIcon = button.querySelector('.player-play-icon');
+    var pauseIcon = button.querySelector('.player-pause-icon');
+    // Keep both the CSS class AND the inline SVG display state in sync.
+    // The explicit style is also understood by old Android 4.4 WebViews.
     if (playing) {
-      hide(button.querySelector('.player-play-icon'));
-      show(button.querySelector('.player-pause-icon'));
+      hide(playIcon);
+      show(pauseIcon);
+      if (playIcon) playIcon.style.display = 'none';
+      if (pauseIcon) pauseIcon.style.display = 'block';
       button.className = 'player-icon-btn player-main-toggle is-playing';
     } else {
-      show(button.querySelector('.player-play-icon'));
-      hide(button.querySelector('.player-pause-icon'));
+      show(playIcon);
+      hide(pauseIcon);
+      if (playIcon) playIcon.style.display = 'block';
+      if (pauseIcon) pauseIcon.style.display = 'none';
       button.className = 'player-icon-btn player-main-toggle';
     }
   }
