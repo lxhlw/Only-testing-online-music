@@ -676,7 +676,7 @@
         actions.appendChild(play);
         var queue=document.createElement('button');
         queue.type='button';queue.className='secondary playlist-add-queue';queue.innerHTML='＋';
-        queue.title='加入播放队列';queue.setAttribute('aria-label','加入播放队列');
+        queue.title='加入队列';queue.setAttribute('aria-label','加入队列');
         queue.onclick=(function(m){return function(ev){
           if(ev&&ev.stopPropagation)ev.stopPropagation();
           if(global.OnlyTestingMusicApp&&global.OnlyTestingMusicApp.addToQueue)global.OnlyTestingMusicApp.addToQueue(m);
