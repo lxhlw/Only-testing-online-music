@@ -133,10 +133,19 @@
     button.setAttribute('aria-label', button.title);
     button.setAttribute('data-mode', mode);
     var items = document.querySelectorAll('#player-mode-menu button[data-mode]');
+    var chosenSvg = null;
     for (var i = 0; i < items.length; i += 1) {
       var selected = items[i].getAttribute('data-mode') === mode;
       items[i].setAttribute('aria-checked', selected ? 'true' : 'false');
       items[i].className = selected ? 'is-selected' : '';
+      if (selected) chosenSvg = items[i].querySelector('.mode-glyph svg');
+    }
+    // Main transport icon always mirrors the selected menu glyph.
+    // Replace the old SVG instead of keeping four hidden glyphs: this also
+    // prevents the historic overlapped-icon regression in old Via browsers.
+    if (chosenSvg) {
+      while (button.firstChild) button.removeChild(button.firstChild);
+      button.appendChild(chosenSvg.cloneNode(true));
     }
   }
   function closeMenu() {

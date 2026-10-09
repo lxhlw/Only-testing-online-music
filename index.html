@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>Only Testing Online Music</title>
-  <link rel="stylesheet" href="styles.css?v=0.2.36&amp;player-icon=20261009-2">
+  <link rel="stylesheet" href="styles.css?v=0.2.36&amp;mode-icons=20261009-3">
 </head>
 <body>
   <div id="app">
@@ -279,13 +279,13 @@
         <div class="player-transport" aria-label="音乐播放控制">
           <div class="player-mode-wrap">
             <button id="player-mode-btn" type="button" class="player-icon-btn mode-control" title="播放模式：顺序播放" aria-label="播放模式：顺序播放" aria-haspopup="true" aria-expanded="false">
-              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 7h14l-3-3m3 3-3 3M20 17H6l3-3m-3 3 3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M4 6h16M4 11h16M4 17h11m-3-3 3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <div id="player-mode-menu" class="player-mode-menu hidden" role="menu" aria-label="选择播放模式">
-              <button type="button" data-mode="sequence" role="menuitemradio" aria-checked="true"><span class="mode-glyph">⇥</span>顺序播放</button>
-              <button type="button" data-mode="list-loop" role="menuitemradio" aria-checked="false"><span class="mode-glyph">🔁</span>列表循环</button>
-              <button type="button" data-mode="single-loop" role="menuitemradio" aria-checked="false"><span class="mode-glyph">↻₁</span>单曲循环</button>
-              <button type="button" data-mode="shuffle" role="menuitemradio" aria-checked="false"><span class="mode-glyph">⤨</span>随机播放</button>
+              <button type="button" data-mode="sequence" role="menuitemradio" aria-checked="true"><span class="mode-glyph"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M4 6h16M4 11h16M4 17h11m-3-3 3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>顺序播放</button>
+              <button type="button" data-mode="list-loop" role="menuitemradio" aria-checked="false"><span class="mode-glyph"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M17 3l4 4-4 4M20.5 7H7a4 4 0 0 0-4 4m4 10-4-4 4-4M3.5 17H17a4 4 0 0 0 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>列表循环</button>
+              <button type="button" data-mode="single-loop" role="menuitemradio" aria-checked="false"><span class="mode-glyph"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M17 3l4 4-4 4M20.5 7H7a4 4 0 0 0-4 4m4 10-4-4 4-4M3.5 17H17a4 4 0 0 0 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><text x="12" y="15" text-anchor="middle" font-size="9" font-family="Arial,sans-serif" font-weight="bold" fill="currentColor">1</text></svg></span>单曲循环</button>
+              <button type="button" data-mode="shuffle" role="menuitemradio" aria-checked="false"><span class="mode-glyph"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M4 5h3c6 0 4 14 10 14h3m-3-3 3 3-3 3M4 19h3c2.5 0 3.5-2.5 5-5m1-5c1.5-2.5 2.5-4 4-4h3m-3-3 3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>随机播放</button>
             </div>
           </div>
           <button id="prev-track-btn" type="button" class="player-icon-btn" title="上一首" aria-label="上一首">
@@ -334,7 +334,7 @@
   <script src="src/source-manager.js?v=0.2.36&amp;defaults=20261009-real"></script>
   <script src="src/music-library.js?playlist-queue=20261009"></script>
   <script src="src/music-lyrics.js"></script>
-  <script src="src/player-controls.js?v=20261009-iconfix"></script>
+  <script src="src/player-controls.js?v=20261009-mode-icons"></script>
   <script src="src/app.js?v=0.2.36&amp;player-ui=20261009"></script>
   <script>
   (function (global) {
