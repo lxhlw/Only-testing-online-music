@@ -346,11 +346,10 @@
     // bars are CSS-sticky on modern browsers. Android 4.4 WebView lacks
     // reliable sticky support, so only that legacy case uses a small fixed-
     // positioning fallback with placeholders to avoid jumping content.
-    var stickyLegacy = !(
-      global.CSS && typeof global.CSS.supports === 'function' &&
-      (global.CSS.supports('position','sticky') ||
-       global.CSS.supports('position','-webkit-sticky'))
-    );
+    // Browser sticky layers leave their containing block at the last row,
+    // especially on narrow screens. Use one consistent fixed+spacer approach
+    // for every browser, so scrolling the playlist cannot dismiss controls.
+    var stickyLegacy = true;
     var stickyTopNode = document.getElementById('persistent-top-stack');
     var stickyFilterNode = document.getElementById('playlist-filter-stack');
     var stickyTopPlaceholder = null;
