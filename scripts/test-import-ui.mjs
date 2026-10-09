@@ -13,6 +13,10 @@ try {
   // Suppress window.load listeners before any page script runs. The legacy
   // regression must prove that the import button does not depend on load.
   await page.addInitScript(() => {
+    // The test is for click-handler readiness, not GitHub source availability.
+    // Background default-import callbacks can overwrite the short-lived
+    // invalid-URL warning, making an unrelated network race look like failure.
+    localStorage.setItem('only-testing-online-music.default-source-disabled', '1')
     const nativeAddEventListener = window.addEventListener
     window.addEventListener = function (type, listener, options) {
       if (type === 'load') {
