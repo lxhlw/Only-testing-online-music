@@ -142,6 +142,16 @@ try {
       window.__qualityPlayingUrls.push(qualityAudio.currentSrc || qualityAudio.src || '')
     })
 
+    // Quality fallback is independent of upstream search availability.
+    // The real QQ search endpoint intermittently rejects CI traffic; use
+    // a stable fixture while exercising actual source/media playback logic.
+    window.LXMusicSearch.search = function (source, keyword, page, limit, callback) {
+      callback(null, { source:source, list:[{
+        source:source, id:'quality-test-1',songmid:'quality-test-1',
+        name:'成都',singer:'赵雷',interval:300000
+      }] });
+    };
+
     window.LXMusicSearch.resolveMusicUrl = function (source, musicInfo, quality, callback) {
       callback(new Error('resolver intentionally disabled by quality-isolation test'))
     }

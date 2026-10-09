@@ -289,7 +289,7 @@
   <script src="src/source-manager.js?v=0.2.36&amp;defaults=20261009"></script>
   <script src="src/music-library.js"></script>
   <script src="src/music-lyrics.js"></script>
-  <script src="src/app.js?v=0.2.36&amp;defaults=20261009"></script>
+  <script src="src/app.js?v=0.2.36&amp;viafix=20261009"></script>
   <script>
   (function (global) {
     'use strict';
@@ -446,7 +446,23 @@
       var actions=document.createElement('div'); actions.className='playlist-card-actions';
 
       var open=document.createElement('button'); open.type='button'; open.className='playlist-open-button'; open.innerHTML='打开歌单';
-      open.onclick=function(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();openPlaylist(item);};
+      // Some Android 4.4 WebViews dispatch both touchend and a delayed
+      // synthetic click. Never let the second event reopen/repaint the panel.
+      var lastTouchOpenAt=0;
+      open.ontouchend=function(ev){
+        if(ev&&ev.preventDefault)ev.preventDefault();
+        if(ev&&ev.stopPropagation)ev.stopPropagation();
+        lastTouchOpenAt=Date.now?Date.now():(new Date()).getTime();
+        openPlaylist(item);
+        return false;
+      };
+      open.onclick=function(ev){
+        if(ev&&ev.stopPropagation)ev.stopPropagation();
+        var now=Date.now?Date.now():(new Date()).getTime();
+        if(lastTouchOpenAt&&now-lastTouchOpenAt<900)return false;
+        openPlaylist(item);
+        return false;
+      };
       actions.appendChild(open);
 
       var fav=document.createElement('button'); fav.type='button'; fav.className='secondary'; fav.innerHTML=playlistIsFavorite(item.id)?'取消收藏':'收藏';
@@ -459,6 +475,7 @@
       box.appendChild(actions);
       box.onclick=function(ev){
         if(ev&&ev.target&&String(ev.target.tagName||'').toLowerCase()==='button')return;
+        if(lastTouchOpenAt&&((Date.now?Date.now():(new Date()).getTime())-lastTouchOpenAt)<900)return;
         openPlaylist(item);
       };
       return box;
@@ -466,6 +483,10 @@
 
     function openPlaylist(item){
       if(!item||item.id==null)return;
+      // Duplicate click/touch events or stale card handlers must not restart
+      // the detail request and blank its songs after it has opened.
+      if(playlistDetailItem&&String(playlistDetailItem.id)===String(item.id)&&
+          !hasClass(el('playlist-detail-panel'),'hidden'))return;
       // Publish detail state BEFORE navigation. Otherwise showView('playlist')
       // launches another featured-list search on slow legacy devices, which
       // can re-render cards during the touch/click transition.

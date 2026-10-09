@@ -26,6 +26,11 @@ await page.waitForFunction(() => document.querySelectorAll('#playlist-featured .
 const button=page.locator('#playlist-featured .playlist-open-button').first()
 await button.dispatchEvent('touchend')
 await button.click()
+await page.evaluate(() => {
+  // Simulate an old WebView firing another delayed click after touchend.
+  const b=document.querySelector('#playlist-featured .playlist-open-button')
+  if(b && typeof b.onclick==='function') b.onclick({stopPropagation:function(){}})
+})
 await page.waitForFunction(() => {
  const panel=document.querySelector('#playlist-detail-panel')
  return panel&&!panel.className.includes('hidden')&&document.querySelectorAll('#playlist-detail-songs .playlist-song-row').length===2
@@ -42,6 +47,11 @@ assert.match(state.view,/active/)
 assert.equal(state.title,'成都测试歌单')
 assert.equal(state.songs,2)
 assert.equal(await page.locator('#playlist-detail-songs .playlist-song-row button').first().textContent(),'播放')
+await button.evaluate(el => {
+  // An already-open card must not clear loaded results on ghost clicks.
+  if(el.onclick) el.onclick({stopPropagation:function(){}})
+})
+assert.equal(await page.locator('#playlist-detail-songs .playlist-song-row').count(),2)
 await page.locator('#playlist-detail-songs .playlist-song-row button').first().click()
 assert.equal(await page.locator('#playlist-detail-panel').evaluate(x=>x.className.includes('hidden')),false,
  'Attempting to play a playlist track must not navigate away')
