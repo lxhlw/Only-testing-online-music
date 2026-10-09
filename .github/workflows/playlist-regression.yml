@@ -6,6 +6,9 @@ on:
       - "index.html"
       - "styles.css"
       - "scripts/test-playlist-sticky-scroll-browser.mjs"
+      - "src/player-controls.js"
+      - "styles.css"
+      - "scripts/test-player-controls-browser.mjs"
       - "src/app.js"
       - "src/music-library.js"
       - "scripts/test-music-library.mjs"
@@ -47,6 +50,8 @@ jobs:
           node --check scripts/test-playlist-browser.mjs
           node --check scripts/test-playlist-playall-browser.mjs
           node --check scripts/test-playlist-sticky-scroll-browser.mjs
+          node --check src/player-controls.js
+          node --check scripts/test-player-controls-browser.mjs
 
       - name: Test existing project contracts and core modules
         run: |
@@ -86,6 +91,9 @@ jobs:
 
       - name: Verify Via touch navigation holds the playlist detail
         run: node scripts/test-playlist-via-navigation-browser.mjs
+
+      - name: Verify custom audio transport, draggable seek and playback modes
+        run: node scripts/test-player-controls-browser.mjs
 
       - name: Verify sequential Play All and automatic page continuation
         run: node scripts/test-playlist-playall-browser.mjs
