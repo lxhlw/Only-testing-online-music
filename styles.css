@@ -571,3 +571,209 @@ h1{font-size:19px;font-weight:500}
   .active-source-summary-state{display:block;margin:5px 0 0}
   .source-current-badge{margin-top:3px}
 }
+
+/* LX-inspired light mint interface: no runtime framework, fonts or images.
+   All interactive rows use Flexbox for Android 4.4 WebView compatibility. */
+html,body{font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;color:#344d46;background:#f6faf8}
+body{font-size:14px;line-height:1.45}
+button{border-radius:6px}
+button:focus,.playlist-song-row:focus{outline:2px solid #6fc8a0;outline-offset:1px}
+.topbar{height:58px;background:#f9fcfa;border-bottom:1px solid #dcece4}
+.topbar-inner{padding:0 23px 0 20px}
+.brand{font-size:21px;font-weight:700;color:#43ac7e;letter-spacing:.2px}
+.subtitle{font-size:11px;color:#7b9f8e}
+.topbar-chip{font-size:11px;padding:6px 12px;background:#ecf8f1;color:#568b73;border-color:#cce9d9}
+.lx-layout{min-height:calc(100vh - 58px)}
+.nav-rail{width:70px;flex:0 0 70px;background:#ebf7f1;border-right:1px solid #d7ebdf;padding:12px 7px}
+.nav-brand{font-size:18px;letter-spacing:2px;color:#54b986;margin:0 0 17px}
+.nav-item{height:52px;border-radius:9px;margin:0 0 8px;color:#4eaa80}
+.nav-item:hover{background:#ddf1e7}
+.nav-item.active,.nav-item.active:hover{background:#ccebdd;color:#249a65;border-left:3px solid #4ab982}
+.nav-symbol{font-size:23px}
+.main-stage{background:#fff}
+.global-search-bar{top:58px;padding:15px 24px 9px;background:#fff}
+.global-search{height:43px;max-width:780px;background:#f8fcfa;border-radius:8px;border:1px solid #cfebdb}
+.global-search:focus-within{border-color:#67c49b;box-shadow:0 0 0 2px rgba(97,195,151,.12)}
+.global-search input{font-size:14px;height:41px;background:transparent;padding:0 8px}
+.global-search button{background:#5dbb8c;color:white;border:0;border-radius:6px;min-height:33px;height:33px;font-weight:bold;font-size:13px}
+.global-search button:hover{background:#46ad79}
+.search-context{font-size:11px}
+.global-status{margin:0 24px 10px;padding:7px 12px;font-size:12px;border-radius:7px}
+.view-container{padding:16px 24px 120px;max-width:1560px}
+.view-header{margin-bottom:16px;align-items:center}
+.view-header h1,h1{font-size:25px;color:#33473e;font-weight:bold}
+.panel-kicker{font-size:10px;color:#7fbca1;letter-spacing:1.9px}
+.view-note,.muted{font-size:12px;color:#8caaa0}
+.sub-toolbar{padding:12px 14px;font-size:13px;background:#f9fcfa}
+.category-row{padding:12px 14px;font-size:12px}
+.platform-pill,.category-pill{min-height:33px;padding:0 14px;font-size:12px;border-radius:7px}
+.platform-pill.active,.category-pill.active{background:#d4f0e2;color:#249869}
+.results-head{padding:14px 16px 10px;font-size:14px}
+.results-head .muted{font-size:12px}
+.playlist-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;padding:16px}
+.playlist-card{border:1px solid #e0eee7;border-radius:10px;padding:10px;transition:box-shadow .15s,border-color .15s}
+.playlist-card:hover{border-color:#a7dbc0;box-shadow:0 4px 17px rgba(36,132,81,.09)}
+.playlist-cover{height:145px;border-radius:7px}
+.playlist-name{font-size:13px;font-weight:bold;margin-top:9px}
+.playlist-meta{font-size:11px;margin-top:5px}
+.playlist-card-actions button{font-size:12px;min-height:32px}
+.playlist-detail-panel{border:1px solid #e0eee6;border-radius:11px;overflow:hidden;box-shadow:0 3px 22px rgba(51,104,77,.055)}
+.playlist-detail-toolbar{padding:14px 18px;background:#f9fcfa;border-bottom:1px solid #e1eee6}
+.playlist-detail-toolbar button{min-height:36px;font-size:13px;border-radius:7px;padding:0 15px}
+#playlist-play-all-btn{background:#4bb985;color:#fff;border:1px solid #4bb985;font-weight:bold}
+#playlist-play-all-btn:hover{background:#329b6c}
+.playlist-detail-header{padding:22px 24px;gap:23px;align-items:flex-start}
+.playlist-detail-cover{width:148px;height:148px;flex:0 0 148px;border-radius:10px;background-color:#e5f5eb}
+.playlist-detail-meta h2{font-size:23px;font-weight:700;color:#29473b;margin:7px 0 11px}
+.playlist-detail-creator,.playlist-detail-count{font-size:12px;color:#6a9980;margin-top:5px}
+.playlist-detail-description{font-size:12px;line-height:1.6;color:#809b8f;max-height:64px;max-width:900px}
+.playlist-song-head{padding:14px 20px 11px;border-top:1px solid #e8f0eb}
+.playlist-song-head strong{font-size:15px;color:#356d52}
+.playlist-hint{font-size:11px;color:#92aca0;font-weight:normal;margin-left:12px}
+#playlist-detail-songs{padding:0 16px 8px;background:#fff}
+.playlist-table-heading{display:flex;align-items:center;min-height:38px;padding:0 20px;background:#f4fbf7;border-top:1px solid #e5f0e8;border-bottom:1px solid #e5f0e8;font-size:12px;color:#779886}
+.playlist-th-index{flex:0 0 42px;width:42px}
+.playlist-th-title{flex:2 1 0;min-width:0}
+.playlist-th-artist{flex:1 1 0;min-width:0}
+.playlist-th-album{flex:1.15 1 0;min-width:0}
+.playlist-th-duration{flex:0 0 64px;text-align:right}
+.playlist-th-actions{flex:0 0 148px;text-align:center}
+#playlist-detail-songs>.playlist-song-row{
+  display:flex;align-items:center;flex-wrap:nowrap;min-height:52px;
+  padding:0 4px;border-top:1px solid #edf3ef;
+  background:#fff;cursor:pointer;color:#476256;max-width:100%;
+}
+#playlist-detail-songs>.playlist-song-row:before{display:none}
+#playlist-detail-songs>.playlist-song-row:hover{background:#f3fbf6}
+#playlist-detail-songs>.playlist-song-row.is-playing{background:#e4f6eb;color:#1b975c}
+#playlist-detail-songs>.playlist-song-row.is-playing .song-main b{color:#168e59;font-weight:700}
+#playlist-detail-songs>.playlist-song-row>.playlist-song-index{
+  display:block;flex:0 0 42px;width:42px;font-size:12px;color:#92a99b;text-align:center;margin:0
+}
+#playlist-detail-songs>.playlist-song-row>.song-main{
+  display:block;flex:2 1 0;min-width:0;padding-right:15px
+}
+#playlist-detail-songs>.playlist-song-row>.song-main b{
+  display:block;font-size:14px;font-weight:500;line-height:1.5;
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+#playlist-detail-songs>.playlist-song-row>.playlist-song-artist{
+  display:block;flex:1 1 0;min-width:0;margin:0;padding-right:14px;
+  color:#6f887a;font-size:13px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis
+}
+#playlist-detail-songs>.playlist-song-row>.playlist-song-album{
+  display:block;flex:1.15 1 0;min-width:0;margin:0;padding-right:14px;
+  color:#8da398;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis
+}
+#playlist-detail-songs>.playlist-song-row>.playlist-song-duration{
+  display:block;flex:0 0 64px;width:64px;margin:0;text-align:right;
+  color:#7d9a8b;font-size:12px
+}
+#playlist-detail-songs>.playlist-song-row>.playlist-song-actions{
+  display:flex;flex:0 0 148px;width:148px;margin:0;padding:0;
+  align-items:center;justify-content:center;gap:5px;white-space:nowrap
+}
+#playlist-detail-songs>.playlist-song-row>.playlist-song-actions button{
+  display:inline-block;min-height:30px;height:30px;margin:0;padding:0 8px;
+  background:transparent!important;border:1px solid transparent;border-radius:5px;
+  color:#52ac83!important;font-size:13px
+}
+#playlist-detail-songs>.playlist-song-row>.playlist-song-actions button:hover{
+  background:#d5f0e0!important;border-color:#b4dfc5
+}
+#playlist-detail-songs>.playlist-song-row>.playlist-song-actions .playlist-song-play{
+  border-color:#d3eade;font-size:12px;min-width:48px
+}
+#playlist-detail-songs>.playlist-song-row>.playlist-song-actions .playlist-add-queue,
+#playlist-detail-songs>.playlist-song-row>.playlist-song-actions .playlist-fav-song{
+  min-width:30px;font-size:18px;line-height:26px
+}
+.player-bar{height:78px;background:#f9fcfa;border-top:1px solid #d6e9df;padding:10px 22px;box-shadow:0 -5px 18px rgba(48,110,75,.08)}
+.player-art{width:50px;height:50px;flex:0 0 50px;background:#ccecd9;color:#2a9c69;border-radius:8px;font-size:27px}
+.player-song{width:270px}
+#player-title{font-size:15px;color:#39594a;font-weight:bold}
+#player-artist{font-size:12px;color:#8dab9b}
+.player-control{font-size:12px;min-height:35px;padding:0 12px;background:#e8f6ed!important;color:#2d9b68!important;border-radius:7px}
+.player-control:hover{background:#d4eedd!important}
+.player-center audio{width:345px;max-width:33vw;height:38px}
+.player-lyric{font-size:12px;max-width:280px;color:#80a08f}
+.player-status{font-size:11px;color:#7aab90}
+@media(max-width:1100px){
+  .playlist-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .view-container{padding:14px 17px 120px}
+  .playlist-th-actions{flex-basis:120px}
+  #playlist-detail-songs>.playlist-song-row>.playlist-song-actions{flex-basis:120px;width:120px}
+}
+@media(max-width:820px) and (min-width:681px){
+  .playlist-th-album,#playlist-detail-songs>.playlist-song-row>.playlist-song-album{display:none}
+  .playlist-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .playlist-detail-cover{width:112px;height:112px;flex-basis:112px}
+  .player-song{width:190px}
+  .player-lyric{display:none}
+}
+@media(max-width:680px){
+  html,body{overflow-x:hidden}
+  #app{padding-bottom:133px}
+  .topbar{height:48px}
+  .topbar-inner{padding:0 10px}
+  .brand{font-size:17px}
+  .topbar-chip{font-size:9px;padding:4px 7px}
+  .nav-rail{width:100%;height:50px;flex:0 0 50px;padding:4px 6px}
+  .nav-brand{display:none}
+  .nav-item{height:40px;min-width:53px;margin:0;border-left:0!important}
+  .nav-symbol{font-size:16px}
+  .global-search-bar{top:48px;padding:9px 10px 5px}
+  .global-search{height:39px}
+  .global-search input{height:37px}
+  .global-status{margin:0 10px 7px;padding:6px 9px;font-size:11px}
+  .view-container{padding:10px 9px 140px}
+  .view-header h1,h1{font-size:21px}
+  .sub-toolbar,.category-row{padding:9px 7px}
+  .playlist-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;padding:8px}
+  .playlist-cover{height:115px}
+  .playlist-detail-toolbar{padding:9px;gap:7px}
+  .playlist-detail-toolbar button{font-size:12px;min-height:34px}
+  .playlist-detail-header{padding:12px;gap:12px}
+  .playlist-detail-cover{width:98px;height:98px;flex:0 0 98px}
+  .playlist-detail-meta h2{font-size:17px;margin:4px 0}
+  .playlist-detail-creator,.playlist-detail-count{font-size:11px}
+  .playlist-detail-description{font-size:11px;max-height:50px}
+  .playlist-song-head{padding:12px 10px 9px}
+  .playlist-song-head strong{font-size:13px}
+  .playlist-hint{display:block;margin:3px 0 0}
+  .playlist-table-heading{padding:0 8px;min-height:32px}
+  .playlist-th-index{flex-basis:28px;width:28px}
+  .playlist-th-title{flex:1 1 0}
+  .playlist-th-artist,.playlist-th-album,.playlist-th-duration{display:none}
+  .playlist-th-actions{flex:0 0 104px}
+  #playlist-detail-songs{padding:0 6px 6px}
+  #playlist-detail-songs>.playlist-song-row{
+    min-height:62px;padding:6px 2px;flex-wrap:nowrap;align-items:center
+  }
+  #playlist-detail-songs>.playlist-song-row>.playlist-song-index{flex-basis:28px;width:28px;font-size:11px}
+  #playlist-detail-songs>.playlist-song-row>.song-main{flex:1 1 0;min-width:0;padding-right:5px}
+  #playlist-detail-songs>.playlist-song-row>.song-main b{font-size:13px;line-height:1.5}
+  #playlist-detail-songs>.playlist-song-row>.playlist-song-artist,
+  #playlist-detail-songs>.playlist-song-row>.playlist-song-album,
+  #playlist-detail-songs>.playlist-song-row>.playlist-song-duration{display:none}
+  #playlist-detail-songs>.playlist-song-row>.playlist-song-actions{
+    flex:0 0 104px;width:104px;gap:0;margin:0;padding:0;min-width:0
+  }
+  #playlist-detail-songs>.playlist-song-row>.playlist-song-actions button{
+    min-width:25px;min-height:30px;padding:0 3px;margin:0;font-size:14px
+  }
+  #playlist-detail-songs>.playlist-song-row>.playlist-song-actions .playlist-song-play{
+    min-width:42px;font-size:11px
+  }
+  .player-bar{height:119px;display:block;padding:7px 10px}
+  .player-song{width:100%;height:36px}
+  .player-art{width:34px;height:34px;flex-basis:34px;font-size:17px;margin-right:8px}
+  #player-title{font-size:13px}
+  #player-artist{font-size:10px}
+  .player-center{width:100%;height:49px;min-width:0;justify-content:flex-start}
+  .player-actions{flex:0 0 auto}
+  .player-control{font-size:11px;min-height:36px;padding:0 5px;margin-right:4px}
+  .player-center audio{flex:1 1 0;max-width:none;min-width:0;width:auto;height:36px}
+  .player-lyric{display:none}
+  .player-status{display:none}
+}
