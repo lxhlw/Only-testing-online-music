@@ -5,6 +5,7 @@
   var ACTIVE_SOURCE_KEY = 'only-testing-online-music.active-source-id';
   var DEFAULT_SOURCE_LAST_ATTEMPT_KEY = 'only-testing-online-music.default-source-attempt';
   var DEFAULT_SOURCE_DISABLED_KEY = 'only-testing-online-music.default-source-disabled';
+  var DEFAULT_BOOTSTRAP_KEY = 'only-testing-online-music.default-source-bootstrap';
   // User-confirmed Flower mirror, with the matching maintainer GitHub raw URL
   // as a transport fallback. Never auto-import arbitrary repository contents.
   var DEFAULT_FLOWER_URL = 'https://ghproxy.net/raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js';
@@ -412,6 +413,14 @@
     return false;
   }
 
+  function hasLegacyPlaceholderHuibq() {
+    for (var i = 0; i < sources.length; i += 1) {
+      if (String(sources[i].url || '') === BUILTIN_HUIBQ_URL &&
+          String(sources[i].code || '').indexOf(LEGACY_HUIBQ_MARKER) >= 0) return true;
+    }
+    return false;
+  }
+
   function hasDefaultHuibq() {
     for (var i = 0; i < sources.length; i += 1) {
       var item = sources[i];
@@ -437,8 +446,19 @@
         if (callback) callback(null); return;
       }
     } catch (e) {}
-    // A returning device can still have the old placeholder Huibq or be
-    // missing one of the two defaults after a previous network failure.
+    // Automatically repair only an earlier managed bootstrap, an existing
+    // Flower default, or an obsolete placeholder. Never inject extra scripts
+    // into a purely user-managed pre-existing LX source collection.
+    var managedBootstrap = false;
+    try { managedBootstrap = localStorage.getItem(DEFAULT_BOOTSTRAP_KEY) === '1'; }
+    catch (e) {}
+    if (!force && sources.length && !managedBootstrap &&
+        !hasDefaultFlower() && !hasLegacyPlaceholderHuibq()) {
+      if (callback) callback(null); return;
+    }
+    if (!sources.length) {
+      try { localStorage.setItem(DEFAULT_BOOTSTRAP_KEY, '1'); } catch (e) {}
+    }
     if (hasDefaultFlower() && hasDefaultHuibq()) {
       if (callback) callback(null); return;
     }
@@ -559,6 +579,7 @@
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(ACTIVE_SOURCE_KEY);
       localStorage.setItem(DEFAULT_SOURCE_DISABLED_KEY, '1');
+      localStorage.removeItem(DEFAULT_BOOTSTRAP_KEY);
     }catch(e){}
     notify();
   }
@@ -567,6 +588,7 @@
     try {
       localStorage.removeItem(DEFAULT_SOURCE_DISABLED_KEY);
       localStorage.removeItem(DEFAULT_SOURCE_LAST_ATTEMPT_KEY);
+      localStorage.setItem(DEFAULT_BOOTSTRAP_KEY, '1');
     } catch (e) {}
     ensureDefaultSources(true, callback);
   }
