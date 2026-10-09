@@ -651,7 +651,7 @@
         var totalSeconds=ms>10000?Math.floor(ms/1000):Math.floor(ms);
         var duration=totalSeconds>0?String(Math.floor(totalSeconds/60))+':'+('0'+String(totalSeconds%60)).slice(-2):'—';
         row.innerHTML='<span class="playlist-song-index">'+String(i+1)+'</span>'+
-          '<div class="song-main"><b>'+escapeHtml(item.name||'未知歌曲')+'</b></div>'+
+          '<div class="song-main"><b>'+escapeHtml(item.name||'未知歌曲')+'</b><small class="playlist-song-mobile-meta">'+escapeHtml(item.singer||'未知歌手')+' · '+escapeHtml(duration)+'</small></div>'+
           '<span class="playlist-song-artist">'+escapeHtml(item.singer||'未知歌手')+'</span>'+
           '<span class="playlist-song-album">'+escapeHtml(item.albumName||'—')+'</span>'+
           '<span class="playlist-song-duration">'+escapeHtml(duration)+'</span>';
