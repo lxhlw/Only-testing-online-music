@@ -23,10 +23,16 @@
 
   function get(id) { return document.getElementById(id); }
   function show(node) {
-    if (node) node.className = String(node.className || '').replace(/\bhidden\b/g, '').replace(/^\s+|\s+$/g, '');
+    if (!node) return;
+    // SVGElement.className is SVGAnimatedString on many old WebViews.
+    var classes = String(node.getAttribute('class') || '');
+    node.setAttribute('class', classes.replace(/\bhidden\b/g, '').replace(/^\s+|\s+$/g, ''));
   }
   function hide(node) {
-    if (node && (' ' + node.className + ' ').indexOf(' hidden ') < 0) node.className += ' hidden';
+    if (!node) return;
+    var classes = String(node.getAttribute('class') || '');
+    if ((' ' + classes + ' ').indexOf(' hidden ') < 0)
+      node.setAttribute('class', classes + ' hidden');
   }
   function timeString(seconds) {
     var value = Math.floor(Number(seconds) || 0);
