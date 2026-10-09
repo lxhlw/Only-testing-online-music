@@ -12,6 +12,17 @@ page.on('pageerror',e=>errors.push(String(e)))
 await page.route(/(?:ghproxy\.net\/raw\.githubusercontent\.com|raw\.githubusercontent\.com)\/pdone\/lx-music-source\/main\/(?:flower|huibq)\/latest\.js/,async route=>{
   await route.abort('failed')
 })
+await page.route('**/api/proxy?url=*',async route=>{
+  const target=new URL(route.request().url()).searchParams.get('url') || ''
+  // Direct GitHub and mirror requests are already blocked above. Also block
+  // the same-origin proxy fallback, otherwise real Github connectivity can
+  // race the test and make an LX script ready before the click.
+  if(target.includes('pdone/lx-music-source/main/')){
+    await route.abort('failed')
+    return
+  }
+  await route.continue()
+})
 await page.route('**/api/netease-search?*',async route=>{
   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
     result:{songCount:1,songs:[{
@@ -43,7 +54,6 @@ try{
       status:document.querySelector('#status').textContent
     }
   })
-  console.log('DIAGNOSTIC OFFLINE PLAYBACK',JSON.stringify({result,errors,selected:await page.locator('#channel-list .channel-button.active').getAttribute('title')}))
   assert.equal(result.calls.length,1,'Playback should attempt native resolution when LX source is unavailable')
   assert.equal(result.calls[0].source,'wy')
   assert.ok(result.src.includes('chengdu.mp3'),'Resolved URL must reach the HTML5 audio element')
