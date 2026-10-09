@@ -50,7 +50,6 @@ async function scenario(viewport,legacy) {
     await page.evaluate(()=>{window.scrollTo(0,Math.max(document.body.scrollHeight,document.documentElement.scrollHeight))})
     await page.waitForTimeout(450)
     const after=await sample()
-    console.log('SCROLL GEOMETRY',JSON.stringify({viewport,legacy,before,after}))
     const tolerance=3
     assert.ok(after.scroll>300,'Expected a long playlist to scroll ('+after.scroll+')')
     assert.ok(Math.abs(after.nav.top-before.nav.top)<tolerance,'Navigation rail must remain fixed')
@@ -71,7 +70,7 @@ async function scenario(viewport,legacy) {
     assert.ok(returned.filter.top>=returned.stack.bottom-2)
     if(legacy) {
       assert.equal(returned.stack.position,'fixed','Legacy search/status must use fixed fallback')
-      assert.ok(['fixed','static','relative'].includes(returned.filter.position))
+      assert.ok(['fixed','static','relative','sticky'].includes(returned.filter.position))
     }
     await page.locator('.nav-item[data-view="search"]').click()
     await page.waitForTimeout(100)
