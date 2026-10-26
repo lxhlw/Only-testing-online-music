@@ -34,12 +34,50 @@ for(const [name,path] of Object.entries(paths)){
  }
  console.log('PASS: '+name+' served successfully '+buf.length+' bytes and range status '+ranged.status)
 }
+// Cloudflare Pages intentionally ignores Range on static assets. Our
+// compatible Function must implement actual 206 and return only the
+// requested payload, verified against the original static asset.
+for (const kind of ['mp3','wav']) {
+  const route=new URL('/api/legacy-audio?type='+kind,base).toString()
+  const normal=await fetch(route)
+  assert.equal(normal.status,200)
+  assert.equal(normal.headers.get('accept-ranges'),'bytes')
+  assert.equal(normal.headers.get('content-type'),kind==='mp3'?'audio/mpeg':'audio/wav')
+  const whole=Buffer.from(await normal.arrayBuffer())
+  assert.equal(Number(normal.headers.get('content-length')),whole.length)
+  const partial=await fetch(route,{headers:{Range:'bytes=0-63'}})
+  assert.equal(partial.status,206,'Real old-browser byte range required')
+  assert.equal(partial.headers.get('content-range'),'bytes 0-63/'+whole.length)
+  assert.equal(partial.headers.get('content-length'),'64')
+  assert.deepEqual(Buffer.from(await partial.arrayBuffer()),whole.subarray(0,64))
+  const suffix=await fetch(route,{headers:{Range:'bytes=-73'}})
+  assert.equal(suffix.status,206)
+  assert.equal(suffix.headers.get('content-range'),
+    'bytes '+(whole.length-73)+'-'+(whole.length-1)+'/'+whole.length)
+  assert.deepEqual(Buffer.from(await suffix.arrayBuffer()),whole.subarray(whole.length-73))
+  const invalid=await fetch(route,{headers:{Range:'bytes=9999999-'}})
+  assert.equal(invalid.status,416)
+  assert.equal(invalid.headers.get('content-range'),'bytes */'+whole.length)
+  const head=await fetch(route,{method:'HEAD'})
+  assert.equal(head.status,200)
+  assert.equal(Number(head.headers.get('content-length')),whole.length)
+  assert.equal((await head.arrayBuffer()).byteLength,0)
+  const download=await fetch(route+'&download=1')
+  assert.equal(download.status,200)
+  assert.match(download.headers.get('content-disposition'),/^attachment/)
+  console.log('PASS: '+kind+' same-origin 200/206/416/HEAD, byte-accurate output and native-player download')
+}
+const unsupported=await fetch(new URL('/api/legacy-audio?type=secret',base))
+assert.equal(unsupported.status,400,'Audio route must use a fixed allowlist')
 const browser=await chromium.launch({headless:true})
 try{
  const page=await browser.newPage({viewport:{width:800,height:850}})
  const errors=[]
  page.on('pageerror',e=>errors.push(String(e)))
  await page.goto(new URL('/audio-test.html',base).toString(),{waitUntil:'domcontentloaded'})
+ assert.ok(await page.locator('#tone source[src*="legacy-audio?type=mp3"]').count())
+ assert.ok(await page.locator('#wav source[src*="legacy-audio?type=wav"]').count())
+ assert.ok(await page.locator('a[href*="download=1"]').count()>=2)
  await page.locator('#manual-play').click()
  await page.waitForFunction(()=>{
    const a=document.getElementById('tone')
