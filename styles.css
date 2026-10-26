@@ -1042,3 +1042,56 @@ button:focus,.playlist-song-row:focus{outline:2px solid #6fc8a0;outline-offset:1
 @media(max-width:680px){
   .nav-rail{overflow-x:hidden!important}
 }
+
+/* Real Android 4.4 / Via fallback. Keeping <audio controls> displayable is
+   essential for WebViews which reject async JavaScript-triggered play().
+   The custom LX transport remains unchanged on modern devices. */
+.legacy-media-panel{display:none}
+html.legacy-native-media .player-bar{
+  height:164px;min-height:164px;display:flex;flex-wrap:wrap;
+  align-content:center;justify-content:center;gap:2px 12px;
+  padding:8px 14px 10px
+}
+html.legacy-native-media .player-song{
+  height:33px;min-height:33px;width:100%;flex:1 1 100%
+}
+html.legacy-native-media .player-center{
+  height:auto;flex:1 1 100%;min-width:0;
+  display:flex;flex-direction:column;gap:3px
+}
+html.legacy-native-media .native-audio-transport{
+  display:block!important;position:static!important;
+  width:100%!important;min-width:0!important;
+  height:34px!important;min-height:34px!important;
+  opacity:1!important;visibility:visible!important;
+  overflow:visible!important
+}
+html.legacy-native-media .player-transport{
+  height:28px;min-height:28px;gap:12px
+}
+html.legacy-native-media .player-transport .player-icon-btn{
+  height:27px;min-height:27px;width:30px;min-width:30px
+}
+html.legacy-native-media .player-timeline{display:none}
+html.legacy-native-media .player-extras,
+html.legacy-native-media .player-status{display:none}
+html.legacy-native-media .legacy-media-panel{
+  display:flex!important;align-items:center;justify-content:center;
+  flex-wrap:wrap;gap:4px 8px;color:#517e67;font-size:11px;line-height:1.5
+}
+html.legacy-native-media .legacy-media-panel .legacy-media-hint{font-weight:700}
+html.legacy-native-media .legacy-media-panel button{
+  min-height:25px;padding:2px 8px;background:#e6f6ec;
+  border:1px solid #bde4cf;border-radius:5px;color:#247c4c;font-size:11px
+}
+html.legacy-native-media .legacy-media-test{color:#178a54;text-decoration:underline}
+html.legacy-native-media .nav-rail{bottom:164px}
+html.legacy-native-media .view-container{padding-bottom:210px}
+@media(max-width:680px) {
+  html.legacy-native-media .player-bar{height:177px;min-height:177px;padding:8px}
+  html.legacy-native-media .player-song{margin:0}
+  html.legacy-native-media .player-center{height:auto;gap:2px}
+  html.legacy-native-media .legacy-media-panel{font-size:10px;gap:3px}
+  html.legacy-native-media #app{padding-bottom:195px}
+  html.legacy-native-media .nav-rail{bottom:auto}
+}
