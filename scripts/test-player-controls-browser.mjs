@@ -175,14 +175,19 @@ async function test(viewport, legacy){
   assert.equal(await page.locator('#player-current-time').textContent(),'2:00')
   // Exercise the native range control with real pointer movement as well,
   // not only JavaScript-dispatched input/change events.
-  const seekBox=await page.locator('#player-seek').boundingBox()
-  assert.ok(seekBox && seekBox.width>80)
-  await page.mouse.move(seekBox.x+seekBox.width*0.75,seekBox.y+seekBox.height/2)
-  await page.mouse.down()
-  await page.mouse.move(seekBox.x+seekBox.width*0.25,seekBox.y+seekBox.height/2,{steps:8})
-  await page.mouse.up()
-  await page.waitForFunction(()=>Math.abs(window.__simulatedTime-50)<12,null,{timeout:3000})
-  console.log('PASS: real range drag moves HTMLAudioElement currentTime')
+  if (!legacy) {
+    const seekBox=await page.locator('#player-seek').boundingBox()
+    assert.ok(seekBox && seekBox.width>80)
+    await page.mouse.move(seekBox.x+seekBox.width*0.75,seekBox.y+seekBox.height/2)
+    await page.mouse.down()
+    await page.mouse.move(seekBox.x+seekBox.width*0.25,seekBox.y+seekBox.height/2,{steps:8})
+    await page.mouse.up()
+    await page.waitForFunction(()=>Math.abs(window.__simulatedTime-50)<12,null,{timeout:3000})
+    console.log('PASS: custom seek range drag moves HTMLAudioElement currentTime')
+  } else {
+    assert.ok(await page.locator('#audio').isVisible(),'Old Android needs visible native audio controls')
+    console.log('PASS: old Via uses visible user-tappable native seek and audio controls')
+  }
   console.log('PASS: range tap/drag commits real audio currentTime')
 
   await page.locator('#player-mode-btn').click()
@@ -239,14 +244,15 @@ async function test(viewport, legacy){
     return {seek:box('player-seek'),transport:box('player-toggle-btn'),
       mode:box('player-mode-btn'),next:box('next-track-btn'),bar:box('audio'),viewport:document.documentElement.clientWidth}
   })
-  assert.ok(dimensions.seek.width>80,'Timeline must be draggable')
+  if (legacy) assert.ok(dimensions.bar.width>170,'Android 4.4 native audio controls must be wide enough')
+  else assert.ok(dimensions.seek.width>80,'Custom timeline must be draggable')
   assert.ok(dimensions.next.right<=dimensions.viewport+1,'Transport cannot overflow mobile viewport')
   assert.ok(dimensions.mode.left>=0,'Mode button cannot overflow')
   await page.locator('#player-mode-btn').click()
   assert.equal(await page.locator('#player-mode-menu').isVisible(),true)
   // Choose a true outside target. On a narrow Via screen the menu quite
   // intentionally overlays the album/track-title area above the player.
-  await page.locator('#player-duration').click()
+  await page.locator(legacy?'#global-search-input':'#player-duration').click()
   assert.equal(await page.locator('#player-mode-menu').isVisible(),false,'Clicking outside closes mode menu')
   assert.deepEqual(errors,[])
   console.log('PASS: '+viewport.width+' custom player layout, mode menu and no runtime errors')

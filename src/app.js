@@ -20,6 +20,11 @@
   var MIN_CONFIRMED_PLAYBACK_PROGRESS_SECONDS = 0.25;
   var PLAYBACK_CONFIRM_TIMEOUT_MS = 3500;
   var PLAYBACK_CONNECT_TIMEOUT_MS = 7000;
+  // Android 4.4 Chromium WebView can require touching the native media UI;
+  // auto-play from an asynchronous resolver has no valid tap gesture.
+  var LEGACY_NATIVE_MEDIA = /Android 4[.]4(?:[.;\s]|$)/i.test(String(global.navigator && global.navigator.userAgent || ''));
+  var legacyPreferDirect = false;
+  if (LEGACY_NATIVE_MEDIA) document.documentElement.className += ' legacy-native-media';
   // Migu-only budget for a single user-visible play attempt, across all
   // qualities and fallback providers. Do not bound other four channels.
   var MIGU_PLAYBACK_MAX_WAIT_MS = 25000;
@@ -600,7 +605,7 @@
         // media request to HTTPS avoids mixed-content blocking on the Pages app
         // and avoids routing a valid media CDN through the JSON proxy.
         // Official Migu HTTPS media/redirect endpoints also stay direct.
-        if (!forceProxy &&
+        if (!forceProxy && (typeof LEGACY_NATIVE_MEDIA==='undefined' || !LEGACY_NATIVE_MEDIA || (typeof legacyPreferDirect!=='undefined' && legacyPreferDirect)) &&
             (trustedKuwoMediaHost || trustedKugouMediaHost || target.protocol === 'https:')) {
           if (trustedKugouMediaHost && target.protocol === 'http:') {
             target.protocol = 'https:';
@@ -617,7 +622,7 @@
 
     try {
       var origin = String(global.location.protocol || '') + '//' + String(global.location.host || '');
-      if (origin && !forceProxy && /^https:/i.test(value)) return value;
+      if (origin && !forceProxy && (typeof LEGACY_NATIVE_MEDIA==='undefined' || !LEGACY_NATIVE_MEDIA || (typeof legacyPreferDirect!=='undefined' && legacyPreferDirect)) && /^https:/i.test(value)) return value;
       if (origin) return origin + '/api/proxy?url=' + encodeURIComponent(value);
     } catch (e) {}
 
@@ -758,6 +763,7 @@
       playbackState.confirmTimer = null;
     }
     playbackState.waitingForAudio = true;
+    playbackState.manualPlaybackRequired = LEGACY_NATIVE_MEDIA;
     playbackState.url = playableUrl;
     playbackState.sourceUrl = url;
     playbackState.transport = playableUrl === String(url || '') ? 'direct' : 'proxy';
@@ -832,7 +838,14 @@
         return handleAudioError(token, playableUrl);
       }
 
-      // Never start audible playback until metadata has been validated.
+      // Legacy Via/WebView requires a direct tap on its *native* media
+      // controls. The metadata event runs asynchronously, and audio.play()
+      // here cannot satisfy the Android 4.4 user-gesture restriction.
+      if (LEGACY_NATIVE_MEDIA) {
+        playbackState.manualPlaybackRequired = true;
+        setStatus('歌曲地址已准备好。Android 4.4.2 请点击底部“原生音频播放”灰色控件里的 ▶；网页圆形播放键可能被系统限制。', 'warn');
+        return;
+      }
       startAudioPlayback();
     };
     audio.onended = function () {
@@ -865,15 +878,19 @@
         playNextQueued();
       }
     };
-    audio.preload = 'auto';
+    audio.preload = LEGACY_NATIVE_MEDIA ? 'metadata' : 'auto';
     audio.src = playableUrl;
-    if (typeof audio.load === 'function') audio.load();
+    if (!LEGACY_NATIVE_MEDIA && typeof audio.load === 'function') audio.load();
 
     // Start the real-media connection timeout when the URL is attached, not
     // only after a "playing" event. A stalled CDN can stop at loadstart forever
     // and otherwise bypass the fallback path completely.
     clearPlaybackConfirmTimer(playbackState);
-    playbackState.confirmTimer = global.setTimeout(function () {
+    if (LEGACY_NATIVE_MEDIA) {
+      // Do not abort a perfectly usable MP3 before the listener can tap the
+      // native player. Explicit media errors still trigger normal fallback.
+      setStatus('已找到歌曲播放地址。请使用底部原生音频控件手动点击 ▶ 开始播放。若无法播放，请先运行“旧设备音频自检”。', 'warn');
+    } else playbackState.confirmTimer = global.setTimeout(function () {
       if (
         token !== playbackToken ||
         !playbackState ||
@@ -899,8 +916,8 @@
       (CHANNEL_NAMES[source] || source.toUpperCase()) +
       ' 已返回 ' + escapeHtml(quality) + ' 播放地址' +
       (viaLabel ? '（' + escapeHtml(viaLabel) + '）' : '') +
-      '，正在验证媒体信息。',
-      'ready'
+      (LEGACY_NATIVE_MEDIA ? '，请点下方原生音频控件的 ▶ 播放键。' : '，正在验证媒体信息。'),
+      LEGACY_NATIVE_MEDIA ? 'warn' : 'ready'
     );
   }
 
@@ -1214,6 +1231,18 @@
 
     var plan = getQualityPlan(active, source);
     if (!plan.length) plan = ['128k'];
+    if (LEGACY_NATIVE_MEDIA) {
+      // MP3-compatible qualities first even when a device previously saved
+      // a FLAC-only preference that cannot be decoded on Android 4.4.
+      var legacyPlan = [], preferred = ['128k','192k','256k','320k'];
+      for (var li=0;li<preferred.length;li++) {
+        for (var pi=0;pi<plan.length;pi++) {
+          if(String(plan[pi]).toLowerCase()===preferred[li] &&
+             legacyPlan.indexOf(plan[pi])<0)legacyPlan.push(plan[pi]);
+        }
+      }
+      if(legacyPlan.length)plan=legacyPlan;
+    }
 
     playbackToken += 1;
     var token = playbackToken;
@@ -1698,6 +1727,14 @@
     renderChannelSelectors();
 
     var audio = document.getElementById('audio');
+    if (LEGACY_NATIVE_MEDIA) {
+      var manualPanel=document.getElementById('legacy-media-panel');
+      if (manualPanel) manualPanel.className='legacy-media-panel';
+      var proxyBtn=document.getElementById('legacy-proxy-btn');
+      var directBtn=document.getElementById('legacy-direct-btn');
+      if (proxyBtn)proxyBtn.onclick=function(){retryLegacyStream(false);};
+      if (directBtn)directBtn.onclick=function(){retryLegacyStream(true);};
+    }
     if (audio) {
       if (global.LXPlayerControls) {
         global.LXPlayerControls.init(audio, {
@@ -1981,7 +2018,27 @@
     resultsEl.appendChild(fragment);
   }
 
+  function retryLegacyStream(direct) {
+    if (!LEGACY_NATIVE_MEDIA || !playbackState || !playbackState.sourceUrl) {
+      setStatus('请先点选一首歌曲，等待播放地址返回，再选择传输线路。', 'warn');
+      return;
+    }
+    legacyPreferDirect = direct === true;
+    var state = playbackState;
+    var oldUrl = state.sourceUrl;
+    var quality = state.quality;
+    var source = state.source;
+    // Do not redo musicUrl resolution: the signed source URL is already
+    // available. Only switch whether the media bytes pass through our proxy.
+    useResolvedUrl(oldUrl,quality,state.token,state.music,source,
+      buildMusicInfo(state.music,source),getPlaySettings(),
+      state.resolver,state.resolverProvider,!legacyPreferDirect);
+    setStatus('已切换至'+(legacyPreferDirect?'直接连接':'项目代理')+
+      '线路。请再次点击下方原生音频控件中的 ▶。', 'warn');
+  }
+
   global.OnlyTestingMusicApp = {
+    retryLegacyStream: retryLegacyStream,
     renderSources: renderSources,
     onSourceInited: onSourceInited,
     playPlaylist: startPlaylistPlayback,

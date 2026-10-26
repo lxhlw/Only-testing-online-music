@@ -60,6 +60,7 @@ jobs:
           node --check src/play-settings.js
           node --check src/player-controls.js
           node --check scripts/test-player-controls-browser.mjs
+          node --check scripts/test-android44-real-audio-browser.mjs
           node --check src/promise-lite.js
           node --check src/sha1.js
           node --check src/source-manager.js
@@ -102,6 +103,9 @@ jobs:
 
       - name: Run settings test
         run: node scripts/test-settings.mjs
+
+      - name: Verify Android 4.4 native audio fallback and MP3 byte ranges
+        run: node scripts/test-android44-real-audio-browser.mjs
 
       - name: Run curated first-visit Via default sources and search test
         run: node scripts/test-default-sources-legacy-browser.mjs
@@ -255,6 +259,11 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
         run: node scripts/test-default-sources-legacy-browser.mjs
+
+      - name: Verify deployed Android 4.4 MP3 and manual native playback
+        env:
+          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
+        run: node scripts/test-android44-real-audio-browser.mjs
 
       - name: Verify deployed player progress and playback modes
         env:
