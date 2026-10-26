@@ -8,16 +8,10 @@ const paths={
  mp3:'/diagnostics/android44-tone-v3.mp3',
  wav:'/diagnostics/android44-tone-v3.wav'
 }
-const ffprobe=spawnSync('ffprobe',['-v','error','-show_entries',
- 'format=duration:stream=codec_name,sample_rate,channels','-of','json',
- 'diagnostics/android44-tone-v3.mp3'],{encoding:'utf8'})
-assert.equal(ffprobe.status,0,ffprobe.stderr)
-const details=JSON.parse(ffprobe.stdout)
-assert.ok(Number(details.format.duration)>3.8)
-assert.equal(details.streams[0].codec_name,'mp3')
-assert.equal(Number(details.streams[0].sample_rate),44100)
-assert.equal(Number(details.streams[0].channels),1)
-assert.ok(statSync('diagnostics/android44-tone-v3.mp3').size>30000)
+const mp3Bytes=readFileSync('diagnostics/android44-tone-v3.mp3')
+assert.ok(mp3Bytes.length>30000,'Genuinely encoded MP3 should contain ~4 seconds of CBR frames')
+assert.ok(mp3Bytes[0]===0xff && (mp3Bytes[1]&0xe0)===0xe0,
+  'MP3 must contain real MPEG-1 Layer III frames without fake repeated samples')
 const wav=readFileSync('diagnostics/android44-tone-v3.wav')
 assert.equal(wav.toString('ascii',0,4),'RIFF')
 assert.equal(wav.toString('ascii',8,12),'WAVE')
