@@ -88,7 +88,7 @@ try{
    src:a.currentSrc
  }))
  assert.equal(mp3.error,null)
- assert.ok(mp3.src.includes('android44-tone-v3.mp3'))
+ assert.ok(mp3.src.includes('/api/legacy-audio?type=mp3'),'HTML5 player must use the range-enabled media route')
  console.log('PASS: actual MP3 duration and playback progress in Chromium '+JSON.stringify(mp3))
  await page.locator('#wav-play').click()
  await page.waitForFunction(()=>{
