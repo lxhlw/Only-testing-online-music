@@ -605,7 +605,7 @@
         // media request to HTTPS avoids mixed-content blocking on the Pages app
         // and avoids routing a valid media CDN through the JSON proxy.
         // Official Migu HTTPS media/redirect endpoints also stay direct.
-        if (!forceProxy && (!LEGACY_NATIVE_MEDIA || legacyPreferDirect) &&
+        if (!forceProxy && (typeof LEGACY_NATIVE_MEDIA==='undefined' || !LEGACY_NATIVE_MEDIA || (typeof legacyPreferDirect!=='undefined' && legacyPreferDirect)) &&
             (trustedKuwoMediaHost || trustedKugouMediaHost || target.protocol === 'https:')) {
           if (trustedKugouMediaHost && target.protocol === 'http:') {
             target.protocol = 'https:';
@@ -622,7 +622,7 @@
 
     try {
       var origin = String(global.location.protocol || '') + '//' + String(global.location.host || '');
-      if (origin && !forceProxy && (!LEGACY_NATIVE_MEDIA || legacyPreferDirect) && /^https:/i.test(value)) return value;
+      if (origin && !forceProxy && (typeof LEGACY_NATIVE_MEDIA==='undefined' || !LEGACY_NATIVE_MEDIA || (typeof legacyPreferDirect!=='undefined' && legacyPreferDirect)) && /^https:/i.test(value)) return value;
       if (origin) return origin + '/api/proxy?url=' + encodeURIComponent(value);
     } catch (e) {}
 
