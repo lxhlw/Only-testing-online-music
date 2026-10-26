@@ -18,7 +18,7 @@ try {
     injected:window.LXAndroidExternalAudio.buildIntentUrl('https://a.test/x.mp3#Intent;package=evil;end','audio/mpeg'),
     safe:window.LXAndroidExternalAudio.buildIntentUrl('https://a.test/x.mp3?x=1;y=2','audio/mpeg')
   }))
-  assert.match(intents.mp3,/^intent:\/\/[^#]+\/api\/legacy-audio\?type=mp3&v=9#Intent;scheme=http;action=android\.intent\.action\.VIEW;/)
+  assert.match(intents.mp3,/^intent:\/\/[^#]+\/api\/legacy-audio\?type=mp3&v=9#Intent;scheme=https?;action=android\.intent\.action\.VIEW;/)
   assert.match(intents.wav,/type=audio\/wav;end$/)
   assert.equal(intents.unsafe,'')
   assert.equal(intents.injected,'')
@@ -55,7 +55,7 @@ try {
   }))
   assert.equal(state.disabled,null)
   assert.match(state.href,/^intent:\/\/[^#]+\/api\/proxy\?url=/)
-  assert.match(state.href,/#Intent;scheme=http;action=android\.intent\.action\.VIEW;/)
+  assert.match(state.href,/#Intent;scheme=https?;action=android\.intent\.action\.VIEW;/)
   assert.match(state.href,/type=audio\/mpeg;end$/)
   assert.deepEqual(pageErrors,[])
   console.log('PASS: Android 4.4 only, manual user-gesture intent links, no silent autoplay, signed URLs remain encoded in same-origin proxy')
