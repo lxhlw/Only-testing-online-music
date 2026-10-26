@@ -1,6 +1,4 @@
 import assert from 'node:assert/strict'
-import { readFileSync, statSync } from 'node:fs'
-import { spawnSync } from 'node:child_process'
 import { chromium } from 'playwright'
 
 const base=process.env.TEST_BASE_URL||'http://127.0.0.1:8788'
@@ -8,17 +6,6 @@ const paths={
  mp3:'/diagnostics/android44-tone-v3.mp3',
  wav:'/diagnostics/android44-tone-v3.wav'
 }
-const mp3Bytes=readFileSync('diagnostics/android44-tone-v3.mp3')
-assert.ok(mp3Bytes.length>30000,'Genuinely encoded MP3 should contain ~4 seconds of CBR frames')
-assert.ok(mp3Bytes[0]===0xff && (mp3Bytes[1]&0xe0)===0xe0,
-  'MP3 must contain real MPEG-1 Layer III frames without fake repeated samples')
-const wav=readFileSync('diagnostics/android44-tone-v3.wav')
-assert.equal(wav.toString('ascii',0,4),'RIFF')
-assert.equal(wav.toString('ascii',8,12),'WAVE')
-assert.equal(wav.readUInt32LE(24),22050)
-assert.ok(wav.length>150000)
-console.log('PASS: generated 4s MPEG-1 MP3 and actual PCM WAV media files')
-
 for(const [name,path] of Object.entries(paths)){
  const url=new URL(path,base).toString()
  const response=await fetch(url)
@@ -27,6 +14,15 @@ for(const [name,path] of Object.entries(paths)){
  assert.match(type,name==='mp3'?/audio\/(?:mpeg|mp3)|application\/octet-stream/i:/audio\/wav|audio\/x-wav|application\/octet-stream/i)
  const buf=Buffer.from(await response.arrayBuffer())
  assert.ok(buf.length>20000)
+ if(name==='mp3'){
+   assert.ok(buf.length>30000,'Deployed MP3 unexpectedly small')
+   assert.ok(buf[0]===0xff&&(buf[1]&0xe0)===0xe0,'Deployed MP3 lacks MPEG frame sync')
+ } else {
+   assert.equal(buf.toString('ascii',0,4),'RIFF','Deployed WAV must be PCM RIFF')
+   assert.equal(buf.toString('ascii',8,12),'WAVE')
+   assert.equal(buf.readUInt32LE(24),22050)
+   assert.ok(buf.length>150000)
+ }
  const ranged=await fetch(url,{headers:{Range:'bytes=0-63'}})
  // Cloudflare Pages and Wrangler may return 200 for small static files;
  // require correctly usable media bytes and consistent range when 206.
