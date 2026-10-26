@@ -784,6 +784,37 @@
     playbackState.resolverProvider = viaProvider || 'lx-source';
     playbackState.expectedDuration = getExpectedDurationSeconds(music);
 
+    // Only the dedicated Android 4.4 APK exposes this bounded media bridge.
+    // The browser's XHR fetches the bytes, then Android MediaPlayer decodes
+    // them from a private cache file. Never assign src to broken HTML5 Audio.
+    var nativeTransport = global.LXNativeAudioTransport;
+    if (nativeTransport && nativeTransport.available) {
+      clearMiguPlaybackDeadline(playbackState);
+      setStatus('原生播放器正在读取音频，完成后由下方 Android 控件播放……','warn');
+      nativeTransport.load(playableUrl, token, function (event, position, duration) {
+        if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
+        if (event === 'error') {
+          setStatus('Android 原生音频读取/解码失败，正在尝试备用音源……','warn');
+          handleAudioError(token,playableUrl);
+        } else if (event === 'prepared') {
+          setStatus('Android 原生播放器已准备好音频','ready');
+        } else if (event === 'progress' && position >= 250 && playbackState.waitingForAudio) {
+          playbackState.waitingForAudio=false;
+          playbackState.playing=true;
+          if(global.LXMusicLibrary){global.LXMusicLibrary.addHistory(music);renderLibrary();}
+          setStatus('Android 原生播放中 · '+escapeHtml(quality),'ready');
+          loadLyricsForState(playbackState);
+        } else if (event === 'paused') {
+          setStatus('Android 原生播放器已暂停','warn');
+        } else if (event === 'ended') {
+          playbackState.playing=false;
+          playbackState.waitingForAudio=false;
+          playNextQueued();
+        }
+      });
+      return;
+    }
+
     var playRequested = false;
 
     function requireManualPlayback(error) {
@@ -1254,6 +1285,9 @@
       if(legacyPlan.length)plan=legacyPlan;
     }
 
+    if (global.LXNativeAudioTransport && global.LXNativeAudioTransport.available) {
+      global.LXNativeAudioTransport.stop();
+    }
     playbackToken += 1;
     updateExternalPlayerUrl('');
     var token = playbackToken;
@@ -1369,6 +1403,9 @@
     // prevents a short prompt/error file from continuing to play while the
     // fallback resolver is being queried.
     var currentAudio = document.getElementById('audio');
+    if (global.LXNativeAudioTransport && global.LXNativeAudioTransport.available) {
+      global.LXNativeAudioTransport.stop();
+    }
     if (currentAudio) {
       try { currentAudio.pause(); } catch (e) {}
       try { currentAudio.removeAttribute('src'); } catch (e) {}
@@ -1740,7 +1777,15 @@
     var audio = document.getElementById('audio');
     if (LEGACY_NATIVE_MEDIA) {
       var manualPanel=document.getElementById('legacy-media-panel');
-      if (manualPanel) manualPanel.className='legacy-media-panel';
+      if (manualPanel) {
+        manualPanel.className='legacy-media-panel';
+        if(global.LXNativeAudioTransport && global.LXNativeAudioTransport.available) {
+          manualPanel.style.display='none';
+          var builtInAudio=document.getElementById('audio');
+          if(builtInAudio)builtInAudio.style.display='none';
+          setStatus('Android 4.4 专用原生播放器已连接，使用 APK 底部播放控件。','ready');
+        }
+      }
       var proxyBtn=document.getElementById('legacy-proxy-btn');
       var directBtn=document.getElementById('legacy-direct-btn');
       var externalLink=document.getElementById('legacy-external-player');
