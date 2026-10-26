@@ -1,0 +1,58 @@
+name: Build Android 4.4 Native Companion APK
+
+on:
+  pull_request:
+    paths:
+      - 'android-companion/**'
+      - 'src/app.js'
+      - 'index.html'
+      - 'scripts/test-native-companion-browser.mjs'
+      - '.github/workflows/build-android44-companion.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'android-companion/**'
+      - 'src/app.js'
+      - 'index.html'
+      - 'scripts/test-native-companion-browser.mjs'
+      - '.github/workflows/build-android44-companion.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    name: Android API 19 installable debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android platform API 35
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Install Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build signed debug APK
+        run: gradle --no-daemon -p android-companion :app:assembleDebug
+      - name: Check APK existence and min SDK
+        run: |
+          test -s android-companion/app/build/outputs/apk/debug/app-debug.apk
+          ls -lh android-companion/app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android-companion/app/build/outputs/apk/debug/app-debug.apk | grep "sdkVersion:'19'"
+      - name: Upload installable APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LX-Music-Android-4.4-Phase1-APK
+          path: android-companion/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
