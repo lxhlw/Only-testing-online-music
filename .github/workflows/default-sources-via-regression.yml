@@ -10,6 +10,7 @@ on:
       - "scripts/generate-android44-audio.mjs"
       - "scripts/test-android44-encoded-media-browser.mjs"
       - "functions/api/audio-selftest.js"
+      - "functions/api/legacy-audio.js"
       - "functions/api/audio-selftest.mp3.js"
       - "scripts/test-android44-real-audio-browser.mjs"
       - "scripts/test-default-sources-legacy-browser.mjs"
