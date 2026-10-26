@@ -4,6 +4,7 @@
 import { mkdirSync, writeFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
+import { createRequire } from 'node:module'
 
 const out=join(process.cwd(),'diagnostics')
 mkdirSync(out,{recursive:true})
@@ -15,7 +16,14 @@ const cmd=[
   '-c:a','libmp3lame','-b:a','96k','-write_xing','1',
   '-id3v2_version','0',mp3
 ]
-const proc=spawnSync('ffmpeg',cmd,{encoding:'utf8'})
+let proc=spawnSync('ffmpeg',cmd,{encoding:'utf8'})
+if (proc.error && proc.error.code==='ENOENT') {
+  // GitHub runner images no longer guarantee system FFmpeg. Use pinned npm
+  // binary instead of apt-get (which may hang on unavailable package mirrors).
+  const require=createRequire(import.meta.url)
+  const bundled=require('@ffmpeg-installer/ffmpeg')
+  proc=spawnSync(bundled.path,cmd,{encoding:'utf8'})
+}
 if(proc.error||proc.status!==0){
   throw new Error('FFmpeg failed to generate real MPEG-1 Layer III tone: '+(proc.error?.message||proc.stderr))
 }
