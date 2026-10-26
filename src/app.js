@@ -23,6 +23,8 @@
   // Android 4.4 Chromium WebView can require touching the native media UI;
   // auto-play from an asynchronous resolver has no valid tap gesture.
   var LEGACY_NATIVE_MEDIA = /Android 4[.]4(?:[.;\s]|$)/i.test(String(global.navigator && global.navigator.userAgent || ''));
+  var legacyPreferDirect = false;
+  if (LEGACY_NATIVE_MEDIA) document.documentElement.className += ' legacy-native-media';
   // Migu-only budget for a single user-visible play attempt, across all
   // qualities and fallback providers. Do not bound other four channels.
   var MIGU_PLAYBACK_MAX_WAIT_MS = 25000;
@@ -603,7 +605,7 @@
         // media request to HTTPS avoids mixed-content blocking on the Pages app
         // and avoids routing a valid media CDN through the JSON proxy.
         // Official Migu HTTPS media/redirect endpoints also stay direct.
-        if (!forceProxy &&
+        if (!forceProxy && (!LEGACY_NATIVE_MEDIA || legacyPreferDirect) &&
             (trustedKuwoMediaHost || trustedKugouMediaHost || target.protocol === 'https:')) {
           if (trustedKugouMediaHost && target.protocol === 'http:') {
             target.protocol = 'https:';
@@ -620,7 +622,7 @@
 
     try {
       var origin = String(global.location.protocol || '') + '//' + String(global.location.host || '');
-      if (origin && !forceProxy && /^https:/i.test(value)) return value;
+      if (origin && !forceProxy && (!LEGACY_NATIVE_MEDIA || legacyPreferDirect) && /^https:/i.test(value)) return value;
       if (origin) return origin + '/api/proxy?url=' + encodeURIComponent(value);
     } catch (e) {}
 
@@ -2008,7 +2010,27 @@
     resultsEl.appendChild(fragment);
   }
 
+  function retryLegacyStream(direct) {
+    if (!LEGACY_NATIVE_MEDIA || !playbackState || !playbackState.sourceUrl) {
+      setStatus('请先点选一首歌曲，等待播放地址返回，再选择传输线路。', 'warn');
+      return;
+    }
+    legacyPreferDirect = direct === true;
+    var state = playbackState;
+    var oldUrl = state.sourceUrl;
+    var quality = state.quality;
+    var source = state.source;
+    // Do not redo musicUrl resolution: the signed source URL is already
+    // available. Only switch whether the media bytes pass through our proxy.
+    useResolvedUrl(oldUrl,quality,state.token,state.music,source,
+      buildMusicInfo(state.music,source),getPlaySettings(),
+      state.resolver,state.resolverProvider,!legacyPreferDirect);
+    setStatus('已切换至'+(legacyPreferDirect?'直接连接':'项目代理')+
+      '线路。请再次点击下方原生音频控件中的 ▶。', 'warn');
+  }
+
   global.OnlyTestingMusicApp = {
+    retryLegacyStream: retryLegacyStream,
     renderSources: renderSources,
     onSourceInited: onSourceInited,
     playPlaylist: startPlaylistPlayback,
