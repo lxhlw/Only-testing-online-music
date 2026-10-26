@@ -5,6 +5,8 @@ on:
     paths:
       - "src/source-manager.js"
       - "src/app.js"
+      - "src/android-native-media.js"
+      - "scripts/test-android19-native-bridge-browser.mjs"
       - "index.html"
       - "audio-test.html"
       - "src/android-external-audio.js"
@@ -50,6 +52,8 @@ jobs:
         run: |
           node --check src/source-manager.js
           node --check src/app.js
+          node --check src/android-native-media.js
+          node --check scripts/test-android19-native-bridge-browser.mjs
           node --check src/android-external-audio.js
           node --check scripts/test-android-external-intent-browser.mjs
           node --check scripts/test-android44-real-audio-browser.mjs
@@ -76,6 +80,9 @@ jobs:
         run: node scripts/test-import-ui.mjs
       - name: Verify actual MP3/WAV decoders and playback progress
         run: node scripts/test-android44-encoded-media-browser.mjs
+
+      - name: Verify dedicated Android19 native bridge and exact XHR bytes
+        run: node scripts/test-android19-native-bridge-browser.mjs
 
       - name: Verify Android 4.4 external player ACTION_VIEW intent handoff
         run: node scripts/test-android-external-intent-browser.mjs
