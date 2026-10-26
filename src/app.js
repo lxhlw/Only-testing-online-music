@@ -1727,6 +1727,14 @@
     renderChannelSelectors();
 
     var audio = document.getElementById('audio');
+    if (LEGACY_NATIVE_MEDIA) {
+      var manualPanel=document.getElementById('legacy-media-panel');
+      if (manualPanel) manualPanel.className='legacy-media-panel';
+      var proxyBtn=document.getElementById('legacy-proxy-btn');
+      var directBtn=document.getElementById('legacy-direct-btn');
+      if (proxyBtn)proxyBtn.onclick=function(){retryLegacyStream(false);};
+      if (directBtn)directBtn.onclick=function(){retryLegacyStream(true);};
+    }
     if (audio) {
       if (global.LXPlayerControls) {
         global.LXPlayerControls.init(audio, {
