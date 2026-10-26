@@ -44,6 +44,15 @@ a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all
 <p id="data-result" role="status">请先用“网页内读取”取得完整音频，再测试此入口。它不依赖 Blob URL。</p>
 <p><small>此测试与 Blob 播放相互独立。即使 Blob 创建成功也可以强制使用 Data URI，但是否能发声仍由设备的 HTML5 Audio 实现决定。</small></p>
 </div>
+<div class="card" id="external-player-card">
+<h2>Android 原生播放器测试（不使用 Via 音频内核）</h2>
+<p>已经确认平板系统播放器能播放本地歌曲。下面尝试把本站的四秒测试音直接交给 Android 的其他音频应用。此测试不需要重复读取 MP3/WAV，也不会安装应用。</p>
+<p><a id="android-external-mp3" class="link" href="#">尝试调用系统播放器（MP3）</a>
+<a id="android-external-wav" class="link" href="#">尝试调用系统播放器（WAV）</a></p>
+<p id="android-external-result" role="status">尚未尝试。点击后如果出现应用选择窗口，请选系统音乐播放器，再确认是否有声音。</p>
+<p><a class="link" href="./api/legacy-audio?type=mp3&amp;v=9">备用：直接打开 MP3 地址</a></p>
+<small>此按钮使用 Android ACTION_VIEW Intent，仅代表发起系统播放器调用。Via 浏览器可能拦截 Intent；即使弹出外部播放器，Android 4.4 的 HTTPS 连接也可能失败。网页无法自动确认外部播放器真的发声。</small>
+</div>
 <div class="card">
 <h2>完全离线测试：本地生成短 WAV</h2>
 <p>通过 JavaScript 在内存中生成 1 秒 PCM WAV 测试音，不需要 MP3、XHR、系统下载管理器或服务器。请点击按钮后听声音；可再点击下面的原生音频控件。</p>
@@ -89,11 +98,30 @@ a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all
 </ol>
 </div>
 </main>
+<script src="./src/android-external-audio.js?v=1"></script>
 <script>
 (function(){
 'use strict';
 var player=document.getElementById('tone'),wav=document.getElementById('wav'),log=document.getElementById('log'),events=[],network='not-checked';
-var mediaUrl='./api/legacy-audio?type=mp3&v=8';
+var mediaUrl='./api/legacy-audio?type=mp3&v=9';
+var externalResult=document.getElementById('android-external-result');
+var externalTests={mp3:'not-tried',wav:'not-tried'};
+if(window.LXAndroidExternalAudio){
+ var site=window.location.protocol+'//'+window.location.host;
+ var mediaRoot=site+'/api/legacy-audio?type=';
+ window.LXAndroidExternalAudio.attachLink(document.getElementById('android-external-mp3'),
+    mediaRoot+'mp3&v=9','audio/mpeg');
+ window.LXAndroidExternalAudio.attachLink(document.getElementById('android-external-wav'),
+    mediaRoot+'wav&v=9','audio/wav');
+}
+function recordExternalTrial(kind){
+ externalTests[kind]='intent-clicked (result unknown)';
+ externalResult.textContent='已尝试交给 Android 的 '+kind.toUpperCase()+
+  ' 播放器。请观察是否弹出应用选择窗口，以及是否实际有声音；网页无法判断外部播放器结果。';
+ add('external audio Intent '+kind+' clicked; actual launch and sound not yet confirmed');
+}
+document.getElementById('android-external-mp3').onclick=function(){recordExternalTrial('mp3');};
+document.getElementById('android-external-wav').onclick=function(){recordExternalTrial('wav');};
 var inpageResults={mp3:'not-run',wav:'not-run'};
 var inpageUrls={mp3:null,wav:null};
 var inpagePayloads={mp3:null,wav:null};
@@ -130,6 +158,7 @@ var lines=['系统浏览器: '+navigator.userAgent,
  '内存播放地址 MP3/WAV: '+inpageMethods.mp3+' / '+inpageMethods.wav,
  '纯本地 WAV: '+document.getElementById('tiny-wav-status').textContent,
  '强制 Data URI: '+document.getElementById('data-result').textContent,
+ '调用系统播放器 MP3/WAV: '+externalTests.mp3+' / '+externalTests.wav,
  'Blob / webkitURL / btoa / MediaSource: '+String(typeof window.Blob)+' / '+String(typeof window.webkitURL)+' / '+String(typeof window.btoa)+' / '+String(typeof window.MediaSource),
  '网络测试: '+network,'近期事件:'];
 log.textContent=lines.concat(events).join('\n');
@@ -507,6 +536,7 @@ function reportCard(payload,link,id){
  '网页WAV读取: '+String(payload.transfer.wav).slice(0,85),
  '播放地址 MP3/WAV: '+payload.transfer.mp3Method+' / '+payload.transfer.wavMethod,
  'Web Audio: '+(payload.features.audioContext?'支持':'不支持'),
+ '调用外部播放器 MP3/WAV: '+externalTests.mp3+' / '+externalTests.wav,
  id?'报告编号: '+id:'报告未上传：此照片就是诊断结果',
  link?'报告链接: '+link:'请直接拍摄本卡片发给 ChatGPT'
  ].join('\n');
