@@ -18,7 +18,7 @@ a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all
 <body><main>
 <a href="./">← 返回 LX Music Web</a>
 <h1>Android 4.4 / Via 真实播放自检</h1>
-<p>这是<strong>独立 MP3 测试</strong>，不调用任何第三方音源。本次使用完整编码的 <strong>MPEG-1 Layer III / 44.1 kHz / 96 kbps</strong> 四秒测试音（v4 分段兼容测试）。现在同时检验 MP3、WAV 的 HTTP 206 以及旧设备原生音频行为。</p>
+<p>这是<strong>独立 MP3 测试</strong>，不调用任何第三方音源。本次使用完整编码的 <strong>MPEG-1 Layer III / 44.1 kHz / 96 kbps</strong> 四秒测试音（v5 下载故障诊断）。新增不使用系统下载管理器的“网页内读取”与内存播放测试，并保留 MP3、WAV 的 HTTP 206 检测。</p>
 <div class="card">
 <h2>第一步：测试真实编码的 MP3（约 4 秒）</h2>
 <p>请直接点击下面灰色<strong>原生音频控件</strong>里的播放三角形 ▶。如果仍然点不了，再尝试下面两个备用入口。</p>
@@ -33,6 +33,14 @@ a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all
 <audio id="wav" controls preload="metadata"><source src="./api/legacy-audio?type=wav&v=4" type="audio/wav"></audio>
 <p><button id="wav-play" type="button">备用：直接播放 WAV</button><a class="link" href="./api/legacy-audio?type=wav&v=4">直接打开 WAV 文件</a><a class="link" href="./api/legacy-audio?type=wav&download=1&v=4">下载 WAV，交给系统播放器</a></p>
 <div id="wav-result">尚未测试 WAV</div>
+</div>
+<div class="card" id="inpage-card">
+<h2>Via 专项：网页内读取并播放音频</h2>
+<p>截图显示系统下载停在 0 B。本测试<strong>不启动 Android 系统下载管理器</strong>，而是在已经能打开网页的 Via 内核中读取音频字节。能够读取，并不等于可以播放，但有助于区分下载管理器、浏览器网络和音频解码问题。</p>
+<p><button id="xhr-mp3" type="button">网页内读取 MP3</button><button id="xhr-wav" type="button">网页内读取 WAV</button></p>
+<p id="xhr-result" role="status">尚未尝试网页内读取</p>
+<p><button id="blob-mp3" type="button" disabled>播放已读取的 MP3</button><button id="blob-wav" type="button" disabled>播放已读取的 WAV</button></p>
+<p><small>上方“播放已读取”会将内存音频交给原生音频控件，再手动尝试发声。此过程不再重新访问音频服务器。</small></p>
 </div>
 <div class="card">
 <h2>第三步：测试 Web Audio 直接发声</h2>
@@ -69,6 +77,11 @@ a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all
 'use strict';
 var player=document.getElementById('tone'),wav=document.getElementById('wav'),log=document.getElementById('log'),events=[],network='not-checked';
 var mediaUrl='./api/legacy-audio?type=mp3&v=4';
+var inpageResults={mp3:'not-run',wav:'not-run'};
+var inpageUrls={mp3:null,wav:null};
+var inpageBytes={mp3:0,wav:0};
+var inpageRequests={mp3:null,wav:null};
+
 var networkStates={0:'EMPTY',1:'IDLE',2:'LOADING',3:'NO_SOURCE'};
 var readyStates={0:'HAVE_NOTHING',1:'HAVE_METADATA',2:'HAVE_CURRENT_DATA',3:'HAVE_FUTURE_DATA',4:'HAVE_ENOUGH_DATA'};
 var states={1:'ABORTED',2:'NETWORK',3:'DECODE',4:'NOT_SUPPORTED'};
@@ -92,6 +105,8 @@ var lines=['系统浏览器: '+navigator.userAgent,
  'WAV time/duration: '+String(wav.currentTime)+' / '+String(wav.duration),
  'WAV paused: '+String(wav.paused),
  'Web Audio: '+document.getElementById('web-audio-status').textContent,
+ 'Via 网页读取 MP3: '+inpageResults.mp3,
+ 'Via 网页读取 WAV: '+inpageResults.wav,
  '网络测试: '+network,'近期事件:'];
 log.textContent=lines.concat(events).join('\n');
 }
@@ -119,6 +134,110 @@ document.getElementById('wav-play').onclick=function(){
    if(result && typeof result.catch==='function')result.catch(function(e){add('WAV play rejected '+String(e.message||e));});
  }catch(e){add('WAV play exception '+String(e.message||e));}
 };
+// ES5-compatible diagnostic for the Android 4.4 browser network engine.
+function inPageLoad(kind){
+ var result=document.getElementById('xhr-result');
+ var url='./api/legacy-audio?type='+kind+'&v=4&transport=xhr';
+ var type=kind==='mp3'?'audio/mpeg':'audio/wav';
+ var old=inpageRequests[kind];
+ if(old&&old.readyState!==4)try{old.abort()}catch(e){}
+ var xhr=new XMLHttpRequest(), lastProgress='0 B';
+ inpageRequests[kind]=xhr;
+ inpageResults[kind]='starting';
+ document.getElementById('blob-'+kind).disabled=true;
+ if(inpageUrls[kind]){
+   var urlApi=window.URL||window.webkitURL;
+   if(urlApi&&urlApi.revokeObjectURL)urlApi.revokeObjectURL(inpageUrls[kind]);
+   inpageUrls[kind]=null;
+ }
+ xhr.open('GET',url,true);
+ xhr.timeout=20000;
+ var arrayBufferMode=false;
+ try{ xhr.responseType='arraybuffer';arrayBufferMode=xhr.responseType==='arraybuffer';}catch(e){}
+ if(!arrayBufferMode&&xhr.overrideMimeType)xhr.overrideMimeType('text/plain; charset=x-user-defined');
+ xhr.onprogress=function(evt){
+   lastProgress=(evt.loaded||0)+' B'+(evt.lengthComputable?'/'+evt.total+' B':'');
+   inpageResults[kind]='receiving '+lastProgress;
+   result.textContent='网页接收 '+kind.toUpperCase()+'：'+lastProgress;
+   draw();
+ };
+ xhr.onreadystatechange=function(){
+   if(xhr.readyState!==4)return;
+   if(xhr.status!==200 && xhr.status!==206){
+     inpageResults[kind]='HTTP '+xhr.status+', last '+lastProgress;
+     result.textContent=kind.toUpperCase()+' 网页读取失败：HTTP '+xhr.status;
+     add('inpage '+kind+' HTTP '+xhr.status);
+     return;
+   }
+   try {
+     var bytes;
+     if(arrayBufferMode){
+       if(!xhr.response||!xhr.response.byteLength)throw new Error('empty ArrayBuffer');
+       bytes=new Uint8Array(xhr.response);
+     }else{
+       var raw=xhr.responseText||'';
+       bytes=new Uint8Array(raw.length);
+       for(var i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i)&255;
+     }
+     if(bytes.length<20000)throw new Error('audio truncated: '+bytes.length+' bytes');
+     if(kind==='mp3' && !(bytes[0]===255&&(bytes[1]&224)===224))
+       throw new Error('MP3 header missing');
+     if(kind==='wav' && !(bytes[0]===82&&bytes[1]===73&&bytes[2]===70&&bytes[3]===70))
+       throw new Error('WAV RIFF header missing');
+     var blob;
+     if(window.Blob)blob=new Blob([bytes],{type:type});
+     else{
+       var Builder=window.BlobBuilder||window.WebKitBlobBuilder;
+       if(!Builder)throw new Error('Blob unavailable');
+       var builder=new Builder();builder.append(bytes.buffer);blob=builder.getBlob(type);
+     }
+     var urlApi=window.URL||window.webkitURL;
+     if(!urlApi||!urlApi.createObjectURL)throw new Error('createObjectURL unsupported');
+     inpageUrls[kind]=urlApi.createObjectURL(blob);
+     inpageBytes[kind]=bytes.length;
+     inpageResults[kind]='SUCCESS '+bytes.length+' bytes, '+type;
+     document.getElementById('blob-'+kind).disabled=false;
+     result.textContent='网页已经成功取得 '+kind.toUpperCase()+' 完整音频：'+bytes.length+' B。系统下载卡住不代表网页不能传输文件。接下来点“播放已读取的 '+kind.toUpperCase()+'”。';
+     add('inpage '+kind+' complete '+bytes.length+' bytes via XHR');
+   }catch(err){
+     inpageResults[kind]='error '+String(err&&err.message||err);
+     result.textContent='网页接收后无法处理 '+kind.toUpperCase()+'：'+String(err&&err.message||err);
+     add('inpage '+kind+' error '+String(err&&err.message||err));
+   }
+ };
+ xhr.onerror=function(){
+   inpageResults[kind]='network error (XHR)';
+   result.textContent=kind.toUpperCase()+' Via 网页内请求也发生网络错误。';
+   add('inpage '+kind+' network error');
+ };
+ xhr.ontimeout=function(){
+   inpageResults[kind]='timeout after '+lastProgress;
+   result.textContent=kind.toUpperCase()+' 网页接收超时，已收到 '+lastProgress;
+   add('inpage '+kind+' timeout');
+ };
+ xhr.send(null);draw();
+}
+document.getElementById('xhr-mp3').onclick=function(){inPageLoad('mp3');};
+document.getElementById('xhr-wav').onclick=function(){inPageLoad('wav');};
+function playInMemory(kind){
+ if(!inpageUrls[kind])return;
+ var playerForKind=kind==='mp3'?player:wav;
+ try{
+   playerForKind.pause();
+   playerForKind.src=inpageUrls[kind];
+   playerForKind.load();
+   var result=playerForKind.play();
+   if(result&&typeof result.catch==='function')result.catch(function(err){
+     add('memory '+kind+' rejected '+String(err&&err.message||err));
+   });
+   add('memory '+kind+' native media from '+inpageBytes[kind]+' bytes');
+   document.getElementById('xhr-result').textContent=
+    '已将 '+kind.toUpperCase()+' 内存音频交给浏览器播放器。请确认实际有无声音，以及时长是否大于 0。';
+ }catch(err){add('memory '+kind+' exception '+String(err&&err.message||err));}
+ draw();
+}
+document.getElementById('blob-mp3').onclick=function(){playInMemory('mp3');};
+document.getElementById('blob-wav').onclick=function(){playInMemory('wav');};
 document.getElementById('web-audio-test').onclick=function(){
  var status=document.getElementById('web-audio-status');
  var Context=window.AudioContext||window.webkitAudioContext;

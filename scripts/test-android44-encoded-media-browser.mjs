@@ -97,6 +97,30 @@ try{
  },null,{timeout:12000})
  assert.equal(await page.locator('#wav').evaluate(a=>a.error?a.error.code:null),null)
  console.log('PASS: real PCM WAV decodes and advances')
+ // Old Chromium's webpage network stack may work even when Android's
+ // separate system DownloadManager cannot open HTTPS downloads.
+ await page.locator('#xhr-mp3').click()
+ await page.waitForFunction(()=>
+   document.getElementById('xhr-result').textContent.includes('完整音频') &&
+   !document.getElementById('blob-mp3').disabled,null,{timeout:8000})
+ const inpageMp3=await page.locator('#log').textContent()
+ assert.match(inpageMp3,/Via 网页读取 MP3: SUCCESS \d+ bytes/)
+ await page.locator('#blob-mp3').click()
+ await page.waitForFunction(()=>
+   document.getElementById('tone').currentSrc.indexOf('blob:')===0 &&
+   document.getElementById('tone').currentTime>0.10,null,{timeout:10000})
+ console.log('PASS: Via in-page XHR MP3 fetched full bytes and played from blob')
+ await page.locator('#xhr-wav').click()
+ await page.waitForFunction(()=>
+   document.getElementById('xhr-result').textContent.includes('完整音频') &&
+   !document.getElementById('blob-wav').disabled,null,{timeout:8000})
+ const inpageWav=await page.locator('#log').textContent()
+ assert.match(inpageWav,/Via 网页读取 WAV: SUCCESS \d+ bytes/)
+ await page.locator('#blob-wav').click()
+ await page.waitForFunction(()=>
+   document.getElementById('wav').currentSrc.indexOf('blob:')===0 &&
+   document.getElementById('wav').currentTime>0.10,null,{timeout:10000})
+ console.log('PASS: Via in-page XHR WAV fetched full bytes and played from blob')
  await page.locator('#web-audio-test').click()
  const status=await page.locator('#web-audio-status').textContent()
  assert.match(status,/已要求 Web Audio/)
