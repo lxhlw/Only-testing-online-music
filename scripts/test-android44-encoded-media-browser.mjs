@@ -110,6 +110,13 @@ try{
    document.getElementById('tone').currentSrc.indexOf('blob:')===0 &&
    document.getElementById('tone').currentTime>0.10,null,{timeout:10000})
  console.log('PASS: Via in-page XHR MP3 fetched full bytes and played from blob')
+ await page.locator('#data-mp3').click()
+ await page.waitForFunction(()=>{
+   const a=document.getElementById('tone')
+   return a.currentSrc.startsWith('data:audio/mpeg;base64,')&&a.currentTime>0.15
+ },null,{timeout:12000})
+ assert.equal(await page.locator('#tone').evaluate(a=>a.error?a.error.code:null),null)
+ console.log('PASS: forced MP3 Data URI plays even when blob URL would be available')
  await page.locator('#xhr-wav').click()
  await page.waitForFunction(()=>
    document.getElementById('log').textContent.includes('Via 网页读取 WAV: SUCCESS') &&
@@ -121,6 +128,25 @@ try{
    document.getElementById('wav').currentSrc.indexOf('blob:')===0 &&
    document.getElementById('wav').currentTime>0.10,null,{timeout:10000})
  console.log('PASS: Via in-page XHR WAV fetched full bytes and played from blob')
+ await page.locator('#data-wav').click()
+ await page.waitForFunction(()=>{
+   const a=document.getElementById('wav')
+   return a.currentSrc.startsWith('data:audio/wav;base64,')&&a.currentTime>0.15
+ },null,{timeout:12000})
+ assert.equal(await page.locator('#wav').evaluate(a=>a.error?a.error.code:null),null)
+ console.log('PASS: forced WAV Data URI plays independently of blob URL')
+ await page.locator('#tiny-wav-play').click()
+ await page.waitForFunction(()=>{
+   const a=document.getElementById('tiny-wav-audio')
+   return a.currentSrc.startsWith('data:audio/wav;base64,')&&a.currentTime>0.15
+ },null,{timeout:12000})
+ const offlineWav=await page.locator('#tiny-wav-audio').evaluate(a=>({
+   duration:a.duration,error:a.error?a.error.code:null,
+   src:a.currentSrc.slice(0,22),time:a.currentTime
+ }))
+ assert.equal(offlineWav.error,null)
+ assert.ok(offlineWav.duration>0.9&&offlineWav.duration<1.1)
+ console.log('PASS: independent network-free WAV generator plays '+JSON.stringify(offlineWav))
  // Regression: a partial response must never enable Blob playback.
  await page.route('**/api/legacy-audio?type=mp3&*transport=xhr',async route=>{
    await route.fulfill({status:206,contentType:'audio/mpeg',
