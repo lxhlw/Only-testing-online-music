@@ -39,9 +39,9 @@ const browser=await chromium.launch({headless:true})
 const diagnosticPage=await browser.newPage()
 try {
   await diagnosticPage.goto(new URL('/audio-test.html',base).toString(),{waitUntil:'domcontentloaded'})
-  assert.ok(await diagnosticPage.locator('#tone source[src*="android44-tone-v3.mp3"]').count())
+  assert.ok(await diagnosticPage.locator('#tone source[src*="legacy-audio?type=mp3"]').count())
   assert.equal(await diagnosticPage.locator('#manual-play').isVisible(),true)
-  assert.ok((await diagnosticPage.locator('a[href*="android44-tone-v3.mp3"]').count())>0)
+  assert.ok((await diagnosticPage.locator('a[href*="legacy-audio?type=mp3"]').count())>0)
   await diagnosticPage.locator('#manual-play').click()
   await diagnosticPage.waitForFunction(()=>{
     const audio=document.getElementById('tone')
