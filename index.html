@@ -313,7 +313,9 @@
           <span class="legacy-media-hint">Android 4.4：请点上方原生音频 ▶ 键</span>
           <button id="legacy-proxy-btn" type="button" class="secondary">项目代理线路</button>
           <button id="legacy-direct-btn" type="button" class="secondary">直连线路</button>
-          <a href="./audio-test.html" class="legacy-media-test">声音自检</a>
+          <a id="legacy-external-player" class="legacy-media-test" aria-disabled="true">尝试系统播放器（等歌曲地址）</a>
+          <span class="legacy-media-hint">系统播放器入口为独立实验功能；不保证 Via 能唤起应用，也不保证外部应用能读取 HTTPS 音频。</span>
+          <a href="./audio-test.html?v=9#external-player-card" class="legacy-media-test">系统播放器测试</a>
         </div>
       </div>
       <div class="player-extras">
@@ -342,7 +344,8 @@
   <script src="src/music-library.js?playlist-queue=20261009"></script>
   <script src="src/music-lyrics.js"></script>
   <script src="src/player-controls.js?v=20261009-mode-icons"></script>
-  <script src="src/app.js?v=0.2.36&amp;android-native-20261026"></script>
+  <script src="src/android-external-audio.js?v=1"></script>
+  <script src="src/app.js?v=0.2.36&amp;android-native-intent-20261027"></script>
   <script>
   (function (global) {
     'use strict';
