@@ -35,11 +35,8 @@ jobs:
         with:
           node-version-file: .node-version
       - run: npm install --no-audit --no-fund
-      - name: Install MP3 encoder for real legacy audio test
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg
-          ffmpeg -hide_banner -version | head -1
+      - name: Install pinned FFmpeg encoder
+        run: npm install --no-save --no-audit --no-fund @ffmpeg-installer/ffmpeg@1.1.0
 
       - name: Generate genuine MP3 and WAV test files
         run: node scripts/generate-android44-audio.mjs
