@@ -1,0 +1,18 @@
+plugins {
+    id 'com.android.application'
+}
+android {
+    namespace 'dev.lxmusic.legacy'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'dev.lxmusic.legacy'
+        minSdk 19
+        targetSdk 28
+        versionCode 1
+        versionName '0.1.0-phase1'
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
