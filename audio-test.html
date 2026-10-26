@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Android 4.4 音频自检 - LX Music Web</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f6fbf8;color:#284c3d;font:15px/1.6 Arial,"Microsoft YaHei",sans-serif}
+main{max-width:680px;margin:0 auto;padding:20px 15px 50px}
+h1{font-size:23px;color:#289969;margin:10px 0}h2{font-size:17px;margin:4px 0 10px}
+.card{background:#fff;border:1px solid #d7e9de;border-radius:12px;padding:16px;margin:16px 0}
+p{margin:8px 0}audio{display:block!important;width:100%!important;height:50px!important;position:static!important;visibility:visible!important}
+button,.link{display:inline-block;margin:5px 5px 5px 0;padding:9px 14px;border:1px solid #b7ddc7;border-radius:8px;background:#e1f4e9;color:#16794a;font-size:14px}
+a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all;max-height:300px;overflow-y:auto;padding:12px;border-radius:8px;font-size:12px}
+#result{font-weight:700}small{color:#647f70}ol{padding-left:20px}li{margin:6px 0}
+</style>
+</head>
+<body><main>
+<a href="./">← 返回 LX Music Web</a>
+<h1>Android 4.4 / Via 真实播放自检</h1>
+<p>这是<strong>独立 MP3 测试</strong>，不调用任何第三方音源。请在出问题的平板上测试。</p>
+<div class="card">
+<h2>第一步：播放测试提示音（约 1 秒）</h2>
+<p>请直接点击下面灰色<strong>原生音频控件</strong>里的播放三角形 ▶，不要只看网页绿色播放器。</p>
+<audio id="tone" controls preload="none" src="./api/audio-selftest"></audio>
+<div id="result" role="status">尚未测试，请点击音频控件 ▶</div>
+<small>如果听到了短促“嘀”声，说明当前浏览器至少能解码本站 MP3；若始终没有声音，需要看下面的错误信息。</small>
+</div>
+<div class="card">
+<h2>第二步：检查本站音频传输</h2>
+<button id="check-network" type="button">检查 MP3 线路和分段下载</button>
+<p id="network-status">尚未检查</p>
+<small>结果应该显示 HTTP 206、audio/mpeg、Accept-Ranges: bytes。</small>
+</div>
+<div class="card">
+<h2>第三步：复制结果</h2>
+<p>把以下结果复制发给我，就能区分“解码不支持 / 网络传输失败 / 浏览器拦截播放”。没有保存或上传音源播放地址。</p>
+<pre id="log">初始化中...</pre>
+<button id="copy" type="button">复制诊断文字</button>
+<small id="copy-tip"></small>
+</div>
+<div class="card">
+<h2>怎么判断？</h2>
+<ol>
+<li>提示音能播，但歌曲不能播：重点检查第三方音频格式、直连/代理和地址有效期。</li>
+<li>提示音不能播，报错误码 3/4：旧 WebView 解码器可能不支持当前音频。</li>
+<li>提示音不能播，HTTP 206 正常：可能被浏览器的用户手势限制或 WebView 媒体设置阻止。</li>
+<li>音频线路报 403/502、超时：先排查网络、证书或 Pages 的媒体服务。</li>
+</ol>
+</div>
+</main>
+<script>
+(function(){
+'use strict';
+var player=document.getElementById('tone'),log=document.getElementById('log'),events=[],network='not-checked';
+var states={1:'ABORTED',2:'NETWORK',3:'DECODE',4:'NOT_SUPPORTED'};
+function now(){var d=new Date();return d.toLocaleTimeString?d.toLocaleTimeString():String(d.getTime());}
+function add(name){events.push(now()+' '+name);if(events.length>30)events.shift();draw();}
+function error(){
+var e=player.error;
+return e?(String(e.code)+' '+(states[e.code]||'UNKNOWN')):'none';
+}
+function draw(){
+var lines=['系统浏览器: '+navigator.userAgent,
+ 'canPlayType MP3: '+(player.canPlayType?player.canPlayType('audio/mpeg'):'unknown'),
+ '音频错误: '+error(),'readystate: '+player.readyState,
+ 'networkState: '+player.networkState,
+ 'currentTime: '+(Number(player.currentTime||0).toFixed(2)),
+ 'duration: '+String(player.duration),
+ 'paused: '+String(player.paused),
+ '网络测试: '+network,'近期事件:'];
+log.textContent=lines.concat(events).join('\n');
+}
+var types=['loadstart','loadedmetadata','canplay','play','playing','timeupdate','pause','waiting','stalled','suspend','ended','error'];
+for(var i=0;i<types.length;i++){
+(function(type){player.addEventListener(type,function(){
+ if(type==='playing' || (type==='timeupdate' && player.currentTime>0.1))document.getElementById('result').textContent='检测到 MP3 播放进度。请确认是否能听见“嘀”声。';
+ if(type==='error')document.getElementById('result').textContent='MP3 播放失败：'+error();
+ if(type!=='timeupdate'||player.currentTime>0.1)add(type);
+},false);})(types[i]);
+}
+document.getElementById('check-network').onclick=function(){
+network='checking';draw();
+var xhr=new XMLHttpRequest();
+xhr.open('GET','./api/audio-selftest?check=1',true);
+xhr.setRequestHeader('Range','bytes=0-63');
+xhr.timeout=15000;
+xhr.onreadystatechange=function(){
+if(xhr.readyState!==4)return;
+network='HTTP '+xhr.status+'; Content-Type '+xhr.getResponseHeader('Content-Type')+'; Accept-Ranges '+xhr.getResponseHeader('Accept-Ranges')+'; Content-Range '+xhr.getResponseHeader('Content-Range');
+document.getElementById('network-status').textContent=network;draw();
+};
+xhr.ontimeout=function(){network='TIMEOUT';document.getElementById('network-status').textContent=network;draw()};
+xhr.onerror=function(){network='XHR ERROR';document.getElementById('network-status').textContent=network;draw()};
+xhr.send(null);
+};
+document.getElementById('copy').onclick=function(){
+var text=log.textContent;
+var input=document.createElement('textarea');input.value=text;document.body.appendChild(input);input.select();
+var copied=false;try{copied=document.execCommand('copy')}catch(e){}
+document.body.removeChild(input);
+document.getElementById('copy-tip').textContent=copied?'已复制':'请长按上方诊断文字并复制';
+};
+draw();
+})();
+</script>
+</body></html>
