@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "index.html"
+      - "audio-test.html"
       - "settings.html"
       - "legacy-test.html"
       - "styles.css"
@@ -39,6 +40,12 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Install pinned FFmpeg encoder
+        run: npm install --no-save --no-audit --no-fund @ffmpeg-installer/ffmpeg@1.1.0
+
+      - name: Generate genuine encoded MP3 and WAV diagnostics
+        run: node scripts/generate-android44-audio.mjs
+
       - name: Prepare bundled legacy Babel
         run: |
           mkdir -p vendor
@@ -61,13 +68,15 @@ jobs:
           node --check src/player-controls.js
           node --check scripts/test-player-controls-browser.mjs
           node --check scripts/test-android44-real-audio-browser.mjs
+          node --check scripts/test-android44-encoded-media-browser.mjs
+          node --check scripts/generate-android44-audio.mjs
           node --check src/promise-lite.js
           node --check src/sha1.js
           node --check src/source-manager.js
           node --check src/source-transpiler.js
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Start local Pages server
         run: |
@@ -103,6 +112,9 @@ jobs:
 
       - name: Run settings test
         run: node scripts/test-settings.mjs
+
+      - name: Verify genuine MP3/WAV decoding and playback progress
+        run: node scripts/test-android44-encoded-media-browser.mjs
 
       - name: Verify Android 4.4 native audio fallback and MP3 byte ranges
         run: node scripts/test-android44-real-audio-browser.mjs
@@ -233,7 +245,7 @@ jobs:
         run: node scripts/test-proxy-production.mjs
 
       - name: Install Chromium for production playlist test
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Verify deployed responsive layout
         env:
@@ -259,6 +271,11 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
         run: node scripts/test-default-sources-legacy-browser.mjs
+
+      - name: Verify deployed genuine MP3, PCM WAV and Web Audio diagnostics
+        env:
+          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
+        run: node scripts/test-android44-encoded-media-browser.mjs
 
       - name: Verify deployed Android 4.4 MP3 and manual native playback
         env:
@@ -308,7 +325,7 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Run live Flower search + playback matrix
         env:
@@ -342,7 +359,7 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Run live Flower Migu search + playback
         env:
