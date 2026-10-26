@@ -476,8 +476,8 @@ function audioSnapshot(a){
 }
 function diagnosticPayload(){
  var agent=navigator.userAgent||'';
- var android=/Android\\s+([0-9.]+)/i.exec(agent);
- var chrome=/Chrome\\/([0-9.]+)/i.exec(agent);
+ var android=/Android\s+([0-9.]+)/i.exec(agent);
+ var chrome=/Chrome\/([0-9.]+)/i.exec(agent);
  var audible=document.getElementById('audible-choice').value;
  return {schema:1,
    platform:{android:android?android[1]:'unknown',chrome:chrome?chrome[1]:'unknown'},
