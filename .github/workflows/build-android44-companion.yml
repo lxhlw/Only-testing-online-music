@@ -34,10 +34,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-      - name: Install Android platform API 35
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Check preinstalled runner SDK and install API 35
+        run: |
+          test -n "$ANDROID_HOME"
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"; fi
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
       - name: Install Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
         with:
