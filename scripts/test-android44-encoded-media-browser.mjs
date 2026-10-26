@@ -134,6 +134,30 @@ try{
  assert.match(await page.locator('#log').textContent(),/audio truncated|incomplete HTTP 206/)
  await page.unroute('**/api/legacy-audio?type=mp3&*transport=xhr')
  console.log('PASS: truncated XHR cannot enable Blob playback')
+ // Reproduce physical Via's "MediaSource is not defined" failure during
+ // URL.createObjectURL, while preserving the already retrieved audio bytes.
+ await page.evaluate(()=>{
+   const broken=function(){throw new ReferenceError('MediaSource is not defined')}
+   if(window.URL)window.URL.createObjectURL=broken
+   if(window.webkitURL)window.webkitURL.createObjectURL=broken
+ })
+ for(const kind of ['mp3','wav']){
+   await page.locator('#xhr-'+kind).click()
+   await page.waitForFunction(kind=>{
+     const result=document.getElementById('log').textContent
+     return result.includes('Via 网页读取 '+kind.toUpperCase()+': SUCCESS') &&
+       result.includes('data-uri/base64') &&
+       !document.getElementById('blob-'+kind).disabled
+   },kind,{timeout:10000})
+   const diagnostics=await page.locator('#log').textContent()
+   assert.match(diagnostics,/fallback reason: .*MediaSource is not defined/)
+   await page.locator('#blob-'+kind).click()
+   await page.waitForFunction(kind=>{
+     const audio=document.getElementById(kind==='mp3'?'tone':'wav')
+     return audio.currentSrc.startsWith('data:audio/')&&audio.currentTime>0.10
+   },kind,{timeout:15000})
+   console.log('PASS: '+kind+' falls back to Data URI and plays despite missing MediaSource shim')
+ }
  await page.locator('#web-audio-test').click()
  const status=await page.locator('#web-audio-status').textContent()
  assert.match(status,/已要求 Web Audio/)
