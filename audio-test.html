@@ -18,20 +18,20 @@ a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all
 <body><main>
 <a href="./">← 返回 LX Music Web</a>
 <h1>Android 4.4 / Via 真实播放自检</h1>
-<p>这是<strong>独立 MP3 测试</strong>，不调用任何第三方音源。本次使用完整编码的 <strong>MPEG-1 Layer III / 44.1 kHz / 96 kbps</strong> 四秒测试音（v3），不再重复拼接单个 MP3 帧。另提供 PCM WAV 与 Web Audio 对照实验。</p>
+<p>这是<strong>独立 MP3 测试</strong>，不调用任何第三方音源。本次使用完整编码的 <strong>MPEG-1 Layer III / 44.1 kHz / 96 kbps</strong> 四秒测试音（v4 分段兼容测试）。现在同时检验 MP3、WAV 的 HTTP 206 以及旧设备原生音频行为。</p>
 <div class="card">
 <h2>第一步：测试真实编码的 MP3（约 4 秒）</h2>
 <p>请直接点击下面灰色<strong>原生音频控件</strong>里的播放三角形 ▶。如果仍然点不了，再尝试下面两个备用入口。</p>
-<audio id="tone" controls preload="metadata"><source src="./diagnostics/android44-tone-v3.mp3" type="audio/mpeg"></audio>
-<p><button id="manual-play" type="button">旧设备备用：直接播放 MP3</button><a class="link" href="./diagnostics/android44-tone-v3.mp3">直接打开 MP3 文件</a></p>
+<audio id="tone" controls preload="metadata"><source src="./api/legacy-audio?type=mp3&v=4" type="audio/mpeg"></audio>
+<p><button id="manual-play" type="button">旧设备备用：直接播放 MP3</button><a class="link" href="./api/legacy-audio?type=mp3&v=4">直接打开 MP3 文件</a><a class="link" href="./api/legacy-audio?type=mp3&download=1&v=4">下载 MP3，交给系统播放器</a></p>
 <div id="result" role="status">尚未测试，请点击音频控件 ▶</div>
 <small>声音应持续约 4 秒。网页检测到 playing 不等于已听到声音，请按实际听觉判断。</small>
 </div>
 <div class="card">
 <h2>第二步：测试独立 PCM WAV</h2>
 <p>如果 MP3 没声音，尝试 WAV。这个文件不需要 MP3 解码器。</p>
-<audio id="wav" controls preload="metadata"><source src="./diagnostics/android44-tone-v3.wav" type="audio/wav"></audio>
-<p><button id="wav-play" type="button">备用：直接播放 WAV</button><a class="link" href="./diagnostics/android44-tone-v3.wav">直接打开 WAV 文件</a></p>
+<audio id="wav" controls preload="metadata"><source src="./api/legacy-audio?type=wav&v=4" type="audio/wav"></audio>
+<p><button id="wav-play" type="button">备用：直接播放 WAV</button><a class="link" href="./api/legacy-audio?type=wav&v=4">直接打开 WAV 文件</a><a class="link" href="./api/legacy-audio?type=wav&download=1&v=4">下载 WAV，交给系统播放器</a></p>
 <div id="wav-result">尚未测试 WAV</div>
 </div>
 <div class="card">
@@ -44,7 +44,7 @@ a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all
 <h2>第四步：检查本站音频传输</h2>
 <button id="check-network" type="button">检查 MP3 线路和分段下载</button>
 <p id="network-status">尚未检查</p>
-<small>结果应该显示 HTTP 206、audio/mpeg、Accept-Ranges: bytes。</small>
+<small>新的分段音频接口应该显示 HTTP 206、audio/mpeg、Accept-Ranges: bytes。HTTP 206 仍不代表设备已出声。</small>
 </div>
 <div class="card">
 <h2>第五步：复制诊断结果</h2>
@@ -68,7 +68,7 @@ a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all
 (function(){
 'use strict';
 var player=document.getElementById('tone'),wav=document.getElementById('wav'),log=document.getElementById('log'),events=[],network='not-checked';
-var mediaUrl='./diagnostics/android44-tone-v3.mp3';
+var mediaUrl='./api/legacy-audio?type=mp3&v=4';
 var networkStates={0:'EMPTY',1:'IDLE',2:'LOADING',3:'NO_SOURCE'};
 var readyStates={0:'HAVE_NOTHING',1:'HAVE_METADATA',2:'HAVE_CURRENT_DATA',3:'HAVE_FUTURE_DATA',4:'HAVE_ENOUGH_DATA'};
 var states={1:'ABORTED',2:'NETWORK',3:'DECODE',4:'NOT_SUPPORTED'};
@@ -159,7 +159,7 @@ draw();
 document.getElementById('check-network').onclick=function(){
 network='checking';draw();
 var xhr=new XMLHttpRequest();
-xhr.open('GET',mediaUrl+'?check=1',true);
+xhr.open('GET',mediaUrl+'&check=1',true);
 xhr.setRequestHeader('Range','bytes=0-63');
 xhr.timeout=15000;
 xhr.onreadystatechange=function(){
