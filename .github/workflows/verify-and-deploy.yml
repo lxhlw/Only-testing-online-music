@@ -76,7 +76,7 @@ jobs:
           node --check src/source-transpiler.js
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Start local Pages server
         run: |
@@ -245,7 +245,7 @@ jobs:
         run: node scripts/test-proxy-production.mjs
 
       - name: Install Chromium for production playlist test
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Verify deployed responsive layout
         env:
@@ -325,7 +325,7 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Run live Flower search + playback matrix
         env:
@@ -359,7 +359,7 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Run live Flower Migu search + playback
         env:
