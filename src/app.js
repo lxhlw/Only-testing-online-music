@@ -751,6 +751,55 @@
     link.textContent = ok ? '尝试交给 Android 系统播放器' : '系统播放器（等歌曲地址）';
   }
 
+  function nativeAudioReady() {
+    try {
+      return !!(global.LXNativeAudio &&
+        typeof global.LXNativeAudio.isAvailable === 'function' &&
+        global.LXNativeAudio.isAvailable() === true);
+    } catch (e) { return false; }
+  }
+
+  // The companion APK injects LXNativeAudio before loading the existing
+  // LX Music Web. Audio bytes are downloaded and decoded natively; Via/Chrome
+  // 30 HTML5 Audio is never used in this branch.
+  global.LXNativeAudioEvent = function (token, eventName, positionMs, durationMs) {
+    if (!nativeAudioReady()) return;
+    var state = playbackState;
+    if (!state || Number(token) !== state.token || !state.nativePlayback) return;
+    var elapsed = Math.max(0, Number(positionMs || 0));
+    var total = Math.max(0, Number(durationMs || 0));
+    if (eventName === 'playing' || eventName === 'progress') {
+      state.waitingForAudio = false;
+      state.playing = true;
+      clearPlaybackConfirmTimer(state);
+      clearMiguPlaybackDeadline(state);
+      if (eventName === 'playing')
+        setStatus('Android 原生 MediaPlayer 已开始播放；请按实际声音确认。', 'ready');
+      // The Phase-1 web progress controls are informational; use the
+      // companion APK buttons for pause/resume until native controls sync.
+      var current = document.getElementById('player-current-time');
+      var duration = document.getElementById('player-duration');
+      function clock(ms) {
+        var seconds = Math.floor(ms / 1000);
+        return ('0' + Math.floor(seconds / 60)).slice(-2) +
+          ':' + ('0' + seconds % 60).slice(-2);
+      }
+      if (current) current.textContent = clock(elapsed);
+      if (duration && total) duration.textContent = clock(total);
+    } else if (eventName === 'loading') {
+      setStatus('Android 原生播放器正在下载并缓存音频……', 'warn');
+    } else if (eventName === 'paused') {
+      state.playing = false;
+      setStatus('Android 原生播放器已暂停；使用 APK 顶部按钮继续。', 'warn');
+    } else if (eventName === 'completed') {
+      state.playing = false;
+      setStatus('Android 原生播放器已完成当前歌曲。', 'ready');
+    } else if (eventName === 'error') {
+      setStatus('Android 原生音频读取或解码失败，尝试其他可用音源……', 'warn');
+      handleAudioError(state.token, state.url);
+    }
+  };
+
   function useResolvedUrl(
     url,
     quality,
@@ -783,6 +832,21 @@
     playbackState.resolver = viaLabel || 'LX source';
     playbackState.resolverProvider = viaProvider || 'lx-source';
     playbackState.expectedDuration = getExpectedDurationSeconds(music);
+
+    if (nativeAudioReady()) {
+      playbackState.nativePlayback = true;
+      playbackState.manualPlaybackRequired = false;
+      // Never call HTMLAudioElement.play() in Android 4.4 companion mode:
+      // physical Via has failed direct, Blob, Data URI and local WAV modes.
+      try { audio.pause(); audio.removeAttribute('src'); } catch (e) {}
+      setStatus('原生播放组件正在获取歌曲，播放控制请使用 APK 顶部按钮。', 'warn');
+      try { global.LXNativeAudio.play(playableUrl, token); }
+      catch (error) {
+        setStatus('Android 原生桥未能启动：' + escapeHtml(String(error)), 'fail');
+        handleAudioError(token, playableUrl);
+      }
+      return;
+    }
 
     var playRequested = false;
 
