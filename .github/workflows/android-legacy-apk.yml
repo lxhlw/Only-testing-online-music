@@ -36,6 +36,8 @@ jobs:
           java-version: '17'
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
       - name: Install Android 33 compilation platform
         run: sdkmanager 'platforms;android-33' 'build-tools;33.0.2'
       - name: Java 11 for Android Gradle Plugin 7.4 build
