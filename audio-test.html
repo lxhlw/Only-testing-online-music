@@ -18,13 +18,14 @@ a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all
 <body><main>
 <a href="./">← 返回 LX Music Web</a>
 <h1>Android 4.4 / Via 真实播放自检</h1>
-<p>这是<strong>独立 MP3 测试</strong>，不调用任何第三方音源。请在出问题的平板上测试。</p>
+<p>这是<strong>独立 MP3 测试</strong>，不调用任何第三方音源。已换为旧 Android 更常见的 <strong>MPEG-1 Layer III / 44.1 kHz / 64 kbps</strong> 编码（测试音 v2）。</p>
 <div class="card">
 <h2>第一步：播放测试提示音（约 1 秒）</h2>
-<p>请直接点击下面灰色<strong>原生音频控件</strong>里的播放三角形 ▶，不要只看网页绿色播放器。</p>
-<audio id="tone" controls preload="none" src="./api/audio-selftest"></audio>
+<p>请直接点击下面灰色<strong>原生音频控件</strong>里的播放三角形 ▶。如果仍然点不了，再尝试下面两个备用入口。</p>
+<audio id="tone" controls preload="metadata"><source src="./api/audio-selftest.mp3?v=2" type="audio/mpeg"></audio>
+<p><button id="manual-play" type="button">旧设备备用：点击加载并播放</button><a class="link" href="./api/audio-selftest.mp3?v=2">直接打开 MP3 文件</a></p>
 <div id="result" role="status">尚未测试，请点击音频控件 ▶</div>
-<small>如果听到了短促“嘀”声，说明当前浏览器至少能解码本站 MP3；若始终没有声音，需要看下面的错误信息。</small>
+<small>声音应持续约 1.9 秒。若原生控件不能播放，可以先试“旧设备备用”，再试“直接打开 MP3”。后者可检查系统能否独立打开音频文件。</small>
 </div>
 <div class="card">
 <h2>第二步：检查本站音频传输</h2>
@@ -43,8 +44,9 @@ a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all
 <h2>怎么判断？</h2>
 <ol>
 <li>提示音能播，但歌曲不能播：重点检查第三方音频格式、直连/代理和地址有效期。</li>
-<li>提示音不能播，报错误码 3/4：旧 WebView 解码器可能不支持当前音频。</li>
-<li>提示音不能播，HTTP 206 正常：可能被浏览器的用户手势限制或 WebView 媒体设置阻止。</li>
+<li>提示音不能播，<code>networkState=3</code> 或 <code>readyState=0</code>：浏览器没有识别出可播放音频源，优先测试直接打开 MP3。</li>
+<li>提示音不能播，报错误码 3/4：旧 WebView 解码器或系统媒体组件可能不支持该音频。</li>
+<li>提示音不能播，但 HTTP 206 正常：只证明字节传输成功，不能证明解码器可用；试备用播放及直接打开文件。</li>
 <li>音频线路报 403/502、超时：先排查网络、证书或 Pages 的媒体服务。</li>
 </ol>
 </div>
@@ -53,6 +55,9 @@ a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all
 (function(){
 'use strict';
 var player=document.getElementById('tone'),log=document.getElementById('log'),events=[],network='not-checked';
+var mediaUrl='./api/audio-selftest.mp3?v=2';
+var networkStates={0:'EMPTY',1:'IDLE',2:'LOADING',3:'NO_SOURCE'};
+var readyStates={0:'HAVE_NOTHING',1:'HAVE_METADATA',2:'HAVE_CURRENT_DATA',3:'HAVE_FUTURE_DATA',4:'HAVE_ENOUGH_DATA'};
 var states={1:'ABORTED',2:'NETWORK',3:'DECODE',4:'NOT_SUPPORTED'};
 function now(){var d=new Date();return d.toLocaleTimeString?d.toLocaleTimeString():String(d.getTime());}
 function add(name){events.push(now()+' '+name);if(events.length>30)events.shift();draw();}
@@ -63,8 +68,9 @@ return e?(String(e.code)+' '+(states[e.code]||'UNKNOWN')):'none';
 function draw(){
 var lines=['系统浏览器: '+navigator.userAgent,
  'canPlayType MP3: '+(player.canPlayType?player.canPlayType('audio/mpeg'):'unknown'),
- '音频错误: '+error(),'readystate: '+player.readyState,
- 'networkState: '+player.networkState,
+ '音频错误: '+error(),'readyState: '+player.readyState+' '+(readyStates[player.readyState]||''),
+ 'networkState: '+player.networkState+' '+(networkStates[player.networkState]||''),
+ 'currentSrc: '+String(player.currentSrc||'(empty)'),
  'currentTime: '+(Number(player.currentTime||0).toFixed(2)),
  'duration: '+String(player.duration),
  'paused: '+String(player.paused),
@@ -79,10 +85,29 @@ for(var i=0;i<types.length;i++){
  if(type!=='timeupdate'||player.currentTime>0.1)add(type);
 },false);})(types[i]);
 }
+document.getElementById('manual-play').onclick=function(){
+add('user-direct-click: load + play');
+document.getElementById('result').textContent='已请求播放。请查看下方事件和音频状态。';
+try{
+  // Both calls are inside a real user-gesture handler for old WebViews.
+  if(!player.currentSrc&&(!player.querySelector('source')||!player.querySelector('source').src))
+    player.src=mediaUrl;
+  if(typeof player.load==='function')player.load();
+  var playback=player.play();
+  if(playback&&typeof playback.catch==='function')playback.catch(function(err){
+    add('play-rejected: '+String(err&&err.message||err));
+    document.getElementById('result').textContent='浏览器阻止了播放：'+String(err&&err.message||err);
+  });
+}catch(err){
+  add('play-exception: '+String(err&&err.message||err));
+  document.getElementById('result').textContent='启动失败：'+String(err&&err.message||err);
+}
+draw();
+};
 document.getElementById('check-network').onclick=function(){
 network='checking';draw();
 var xhr=new XMLHttpRequest();
-xhr.open('GET','./api/audio-selftest?check=1',true);
+xhr.open('GET',mediaUrl+'&check=1',true);
 xhr.setRequestHeader('Range','bytes=0-63');
 xhr.timeout=15000;
 xhr.onreadystatechange=function(){
