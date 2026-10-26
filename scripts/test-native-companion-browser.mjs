@@ -41,7 +41,7 @@ try {
  assert.equal(state.calls.length,1)
  assert.equal(state.htmlPlay,0,'Native companion must never invoke HTMLAudioElement.play()')
  assert.equal(state.nativeReady,true)
- assert.match(state.calls[0].url,/^http:\/\/127\.0\.0\.1:8788\/api\/proxy\?url=/)
+ assert.ok(state.calls[0].url.startsWith(new URL('/api/proxy?url=',base).toString()), 'Bridge must use the current Pages origin: '+state.calls[0].url)
  assert.match(state.status,/原生播放组件/)
  await page.evaluate(()=>{
    var item=window.__nativeCalls[0]
