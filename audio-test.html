@@ -18,20 +18,20 @@ a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all
 <body><main>
 <a href="./">← 返回 LX Music Web</a>
 <h1>Android 4.4 / Via 真实播放自检</h1>
-<p>这是<strong>独立 MP3 测试</strong>，不调用任何第三方音源。本次使用完整编码的 <strong>MPEG-1 Layer III / 44.1 kHz / 96 kbps</strong> 四秒测试音（v5 下载故障诊断）。新增不使用系统下载管理器的“网页内读取”与内存播放测试，并保留 MP3、WAV 的 HTTP 206 检测。</p>
+<p>这是<strong>独立 MP3 测试</strong>，不调用任何第三方音源。本次使用完整编码的 <strong>MPEG-1 Layer III / 44.1 kHz / 96 kbps</strong> 四秒测试音（v6 旧 Via 内存播放兼容诊断）。新增不使用系统下载管理器的“网页内读取”与内存播放测试，并保留 MP3、WAV 的 HTTP 206 检测。</p>
 <div class="card">
 <h2>第一步：测试真实编码的 MP3（约 4 秒）</h2>
 <p>请直接点击下面灰色<strong>原生音频控件</strong>里的播放三角形 ▶。如果仍然点不了，再尝试下面两个备用入口。</p>
-<audio id="tone" controls preload="metadata"><source src="./api/legacy-audio?type=mp3&v=4" type="audio/mpeg"></audio>
-<p><button id="manual-play" type="button">旧设备备用：直接播放 MP3</button><a class="link" href="./api/legacy-audio?type=mp3&v=4">直接打开 MP3 文件</a><a class="link" href="./api/legacy-audio?type=mp3&download=1&v=4">下载 MP3，交给系统播放器</a></p>
+<audio id="tone" controls preload="metadata"><source src="./api/legacy-audio?type=mp3&v=6" type="audio/mpeg"></audio>
+<p><button id="manual-play" type="button">旧设备备用：直接播放 MP3</button><a class="link" href="./api/legacy-audio?type=mp3&v=6">直接打开 MP3 文件</a><a class="link" href="./api/legacy-audio?type=mp3&download=1&v=6">下载 MP3，交给系统播放器</a></p>
 <div id="result" role="status">尚未测试，请点击音频控件 ▶</div>
 <small>声音应持续约 4 秒。网页检测到 playing 不等于已听到声音，请按实际听觉判断。</small>
 </div>
 <div class="card">
 <h2>第二步：测试独立 PCM WAV</h2>
 <p>如果 MP3 没声音，尝试 WAV。这个文件不需要 MP3 解码器。</p>
-<audio id="wav" controls preload="metadata"><source src="./api/legacy-audio?type=wav&v=4" type="audio/wav"></audio>
-<p><button id="wav-play" type="button">备用：直接播放 WAV</button><a class="link" href="./api/legacy-audio?type=wav&v=4">直接打开 WAV 文件</a><a class="link" href="./api/legacy-audio?type=wav&download=1&v=4">下载 WAV，交给系统播放器</a></p>
+<audio id="wav" controls preload="metadata"><source src="./api/legacy-audio?type=wav&v=6" type="audio/wav"></audio>
+<p><button id="wav-play" type="button">备用：直接播放 WAV</button><a class="link" href="./api/legacy-audio?type=wav&v=6">直接打开 WAV 文件</a><a class="link" href="./api/legacy-audio?type=wav&download=1&v=6">下载 WAV，交给系统播放器</a></p>
 <div id="wav-result">尚未测试 WAV</div>
 </div>
 <div class="card" id="inpage-card">
@@ -40,7 +40,7 @@ a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all
 <p><button id="xhr-mp3" type="button">网页内读取 MP3</button><button id="xhr-wav" type="button">网页内读取 WAV</button></p>
 <p id="xhr-result" role="status">尚未尝试网页内读取</p>
 <p><button id="blob-mp3" type="button" disabled>播放已读取的 MP3</button><button id="blob-wav" type="button" disabled>播放已读取的 WAV</button></p>
-<p><small>上方“播放已读取”会将内存音频交给原生音频控件，再手动尝试发声。此过程不再重新访问音频服务器。</small></p>
+<p><small>读取完整后，优先尝试 Blob 播放地址。如果旧 Via 出现 MediaSource is not defined，则使用 Base64 Data URI 备用路径。两种方式都仍依赖旧系统的原生音频解码器，不能保证一定有声音。</small></p>
 </div>
 <div class="card">
 <h2>第三步：测试 Web Audio 直接发声</h2>
@@ -76,9 +76,10 @@ a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all
 (function(){
 'use strict';
 var player=document.getElementById('tone'),wav=document.getElementById('wav'),log=document.getElementById('log'),events=[],network='not-checked';
-var mediaUrl='./api/legacy-audio?type=mp3&v=4';
+var mediaUrl='./api/legacy-audio?type=mp3&v=6';
 var inpageResults={mp3:'not-run',wav:'not-run'};
 var inpageUrls={mp3:null,wav:null};
+var inpageMethods={mp3:'none',wav:'none'};
 var inpageBytes={mp3:0,wav:0};
 var inpageRequests={mp3:null,wav:null};
 
@@ -107,6 +108,8 @@ var lines=['系统浏览器: '+navigator.userAgent,
  'Web Audio: '+document.getElementById('web-audio-status').textContent,
  'Via 网页读取 MP3: '+inpageResults.mp3,
  'Via 网页读取 WAV: '+inpageResults.wav,
+ '内存播放地址 MP3/WAV: '+inpageMethods.mp3+' / '+inpageMethods.wav,
+ 'Blob / webkitURL / btoa / MediaSource: '+String(typeof window.Blob)+' / '+String(typeof window.webkitURL)+' / '+String(typeof window.btoa)+' / '+String(typeof window.MediaSource),
  '网络测试: '+network,'近期事件:'];
 log.textContent=lines.concat(events).join('\n');
 }
@@ -134,20 +137,84 @@ document.getElementById('wav-play').onclick=function(){
    if(result && typeof result.catch==='function')result.catch(function(e){add('WAV play rejected '+String(e.message||e));});
  }catch(e){add('WAV play exception '+String(e.message||e));}
 };
+// Validate transport independently of the media decoder. Old Via can receive
+// HTML/error data or a partial 206 body while reporting XHR completion.
+function validateAudioTransfer(xhr,bytes,kind,type){
+ var mime=String(xhr.getResponseHeader('Content-Type')||'').toLowerCase();
+ if(mime.indexOf(type)!==0)throw new Error('unexpected Content-Type: '+(mime||'(missing)'));
+ var announced=String(xhr.getResponseHeader('Content-Length')||'');
+ if(announced){
+   if(!/^[0-9]+$/.test(announced)||Number(announced)!==bytes.length)
+     throw new Error('Content-Length mismatch: '+announced+' / '+bytes.length);
+ }
+ if(xhr.status===206){
+   var header=String(xhr.getResponseHeader('Content-Range')||'');
+   var match=/^bytes ([0-9]+)-([0-9]+)\/([0-9]+)$/i.exec(header);
+   if(!match||Number(match[1])!==0||Number(match[2])+1!==Number(match[3])||
+       Number(match[3])!==bytes.length)
+     throw new Error('incomplete HTTP 206 range: '+(header||'(missing)'));
+ }
+ if(kind==='wav'){
+   if(bytes.length<44||bytes[8]!==87||bytes[9]!==65||bytes[10]!==86||bytes[11]!==69)
+     throw new Error('invalid WAV header');
+   var riffSize=(bytes[4]|(bytes[5]<<8)|(bytes[6]<<16)|(bytes[7]<<24))>>>0;
+   if(riffSize+8!==bytes.length)
+     throw new Error('WAV RIFF length mismatch: '+(riffSize+8)+' / '+bytes.length);
+ }
+}
+// Chromium 30/Via variants may expose a broken URL.createObjectURL shim that
+// references the absent MediaSource API. MSE is NOT required for Blob media.
+// Report that exception and use a conservative Base64 data: URL fallback.
+// Both choices still use HTMLMediaElement and may fail at decoding/output.
+function makeInPageMediaUrl(bytes,type){
+ var blob=null,failures=[];
+ try{
+   if(window.Blob)blob=new window.Blob([bytes],{type:type});
+   else{
+     var Builder=window.BlobBuilder||window.WebKitBlobBuilder;
+     if(!Builder)throw new Error('Blob unavailable');
+     var builder=new Builder();builder.append(bytes.buffer);blob=builder.getBlob(type);
+   }
+ }catch(blobError){failures.push('Blob: '+String(blobError&&blobError.message||blobError));}
+ if(blob){
+   var providers=[{name:'URL',api:window.URL},{name:'webkitURL',api:window.webkitURL}];
+   for(var p=0;p<providers.length;p++){
+     var provider=providers[p];
+     if(!provider.api||!provider.api.createObjectURL)continue;
+     try{
+       return {url:provider.api.createObjectURL(blob),method:'blob/'+provider.name,warning:failures.join('; ')};
+     }catch(urlError){
+       failures.push(provider.name+'.createObjectURL: '+String(urlError&&urlError.message||urlError));
+     }
+   }
+ }
+ if(typeof window.btoa!=='function')
+   throw new Error('Blob URL failed ('+failures.join('; ')+'); btoa unavailable');
+ var parts=[];
+ for(var start=0;start<bytes.length;start+=4096){
+   var chars=[],end=Math.min(start+4096,bytes.length);
+   for(var i=start;i<end;i++)chars.push(String.fromCharCode(bytes[i]));
+   parts.push(chars.join(''));
+ }
+ return {url:'data:'+type+';base64,'+window.btoa(parts.join('')),
+   method:'data-uri/base64',warning:failures.join('; ')||'Blob URL unavailable'};
+}
 // ES5-compatible diagnostic for the Android 4.4 browser network engine.
 function inPageLoad(kind){
  var result=document.getElementById('xhr-result');
- var url='./api/legacy-audio?type='+kind+'&v=4&transport=xhr';
+ var url='./api/legacy-audio?type='+kind+'&v=6&transport=xhr';
  var type=kind==='mp3'?'audio/mpeg':'audio/wav';
  var old=inpageRequests[kind];
  if(old&&old.readyState!==4)try{old.abort()}catch(e){}
  var xhr=new XMLHttpRequest(), lastProgress='0 B';
  inpageRequests[kind]=xhr;
  inpageResults[kind]='starting';
+ inpageMethods[kind]='none';
  document.getElementById('blob-'+kind).disabled=true;
  if(inpageUrls[kind]){
    var urlApi=window.URL||window.webkitURL;
-   if(urlApi&&urlApi.revokeObjectURL)urlApi.revokeObjectURL(inpageUrls[kind]);
+   if(urlApi&&urlApi.revokeObjectURL&&inpageUrls[kind].indexOf('blob:')===0)
+     try{urlApi.revokeObjectURL(inpageUrls[kind])}catch(e){}
    inpageUrls[kind]=null;
  }
  xhr.open('GET',url,true);
@@ -162,7 +229,7 @@ function inPageLoad(kind){
    draw();
  };
  xhr.onreadystatechange=function(){
-   if(xhr.readyState!==4)return;
+   if(xhr.readyState!==4||inpageRequests[kind]!==xhr)return;
    if(xhr.status!==200 && xhr.status!==206){
      inpageResults[kind]='HTTP '+xhr.status+', last '+lastProgress;
      result.textContent=kind.toUpperCase()+' 网页读取失败：HTTP '+xhr.status;
@@ -184,21 +251,30 @@ function inPageLoad(kind){
        throw new Error('MP3 header missing');
      if(kind==='wav' && !(bytes[0]===82&&bytes[1]===73&&bytes[2]===70&&bytes[3]===70))
        throw new Error('WAV RIFF header missing');
-     var blob;
-     if(window.Blob)blob=new Blob([bytes],{type:type});
-     else{
-       var Builder=window.BlobBuilder||window.WebKitBlobBuilder;
-       if(!Builder)throw new Error('Blob unavailable');
-       var builder=new Builder();builder.append(bytes.buffer);blob=builder.getBlob(type);
-     }
-     var urlApi=window.URL||window.webkitURL;
-     if(!urlApi||!urlApi.createObjectURL)throw new Error('createObjectURL unsupported');
-     inpageUrls[kind]=urlApi.createObjectURL(blob);
+     validateAudioTransfer(xhr,bytes,kind,type);
      inpageBytes[kind]=bytes.length;
-     inpageResults[kind]='SUCCESS '+bytes.length+' bytes, '+type;
-     document.getElementById('blob-'+kind).disabled=false;
-     result.textContent='网页已经成功取得 '+kind.toUpperCase()+' 完整音频：'+bytes.length+' B。系统下载卡住不代表网页不能传输文件。接下来点“播放已读取的 '+kind.toUpperCase()+'”。';
-     add('inpage '+kind+' complete '+bytes.length+' bytes via XHR');
+     inpageResults[kind]='RECEIVED '+bytes.length+' bytes via XHR HTTP '+xhr.status;
+     add('inpage '+kind+' received complete '+bytes.length+' bytes HTTP '+xhr.status);
+     // XHR has already succeeded. Keep this outcome even if URL creation fails.
+     try{
+       var memory=makeInPageMediaUrl(bytes,type);
+       inpageUrls[kind]=memory.url;
+       inpageMethods[kind]=memory.method;
+       inpageResults[kind]='SUCCESS '+bytes.length+' bytes, '+type+', HTTP '+xhr.status+
+          ', '+memory.method+(memory.warning?', fallback reason: '+memory.warning:'');
+       document.getElementById('blob-'+kind).disabled=false;
+       result.textContent='网页已经完整读取 '+kind.toUpperCase()+'：'+bytes.length+
+         ' B；播放地址：'+memory.method+'。'+(memory.warning?'Blob 失败原因：'+memory.warning+'。':'')+
+         '请点击“播放已读取的 '+kind.toUpperCase()+'”，并检查时长和实际声音。';
+       add('inpage '+kind+' complete '+bytes.length+' bytes, playback '+memory.method+
+           (memory.warning?', '+memory.warning:''));
+     }catch(memoryError){
+       inpageResults[kind]='RECEIVED '+bytes.length+' bytes; playback URL unsupported: '+
+           String(memoryError&&memoryError.message||memoryError);
+       result.textContent=kind.toUpperCase()+' 已完整读取 '+bytes.length+
+         ' B，但不能创建内存播放地址：'+String(memoryError&&memoryError.message||memoryError);
+       add('inpage '+kind+' memory URL unsupported after successful XHR');
+     }
    }catch(err){
      inpageResults[kind]='error '+String(err&&err.message||err);
      result.textContent='网页接收后无法处理 '+kind.toUpperCase()+'：'+String(err&&err.message||err);
@@ -206,11 +282,13 @@ function inPageLoad(kind){
    }
  };
  xhr.onerror=function(){
+   if(inpageRequests[kind]!==xhr)return;
    inpageResults[kind]='network error (XHR)';
    result.textContent=kind.toUpperCase()+' Via 网页内请求也发生网络错误。';
    add('inpage '+kind+' network error');
  };
  xhr.ontimeout=function(){
+   if(inpageRequests[kind]!==xhr)return;
    inpageResults[kind]='timeout after '+lastProgress;
    result.textContent=kind.toUpperCase()+' 网页接收超时，已收到 '+lastProgress;
    add('inpage '+kind+' timeout');
@@ -232,7 +310,8 @@ function playInMemory(kind){
    });
    add('memory '+kind+' native media from '+inpageBytes[kind]+' bytes');
    document.getElementById('xhr-result').textContent=
-    '已将 '+kind.toUpperCase()+' 内存音频交给浏览器播放器。请确认实际有无声音，以及时长是否大于 0。';
+    '已将 '+kind.toUpperCase()+' ('+inpageMethods[kind]+') 交给原生播放器。'+
+    '注意：播放事件不代表真的有声音，请确认时长大于 0、播放进度增加及实际发声。';
  }catch(err){add('memory '+kind+' exception '+String(err&&err.message||err));}
  draw();
 }

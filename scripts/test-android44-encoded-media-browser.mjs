@@ -101,7 +101,7 @@ try{
  // separate system DownloadManager cannot open HTTPS downloads.
  await page.locator('#xhr-mp3').click()
  await page.waitForFunction(()=>
-   document.getElementById('xhr-result').textContent.includes('完整音频') &&
+   document.getElementById('log').textContent.includes('Via 网页读取 MP3: SUCCESS') &&
    !document.getElementById('blob-mp3').disabled,null,{timeout:8000})
  const inpageMp3=await page.locator('#log').textContent()
  assert.match(inpageMp3,/Via 网页读取 MP3: SUCCESS \d+ bytes/)
@@ -112,7 +112,7 @@ try{
  console.log('PASS: Via in-page XHR MP3 fetched full bytes and played from blob')
  await page.locator('#xhr-wav').click()
  await page.waitForFunction(()=>
-   document.getElementById('xhr-result').textContent.includes('完整音频') &&
+   document.getElementById('log').textContent.includes('Via 网页读取 WAV: SUCCESS') &&
    !document.getElementById('blob-wav').disabled,null,{timeout:8000})
  const inpageWav=await page.locator('#log').textContent()
  assert.match(inpageWav,/Via 网页读取 WAV: SUCCESS \d+ bytes/)
@@ -121,6 +121,43 @@ try{
    document.getElementById('wav').currentSrc.indexOf('blob:')===0 &&
    document.getElementById('wav').currentTime>0.10,null,{timeout:10000})
  console.log('PASS: Via in-page XHR WAV fetched full bytes and played from blob')
+ // Regression: a partial response must never enable Blob playback.
+ await page.route('**/api/legacy-audio?type=mp3&*transport=xhr',async route=>{
+   await route.fulfill({status:206,contentType:'audio/mpeg',
+     headers:{'Content-Range':'bytes 0-1023/99999','Content-Length':'1024'},
+     body:Buffer.alloc(1024,0xff)})
+ })
+ await page.locator('#xhr-mp3').click()
+ await page.waitForFunction(()=>
+   document.getElementById('xhr-result').textContent.includes('无法处理'),null,{timeout:8000})
+ assert.equal(await page.locator('#blob-mp3').isDisabled(),true)
+ assert.match(await page.locator('#log').textContent(),/audio truncated|incomplete HTTP 206/)
+ await page.unroute('**/api/legacy-audio?type=mp3&*transport=xhr')
+ console.log('PASS: truncated XHR cannot enable Blob playback')
+ // Reproduce physical Via's "MediaSource is not defined" failure during
+ // URL.createObjectURL, while preserving the already retrieved audio bytes.
+ await page.evaluate(()=>{
+   const broken=function(){throw new ReferenceError('MediaSource is not defined')}
+   if(window.URL)window.URL.createObjectURL=broken
+   if(window.webkitURL)window.webkitURL.createObjectURL=broken
+ })
+ for(const kind of ['mp3','wav']){
+   await page.locator('#xhr-'+kind).click()
+   await page.waitForFunction(kind=>{
+     const result=document.getElementById('log').textContent
+     return result.includes('Via 网页读取 '+kind.toUpperCase()+': SUCCESS') &&
+       result.includes('data-uri/base64') &&
+       !document.getElementById('blob-'+kind).disabled
+   },kind,{timeout:10000})
+   const diagnostics=await page.locator('#log').textContent()
+   assert.match(diagnostics,/fallback reason: .*MediaSource is not defined/)
+   await page.locator('#blob-'+kind).click()
+   await page.waitForFunction(kind=>{
+     const audio=document.getElementById(kind==='mp3'?'tone':'wav')
+     return audio.currentSrc.startsWith('data:audio/')&&audio.currentTime>0.10
+   },kind,{timeout:15000})
+   console.log('PASS: '+kind+' falls back to Data URI and plays despite missing MediaSource shim')
+ }
  await page.locator('#web-audio-test').click()
  const status=await page.locator('#web-audio-status').textContent()
  assert.match(status,/已要求 Web Audio/)
