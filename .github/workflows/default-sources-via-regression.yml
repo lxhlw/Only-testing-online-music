@@ -7,6 +7,9 @@ on:
       - "src/app.js"
       - "index.html"
       - "audio-test.html"
+      - "functions/api/diagnostic-report.js"
+      - "scripts/test-diagnostic-report.mjs"
+      - "scripts/test-diagnostic-report-browser.mjs"
       - "scripts/generate-android44-audio.mjs"
       - "scripts/test-android44-encoded-media-browser.mjs"
       - "functions/api/audio-selftest.js"
@@ -54,6 +57,7 @@ jobs:
           node scripts/test-version.mjs
           node scripts/test-legacy-web.mjs
           node scripts/test-source-selection.mjs
+          node scripts/test-diagnostic-report.mjs
       - run: npx playwright install chromium
       - name: Start Pages simulator
         run: |
@@ -68,6 +72,9 @@ jobs:
         run: node scripts/test-import-ui.mjs
       - name: Verify actual MP3/WAV decoders and playback progress
         run: node scripts/test-android44-encoded-media-browser.mjs
+
+      - name: Verify one-tap diagnostic card and privacy-scoped upload
+        run: node scripts/test-diagnostic-report-browser.mjs
 
       - name: Verify native Android 4.4 MP3 media fallback and Range responses
         run: node scripts/test-android44-real-audio-browser.mjs
