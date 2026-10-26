@@ -509,7 +509,7 @@ function reportCard(payload,link,id){
  'Web Audio: '+(payload.features.audioContext?'支持':'不支持'),
  id?'报告编号: '+id:'报告未上传：此照片就是诊断结果',
  link?'报告链接: '+link:'请直接拍摄本卡片发给 ChatGPT'
- ].join('\\n');
+ ].join('\n');
 }
 document.getElementById('quick-report').onclick=function(){
  var payload=diagnosticPayload();
