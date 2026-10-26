@@ -31,7 +31,7 @@ a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all
 <h2>第二步：测试独立 PCM WAV</h2>
 <p>如果 MP3 没声音，尝试 WAV。这个文件不需要 MP3 解码器。</p>
 <audio id="wav" controls preload="metadata"><source src="./diagnostics/android44-tone-v3.wav" type="audio/wav"></audio>
-<p><a class="link" href="./diagnostics/android44-tone-v3.wav">直接打开 WAV 文件</a></p>
+<p><button id="wav-play" type="button">备用：直接播放 WAV</button><a class="link" href="./diagnostics/android44-tone-v3.wav">直接打开 WAV 文件</a></p>
 <div id="wav-result">尚未测试 WAV</div>
 </div>
 <div class="card">
@@ -112,6 +112,13 @@ for(var wi=0;wi<wavEvents.length;wi++){
    if(type!=='timeupdate')add('WAV '+type);
  },false);})(wavEvents[wi]);
 }
+document.getElementById('wav-play').onclick=function(){
+ add('WAV user-direct-play');
+ try{
+   var result=wav.play();
+   if(result && typeof result.catch==='function')result.catch(function(e){add('WAV play rejected '+String(e.message||e));});
+ }catch(e){add('WAV play exception '+String(e.message||e));}
+};
 document.getElementById('web-audio-test').onclick=function(){
  var status=document.getElementById('web-audio-status');
  var Context=window.AudioContext||window.webkitAudioContext;
