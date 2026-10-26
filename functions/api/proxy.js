@@ -698,6 +698,21 @@ function copyResponseHeaders(source, request) {
     headers.set('Content-Disposition', 'attachment');
     headers.set('Content-Security-Policy', 'sandbox');
   }
+  // Chromium 33 (Android 4.4) can require a length-bounded 206 to
+  // initialize its native MP3 player. Keep byte-range framing intact.
+  var contentRange = String(source.headers.get('Content-Range') || '');
+  var rangeMatch = /^bytes (\d+)-(\d+)\/(?:\d+|\*)$/i.exec(contentRange);
+  if (source.status === 206 && rangeMatch) {
+    var mediaLength = Number(rangeMatch[2]) - Number(rangeMatch[1]) + 1;
+    if (isFinite(mediaLength) && mediaLength > 0) {
+      headers.set('Content-Length', String(mediaLength));
+      headers.set('Accept-Ranges', 'bytes');
+    }
+  }
+  if ((!contentType || /application\/octet-stream/.test(contentType)) &&
+      /[.]mp3(?:[?#]|$)/i.test(String(new URL(request.url).searchParams.get('url') || ''))) {
+    headers.set('Content-Type', 'audio/mpeg');
+  }
   headers.set('X-Content-Type-Options', 'nosniff');
   headers.set('Cache-Control', 'no-store');
   var cors = corsHeaders(request);
