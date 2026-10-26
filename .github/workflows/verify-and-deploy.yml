@@ -204,6 +204,15 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Install pinned FFmpeg encoder for production artifacts
+        run: npm install --no-save --no-audit --no-fund @ffmpeg-installer/ffmpeg@1.1.0
+
+      - name: Generate production MP3 and WAV diagnostic files
+        run: |
+          node scripts/generate-android44-audio.mjs
+          test -s diagnostics/android44-tone-v3.mp3
+          test -s diagnostics/android44-tone-v3.wav
+
       - name: Prepare bundled legacy Babel
         run: |
           mkdir -p vendor
