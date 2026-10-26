@@ -11,6 +11,7 @@ function reply(value, status = 200) {
   return new Response(JSON.stringify(value), { status, headers: JSON_HEADERS })
 }
 function num(value) {
+  if (value == null || value === '') return null
   const n = Number(value)
   return Number.isFinite(n) && n >= 0 && n <= 1e7 ? Math.round(n * 100) / 100 : null
 }
