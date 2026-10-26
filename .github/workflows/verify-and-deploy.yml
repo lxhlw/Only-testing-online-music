@@ -61,6 +61,8 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check src/app.js
+          node --check src/android-external-audio.js
+          node --check scripts/test-android-external-intent-browser.mjs
           node --check src/lx-runtime.js
           node --check src/music-library.js
           node --check src/music-lyrics.js
@@ -116,6 +118,9 @@ jobs:
 
       - name: Verify genuine MP3/WAV decoding and playback progress
         run: node scripts/test-android44-encoded-media-browser.mjs
+
+      - name: Verify manual Android external audio Intent handoff
+        run: node scripts/test-android-external-intent-browser.mjs
 
       - name: Verify no-copy Android 4.4 diagnostic report UI
         run: node scripts/test-diagnostic-report-browser.mjs
@@ -305,6 +310,11 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
         run: node scripts/test-android44-encoded-media-browser.mjs
+
+      - name: Verify deployed manual Android native-player audio handoff
+        env:
+          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
+        run: node scripts/test-android-external-intent-browser.mjs
 
       - name: Verify deployed no-copy report card
         env:

@@ -742,6 +742,15 @@
     return current < Math.max(8, expected * 0.30);
   }
 
+  function updateExternalPlayerUrl(mediaUrl) {
+    if (!LEGACY_NATIVE_MEDIA) return;
+    var link = document.getElementById('legacy-external-player');
+    if (!link) return;
+    var ok = global.LXAndroidExternalAudio &&
+      global.LXAndroidExternalAudio.attachLink(link, mediaUrl, 'audio/mpeg');
+    link.textContent = ok ? '尝试交给 Android 系统播放器' : '系统播放器（等歌曲地址）';
+  }
+
   function useResolvedUrl(
     url,
     quality,
@@ -766,6 +775,7 @@
     playbackState.manualPlaybackRequired = LEGACY_NATIVE_MEDIA;
     playbackState.url = playableUrl;
     playbackState.sourceUrl = url;
+    updateExternalPlayerUrl(playableUrl);
     playbackState.transport = playableUrl === String(url || '') ? 'direct' : 'proxy';
     playbackState.lastForceProxy = forceProxy === true;
 
@@ -1245,6 +1255,7 @@
     }
 
     playbackToken += 1;
+    updateExternalPlayerUrl('');
     var token = playbackToken;
     playbackState = {
       token: token,
@@ -1732,8 +1743,19 @@
       if (manualPanel) manualPanel.className='legacy-media-panel';
       var proxyBtn=document.getElementById('legacy-proxy-btn');
       var directBtn=document.getElementById('legacy-direct-btn');
+      var externalLink=document.getElementById('legacy-external-player');
       if (proxyBtn)proxyBtn.onclick=function(){retryLegacyStream(false);};
       if (directBtn)directBtn.onclick=function(){retryLegacyStream(true);};
+      if (externalLink)externalLink.onclick=function(event){
+        if (externalLink.getAttribute('aria-disabled')==='true') {
+          if (event && event.preventDefault)event.preventDefault();
+          setStatus('请先选择歌曲，等待音频地址解析完成。', 'warn');
+          return false;
+        }
+        // Native handoff is outside browser control. A click is NOT proof
+        // that Android launched an app, obtained media or played audio.
+        setStatus('已尝试唤起 Android 系统播放器。若没有弹出应用选择器，请在“系统播放器测试”中使用直接音频地址尝试。', 'warn');
+      };
     }
     if (audio) {
       if (global.LXPlayerControls) {
