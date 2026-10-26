@@ -1,0 +1,24 @@
+plugins {
+    id 'com.android.application'
+}
+android {
+    namespace 'com.lxmusic.legacy'
+    compileSdk 33
+    defaultConfig {
+        applicationId 'com.lxmusic.legacy'
+        minSdk 19
+        targetSdk 28
+        versionCode 1
+        versionName '0.1.0-beta'
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    buildTypes {
+        debug { minifyEnabled false }
+        release { minifyEnabled false }
+    }
+    lint { abortOnError true }
+}
+dependencies { testImplementation 'junit:junit:4.13.2' }
