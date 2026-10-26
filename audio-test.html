@@ -18,20 +18,20 @@ a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all
 <body><main>
 <a href="./">← 返回 LX Music Web</a>
 <h1>Android 4.4 / Via 真实播放自检</h1>
-<p>这是<strong>独立 MP3 测试</strong>，不调用任何第三方音源。本次使用完整编码的 <strong>MPEG-1 Layer III / 44.1 kHz / 96 kbps</strong> 四秒测试音（v7 强制 Data URI 与纯本地 PCM 测试）。新增不使用系统下载管理器的“网页内读取”与内存播放测试，并保留 MP3、WAV 的 HTTP 206 检测。</p>
+<p>这是<strong>独立 MP3 测试</strong>，不调用任何第三方音源。本次使用完整编码的 <strong>MPEG-1 Layer III / 44.1 kHz / 96 kbps</strong> 四秒测试音（v8 一键诊断报告）。新增不使用系统下载管理器的“网页内读取”与内存播放测试，并保留 MP3、WAV 的 HTTP 206 检测。</p>
 <div class="card">
 <h2>第一步：测试真实编码的 MP3（约 4 秒）</h2>
 <p>请直接点击下面灰色<strong>原生音频控件</strong>里的播放三角形 ▶。如果仍然点不了，再尝试下面两个备用入口。</p>
-<audio id="tone" controls preload="metadata"><source src="./api/legacy-audio?type=mp3&v=7" type="audio/mpeg"></audio>
-<p><button id="manual-play" type="button">旧设备备用：直接播放 MP3</button><a class="link" href="./api/legacy-audio?type=mp3&v=7">直接打开 MP3 文件</a><a class="link" href="./api/legacy-audio?type=mp3&download=1&v=7">下载 MP3，交给系统播放器</a></p>
+<audio id="tone" controls preload="metadata"><source src="./api/legacy-audio?type=mp3&v=8" type="audio/mpeg"></audio>
+<p><button id="manual-play" type="button">旧设备备用：直接播放 MP3</button><a class="link" href="./api/legacy-audio?type=mp3&v=8">直接打开 MP3 文件</a><a class="link" href="./api/legacy-audio?type=mp3&download=1&v=8">下载 MP3，交给系统播放器</a></p>
 <div id="result" role="status">尚未测试，请点击音频控件 ▶</div>
 <small>声音应持续约 4 秒。网页检测到 playing 不等于已听到声音，请按实际听觉判断。</small>
 </div>
 <div class="card">
 <h2>第二步：测试独立 PCM WAV</h2>
 <p>如果 MP3 没声音，尝试 WAV。这个文件不需要 MP3 解码器。</p>
-<audio id="wav" controls preload="metadata"><source src="./api/legacy-audio?type=wav&v=7" type="audio/wav"></audio>
-<p><button id="wav-play" type="button">备用：直接播放 WAV</button><a class="link" href="./api/legacy-audio?type=wav&v=7">直接打开 WAV 文件</a><a class="link" href="./api/legacy-audio?type=wav&download=1&v=7">下载 WAV，交给系统播放器</a></p>
+<audio id="wav" controls preload="metadata"><source src="./api/legacy-audio?type=wav&v=8" type="audio/wav"></audio>
+<p><button id="wav-play" type="button">备用：直接播放 WAV</button><a class="link" href="./api/legacy-audio?type=wav&v=8">直接打开 WAV 文件</a><a class="link" href="./api/legacy-audio?type=wav&download=1&v=8">下载 WAV，交给系统播放器</a></p>
 <div id="wav-result">尚未测试 WAV</div>
 </div>
 <div class="card" id="inpage-card">
@@ -64,12 +64,19 @@ a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all
 <p id="network-status">尚未检查</p>
 <small>新的分段音频接口应该显示 HTTP 206、audio/mpeg、Accept-Ranges: bytes。HTTP 206 仍不代表设备已出声。</small>
 </div>
-<div class="card">
-<h2>第五步：复制诊断结果</h2>
-<p>把以下结果复制发给我，就能区分“解码不支持 / 网络传输失败 / 浏览器拦截播放”。没有保存或上传音源播放地址。</p>
+<div class="card" id="quick-report-card">
+<h2>第五步：一键生成诊断报告（无需复制文字）</h2>
+<p>完成播放测试后，点击下面的按钮即可。如果本站已配置诊断存储，将自动上传精简结果并生成24小时有效的报告编号；否则直接显示适合拍照的诊断卡片。</p>
+<p><label for="audible-choice">实际听到声音了吗？</label>
+<select id="audible-choice"><option value="unknown">尚未确认</option><option value="no">没有声音</option><option value="yes">听到声音</option></select></p>
+<button id="quick-report" type="button">一键生成报告 / 尝试上传</button>
+<p id="quick-report-status" role="status">无需将平板内的长文字复制到电脑。直接把生成的诊断卡片拍照发给我即可。</p>
+<pre id="quick-report-summary" style="font-size:15px;line-height:1.65;max-height:none;white-space:pre-wrap">点击上方按钮自动汇总测试结果。</pre>
+<small>隐私：仅在点击按钮后尝试上传。报告不包含歌曲、播放地址或完整浏览器日志。上传成功后，凭报告编号可在24小时内查看；切勿公开分享编号。</small>
+<details><summary>展开完整本地诊断（可选）</summary>
 <pre id="log">初始化中...</pre>
-<button id="copy" type="button">复制诊断文字</button>
-<small id="copy-tip"></small>
+<button id="copy" type="button">复制诊断文字（可选）</button><small id="copy-tip"></small>
+</details>
 </div>
 <div class="card">
 <h2>怎么判断？</h2>
@@ -86,7 +93,7 @@ a{color:#178a57}pre{background:#f1f7f3;white-space:pre-wrap;word-break:break-all
 (function(){
 'use strict';
 var player=document.getElementById('tone'),wav=document.getElementById('wav'),log=document.getElementById('log'),events=[],network='not-checked';
-var mediaUrl='./api/legacy-audio?type=mp3&v=7';
+var mediaUrl='./api/legacy-audio?type=mp3&v=8';
 var inpageResults={mp3:'not-run',wav:'not-run'};
 var inpageUrls={mp3:null,wav:null};
 var inpagePayloads={mp3:null,wav:null};
@@ -218,7 +225,7 @@ function makeInPageMediaUrl(bytes,type){
 // ES5-compatible diagnostic for the Android 4.4 browser network engine.
 function inPageLoad(kind){
  var result=document.getElementById('xhr-result');
- var url='./api/legacy-audio?type='+kind+'&v=7&transport=xhr';
+ var url='./api/legacy-audio?type='+kind+'&v=8&transport=xhr';
  var type=kind==='mp3'?'audio/mpeg':'audio/wav';
  var old=inpageRequests[kind];
  if(old&&old.readyState!==4)try{old.abort()}catch(e){}
@@ -459,6 +466,84 @@ document.getElementById('network-status').textContent=network;draw();
 xhr.ontimeout=function(){network='TIMEOUT';document.getElementById('network-status').textContent=network;draw()};
 xhr.onerror=function(){network='XHR ERROR';document.getElementById('network-status').textContent=network;draw()};
 xhr.send(null);
+};
+// A compact visual photo card is always available, including when KV is
+// unconfigured. Consent is explicit: no upload happens until button click.
+function audioSnapshot(a){
+ return {time:Number(a.currentTime||0),duration:Number(a.duration),
+   error:a.error?a.error.code:0,ready:a.readyState,network:a.networkState,
+   paused:a.paused};
+}
+function diagnosticPayload(){
+ var agent=navigator.userAgent||'';
+ var android=/Android\\s+([0-9.]+)/i.exec(agent);
+ var chrome=/Chrome\\/([0-9.]+)/i.exec(agent);
+ var audible=document.getElementById('audible-choice').value;
+ return {schema:1,
+   platform:{android:android?android[1]:'unknown',chrome:chrome?chrome[1]:'unknown'},
+   audio:{mp3:audioSnapshot(player),wav:audioSnapshot(wav),local:audioSnapshot(tinyAudio)},
+   transfer:{mp3:inpageResults.mp3,wav:inpageResults.wav,
+     mp3Method:inpageMethods.mp3,wavMethod:inpageMethods.wav},
+   features:{audioContext:!!(window.AudioContext||window.webkitAudioContext),
+     blob:typeof window.Blob==='function',dataUri:typeof window.btoa==='function'},
+   observed:{audible:audible==='yes'?true:audible==='no'?false:null}};
+}
+function compactState(name,a){
+ var time=Number(a.time)||0, duration=a.duration;
+ return name+': '+time.toFixed(2)+'s / '+
+  (isFinite(duration)?Number(duration).toFixed(2)+'s':'未知')+
+  ', 错误 '+a.error+', 就绪 '+a.ready+', 网络 '+a.network;
+}
+function reportCard(payload,link,id){
+ var a=payload.audio,platform=payload.platform;
+ return [
+ 'LX MUSIC WEB / VIA 音频诊断 V8',
+ 'Android '+platform.android+' / Chrome '+platform.chrome,
+ '实际声音: '+(payload.observed.audible===false?'没有':payload.observed.audible===true?'有':'未确认'),
+ compactState('MP3',a.mp3),
+ compactState('WAV',a.wav),
+ compactState('本地WAV',a.local),
+ '网页MP3读取: '+String(payload.transfer.mp3).slice(0,85),
+ '网页WAV读取: '+String(payload.transfer.wav).slice(0,85),
+ '播放地址 MP3/WAV: '+payload.transfer.mp3Method+' / '+payload.transfer.wavMethod,
+ 'Web Audio: '+(payload.features.audioContext?'支持':'不支持'),
+ id?'报告编号: '+id:'报告未上传：此照片就是诊断结果',
+ link?'报告链接: '+link:'请直接拍摄本卡片发给 ChatGPT'
+ ].join('\\n');
+}
+document.getElementById('quick-report').onclick=function(){
+ var payload=diagnosticPayload();
+ var summary=document.getElementById('quick-report-summary');
+ var message=document.getElementById('quick-report-status');
+ summary.textContent=reportCard(payload,null,null);
+ message.textContent='诊断卡片已生成。正在尝试安全上传；即使失败，也可直接拍照发给我。';
+ var xhr=new XMLHttpRequest(),completed=false;
+ function finish(messageText){
+   if(completed)return;
+   completed=true;
+   message.textContent=messageText;
+ }
+ xhr.open('POST','./api/diagnostic-report',true);
+ xhr.timeout=12000;
+ xhr.setRequestHeader('Content-Type','application/json');
+ xhr.setRequestHeader('X-LX-Diagnostic','1');
+ xhr.onreadystatechange=function(){
+   if(xhr.readyState!==4||completed)return;
+   if(xhr.status===201){
+     try{
+       var receipt=JSON.parse(xhr.responseText);
+       if(!/^[a-f0-9]{24}$/.test(receipt.id||''))throw new Error('invalid receipt');
+       summary.textContent=reportCard(payload,receipt.url,receipt.id);
+       finish('报告已上传保存24小时。拍下报告编号发给我即可，我可以通过该编号查询。');
+       return;
+     }catch(e){}
+   }
+   finish('当前无法保存在线报告（HTTP '+xhr.status+'）。诊断卡片已经生成，请直接拍照发给我，无需复制文字。');
+ };
+ xhr.onerror=function(){finish('上传连接不可用。请拍照发送上方诊断卡片，无需复制。')};
+ xhr.ontimeout=function(){finish('上传超时。请拍照发送上方诊断卡片，无需复制。')};
+ try{xhr.send(JSON.stringify(payload))}
+ catch(e){finish('浏览器无法上传。请拍照发送上方诊断卡片，无需复制。')}
 };
 document.getElementById('copy').onclick=function(){
 var text=log.textContent;
