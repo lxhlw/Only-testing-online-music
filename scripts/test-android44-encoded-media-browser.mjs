@@ -121,6 +121,19 @@ try{
    document.getElementById('wav').currentSrc.indexOf('blob:')===0 &&
    document.getElementById('wav').currentTime>0.10,null,{timeout:10000})
  console.log('PASS: Via in-page XHR WAV fetched full bytes and played from blob')
+ // Regression: a partial response must never enable Blob playback.
+ await page.route('**/api/legacy-audio?type=mp3&*transport=xhr',async route=>{
+   await route.fulfill({status:206,contentType:'audio/mpeg',
+     headers:{'Content-Range':'bytes 0-1023/99999','Content-Length':'1024'},
+     body:Buffer.alloc(1024,0xff)})
+ })
+ await page.locator('#xhr-mp3').click()
+ await page.waitForFunction(()=>
+   document.getElementById('xhr-result').textContent.includes('无法处理'),null,{timeout:8000})
+ assert.equal(await page.locator('#blob-mp3').isDisabled(),true)
+ assert.match(await page.locator('#log').textContent(),/audio truncated|incomplete HTTP 206/)
+ await page.unroute('**/api/legacy-audio?type=mp3&*transport=xhr')
+ console.log('PASS: truncated XHR cannot enable Blob playback')
  await page.locator('#web-audio-test').click()
  const status=await page.locator('#web-audio-status').textContent()
  assert.match(status,/已要求 Web Audio/)
