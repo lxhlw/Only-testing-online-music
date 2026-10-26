@@ -22,7 +22,11 @@
  function load(url,id,onChange) {
    if(!available)return false;
    stop();
-   if(!/^https:\/\//i.test(String(url||'')) && !/^\/api\//.test(String(url||''))) {
+   var target=String(url||'');
+   var localTest=root.location && root.location.protocol==='http:' &&
+      /^(127[.]0[.]0[.]1|localhost)$/.test(root.location.hostname) &&
+      target.indexOf(root.location.origin+'/')===0;
+   if(!/^https:\/\//i.test(target) && !/^\/api\//.test(target) && !localTest) {
      if(onChange)onChange('error',0,0);
      return false;
    }
