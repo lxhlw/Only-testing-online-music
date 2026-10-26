@@ -210,6 +210,16 @@ jobs:
           cp node_modules/@babel/standalone/babel.min.js vendor/babel.min.js
           node scripts/test-bundled-babel.mjs
 
+      - name: Include generated media assets in Pages upload
+        run: |
+          test -s diagnostics/android44-tone-v3.mp3
+          test -s diagnostics/android44-tone-v3.wav
+          # Wrangler scans Git-based asset lists; ensure files created after
+          # checkout are discoverable by its deployment asset collector.
+          git add -f diagnostics/android44-tone-v3.mp3 diagnostics/android44-tone-v3.wav
+          git ls-files diagnostics
+          stat -c '%n %s bytes' diagnostics/android44-tone-v3.mp3 diagnostics/android44-tone-v3.wav
+
       - name: Deploy to Cloudflare Pages
         id: deploy
         env:
