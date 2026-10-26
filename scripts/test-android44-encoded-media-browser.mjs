@@ -101,7 +101,7 @@ try{
  // separate system DownloadManager cannot open HTTPS downloads.
  await page.locator('#xhr-mp3').click()
  await page.waitForFunction(()=>
-   document.getElementById('xhr-result').textContent.includes('完整音频') &&
+   document.getElementById('log').textContent.includes('Via 网页读取 MP3: SUCCESS') &&
    !document.getElementById('blob-mp3').disabled,null,{timeout:8000})
  const inpageMp3=await page.locator('#log').textContent()
  assert.match(inpageMp3,/Via 网页读取 MP3: SUCCESS \d+ bytes/)
@@ -112,7 +112,7 @@ try{
  console.log('PASS: Via in-page XHR MP3 fetched full bytes and played from blob')
  await page.locator('#xhr-wav').click()
  await page.waitForFunction(()=>
-   document.getElementById('xhr-result').textContent.includes('完整音频') &&
+   document.getElementById('log').textContent.includes('Via 网页读取 WAV: SUCCESS') &&
    !document.getElementById('blob-wav').disabled,null,{timeout:8000})
  const inpageWav=await page.locator('#log').textContent()
  assert.match(inpageWav,/Via 网页读取 WAV: SUCCESS \d+ bytes/)
