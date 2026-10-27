@@ -114,6 +114,10 @@ public final class MainActivity extends Activity {
         WebSettings settings = web.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
+        // Bundled first-party scripts must not be replaced by WebView's old
+        // v0.5 HTTP cache after an APK upgrade. Keep localStorage untouched.
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        web.clearCache(true);
         settings.setAllowFileAccess(false);
         settings.setSavePassword(false);
         web.setWebChromeClient(new WebChromeClient() {
@@ -190,7 +194,7 @@ public final class MainActivity extends Activity {
         shell.addView(web, new LinearLayout.LayoutParams(-1, 0, 1));
         setContentView(shell);
         ui.post(progressTick);
-        web.loadUrl(ORIGIN + "/?native-companion=1");
+        web.loadUrl(ORIGIN + "/?native-companion=1&apk-webui=6");
     }
 
     private void inspectWebButtons(final boolean manual) {
