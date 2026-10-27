@@ -644,6 +644,15 @@
     };
   }
 
+  function addTencentFileType(types, type, bytes) {
+    var n = Number(bytes);
+    if (!isFinite(n) || n <= 0) return;
+    types.push({
+      type: type,
+      size: String(Math.round(n / 1024 / 1024 * 10) / 10) + 'M'
+    });
+  }
+
   function buildTencentList(rawList) {
     var list = [];
     if (!Array.isArray(rawList)) return list;
@@ -654,18 +663,10 @@
       if (!file.media_mid) continue;
 
       var types = [];
-      function addType(type, bytes) {
-        var n = Number(bytes);
-        if (!isFinite(n) || n <= 0) return;
-        types.push({
-          type: type,
-          size: String(Math.round(n / 1024 / 1024 * 10) / 10) + 'M'
-        });
-      }
-      addType('128k', file.size_128mp3);
-      addType('320k', file.size_320mp3);
-      addType('flac', file.size_flac);
-      addType('flac24bit', file.size_hires);
+      addTencentFileType(types, '128k', file.size_128mp3);
+      addTencentFileType(types, '320k', file.size_320mp3);
+      addTencentFileType(types, 'flac', file.size_flac);
+      addTencentFileType(types, 'flac24bit', file.size_hires);
 
       var singerNames = [];
       var singers = Array.isArray(item.singer) ? item.singer : [];
