@@ -74,13 +74,8 @@ public final class ModernPageInterceptor {
             URL u = new URL(target);
             String path = u.getPath();
             if (path == null || path.length() == 0 || "/".equals(path)) path = "/index.html";
-            String relative;
-            if ("/index.html".equals(path)) relative = "index.html";
-            else if ("/styles.css".equals(path)) relative = "styles.css";
-            else if ("/vendor/forge.min.js".equals(path)) relative = "vendor/forge.min.js";
-            else if (path.matches("^/src/[A-Za-z0-9._-]+\\\\.js$") &&
-                    !path.contains("..")) relative = path.substring(1);
-            else return null;
+            String relative = BundledAssetPath.resolve(path);
+            if (relative == null) return null;
             InputStream resource = appAssets.open("web/" + relative);
             String type = relative.endsWith(".css") ? "text/css" :
                     relative.endsWith(".js") ? "application/javascript" : "text/html";
