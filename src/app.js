@@ -782,7 +782,7 @@
       clearPlaybackConfirmTimer(state);
       clearMiguPlaybackDeadline(state);
       if (eventName === 'playing')
-        setStatus('Android 原生播放器开始播放；歌曲地址解析约 ' +
+        setStatus('Android 原生 MediaPlayer 已开始播放；歌曲地址解析约 ' +
           (Number(state.addressResolveMs || 0) / 1000).toFixed(1) +
           ' 秒。播放进度以原生播放器为准。', 'ready');
       // The Phase-1 web progress controls are informational; use the
