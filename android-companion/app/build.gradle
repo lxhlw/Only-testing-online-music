@@ -8,8 +8,8 @@ android {
         applicationId 'dev.lxmusic.legacy'
         minSdk 19
         targetSdk 28
-        versionCode 15
-        versionName '0.15.0-fast-start'
+        versionCode 16
+        versionName '0.16.0-fast-clean'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
