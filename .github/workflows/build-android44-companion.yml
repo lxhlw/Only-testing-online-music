@@ -10,6 +10,7 @@ on:
       - 'scripts/test-android44-flower-optin-retry-browser.mjs'
       - 'scripts/bundle-android44-webui.mjs'
       - 'scripts/test-android44-apk-babel-offline-browser.mjs'
+      - 'scripts/diagnose-android44-babel-runtime.mjs'
       - 'scripts/test-chrome30-strict-syntax.mjs'
       - 'package.json'
       - 'scripts/test-android44-bundled-ui-browser.mjs'
@@ -87,7 +88,7 @@ jobs:
       - name: Diagnose APK Babel syntax on Chrome 30
         run: |
           node --input-type=module -e "import {readFileSync} from 'node:fs'; import {parse} from 'acorn'; const s=readFileSync('android-companion/app/src/main/assets/web/vendor/babel.min.js','utf8'); try {parse(s,{ecmaVersion:5,sourceType:'script'});console.log('BABEL_CHROME30_ES5_PASS '+s.length)} catch(e) {console.error('BABEL_CHROME30_ES5_FAIL '+e.message);process.exitCode=1;}"
-      - name: Diagnose Babel runtime missing Android 4.4 ES6 globals
+      - name: Require Babel conversion with missing Chrome30 native ES6 APIs
         run: node scripts/diagnose-android44-babel-runtime.mjs
       - name: Build signed debug APK
         run: gradle --no-daemon -p android-companion :app:testDebugUnitTest :app:assembleDebug
@@ -100,22 +101,22 @@ jobs:
         run: |
           set -euo pipefail
           APK="android-companion/app/build/outputs/apk/debug/app-debug.apk"
-          for FILE in assets/web/index.html assets/web/styles.css assets/web/src/app.js assets/web/src/source-manager.js assets/web/vendor/forge.min.js assets/web/vendor/babel.min.js; do
+          for FILE in assets/web/index.html assets/web/styles.css assets/web/src/app.js assets/web/src/source-manager.js assets/web/vendor/forge.min.js assets/web/vendor/babel.min.js assets/web/vendor/core-js.min.js; do
             unzip -Z -1 "$APK" | grep -Fx "$FILE"
           done
       - name: Give APK a distinct versioned filename
         run: |
           set -euo pipefail
           ORIGINAL="android-companion/app/build/outputs/apk/debug/app-debug.apk"
-          NAMED="android-companion/LXMusic-Android44-v0.12-LocalBabel.apk"
+          NAMED="android-companion/LXMusic-Android44-v0.13-LegacyBabel.apk"
           cp "$ORIGINAL" "$NAMED"
           cmp "$ORIGINAL" "$NAMED"
           sha256sum "$NAMED"
       - name: Upload named installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LXMusic-Android44-v0.12-LocalBabel
-          path: android-companion/LXMusic-Android44-v0.12-LocalBabel.apk
+          name: LXMusic-Android44-v0.13-LegacyBabel
+          path: android-companion/LXMusic-Android44-v0.13-LegacyBabel.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -125,14 +126,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="android44-local-babel-v012-20261027"
-          NAMED_APK="android-companion/LXMusic-Android44-v0.12-LocalBabel.apk"
-          FRIENDLY_NAME="LXMusic-Android44-v0.12-LocalBabel.apk"
+          TAG="android44-legacy-babel-v013-20261027"
+          NAMED_APK="android-companion/LXMusic-Android44-v0.13-LegacyBabel.apk"
+          FRIENDLY_NAME="LXMusic-Android44-v0.13-LegacyBabel.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" "$NAMED_APK" \
               --target "$GITHUB_SHA" \
-              --title "LX Music Android 4.4 - APK-local Babel for Flower ES2020 source beta 0.12" \
-              --notes "Android 4.4 API19 beta v0.12 bundles pinned Babel inside APK so Flower modern LX scripts can be transpiled without live /api/babel on obsolete WebView. Keeps explicit opt-in Flower retry, strict native HTTPS and proven native sound playback. Must test actual Flower initialization and music on L101. Debug prerelease." \
+              --title "LX Music Android 4.4 - KitKat ES5 polyfills before local Babel beta 0.13" \
+              --notes "Android 4.4 API19 beta v0.13 loads pinned ES5 core-js polyfills before the APK-local Babel 7.29.9 runtime, correcting missing Symbol/Map/Set on Chrome30. APK-local assets no longer depend on initializing the HTTPS CA store. Keeps explicit opt-in Flower retry, strict native HTTPS and proven native sound playback. Must test actual Flower initialization and music on L101. Debug prerelease." \
               --prerelease
           else
             # Repair the previously published Release asset *in place*. Only
