@@ -61,6 +61,7 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check src/app.js
+          node --check scripts/test-resolver-outage-cooldown-browser.mjs
           node --check scripts/test-android44-native-media-url-browser.mjs
           node --check src/android-native-resolver.js
           node --check scripts/test-android44-native-resolver-browser.mjs
@@ -144,6 +145,9 @@ jobs:
 
       - name: Verify native Android 4.4 song URL always uses same-origin proxy
         run: node scripts/test-android44-native-media-url-browser.mjs
+
+      - name: Verify known service outages do not exhaust tablet retry chain
+        run: node scripts/test-resolver-outage-cooldown-browser.mjs
 
       - name: Verify Android4.4 native resolver GET POST status behavior
         run: node scripts/test-android44-native-resolver-browser.mjs
