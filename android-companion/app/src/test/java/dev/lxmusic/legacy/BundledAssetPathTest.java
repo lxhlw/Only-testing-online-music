@@ -9,6 +9,7 @@ public final class BundledAssetPathTest {
         assertEquals("index.html",BundledAssetPath.resolve("/index.html"));
         assertEquals("styles.css",BundledAssetPath.resolve("/styles.css"));
         assertEquals("vendor/forge.min.js",BundledAssetPath.resolve("/vendor/forge.min.js"));
+        assertEquals("vendor/babel.min.js",BundledAssetPath.resolve("/vendor/babel.min.js"));
         assertEquals("src/app.js",BundledAssetPath.resolve("/src/app.js"));
         assertEquals("src/music-search.js",BundledAssetPath.resolve("/src/music-search.js"));
         assertEquals("src/source-manager.js",BundledAssetPath.resolve("/src/source-manager.js"));

@@ -29,3 +29,17 @@ for(const name of files){
 }
 console.log('PASS: packaged '+files.length+' synchronized first-party UI files ('+
   files.reduce((n,f)=>n+statSync(f).size,0)+' bytes), including '+scriptTags.length+' scripts')
+
+ // Babel is *not* in index.html. Only the Android companion loads it on-demand
+ // after the user imports an ES2020 LX script. Pin to npm's exact locked
+ // dependency, package it as an asset, and never fetch its CDN at runtime.
+const babelSource='node_modules/@babel/standalone/babel.min.js'
+const babelTarget=join(destination,'vendor/babel.min.js')
+assert.ok(existsSync(babelSource),'Run npm install before bundling Babel')
+const babelSize=statSync(babelSource).size
+assert.ok(babelSize>500000&&babelSize<10000000,'Unexpected Babel artifact size')
+mkdirSync(dirname(babelTarget),{recursive:true})
+copyFileSync(babelSource,babelTarget)
+assert.deepEqual(readFileSync(babelSource),readFileSync(babelTarget),
+  'APK Babel must match the pinned npm version byte-for-byte')
+console.log('PASS: APK-local Babel standalone '+babelSize+' bytes; Flower import will not depend on live /api/babel')
