@@ -10,6 +10,7 @@ public final class BundledAssetPath {
         if ("/styles.css".equals(path)) return "styles.css";
         if ("/vendor/forge.min.js".equals(path)) return "vendor/forge.min.js";
         if ("/vendor/babel.min.js".equals(path)) return "vendor/babel.min.js";
+        if ("/vendor/core-js.min.js".equals(path)) return "vendor/core-js.min.js";
         // Avoid fragile escaped regex dots; [.] means a literal period.
         if (path.matches("^/src/[A-Za-z0-9._-]+[.]js$") &&
                 path.indexOf("..") < 0) {
