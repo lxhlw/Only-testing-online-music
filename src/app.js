@@ -858,7 +858,7 @@
         handleAudioError(token, playableUrl);
         return;
       }
-      setStatus('已通过本站 HTTPS 代理交给 Android 原生播放器，正在获取歌曲……', 'warn');
+      setStatus('原生播放组件已使用本站 HTTPS 安全代理，正在获取歌曲……', 'warn');
       try { global.LXNativeAudio.play(playableUrl, token); }
       catch (error) {
         setStatus('Android 原生桥未能启动：' + escapeHtml(String(error)), 'fail');
