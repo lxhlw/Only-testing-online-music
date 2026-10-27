@@ -24,10 +24,16 @@ try {
   await page.goto(base+'/?native-companion=1',{waitUntil:'domcontentloaded'})
   await page.waitForFunction(()=>window.OnlyTestingMusicApp&&window.LXMusicSearch)
   await page.evaluate(()=>{
-    window.LXSourceManager.getActive=function(){return null}
-    window.LXMusicSearch.resolveMusicUrl=function(source,info,quality,callback){
-      callback(null,{url:'https://audio.example.test/m/123.mp3?expires=123&token=abc',
-        provider:'gd-studio'})
+    window.LXSourceManager.getActive=function(){return {
+      id:'verified-flower',name:'野花🌷',
+      url:'https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js',
+      inited:true,runtime:{},sources:{wy:{actions:['musicUrl'],qualitys:['128k']}}
+    }}
+    window.LXSourceManager.requestAction=function(source,action,info,callback){
+      callback(null,{url:'https://audio.example.test/m/123.mp3?expires=123&token=abc'})
+    }
+    window.LXMusicSearch.resolveMusicUrl=function(){
+      throw new Error('Legacy provider fallback must not run in Flower-only APK')
     }
     window.OnlyTestingMusicApp.playMusic({
       id:'123',name:'Synthetic 128k mp3',source:'wy',singer:'Test Artist',

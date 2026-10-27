@@ -124,7 +124,9 @@
       buttons.appendChild(remove);
 
       box.innerHTML = meta;
-      box.appendChild(buttons);
+      // There is exactly one playback LX source in the native APK; exposing
+      // 'switch' and 'delete' would just break the working Flower session.
+      if (!NATIVE_COMPANION) box.appendChild(buttons);
       listEl.appendChild(box);
     }
 
@@ -820,15 +822,26 @@
     } else if (eventName === 'paused') {
       state.playing = false;
       syncNativeTransportIcon(false);
-      setStatus('Android 原生播放器已暂停；使用 APK 顶部按钮继续。', 'warn');
+      setStatus('原生播放器已暂停；点击绿色播放按钮继续。', 'warn');
     } else if (eventName === 'completed') {
       state.playing = false;
       syncNativeTransportIcon(false);
       setStatus('Android 原生播放器已完成当前歌曲。', 'ready');
     } else if (eventName === 'error') {
+      // Always end loading/playing on native failure, including failed HTTP
+      // media proxies and unsupported codec contents. Do not resurrect old
+      // multi-provider fallback or display a misleading "still playing" icon.
+      state.playing = false;
       syncNativeTransportIcon(false);
-      setStatus('Android 原生音频读取或解码失败，尝试其他可用音源……', 'warn');
       handleAudioError(state.token, state.url);
+      if (NATIVE_COMPANION) {
+        var errorId = Number(positionMs || 0);
+        var extraId = Number(durationMs || 0);
+        var detail = errorId || extraId ?
+          '（MediaPlayer ' + errorId + ' / ' + extraId + '）' : '';
+        setStatus('野花已返回播放地址，但音频下载或播放失败' + detail +
+          '。请重试或换一首歌曲；不会切换其他音源。', 'fail');
+      }
     }
   };
 
@@ -1256,6 +1269,9 @@
     var settings = getPlaySettings();
     if (token !== playbackToken) return;
 
+    // Only one Flower quality per click on Android 4.4: no automatic
+    // cross-source retries or repeated multibit-rate waterfalls.
+    if (NATIVE_COMPANION && plan.length > 1) plan = [plan[0]];
     var quality = plan[index];
     playbackState.index = index;
     playbackState.quality = quality;
@@ -1269,7 +1285,7 @@
     var sourceTimer = null;
     var fastRaceTimer = null;
     var fastRaceStarted = false;
-    var fastEnabled = NATIVE_COMPANION && !playbackState.forceFullResolve &&
+    var fastEnabled = false && NATIVE_COMPANION && !playbackState.forceFullResolve &&
       !!(active && String(active.url || '').indexOf('pdone/lx-music-source/main/flower/latest.js') >= 0 &&
       active.inited && active.runtime &&
       active.sources && active.sources[source] &&
@@ -1312,6 +1328,11 @@
     function runFallback(reason) {
       if (!isCurrentAttempt() || !finishAttempt()) return;
 
+      if (NATIVE_COMPANION) {
+        setStatus('野花音源未取得可播放地址：' + escapeHtml(reason || '解析失败') +
+          '。请重试或选择另一首歌曲。', 'fail');
+        return;
+      }
       if (reason) setStatus(reason, 'warn');
 
       if (global.LXMusicSearch && typeof global.LXMusicSearch.resolveMusicUrl === 'function') {
@@ -1403,6 +1424,37 @@
     // channel's native resolver when the Flower source cannot respond.
     if (!active || !active.inited || !active.runtime ||
         !active.sources || !active.sources[source]) {
+      if (NATIVE_COMPANION) {
+        // First installation and Babel startup complete asynchronously.
+        // Allow one bounded wait for Flower to be ready, with no fallback.
+        var started = Date.now ? Date.now() : new Date().getTime();
+        setStatus('正在准备野花音源，初始化成功后自动解析歌曲……', 'warn');
+        var pollFlower = function () {
+          if (!isCurrentAttempt() || settled) return;
+          var ready = global.LXSourceManager.getActive();
+          if (ready && ready.inited && ready.runtime &&
+              ready.sources && ready.sources[source]) {
+            finishAttempt();
+            requestQuality(music,source,musicInfo,plan,index,token);
+            return;
+          }
+          if (ready && ready.error) {
+            finishAttempt();
+            setStatus('野花音源初始化失败：' + escapeHtml(ready.error) +
+              '。可在设置中重新加载野花。', 'fail');
+            return;
+          }
+          var now = Date.now ? Date.now() : new Date().getTime();
+          if (now-started>=25000) {
+            finishAttempt();
+            setStatus('野花音源尚未准备好，已停止等待。请在设置中重新加载野花。','fail');
+            return;
+          }
+          global.setTimeout(pollFlower,200);
+        };
+        global.setTimeout(pollFlower,200);
+        return;
+      }
       runFallback('该渠道 LX 音源尚未就绪，正在尝试同平台备用解析……');
       return;
     }
@@ -1429,11 +1481,14 @@
     } else {
       sourceTimer = global.setTimeout(function () {
         if (!isCurrentAttempt() || settled) return;
+        if (NATIVE_COMPANION) {
+          return runFallback('野花音源解析超过 18 秒');
+        }
         runFallback(
           '原始音源解析超过 ' + Math.round(SOURCE_RESOLVE_TIMEOUT_MS / 1000)
           + ' 秒，正在切换备用解析器……'
         );
-      }, SOURCE_RESOLVE_TIMEOUT_MS);
+      }, NATIVE_COMPANION ? 18000 : SOURCE_RESOLVE_TIMEOUT_MS);
     }
 
     global.LXSourceManager.requestAction(
@@ -1691,6 +1746,10 @@
       );
     }
 
+    if (NATIVE_COMPANION) {
+      setStatus('野花音源已取得地址，但原生播放器读取失败。请重试或选择另一首。', 'fail');
+      return;
+    }
     if (settings.autoFallback && global.LXMusicSearch &&
         typeof global.LXMusicSearch.resolveMusicUrl === 'function') {
       return global.LXMusicSearch.resolveMusicUrl(
@@ -1999,6 +2058,21 @@
 
   function bind() {
     bindInstallButton();
+    if (NATIVE_COMPANION) {
+      // The APK has exactly one playback source. Hide the old imports,
+      // delete/switch-source controls and misleading diagnostics, but keep
+      // the one useful Flower refresh action.
+      var obsoleteIds=['install-btn','verified-install-btn','sixyin-install-btn',
+        'clear-btn','source-url','runtime-info'];
+      for (var oi=0;oi<obsoleteIds.length;oi++) {
+        var oldControl=document.getElementById(obsoleteIds[oi]);
+        if (oldControl) oldControl.style.display='none';
+      }
+      var sourceUrlLabel=document.querySelector('label[for="source-url"]');
+      if (sourceUrlLabel) sourceUrlLabel.style.display='none';
+      var flowerRefresh=document.getElementById('restore-default-sources-btn');
+      if (flowerRefresh) flowerRefresh.textContent='重新加载野花音源';
+    }
     statusEl = document.getElementById('status');
     listEl = document.getElementById('source-list');
     countEl = document.getElementById('source-count');
@@ -2119,11 +2193,14 @@
     var restoreSourcesButton = document.getElementById('restore-default-sources-btn');
     if (restoreSourcesButton) restoreSourcesButton.onclick = function () {
       restoreSourcesButton.disabled = true;
-      setStatus('正在恢复 Flower 与 Huibq 默认音源，请稍候……');
+      setStatus(NATIVE_COMPANION ? '正在重新加载野花音源……' :
+        '正在恢复 Flower 与 Huibq 默认音源，请稍候……');
       global.LXSourceManager.restoreDefaults(function (err) {
         restoreSourcesButton.disabled = false;
         if (err) setStatus('部分默认音源导入失败：' + escapeHtml(err.message || err), 'warn');
-        else setStatus('默认音源已就绪。可在上方选择当前音源。', 'ready');
+        else setStatus(NATIVE_COMPANION ?
+          '已重新加载野花音源，初始化完成后可以继续播放。' :
+          '默认音源已就绪。可在上方选择当前音源。', 'ready');
       });
     };
 
@@ -2388,7 +2465,13 @@
       global.LXMusicLibrary.addQueue(music);
       renderLibrary();
     },
-    renderLibraryListForExternal: renderLibraryList
+    renderLibraryListForExternal: renderLibraryList,
+    onFlowerBootstrapError: function(error) {
+      if (!NATIVE_COMPANION) return;
+      setStatus('野花音源自动导入失败：' +
+        escapeHtml(error && (error.message || error) || '网络连接失败') +
+        '。请在设置中点击「重新加载野花」。', 'fail');
+    }
   };
 
   var appStarted = false;

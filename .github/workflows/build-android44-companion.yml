@@ -9,7 +9,7 @@ on:
       - 'scripts/test-resolver-outage-cooldown-browser.mjs'
       - 'scripts/test-android44-flower-optin-retry-browser.mjs'
       - 'scripts/test-android44-flower-init-race-browser.mjs'
-      - 'scripts/test-android44-fast-clean-browser.mjs'
+      - 'scripts/test-android44-flower-only-browser.mjs'
       - 'scripts/bundle-android44-webui.mjs'
       - 'scripts/test-android44-apk-babel-offline-browser.mjs'
       - 'scripts/diagnose-android44-babel-runtime.mjs'
@@ -75,9 +75,7 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Check opt-in Flower retry test syntax
         run: |
-          node --check scripts/test-android44-flower-optin-retry-browser.mjs
-          node --check scripts/test-android44-flower-init-race-browser.mjs
-          node --check scripts/test-android44-fast-clean-browser.mjs
+          node --check scripts/test-android44-flower-only-browser.mjs
       - name: Check upstream service outage test syntax
         run: node --check scripts/test-resolver-outage-cooldown-browser.mjs
       - name: Check actual native media URL regression syntax
@@ -108,8 +106,7 @@ jobs:
           done
           if [ "$READY" != 1 ]; then cat /tmp/lx-apk-wrangler.log; exit 1; fi
           node scripts/test-android44-apk-babel-offline-browser.mjs
-          node scripts/test-android44-flower-init-race-browser.mjs
-          node scripts/test-android44-fast-clean-browser.mjs
+          node scripts/test-android44-flower-only-browser.mjs
       - name: Build signed debug APK
         run: gradle --no-daemon -p android-companion :app:testDebugUnitTest :app:assembleDebug
       - name: Check APK existence and min SDK
@@ -128,15 +125,15 @@ jobs:
         run: |
           set -euo pipefail
           ORIGINAL="android-companion/app/build/outputs/apk/debug/app-debug.apk"
-          NAMED="android-companion/LXMusic-Android44-v0.16-FastClean.apk"
+          NAMED="android-companion/LXMusic-Android44-v0.17-FlowerOnly.apk"
           cp "$ORIGINAL" "$NAMED"
           cmp "$ORIGINAL" "$NAMED"
           sha256sum "$NAMED"
       - name: Upload named installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LXMusic-Android44-v0.16-FastClean
-          path: android-companion/LXMusic-Android44-v0.16-FastClean.apk
+          name: LXMusic-Android44-v0.17-FlowerOnly
+          path: android-companion/LXMusic-Android44-v0.17-FlowerOnly.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -146,14 +143,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="android44-fast-clean-v016-20261028"
-          NAMED_APK="android-companion/LXMusic-Android44-v0.16-FastClean.apk"
-          FRIENDLY_NAME="LXMusic-Android44-v0.16-FastClean.apk"
+          TAG="android44-flower-only-v017-20261028"
+          NAMED_APK="android-companion/LXMusic-Android44-v0.17-FlowerOnly.apk"
+          FRIENDLY_NAME="LXMusic-Android44-v0.17-FlowerOnly.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" "$NAMED_APK" \
               --target "$GITHUB_SHA" \
-              --title "LX Music Android 4.4 - Faster 16s parallel song resolving + clean native player beta 0.16" \
-              --notes "Android 4.4 API19 beta v0.16 races existing same-platform resolvers in parallel after 2s Flower delay and caps automatic stalls at 21s; offers opt-in full slower resolver if no playable URL. Hides old test controls and legacy HTML5 player only inside APK and binds mint Play button to native bridge. Retains strict HTTPS, previous working full-download playback, and clear diagnostics. Keeps explicit opt-in Flower retry, strict native HTTPS and proven native sound playback. Must test actual Flower initialization and music on L101. Debug prerelease." \
+              --title "LX Music Android 4.4 - Flower-only default playback with no alternate LX resolvers beta 0.17" \
+              --notes "Android 4.4 API19 beta v0.17 defaults to cached Flower LX source or imports Flower automatically. No Huibq, TuneHub, GD Studio or other playback fallback requests. Search channels remain, and media uses secure first-party proxy and native MediaPlayer. Legacy browser unchanged. Keeps explicit opt-in Flower retry, strict native HTTPS and proven native sound playback. Must test actual Flower initialization and music on L101. Debug prerelease." \
               --prerelease
           else
             # Repair the previously published Release asset *in place*. Only
