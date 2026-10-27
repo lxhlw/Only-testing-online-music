@@ -199,7 +199,7 @@ public final class MainActivity extends Activity {
         shell.addView(web, new LinearLayout.LayoutParams(-1, 0, 1));
         setContentView(shell);
         ui.post(progressTick);
-        web.loadUrl(ORIGIN + "/?native-companion=1&apk-webui=7");
+        web.loadUrl(ORIGIN + "/?native-companion=1&apk-webui=8");
     }
 
     private void inspectWebButtons(final boolean manual) {
