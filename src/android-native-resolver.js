@@ -12,6 +12,17 @@
     var relative=String(url||'');
     if(relative.indexOf(origin+'/api/proxy?url=')!==0)return null;
     relative=relative.substring(origin.length);
+    var encoded=relative.substring('/api/proxy?url='.length);
+    var targetHost='';
+    try {
+      var candidate=decodeURIComponent(encoded);
+      if(encoded.indexOf('&')>=0 || !/^https:\/\//i.test(candidate))return null;
+      targetHost=candidate.split('/')[2].toLowerCase();
+    } catch(err) { return null; }
+    if(targetHost!=='lxmusicapi.onrender.com' &&
+       targetHost!=='music-dl.sayqz.com' &&
+       targetHost!=='music-api.gdstudio.xyz' &&
+       targetHost!=='music.gdstudio.xyz')return null;
     var done=false,id=++sequence;
     if(sequence>100000000)sequence=1;
     id=sequence;
