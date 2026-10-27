@@ -103,23 +103,11 @@ public final class MainActivity extends Activity {
         status.setTextSize(13);
         status.setTextColor(Color.rgb(31, 92, 61));
         status.setPadding(12, 10, 12, 10);
-        status.setText("Android 4.4 原生播放器 / Phase 1：未测试");
+        status.setText("LX Music · 正在准备播放器");
         shell.addView(status, new LinearLayout.LayoutParams(-1, -2));
-        LinearLayout actions = new LinearLayout(this);
-        actions.setOrientation(LinearLayout.HORIZONTAL);
-        actions.addView(button("本地试听", new View.OnClickListener() {
-            @Override public void onClick(View v) { playLocalTone(); }
-        }), new LinearLayout.LayoutParams(0, -2, 1));
-        actions.addView(button("联网试听", new View.OnClickListener() {
-            @Override public void onClick(View v) { playRemote(TONE_URL, -1); }
-        }), new LinearLayout.LayoutParams(0, -2, 1));
-        actions.addView(button("播放/暂停", new View.OnClickListener() {
-            @Override public void onClick(View v) { togglePause(); }
-        }), new LinearLayout.LayoutParams(0, -2, 1));
-        actions.addView(button("检查按钮", new View.OnClickListener() {
-            @Override public void onClick(View v) { inspectWebButtons(true); }
-        }), new LinearLayout.LayoutParams(0, -2, 1));
-        shell.addView(actions);
+        // Production UI: remove obsolete test-tone, button-inspection, and
+        // duplicate play/pause row. Native controls are bound to the mint
+        // player footer; diagnostic routines remain available internally.
         web = new WebView(this);
         WebSettings settings = web.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -209,7 +197,7 @@ public final class MainActivity extends Activity {
         shell.addView(web, new LinearLayout.LayoutParams(-1, 0, 1));
         setContentView(shell);
         ui.post(progressTick);
-        web.loadUrl(ORIGIN + "/?native-companion=1&apk-webui=8");
+        web.loadUrl(ORIGIN + "/?native-companion=1&apk-webui=9");
     }
 
     private void inspectWebButtons(final boolean manual) {
