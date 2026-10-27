@@ -144,8 +144,13 @@ public final class MainActivity extends Activity {
         }
         web.setWebViewClient(new WebViewClient() {
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
-                if (secureWeb != null && ModernPageInterceptor.firstParty(url)) {
-                    return secureWeb.intercept(url);
+                if (ModernPageInterceptor.firstParty(url)) {
+                    // Assets are first-party APK resources, not network requests.
+                    // They must be served even if the strict CA trust initializer
+                    // failed on KitKat. Never weaken HTTPS for API endpoints.
+                    WebResourceResponse local = ModernPageInterceptor.bundledUi(MainActivity.this, url);
+                    if (local != null) return local;
+                    if (secureWeb != null) return secureWeb.intercept(url);
                 }
                 return null;
             }
@@ -194,7 +199,7 @@ public final class MainActivity extends Activity {
         shell.addView(web, new LinearLayout.LayoutParams(-1, 0, 1));
         setContentView(shell);
         ui.post(progressTick);
-        web.loadUrl(ORIGIN + "/?native-companion=1&apk-webui=6");
+        web.loadUrl(ORIGIN + "/?native-companion=1&apk-webui=7");
     }
 
     private void inspectWebButtons(final boolean manual) {
