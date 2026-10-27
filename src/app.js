@@ -1490,6 +1490,8 @@
     } else {
       if (NATIVE_COMPANION) {
         var resolveStarted = Date.now ? Date.now() : new Date().getTime();
+        var initialRequests = active && active.runtime &&
+          active.runtime.__debugRequests ? active.runtime.__debugRequests.length : 0;
         // An upstream Flower request can take substantially longer than 18s.
         // Inform the user instead of discarding a still-live request. Never
         // initiate a Huibq/GD/TuneHub request while this one is pending.
@@ -1500,7 +1502,7 @@
           var activeNow = global.LXSourceManager.getActive();
           var requests = activeNow && activeNow.runtime &&
             activeNow.runtime.__debugRequests;
-          var requestCount = requests && requests.length ? requests.length : 0;
+          var requestCount = Math.max(0, (requests && requests.length ? requests.length : 0) - initialRequests);
           setStatus('野花正在等待歌曲地址（已等 ' + waitedSeconds +
             ' 秒，已发起 ' + requestCount +
             ' 次音源网络请求）。不会切换其他音源，最多等待 ' +
@@ -1514,7 +1516,7 @@
           var activeNow = global.LXSourceManager.getActive();
           var count = activeNow && activeNow.runtime &&
             activeNow.runtime.__debugRequests ?
-            activeNow.runtime.__debugRequests.length : 0;
+            Math.max(0, activeNow.runtime.__debugRequests.length - initialRequests) : 0;
           runFallback('野花网络请求超过 ' +
             Math.round(FLOWER_NATIVE_RESOLVE_TIMEOUT_MS / 1000) +
             ' 秒仍未返回（本次音源网络请求 ' + count + ' 次）');
