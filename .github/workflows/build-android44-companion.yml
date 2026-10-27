@@ -4,6 +4,11 @@ on:
   pull_request:
     paths:
       - 'android-companion/**'
+      - 'scripts/bundle-android44-webui.mjs'
+      - 'scripts/test-android44-bundled-ui-browser.mjs'
+      - 'styles.css'
+      - 'src/**'
+      - 'vendor/forge.min.js'
       - 'scripts/test-android44-modern-trust.mjs'
       - 'src/android-native-xhr-fallback.js'
       - 'scripts/test-android44-bundled-fallback-browser.mjs'
@@ -51,6 +56,8 @@ jobs:
           gradle-version: '8.9'
       - name: Validate modern CA anchors and strict TLS wiring
         run: node scripts/test-android44-modern-trust.mjs
+      - name: Bundle matching website UI and core scripts in APK
+        run: node scripts/bundle-android44-webui.mjs
       - name: Build signed debug APK
         run: gradle --no-daemon -p android-companion :app:assembleDebug
       - name: Check APK existence and min SDK
@@ -58,19 +65,26 @@ jobs:
           test -s android-companion/app/build/outputs/apk/debug/app-debug.apk
           ls -lh android-companion/app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android-companion/app/build/outputs/apk/debug/app-debug.apk | grep "sdkVersion:'19'"
+      - name: Ensure APK contains the full pinned UI bundle
+        run: |
+          set -euo pipefail
+          APK="android-companion/app/build/outputs/apk/debug/app-debug.apk"
+          for FILE in assets/web/index.html assets/web/styles.css assets/web/src/app.js assets/web/src/source-manager.js assets/web/vendor/forge.min.js; do
+            unzip -Z -1 "$APK" | grep -Fx "$FILE"
+          done
       - name: Give APK a distinct versioned filename
         run: |
           set -euo pipefail
           ORIGINAL="android-companion/app/build/outputs/apk/debug/app-debug.apk"
-          NAMED="android-companion/LXMusic-Android44-v0.4-ModernCA.apk"
+          NAMED="android-companion/LXMusic-Android44-v0.5-WebUI.apk"
           cp "$ORIGINAL" "$NAMED"
           cmp "$ORIGINAL" "$NAMED"
           sha256sum "$NAMED"
       - name: Upload named installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LXMusic-Android44-v0.4-ModernCA
-          path: android-companion/LXMusic-Android44-v0.4-ModernCA.apk
+          name: LXMusic-Android44-v0.5-WebUI
+          path: android-companion/LXMusic-Android44-v0.5-WebUI.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -80,14 +94,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="android44-modern-ca-v04-20261027"
-          NAMED_APK="android-companion/LXMusic-Android44-v0.4-ModernCA.apk"
-          FRIENDLY_NAME="LXMusic-Android44-v0.4-ModernCA.apk"
+          TAG="android44-webui-v05-20261027"
+          NAMED_APK="android-companion/LXMusic-Android44-v0.5-WebUI.apk"
+          FRIENDLY_NAME="LXMusic-Android44-v0.5-WebUI.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" "$NAMED_APK" \
               --target "$GITHUB_SHA" \
-              --title "LX Music Android 4.4 - modern CA trust beta 0.4" \
-              --notes "Android 4.4/API 19 verified native HTTPS with updated Mozilla WebPKI CA roots. Physical L101 tablet: local test audio, rendered LX Music page and network test audio all confirmed working. Actual music-source songs remain to be tested. Debug prerelease; signing key may change between CI builds." \
+              --title "LX Music Android 4.4 - bundled website controls beta 0.5" \
+              --notes "Android 4.4 API 19 native music player with APK-bundled pinned HTML JS CSS to restore import search and navigation on legacy WebView. Preserves modern CA HTTPS and native MediaPlayer. Real-device button validation pending. Debug prerelease; signing key may change between builds." \
               --prerelease
           else
             # Repair the previously published Release asset *in place*. Only
