@@ -8,8 +8,8 @@ android {
         applicationId 'dev.lxmusic.legacy'
         minSdk 19
         targetSdk 28
-        versionCode 17
-        versionName '0.17.0-flower-only'
+        versionCode 18
+        versionName '0.18.0-flower-timeout'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
