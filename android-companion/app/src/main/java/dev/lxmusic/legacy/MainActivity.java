@@ -6,6 +6,8 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Base64;
+import android.util.Log;
 import android.webkit.JavascriptInterface;
 import android.webkit.SslErrorHandler;
 import android.net.http.SslError;
@@ -31,6 +33,7 @@ import java.net.URL;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.net.ssl.SSLException;
 import javax.net.ssl.HttpsURLConnection;
 
 public final class MainActivity extends Activity {
@@ -42,6 +45,12 @@ public final class MainActivity extends Activity {
     private final Handler ui = new Handler();
     private final ExecutorService downloads = Executors.newSingleThreadExecutor();
     private final AtomicInteger generation = new AtomicInteger();
+    private final AtomicInteger xhrFallbackGeneration = new AtomicInteger(-1);
+    private final NativeBridge nativeBridge = new NativeBridge();
+    private static final String LOG_TAG = "LXMusicNative";
+    private File xhrPart;
+    private FileOutputStream xhrOutput;
+    private int xhrExpected, xhrReceived, xhrGeneration = -1;
     private TextView status;
     private WebView web;
     private MediaPlayer player;
@@ -109,7 +118,7 @@ public final class MainActivity extends Activity {
                 showStatus("网页加载异常（" + errorCode + "），可先测试顶部本地试听");
             }
         });
-        web.addJavascriptInterface(new NativeBridge(), "LXNativeAudio");
+        web.addJavascriptInterface(nativeBridge, "LXNativeAudio");
         shell.addView(web, new LinearLayout.LayoutParams(-1, 0, 1));
         setContentView(shell);
         ui.post(progressTick);
@@ -138,6 +147,20 @@ public final class MainActivity extends Activity {
                 playRemote(url, token);
             }});
         }
+        // All methods are limited to bounded audio bytes in an explicitly
+        // armed playback generation, not arbitrary files, URLs or intents.
+        @JavascriptInterface public boolean beginXhr(int g, int length) {
+            return MainActivity.this.beginBrowserTransfer(g, length);
+        }
+        @JavascriptInterface public boolean appendXhr(int g, String chunk) {
+            return MainActivity.this.appendBrowserTransfer(g, chunk);
+        }
+        @JavascriptInterface public boolean finishXhr(int g) {
+            return MainActivity.this.finishBrowserTransfer(g);
+        }
+        @JavascriptInterface public void failXhr(int g, String message) {
+            MainActivity.this.failBrowserTransfer(g, message);
+        }
         @JavascriptInterface public void pause() {
             ui.post(new Runnable() { @Override public void run() { pauseCurrent(); }});
         }
@@ -161,6 +184,7 @@ public final class MainActivity extends Activity {
             String p = u.getPath();
             return "https".equalsIgnoreCase(u.getProtocol()) &&
                 "only-testing-online-music.pages.dev".equalsIgnoreCase(u.getHost()) &&
+                u.getPort() == -1 &&
                 ("/api/proxy".equals(p) || "/api/legacy-audio".equals(p));
         } catch (Exception e) { return false; }
     }
@@ -168,6 +192,7 @@ public final class MainActivity extends Activity {
     private void playLocalTone() {
         int g = generation.incrementAndGet();
         releasePlayer();
+        discardBrowserTransfer();
         activeToken = -1;
         try {
             File f = new File(getCacheDir(), "android44-local-tone.wav");
@@ -179,6 +204,7 @@ public final class MainActivity extends Activity {
     private void playRemote(final String url, final int token) {
         final int g = generation.incrementAndGet();
         releasePlayer();
+        discardBrowserTransfer();
         activeToken = token;
         if (!allowedUrl(url)) {
             showStatus("原生播放已拒绝非本站 HTTPS 音频地址");
@@ -228,9 +254,19 @@ public final class MainActivity extends Activity {
                         if (g == generation.get()) prepareCached(downloaded, g, token);
                         else downloaded.delete();
                     }});
+                } catch (final SSLException ssl) {
+                    part.delete();
+                    ready.delete();
+                    Log.w(LOG_TAG, "Native HTTPS handshake failed: " + ssl.getClass().getSimpleName(), ssl);
+                    if (g == generation.get()) ui.post(new Runnable() {
+                        @Override public void run() {
+                            startBrowserFallback(g, token, url, ssl);
+                        }
+                    });
                 } catch (final Exception e) {
                     part.delete();
                     ready.delete();
+                    Log.w(LOG_TAG, "Native audio download failed", e);
                     if (g == generation.get()) ui.post(new Runnable() {
                         @Override public void run() {
                             showStatus("原生联网播放失败：" + e.getClass().getSimpleName() +
@@ -239,6 +275,121 @@ public final class MainActivity extends Activity {
                         }
                     });
                 } finally { if (connection != null) connection.disconnect(); }
+            }
+        });
+    }
+
+
+    private void startBrowserFallback(int g, int token, String url, SSLException cause) {
+        if (g != generation.get() || web == null) return;
+        xhrFallbackGeneration.set(g);
+        showStatus("原生 TLS 握手失败，改用网页安全 XHR 获取音频…");
+        String command = "(function(){if(window.LXNativeXhrFallback&&window.LXNativeXhrFallback.fetchBytes)" +
+                "window.LXNativeXhrFallback.fetchBytes(" + g + "," + JSONObject.quote(url) + ");" +
+                "else if(window.LXNativeAudio)window.LXNativeAudio.failXhr(" + g +
+                ",'webpage fallback unavailable');})();";
+        web.evaluateJavascript(command, null); // API 19, runs on WebView UI thread.
+    }
+
+    private synchronized void discardBrowserTransfer() {
+        try { if (xhrOutput != null) xhrOutput.close(); } catch (IOException ignored) {}
+        xhrOutput = null;
+        if (xhrPart != null) xhrPart.delete();
+        xhrPart = null;
+        xhrGeneration = -1;
+        xhrExpected = xhrReceived = 0;
+        xhrFallbackGeneration.set(-1);
+    }
+
+    private synchronized boolean beginBrowserTransfer(int g, int length) {
+        if (g != generation.get() || xhrFallbackGeneration.get() != g ||
+                length < 1024 || length > MAX_AUDIO_BYTES) return false;
+        if (xhrOutput != null) return false;
+        try {
+            xhrPart = File.createTempFile("lx-xhr-", ".part", getCacheDir());
+            xhrOutput = new FileOutputStream(xhrPart);
+            xhrExpected = length;
+            xhrReceived = 0;
+            xhrGeneration = g;
+            return true;
+        } catch (IOException e) {
+            discardBrowserTransfer();
+            return false;
+        }
+    }
+
+    private synchronized boolean appendBrowserTransfer(int g, String encoded) {
+        if (g != generation.get() || g != xhrGeneration ||
+                xhrOutput == null || encoded == null || encoded.length() > 6000) return false;
+        try {
+            byte[] bytes = Base64.decode(encoded, Base64.NO_WRAP);
+            if (bytes.length < 1 || bytes.length > 4096 ||
+                    xhrReceived + bytes.length > xhrExpected) return false;
+            xhrOutput.write(bytes);
+            xhrReceived += bytes.length;
+            return true;
+        } catch (Exception e) { return false; }
+    }
+
+    private static boolean looksLikeAudio(File file) {
+        try {
+            FileInputStream in = new FileInputStream(file);
+            byte[] b = new byte[12];
+            try { if (in.read(b) != 12) return false; }
+            finally { in.close(); }
+            boolean mp3 = (b[0] == 'I' && b[1] == 'D' && b[2] == '3') ||
+                          ((b[0] & 255) == 255 && (b[1] & 224) == 224);
+            boolean wav = b[0] == 'R' && b[1] == 'I' && b[2] == 'F' && b[3] == 'F' &&
+                          b[8] == 'W' && b[9] == 'A' && b[10] == 'V' && b[11] == 'E';
+            boolean ogg = b[0] == 'O' && b[1] == 'g' && b[2] == 'g' && b[3] == 'S';
+            boolean flac = b[0] == 'f' && b[1] == 'L' && b[2] == 'a' && b[3] == 'C';
+            return mp3 || wav || ogg || flac;
+        } catch (IOException ignored) { return false; }
+    }
+
+    private synchronized boolean finishBrowserTransfer(final int g) {
+        if (g != generation.get() || g != xhrGeneration ||
+                xhrOutput == null || xhrReceived != xhrExpected) return false;
+        try {
+            xhrOutput.close();
+            xhrOutput = null;
+            if (!looksLikeAudio(xhrPart)) {
+                discardBrowserTransfer();
+                return false;
+            }
+            final File complete = new File(getCacheDir(), "audio-" + g + "-xhr.bin");
+            if (complete.exists())complete.delete();
+            if (!xhrPart.renameTo(complete)) {
+                discardBrowserTransfer();
+                return false;
+            }
+            xhrPart = null;
+            xhrGeneration = -1;
+            xhrFallbackGeneration.set(-1);
+            ui.post(new Runnable() {
+                @Override public void run() {
+                    if (g == generation.get()) {
+                        showStatus("安全 XHR 已取得完整音频，由 Android 原生解码");
+                        prepareCached(complete, g, activeToken);
+                    } else complete.delete();
+                }
+            });
+            return true;
+        } catch (IOException e) {
+            discardBrowserTransfer();
+            return false;
+        }
+    }
+
+    private void failBrowserTransfer(final int g, final String reason) {
+        if (g != generation.get() || g != xhrFallbackGeneration.get()) return;
+        discardBrowserTransfer();
+        ui.post(new Runnable() {
+            @Override public void run() {
+                if (g != generation.get()) return;
+                String detail = reason == null ? "" : reason.replaceAll("[\\r\\n]", " ");
+                showStatus("安全 XHR 备用通道失败：" + detail.substring(0, Math.min(95, detail.length())));
+                sendEvent(activeToken, "error", 0, 0);
             }
         });
     }
@@ -374,6 +525,7 @@ public final class MainActivity extends Activity {
         generation.incrementAndGet();
         ui.removeCallbacks(progressTick);
         releasePlayer();
+        discardBrowserTransfer();
         downloads.shutdownNow();
         if (web != null) {
             web.removeJavascriptInterface("LXNativeAudio");
