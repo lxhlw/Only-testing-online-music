@@ -125,15 +125,15 @@ jobs:
         run: |
           set -euo pipefail
           ORIGINAL="android-companion/app/build/outputs/apk/debug/app-debug.apk"
-          NAMED="android-companion/LXMusic-Android44-v0.14-FlowerInit.apk"
+          NAMED="android-companion/LXMusic-Android44-v0.15-FastStart.apk"
           cp "$ORIGINAL" "$NAMED"
           cmp "$ORIGINAL" "$NAMED"
           sha256sum "$NAMED"
       - name: Upload named installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LXMusic-Android44-v0.14-FlowerInit
-          path: android-companion/LXMusic-Android44-v0.14-FlowerInit.apk
+          name: LXMusic-Android44-v0.15-FastStart
+          path: android-companion/LXMusic-Android44-v0.15-FastStart.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -143,14 +143,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="android44-flower-init-v014-20261028"
-          NAMED_APK="android-companion/LXMusic-Android44-v0.14-FlowerInit.apk"
-          FRIENDLY_NAME="LXMusic-Android44-v0.14-FlowerInit.apk"
+          TAG="android44-fast-start-v015-20261028"
+          NAMED_APK="android-companion/LXMusic-Android44-v0.15-FastStart.apk"
+          FRIENDLY_NAME="LXMusic-Android44-v0.15-FastStart.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" "$NAMED_APK" \
               --target "$GITHUB_SHA" \
-              --title "LX Music Android 4.4 - Flower async inited activation and native retry beta 0.14" \
-              --notes "Android 4.4 API19 beta v0.14 repairs a race between Flower import callback and asynchronous LX inited. It waits for actual source readiness before activating Flower, requesting musicUrl and sending the same-origin media URL to native MediaPlayer. Retains offline Babel and strict HTTPS. Keeps explicit opt-in Flower retry, strict native HTTPS and proven native sound playback. Must test actual Flower initialization and music on L101. Debug prerelease." \
+              --title "LX Music Android 4.4 - Faster first-audio preparation and verified transport reuse beta 0.15" \
+              --notes "Android 4.4 API19 beta v0.15 reuses only a previously successful strict same-origin XHR audio path, recovering to verified native HTTPS if it fails. Resolver requests no longer block audio downloads in a shared single-thread queue. Includes playback-stage timing and retains Flower init synchronization, strict HTTPS and full-download playback. Keeps explicit opt-in Flower retry, strict native HTTPS and proven native sound playback. Must test actual Flower initialization and music on L101. Debug prerelease." \
               --prerelease
           else
             # Repair the previously published Release asset *in place*. Only
