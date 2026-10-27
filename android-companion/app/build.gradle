@@ -8,8 +8,8 @@ android {
         applicationId 'dev.lxmusic.legacy'
         minSdk 19
         targetSdk 28
-        versionCode 13
-        versionName '0.13.0-legacy-babel'
+        versionCode 14
+        versionName '0.14.0-flower-init'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8

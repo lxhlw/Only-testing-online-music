@@ -1153,6 +1153,38 @@
           setStatus('Flower 音源导入失败：' + escapeHtml(err.message || err), 'fail');
           return;
         }
+        // LX runtime.send('inited') dispatches on a Promise microtask.
+        // installFromCode can invoke its callback synchronously, BEFORE that
+        // microtask marks candidate.inited. Treat it as still initializing,
+        // not as a failed import; otherwise a late green inited notification
+        // masks a stopped retry and the original source stays selected.
+        if (isFlower(candidate) && !candidate.inited && !candidate.error) {
+          var waitStarted = Date.now ? Date.now() : new Date().getTime();
+          setStatus('Flower 音源已下载，正在等待初始化完成后自动试听……', 'warn');
+          var waitForFlowerInit = function () {
+            if (token !== playbackToken) return;
+            var selected = manager.getActive();
+            var selectedId = String(selected && selected.id || '');
+            if (selectedId !== originalActive &&
+                selectedId !== String(candidate.id || '')) {
+              setStatus('音源已由你手动切换，停止自动重试。', 'warn');
+              return;
+            }
+            if (candidate.inited) { useFlower(null, candidate); return; }
+            if (candidate.error) {
+              setStatus('Flower 音源初始化失败：' + escapeHtml(candidate.error), 'fail');
+              return;
+            }
+            var now = Date.now ? Date.now() : new Date().getTime();
+            if (now - waitStarted >= 15000) {
+              setStatus('Flower 音源已下载，但 15 秒内未完成初始化；没有启动歌曲播放。', 'fail');
+              return;
+            }
+            global.setTimeout(waitForFlowerInit, 120);
+          }
+          global.setTimeout(waitForFlowerInit, 0);
+          return;
+        }
         var current = manager.getActive();
         var currentId = String(current && current.id || '');
         if (currentId !== originalActive &&
