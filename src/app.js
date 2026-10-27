@@ -16,6 +16,7 @@
   var shuffleCursor = -1;
   var playbackToken = 0;
   var searchToken = 0;
+  var legacyFullResolveNext = false;
   var MIN_UNKNOWN_MEDIA_DURATION_SECONDS = 15;
   var MIN_CONFIRMED_PLAYBACK_PROGRESS_SECONDS = 0.25;
   var PLAYBACK_CONFIRM_TIMEOUT_MS = 3500;
@@ -1268,7 +1269,8 @@
     var sourceTimer = null;
     var fastRaceTimer = null;
     var fastRaceStarted = false;
-    var fastEnabled = NATIVE_COMPANION && !!(active && active.inited && active.runtime &&
+    var fastEnabled = NATIVE_COMPANION && !playbackState.forceFullResolve &&
+      !!(active && active.inited && active.runtime &&
       active.sources && active.sources[source] &&
       global.LXMusicSearch && typeof global.LXMusicSearch.resolveMusicUrlFast === 'function');
 
@@ -1411,7 +1413,17 @@
       sourceTimer = global.setTimeout(function() {
         if (!isCurrentAttempt() || settled) return;
         finishAttempt();
-        setStatus('本次歌曲解析超过 21 秒仍没有可用地址，已停止无效等待；请尝试另一首。', 'fail');
+        setStatus('快速解析 21 秒内未得到地址，已停止无效等待。', 'warn');
+        var slowButton = document.createElement('button');
+        slowButton.type = 'button';
+        slowButton.className = 'secondary';
+        slowButton.textContent = '继续完整解析（可能较慢）';
+        slowButton.onclick = function () {
+          if (token !== playbackToken) return;
+          legacyFullResolveNext = true;
+          testMusic(music, false);
+        };
+        statusEl.appendChild(slowButton);
       }, 21000);
     } else {
       sourceTimer = global.setTimeout(function () {
@@ -1538,8 +1550,10 @@
       miguDeadlineTimer: null,
       miguLastAudioTime: 0,
       miguLastProgressAt: 0,
-      activeSourceId: String(active && (active.id || active.url) || '')
+      activeSourceId: String(active && (active.id || active.url) || ''),
+      forceFullResolve: legacyFullResolveNext
     };
+    legacyFullResolveNext = false;
 
     armMiguPlaybackDeadline(playbackState);
     requestQuality(music, source, buildMusicInfo(music, source), plan, 0, token);
