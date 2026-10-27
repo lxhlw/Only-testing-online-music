@@ -7,6 +7,8 @@ on:
       - "src/app.js"
       - "scripts/test-native-companion-browser.mjs"
       - "index.html"
+      - "src/android-native-resolver.js"
+      - "scripts/test-android44-native-resolver-browser.mjs"
       - "scripts/test-chrome30-strict-syntax.mjs"
       - "package.json"
       - "scripts/bundle-android44-webui.mjs"
@@ -60,6 +62,8 @@ jobs:
         run: |
           node --check src/source-manager.js
           node --check src/app.js
+          node --check src/android-native-resolver.js
+          node --check scripts/test-android44-native-resolver-browser.mjs
           node --check scripts/bundle-android44-webui.mjs
           node --check scripts/test-android44-bundled-ui-browser.mjs
           node --check src/android-native-xhr-fallback.js
@@ -109,6 +113,9 @@ jobs:
         run: |
           node scripts/bundle-android44-webui.mjs
           node scripts/test-android44-bundled-ui-browser.mjs
+
+      - name: Verify API19 native resolver GET POST statuses
+        run: node scripts/test-android44-native-resolver-browser.mjs
 
       - name: Verify Android 4.4 external player ACTION_VIEW intent handoff
         run: node scripts/test-android-external-intent-browser.mjs

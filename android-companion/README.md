@@ -1,5 +1,29 @@
 # LX Music Android 4.4 Companion — Phase 1 and TLS fix 0.2
 
+## v0.8: playback URL resolver HTTP 0 on Android 4.4
+
+Physical L101 v0.7 evidence: UI, search and result buttons work; Netease
+`musicUrl` fallback reports `Huibq Search API HTTP 0`, `TuneHub Search API
+HTTP 0`, `GD Studio Search API response is not JSON`. The native test MP3
+and local WAV already work. The failure is URL resolution, not audio decoding.
+
+In v0.8, the three **known** fallback services are called through the APK's
+verified native HTTPS transport to our own /api/proxy endpoint, keeping the
+GET/POST method, POST form body and actual HTTP status. This avoids KitKat
+WebView API19's resource-interceptor ambiguity and legacy XHR `HTTP 0`.
+Unknown providers, including imported-source endpoints, still use existing
+WebView requests; no arbitrary URL forwarding is exposed to JavaScript.
+
+The native bridge is host-allowlisted to Huibq, TuneHub and GD Studio,
+first-party HTTPS only, small response/body limits, and platform hostname
+verification. It cannot bypass an upstream outage, authentication or
+copyright restriction. A 502/403 from an actual service will now be reported
+as that status rather than misidentified as a tablet transport failure.
+
+Install versioned GitHub prerelease `android44-native-resolver-v08-20261027`,
+then search a song and tap 解析并播放. A screenshot of the red error status is
+sufficient for the next round; do not copy sensitive signed music URLs.
+
 ## v0.4: Android 4.4 WebView SSL_UNTRUSTED (error 3)
 
 Physical screenshot from L101 Android 4.4.2: `安全 XHR 备用通道失败：

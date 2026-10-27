@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'android-companion/**'
+      - 'scripts/test-android44-native-resolver-browser.mjs'
       - 'scripts/bundle-android44-webui.mjs'
       - 'scripts/test-chrome30-strict-syntax.mjs'
       - 'package.json'
@@ -65,6 +66,8 @@ jobs:
         run: node scripts/test-android44-modern-trust.mjs
       - name: Install strict ES5 script parser
         run: npm install --no-audit --no-fund
+      - name: Check native resolver bridge test syntax
+        run: node --check scripts/test-android44-native-resolver-browser.mjs
       - name: Verify all UI scripts parse on Android Chrome 30
         run: node scripts/test-chrome30-strict-syntax.mjs
       - name: Bundle matching website UI and core scripts in APK
@@ -87,15 +90,15 @@ jobs:
         run: |
           set -euo pipefail
           ORIGINAL="android-companion/app/build/outputs/apk/debug/app-debug.apk"
-          NAMED="android-companion/LXMusic-Android44-v0.7-StrictMode-Fix.apk"
+          NAMED="android-companion/LXMusic-Android44-v0.8-NativeResolver.apk"
           cp "$ORIGINAL" "$NAMED"
           cmp "$ORIGINAL" "$NAMED"
           sha256sum "$NAMED"
       - name: Upload named installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LXMusic-Android44-v0.7-StrictMode-Fix
-          path: android-companion/LXMusic-Android44-v0.7-StrictMode-Fix.apk
+          name: LXMusic-Android44-v0.8-NativeResolver
+          path: android-companion/LXMusic-Android44-v0.8-NativeResolver.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -105,14 +108,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="android44-strict-mode-v07-20261027"
-          NAMED_APK="android-companion/LXMusic-Android44-v0.7-StrictMode-Fix.apk"
-          FRIENDLY_NAME="LXMusic-Android44-v0.7-StrictMode-Fix.apk"
+          TAG="android44-native-resolver-v08-20261027"
+          NAMED_APK="android-companion/LXMusic-Android44-v0.8-NativeResolver.apk"
+          FRIENDLY_NAME="LXMusic-Android44-v0.8-NativeResolver.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" "$NAMED_APK" \
               --target "$GITHUB_SHA" \
-              --title "LX Music Android 4.4 - Chrome 30 strict IIFE block-function fix beta 0.7" \
-              --notes "Android 4.4 API19 beta v0.7 fixes real L101 Chrome 30 strict block function syntax in src/app.js line 782, adds AST regression test. Other native HTTPS and audio components remain unchanged. Real tablet button verification required. Debug prerelease." \
+              --title "LX Music Android 4.4 - native resolver HTTP bridge beta 0.8" \
+              --notes "Android 4.4 API19 beta v0.8 adds restricted CA-verified native HTTPS resolver requests for Huibq TuneHub and GD Studio. Preserves status codes and POST bodies, while retaining the known-working native audio and Chrome30 interface. External provider availability and real music playback require tablet verification. Debug prerelease." \
               --prerelease
           else
             # Repair the previously published Release asset *in place*. Only

@@ -8,8 +8,8 @@ android {
         applicationId 'dev.lxmusic.legacy'
         minSdk 19
         targetSdk 28
-        versionCode 7
-        versionName '0.7.0-strict-syntax'
+        versionCode 8
+        versionName '0.8.0-native-resolver'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
