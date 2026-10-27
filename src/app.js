@@ -782,7 +782,9 @@
       clearPlaybackConfirmTimer(state);
       clearMiguPlaybackDeadline(state);
       if (eventName === 'playing')
-        setStatus('Android 原生 MediaPlayer 已开始播放；请按实际声音确认。', 'ready');
+        setStatus('Android 原生 MediaPlayer 已开始播放；歌曲地址解析约 ' +
+          (Number(state.addressResolveMs || 0) / 1000).toFixed(1) +
+          ' 秒。播放进度以原生播放器为准。', 'ready');
       // The Phase-1 web progress controls are informational; use the
       // companion APK buttons for pause/resume until native controls sync.
       var current = document.getElementById('player-current-time');
@@ -791,7 +793,9 @@
       if (current) current.textContent = formatNativeClock(elapsed);
       if (duration && total) duration.textContent = formatNativeClock(total);
     } else if (eventName === 'loading') {
-      setStatus('Android 原生播放器正在下载并缓存音频……', 'warn');
+      setStatus('歌曲地址解析约 ' +
+        (Number(state.addressResolveMs || 0) / 1000).toFixed(1) +
+        ' 秒，正在完整下载音频……', 'warn');
     } else if (eventName === 'paused') {
       state.playing = false;
       setStatus('Android 原生播放器已暂停；使用 APK 顶部按钮继续。', 'warn');
@@ -833,6 +837,8 @@
     playbackState.manualPlaybackRequired = LEGACY_NATIVE_MEDIA;
     playbackState.url = playableUrl;
     playbackState.sourceUrl = url;
+    var resolvedNow = Date.now ? Date.now() : new Date().getTime();
+    playbackState.addressResolveMs = Math.max(0, resolvedNow - Number(playbackState.startedResolvingAtMs || resolvedNow));
     updateExternalPlayerUrl(playableUrl);
     playbackState.transport = playableUrl === String(url || '') ? 'direct' : 'proxy';
     playbackState.lastForceProxy = forceProxy === true || usingNative;
@@ -1461,6 +1467,9 @@
       playing: false,
       transport: '',
       sourceUrl: '',
+      // Measurement only; do not persist any music URLs or credentials.
+      startedResolvingAtMs: Date.now ? Date.now() : new Date().getTime(),
+      addressResolveMs: -1,
       directProxyRetry: false,
       confirmTimer: null,
       miguDeadlineTimer: null,
