@@ -6,6 +6,7 @@ on:
       - 'android-companion/**'
       - 'scripts/test-android44-native-resolver-browser.mjs'
       - 'scripts/test-android44-native-media-url-browser.mjs'
+      - 'scripts/test-resolver-outage-cooldown-browser.mjs'
       - 'scripts/bundle-android44-webui.mjs'
       - 'scripts/test-chrome30-strict-syntax.mjs'
       - 'package.json'
@@ -67,6 +68,8 @@ jobs:
         run: node scripts/test-android44-modern-trust.mjs
       - name: Install strict ES5 script parser
         run: npm install --no-audit --no-fund
+      - name: Check upstream service outage test syntax
+        run: node --check scripts/test-resolver-outage-cooldown-browser.mjs
       - name: Check actual native media URL regression syntax
         run: node --check scripts/test-android44-native-media-url-browser.mjs
       - name: Check native resolver bridge test syntax
@@ -93,15 +96,15 @@ jobs:
         run: |
           set -euo pipefail
           ORIGINAL="android-companion/app/build/outputs/apk/debug/app-debug.apk"
-          NAMED="android-companion/LXMusic-Android44-v0.9-MediaProxy.apk"
+          NAMED="android-companion/LXMusic-Android44-v0.10-ResolverHealth.apk"
           cp "$ORIGINAL" "$NAMED"
           cmp "$ORIGINAL" "$NAMED"
           sha256sum "$NAMED"
       - name: Upload named installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LXMusic-Android44-v0.9-MediaProxy
-          path: android-companion/LXMusic-Android44-v0.9-MediaProxy.apk
+          name: LXMusic-Android44-v0.10-ResolverHealth
+          path: android-companion/LXMusic-Android44-v0.10-ResolverHealth.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -111,14 +114,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="android44-media-proxy-v09-20261027"
-          NAMED_APK="android-companion/LXMusic-Android44-v0.9-MediaProxy.apk"
-          FRIENDLY_NAME="LXMusic-Android44-v0.9-MediaProxy.apk"
+          TAG="android44-resolver-health-v010-20261027"
+          NAMED_APK="android-companion/LXMusic-Android44-v0.10-ResolverHealth.apk"
+          FRIENDLY_NAME="LXMusic-Android44-v0.10-ResolverHealth.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" "$NAMED_APK" \
               --target "$GITHUB_SHA" \
-              --title "LX Music Android 4.4 - native media same-origin proxy beta 0.9" \
-              --notes "Android 4.4 API19 beta v0.9 fixes real L101 error refusing non-site HTTPS media by always passing resolved tracks via the first-party /api/proxy URL to the native MediaPlayer, even after direct-route retry. Strict native URL restrictions, verified HTTPS and legacy browser UI remain intact. Real device track playback still needs verification. Debug prerelease." \
+              --title "LX Music Android 4.4 - source service outage handling beta 0.10" \
+              --notes "Android 4.4 API19 beta v0.10 recognizes upstream Huibq HTTP 503, TuneHub 530 Cloudflare 1016 and GD non-JSON responses; pauses repeat calls per broken provider briefly, without caching track-specific errors, and improves safe Chinese diagnostics. Prior native TLS, browser and MediaPlayer improvements remain unchanged. A third-party outage cannot be fixed by APK updates. Debug prerelease." \
               --prerelease
           else
             # Repair the previously published Release asset *in place*. Only
