@@ -51,6 +51,13 @@ const testWav = createTestWav(300)
 const shortErrorWav = createTestWav(9)
 const pageErrors = []
 
+// This fixture independently imports its own deterministic playback source.
+// The normal background default-source bootstrap is irrelevant here, and its
+// late inited status can overwrite the final 128k playback status being tested.
+await page.addInitScript(() => {
+  localStorage.setItem('only-testing-online-music.default-source-disabled', '1')
+})
+
 page.on('pageerror', error => {
   pageErrors.push(String(error))
 })
