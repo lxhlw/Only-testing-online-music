@@ -9,6 +9,7 @@ on:
       - 'scripts/test-resolver-outage-cooldown-browser.mjs'
       - 'scripts/test-android44-flower-optin-retry-browser.mjs'
       - 'scripts/bundle-android44-webui.mjs'
+      - 'scripts/test-android44-apk-babel-offline-browser.mjs'
       - 'scripts/test-chrome30-strict-syntax.mjs'
       - 'package.json'
       - 'scripts/test-android44-bundled-ui-browser.mjs'
@@ -79,6 +80,8 @@ jobs:
         run: node --check scripts/test-android44-native-resolver-browser.mjs
       - name: Verify all UI scripts parse on Android Chrome 30
         run: node scripts/test-chrome30-strict-syntax.mjs
+      - name: Check offline Babel regression syntax
+        run: node --check scripts/test-android44-apk-babel-offline-browser.mjs
       - name: Bundle matching website UI and core scripts in APK
         run: node scripts/bundle-android44-webui.mjs
       - name: Build signed debug APK
@@ -92,22 +95,22 @@ jobs:
         run: |
           set -euo pipefail
           APK="android-companion/app/build/outputs/apk/debug/app-debug.apk"
-          for FILE in assets/web/index.html assets/web/styles.css assets/web/src/app.js assets/web/src/source-manager.js assets/web/vendor/forge.min.js; do
+          for FILE in assets/web/index.html assets/web/styles.css assets/web/src/app.js assets/web/src/source-manager.js assets/web/vendor/forge.min.js assets/web/vendor/babel.min.js; do
             unzip -Z -1 "$APK" | grep -Fx "$FILE"
           done
       - name: Give APK a distinct versioned filename
         run: |
           set -euo pipefail
           ORIGINAL="android-companion/app/build/outputs/apk/debug/app-debug.apk"
-          NAMED="android-companion/LXMusic-Android44-v0.11-FlowerRetry.apk"
+          NAMED="android-companion/LXMusic-Android44-v0.12-LocalBabel.apk"
           cp "$ORIGINAL" "$NAMED"
           cmp "$ORIGINAL" "$NAMED"
           sha256sum "$NAMED"
       - name: Upload named installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LXMusic-Android44-v0.11-FlowerRetry
-          path: android-companion/LXMusic-Android44-v0.11-FlowerRetry.apk
+          name: LXMusic-Android44-v0.12-LocalBabel
+          path: android-companion/LXMusic-Android44-v0.12-LocalBabel.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -117,14 +120,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="android44-flower-retry-v011-20261027"
-          NAMED_APK="android-companion/LXMusic-Android44-v0.11-FlowerRetry.apk"
-          FRIENDLY_NAME="LXMusic-Android44-v0.11-FlowerRetry.apk"
+          TAG="android44-local-babel-v012-20261027"
+          NAMED_APK="android-companion/LXMusic-Android44-v0.12-LocalBabel.apk"
+          FRIENDLY_NAME="LXMusic-Android44-v0.12-LocalBabel.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" "$NAMED_APK" \
               --target "$GITHUB_SHA" \
-              --title "LX Music Android 4.4 - one-tap opt-in Flower retry beta 0.11" \
-              --notes "Android 4.4 API19 beta v0.11 offers an explicit Flower source select/import and replay button when WY/KW/KG/TX song address resolution fails. Existing source is not replaced without a tap; successful GitHub live Flower 4-channel tests do not guarantee old tablet audio. Preserves v0.10 native TLS and MediaPlayer. Debug prerelease." \
+              --title "LX Music Android 4.4 - APK-local Babel for Flower ES2020 source beta 0.12" \
+              --notes "Android 4.4 API19 beta v0.12 bundles pinned Babel inside APK so Flower modern LX scripts can be transpiled without live /api/babel on obsolete WebView. Keeps explicit opt-in Flower retry, strict native HTTPS and proven native sound playback. Must test actual Flower initialization and music on L101. Debug prerelease." \
               --prerelease
           else
             # Repair the previously published Release asset *in place*. Only
