@@ -15,6 +15,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.ValueCallback;
 import android.graphics.Color;
 import android.view.View;
 import android.widget.Button;
@@ -29,6 +30,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.IOException;
+import java.io.ByteArrayOutputStream;
 import java.net.URL;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -53,6 +55,11 @@ public final class MainActivity extends Activity {
     private int xhrExpected, xhrReceived, xhrGeneration = -1;
     private TextView status;
     private WebView web;
+    private volatile boolean webPageFinished = false;
+    private volatile boolean webTopPageError = false;
+    private volatile String webPageErrorDetail = "";
+    private String bundledXhrScript;
+    private static final int MAX_WEB_READY_POLLS = 25;
     private MediaPlayer player;
     private File activeFile;
     private int activeToken = -1;
@@ -102,6 +109,16 @@ public final class MainActivity extends Activity {
         settings.setSavePassword(false);
         web.setWebChromeClient(new WebChromeClient());
         web.setWebViewClient(new WebViewClient() {
+            @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                webPageFinished = false;
+                webTopPageError = false;
+                webPageErrorDetail = "";
+            }
+            @Override public void onPageFinished(WebView view, String url) {
+                webPageFinished = true;
+                Log.i(LOG_TAG, "WebView finished; first-party=" + isTrustedPageUrl(url) +
+                        ", topPageError=" + webTopPageError);
+            }
             @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 if (url.equals(ORIGIN) || url.startsWith(ORIGIN + "/") ||
                     url.startsWith(ORIGIN + "?") || url.startsWith(ORIGIN + "#")) return false;
@@ -111,10 +128,22 @@ public final class MainActivity extends Activity {
             @Override public void onReceivedSslError(WebView view,
                     SslErrorHandler handler, SslError error) {
                 handler.cancel(); // Never disable TLS certificate verification.
-                showStatus("HTTPS 证书校验失败；原生联网试听可能也受系统证书限制");
+                String failing = error == null ? "" : String.valueOf(error.getUrl());
+                if (isTopLevelHomeUrl(failing)) {
+                    webTopPageError = true;
+                    webPageErrorDetail = "WebView SSL "+(error == null ? "unknown" : error.getPrimaryError());
+                }
+                Log.w(LOG_TAG, "WebView SSL error code=" +
+                        (error == null ? -1 : error.getPrimaryError()));
+                showStatus("网页 HTTPS 证书校验失败；原生联网试听可能也受系统证书限制");
             }
             @Override public void onReceivedError(WebView view, int errorCode,
                     String description, String failingUrl) {
+                if (isTopLevelHomeUrl(failingUrl)) {
+                    webTopPageError = true;
+                    webPageErrorDetail = "WebView load "+errorCode;
+                }
+                Log.w(LOG_TAG, "WebView resource error " + errorCode);
                 showStatus("网页加载异常（" + errorCode + "），可先测试顶部本地试听");
             }
         });
@@ -280,15 +309,94 @@ public final class MainActivity extends Activity {
     }
 
 
+    private static boolean isTrustedPageUrl(String url) {
+        if (url == null) return false;
+        try {
+            android.net.Uri uri = android.net.Uri.parse(url);
+            return "https".equalsIgnoreCase(uri.getScheme()) &&
+                    "only-testing-online-music.pages.dev".equalsIgnoreCase(uri.getHost()) &&
+                    uri.getPort() == -1 && uri.getUserInfo() == null;
+        } catch (Exception ignored) { return false; }
+    }
+
+    private static boolean isTopLevelHomeUrl(String url) {
+        if (!isTrustedPageUrl(url)) return false;
+        try {
+            String path = android.net.Uri.parse(url).getPath();
+            return path == null || path.length() == 0 || "/".equals(path);
+        } catch(Exception ignored) { return false; }
+    }
+
+    // The script is compiled into this APK; never fetch executable JS from an
+    // extra HTTPS resource when the whole reason for fallback is old-device TLS.
+    private synchronized String getBundledXhrScript() throws IOException {
+        if (bundledXhrScript != null) return bundledXhrScript;
+        InputStream in = getAssets().open("android-native-xhr-fallback.js");
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try {
+            byte[] b = new byte[2048];
+            int n;
+            while ((n = in.read(b)) != -1) {
+                if (out.size() + n > 16000) throw new IOException("asset too large");
+                out.write(b, 0, n);
+            }
+        } finally { in.close(); }
+        bundledXhrScript = new String(out.toByteArray(), "UTF-8");
+        return bundledXhrScript;
+    }
+
     private void startBrowserFallback(int g, int token, String url, SSLException cause) {
         if (g != generation.get() || web == null) return;
         xhrFallbackGeneration.set(g);
-        showStatus("原生 TLS 握手失败，改用网页安全 XHR 获取音频…");
-        String command = "(function(){if(window.LXNativeXhrFallback&&window.LXNativeXhrFallback.fetchBytes)" +
-                "window.LXNativeXhrFallback.fetchBytes(" + g + "," + JSONObject.quote(url) + ");" +
-                "else if(window.LXNativeAudio)window.LXNativeAudio.failXhr(" + g +
-                ",'webpage fallback unavailable');})();";
-        web.evaluateJavascript(command, null); // API 19, runs on WebView UI thread.
+        Log.w(LOG_TAG, "Using bundled XHR fallback after " + cause.getClass().getSimpleName());
+        waitForTrustedWebPage(g, token, url, 0);
+    }
+
+    private void waitForTrustedWebPage(final int g, final int token,
+                                       final String url, final int attempts) {
+        if (g != generation.get() || xhrFallbackGeneration.get() != g || web == null) return;
+        if (!webPageFinished) {
+            if (attempts < MAX_WEB_READY_POLLS) {
+                showStatus("原生 TLS 失败：等待 LX 网页加载，以便启用安全 XHR…");
+                ui.postDelayed(new Runnable() { @Override public void run() {
+                    waitForTrustedWebPage(g, token, url, attempts + 1);
+                }}, 500);
+            } else {
+                failBrowserTransfer(g, "WebView 页面加载超时，无法启动网页备用通道");
+            }
+            return;
+        }
+        if (!isTrustedPageUrl(web.getUrl()) || webTopPageError) {
+            failBrowserTransfer(g, webTopPageError ?
+                    ("网页 HTTPS 未就绪：" + webPageErrorDetail) :
+                    "WebView 未处于 LX Music 的可信 HTTPS 页面");
+            return;
+        }
+        try {
+            // Use the APK's own audited ES5 script even if the website's
+            // <script src> was cached, omitted, or blocked on old Chromium.
+            final String source = getBundledXhrScript();
+            final String cmd = "(function(){try{" + source +
+                    "\nif(!window.LXNativeXhrFallback||" +
+                    "typeof window.LXNativeXhrFallback.fetchBytes!=='function')" +
+                    "return 'BOOTSTRAP_MISSING';" +
+                    "window.LXNativeXhrFallback.fetchBytes(" + g + "," + JSONObject.quote(url) + ");" +
+                    "return 'XHR_STARTED';" +
+                    "}catch(e){return 'BOOTSTRAP_ERROR:'+String(e.message||e).slice(0,90);}})()";
+            showStatus("已从 APK 内加载备用脚本，正在尝试 WebView 安全 XHR…");
+            web.evaluateJavascript(cmd, new ValueCallback<String>() {
+                @Override public void onReceiveValue(String value) {
+                    if (g != generation.get() || xhrFallbackGeneration.get() != g) return;
+                    String response = String.valueOf(value);
+                    if (response.indexOf("XHR_STARTED") >= 0) return;
+                    Log.w(LOG_TAG, "Bundled XHR bootstrap result " + response);
+                    failBrowserTransfer(g, "备用脚本启动异常：" + response);
+                }
+            });
+        } catch (IOException e) {
+            Log.e(LOG_TAG, "Cannot load bundled XHR asset", e);
+            failBrowserTransfer(g, "APK 中的备用脚本丢失："+e.getClass().getSimpleName());
+        }
     }
 
     private synchronized void discardBrowserTransfer() {

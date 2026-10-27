@@ -1,5 +1,43 @@
 # LX Music Android 4.4 Companion — Phase 1 and TLS fix 0.2
 
+## Physical test: v0.2 WebView fallback unavailable (v0.3 fix)
+
+The Android 4.4.2 L101 confirmed **local native tone audible**.
+The user installed the 23,027-byte v0.2 APK successfully via ADB, but
+**联网试听 returned `安全XHR备用通道失败：webpage fallback unavailable`**.
+This means Java SSL failed and the app attempted the browser fallback before
+the WebView contained `window.LXNativeXhrFallback`. It does NOT establish
+whether XHR can send data or whether the native MP3 decoder works.
+
+Version 0.3 packages the exact audited ES5 fallback script inside the APK
+assets, waits until the first-party HTTPS page is ready, and injects the
+bundled script before invoking XHR. A missing or cached website `<script>`
+is no longer an automatic failure. The APK explicitly reports first-party
+WebView SSL failures, missing trusted page, timeout or actual XHR errors.
+No certificate bypass or trust-all manager was added.
+
+Install v0.3 from the GitHub prerelease `android44-bundled-xhr-v03-20261027`.
+On Windows (assuming the file is saved at `C:\\adb\\app-debug.apk`):
+
+```bat
+adb install -r "C:\\adb\\app-debug.apk"
+adb shell am force-stop dev.lxmusic.legacy
+adb shell am start -n dev.lxmusic.legacy/.MainActivity
+```
+
+If the CI debug signing key changed, `adb install -r` may fail with
+`INSTALL_FAILED_UPDATE_INCOMPATIBLE`. Only then uninstall the old test
+app and reinstall (uninstall clears its app-local data).
+
+Acceptance:
+1. 本地试听 still sounds.
+2. 联网试听 should display `已从 APK 内加载备用脚本` then either obtain
+   sound or give a **specific** reason (WebView SSL, XHR HTTP/network or media).
+3. If still failing, send a photo of the status and optionally collect
+   `adb logcat -d -s LXMusicNative:W AndroidRuntime:E`.
+
+This version is a beta test, not a claim of verified online audio playback.
+
 ## Android 4.4 native TLS handshake fix (0.2 beta)
 
 Physical test: on the L101 Android 4.4.2 tablet, **本地试听 is audible**. This
