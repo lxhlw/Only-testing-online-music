@@ -87,6 +87,8 @@ jobs:
       - name: Diagnose APK Babel syntax on Chrome 30
         run: |
           node --input-type=module -e "import {readFileSync} from 'node:fs'; import {parse} from 'acorn'; const s=readFileSync('android-companion/app/src/main/assets/web/vendor/babel.min.js','utf8'); try {parse(s,{ecmaVersion:5,sourceType:'script'});console.log('BABEL_CHROME30_ES5_PASS '+s.length)} catch(e) {console.error('BABEL_CHROME30_ES5_FAIL '+e.message);process.exitCode=1;}"
+      - name: Diagnose Babel runtime missing Android 4.4 ES6 globals
+        run: node scripts/diagnose-android44-babel-runtime.mjs
       - name: Build signed debug APK
         run: gradle --no-daemon -p android-companion :app:testDebugUnitTest :app:assembleDebug
       - name: Check APK existence and min SDK
