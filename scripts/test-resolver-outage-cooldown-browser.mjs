@@ -57,6 +57,18 @@ try {
  assert.equal(calls.huibq,1,'Suspended Huibq provider should not be contacted again immediately')
  assert.equal(calls.tune,1,'1016 DNS provider should not be contacted again immediately')
  assert.equal(calls.gdPlay,1,'Invalid JSON provider should not be contacted again immediately')
+ // After the bounded circuit opens again the next song must re-probe all
+ // sources; this is NOT a permanent blacklist or a track-ID negative cache.
+ await page.evaluate(()=>{
+   const after=Date.now()+121000
+   Date.now=function(){return after}
+ })
+ const recovered=await resolve('789')
+ assert.match(recovered.error,/Huibq.*503/)
+ assert.equal(calls.huibq,2,'Huibq must be re-probed after cooldown expires')
+ assert.equal(calls.tune,2,'TuneHub must be re-probed after cooldown expires')
+ assert.equal(calls.gdPlay,2,'GD must be re-probed after cooldown expires')
+ assert.ok(calls.official>=3,'Official source is always queried')
  assert.deepEqual(errors,[])
  console.log('PASS: actual 503/530-1016/HTML resolver failures summarized without HTML, cached briefly; official platform stays enabled; requests '+JSON.stringify(calls))
 }finally{await browser.close()}
