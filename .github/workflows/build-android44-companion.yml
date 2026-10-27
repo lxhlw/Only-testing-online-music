@@ -5,6 +5,7 @@ on:
     paths:
       - 'android-companion/**'
       - 'src/android-native-xhr-fallback.js'
+      - 'scripts/test-android44-bundled-fallback-browser.mjs'
       - 'src/app.js'
       - 'index.html'
       - 'scripts/test-native-companion-browser.mjs'
@@ -13,6 +14,8 @@ on:
     branches: [main]
     paths:
       - 'android-companion/**'
+      - 'src/android-native-xhr-fallback.js'
+      - 'scripts/test-android44-bundled-fallback-browser.mjs'
       - 'src/app.js'
       - 'index.html'
       - 'scripts/test-native-companion-browser.mjs'
@@ -66,15 +69,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="android44-tlsfix-test-20261027"
+          TAG="android44-bundled-xhr-v03-20261027"
           APK="android-companion/app/build/outputs/apk/debug/app-debug.apk"
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Existing test release found: not overwriting the publicly downloadable APK."
           else
-            gh release create "$TAG" "$APK#LXMusic-Android44-TLSFix.apk" \
+            gh release create "$TAG" "$APK#LXMusic-Android44-v0.3-BundledXHR.apk" \
               --target "$GITHUB_SHA" \
-              --title "LX Music Android 4.4 - TLS/XHR native audio beta 0.2" \
-              --notes "Android 4.4.2/API 19 MediaPlayer with independently verified browser-XHR audio fallback for native SSL handshake failures, debug build. This is a prerelease for physical tablet sound validation, not a verified production app. On the tablet, test 本地试听 first, then 联网试听, then music search. If you have an older debug APK installed, Android may require uninstalling it because CI debug signing keys can differ." \
+              --title "LX Music Android 4.4 - bundled XHR bootstrap beta 0.3" \
+              --notes "Android 4.4.2/API 19 MediaPlayer + APK-bundled ES5 XHR bootstrap; fixes WebView fallback unavailable failure, awaits page readiness, checks first-party HTTPS. Debug build. This is a prerelease for physical tablet sound validation, not a verified production app. On the tablet, test 本地试听 first, then 联网试听, then music search. If you have an older debug APK installed, Android may require uninstalling it because CI debug signing keys can differ." \
               --prerelease
           fi
           gh release view "$TAG" --json url -q .url
