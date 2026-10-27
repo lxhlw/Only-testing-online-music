@@ -2,7 +2,15 @@
   'use strict';
 
   var BABEL_VERSION = '7.29.9';
-  var CDN_URLS = ['/api/babel'];
+  // The Android 4.4 companion's first-party WebView resource interceptor
+  // serves this Babel file straight from APK assets. Loading the old /api/babel
+  // endpoint required Chrome 30 to fetch a large runtime over fragile TLS,
+  // which failed before Flower's modern JavaScript could be transpiled.
+  // Ordinary browsers still use the existing first-party online endpoint.
+  var isNativeCompanion = !!(global.LXNativeAudio &&
+    typeof global.LXNativeAudio.isAvailable === 'function');
+  var CDN_URLS = isNativeCompanion ?
+    ['/vendor/babel.min.js', '/api/babel'] : ['/api/babel'];
   var loadState = global.Babel && typeof global.Babel.transform === 'function' ? 2 : 0;
   var loadQueue = [];
   var loadError = null;
@@ -68,13 +76,25 @@
     var src = CDN_URLS[loadIndex]; loadIndex += 1;
     var script = global.document.createElement('script');
     script.type = 'text/javascript'; script.async = true; script.src = src;
+    var finished = false;
     function failed() {
+      if (finished) return;
+      finished = true;
+      if (timer && global.clearTimeout) { global.clearTimeout(timer); timer = null; }
       try { if (script.parentNode) script.parentNode.removeChild(script); } catch (e) {}
       loadNext();
     }
-    script.onload = function () { if (global.Babel && typeof global.Babel.transform === 'function') finishLoad(null); else failed(); };
+    script.onload = function () {
+      if (finished) return;
+      if (global.Babel && typeof global.Babel.transform === 'function') {
+        finished = true; finishLoad(null);
+      } else failed();
+    };
     script.onreadystatechange = function () {
-      if ((script.readyState === 'loaded' || script.readyState === 'complete') && global.Babel && typeof global.Babel.transform === 'function') finishLoad(null);
+      if (!finished && (script.readyState === 'loaded' || script.readyState === 'complete') &&
+          global.Babel && typeof global.Babel.transform === 'function') {
+        finished = true; finishLoad(null);
+      }
     };
     script.onerror = failed;
     try {
