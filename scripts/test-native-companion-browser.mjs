@@ -17,9 +17,15 @@ try {
  })
  await page.goto(base+'/',{waitUntil:'domcontentloaded'})
  await page.evaluate(()=>{
-   window.LXSourceManager.getActive=function(){return null}
-   window.LXMusicSearch.resolveMusicUrl=function(source,music,quality,callback){
-     callback(null,{url:'https://media.example.test/song.mp3?token=signed123',provider:'test-audio'})
+   window.LXSourceManager.getActive=function(){return {
+     id:'test-flower',url:'https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js',
+     name:'野花🌷',inited:true,runtime:{},sources:{wy:{actions:['musicUrl'],qualitys:['128k']}}
+   }}
+   window.LXSourceManager.requestAction=function(source,action,info,callback){
+     callback(null,{url:'https://media.example.test/song.mp3?token=signed123'})
+   }
+   window.LXMusicSearch.resolveMusicUrl=function(){
+     throw new Error('APK Flower-only cannot call removed fallback providers')
    }
    var audio=document.getElementById('audio')
    window.__htmlPlayCalls=0
