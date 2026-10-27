@@ -129,7 +129,7 @@ public final class MainActivity extends Activity {
                     SslErrorHandler handler, SslError error) {
                 handler.cancel(); // Never disable TLS certificate verification.
                 String failing = error == null ? "" : String.valueOf(error.getUrl());
-                if (isTrustedPageUrl(failing)) {
+                if (isTopLevelHomeUrl(failing)) {
                     webTopPageError = true;
                     webPageErrorDetail = "WebView SSL "+(error == null ? "unknown" : error.getPrimaryError());
                 }
@@ -139,7 +139,7 @@ public final class MainActivity extends Activity {
             }
             @Override public void onReceivedError(WebView view, int errorCode,
                     String description, String failingUrl) {
-                if (isTrustedPageUrl(failingUrl)) {
+                if (isTopLevelHomeUrl(failingUrl)) {
                     webTopPageError = true;
                     webPageErrorDetail = "WebView load "+errorCode;
                 }
@@ -317,6 +317,14 @@ public final class MainActivity extends Activity {
                     "only-testing-online-music.pages.dev".equalsIgnoreCase(uri.getHost()) &&
                     uri.getPort() == -1 && uri.getUserInfo() == null;
         } catch (Exception ignored) { return false; }
+    }
+
+    private static boolean isTopLevelHomeUrl(String url) {
+        if (!isTrustedPageUrl(url)) return false;
+        try {
+            String path = android.net.Uri.parse(url).getPath();
+            return path == null || path.length() == 0 || "/".equals(path);
+        } catch(Exception ignored) { return false; }
     }
 
     // The script is compiled into this APK; never fetch executable JS from an
