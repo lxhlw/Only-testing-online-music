@@ -819,7 +819,12 @@
     if (token !== playbackToken) return;
 
     var audio = document.getElementById('audio');
-    var playableUrl = buildPlayableUrl(url, forceProxy === true);
+    // Android 4.4 companion's native bridge deliberately accepts only
+    // first-party HTTPS audio endpoints. Always proxy an external resolver
+    // URL, even after the user clicked the legacy "direct connection" button.
+    // Desktop browsers and external-system-player links keep prior behavior.
+    var usingNative = nativeAudioReady();
+    var playableUrl = buildPlayableUrl(url, forceProxy === true || usingNative);
     if (playbackState && playbackState.confirmTimer) {
       try { global.clearTimeout(playbackState.confirmTimer); } catch (e) {}
       playbackState.confirmTimer = null;
@@ -830,20 +835,30 @@
     playbackState.sourceUrl = url;
     updateExternalPlayerUrl(playableUrl);
     playbackState.transport = playableUrl === String(url || '') ? 'direct' : 'proxy';
-    playbackState.lastForceProxy = forceProxy === true;
+    playbackState.lastForceProxy = forceProxy === true || usingNative;
 
     playbackState.quality = quality;
     playbackState.resolver = viaLabel || 'LX source';
     playbackState.resolverProvider = viaProvider || 'lx-source';
     playbackState.expectedDuration = getExpectedDurationSeconds(music);
 
-    if (nativeAudioReady()) {
+    if (usingNative) {
       playbackState.nativePlayback = true;
       playbackState.manualPlaybackRequired = false;
       // Never call HTMLAudioElement.play() in Android 4.4 companion mode:
       // physical Via has failed direct, Blob, Data URI and local WAV modes.
       try { audio.pause(); audio.removeAttribute('src'); } catch (e) {}
-      setStatus('原生播放组件正在获取歌曲，播放控制请使用 APK 顶部按钮。', 'warn');
+      // Do not weaken Java's URL restriction when an input cannot be
+      // canonicalized. This check prevents an attempted non-site native call.
+      var origin = String(global.location.protocol || '') + '//' +
+        String(global.location.host || '');
+      if (playableUrl.indexOf(origin + '/api/proxy?url=') !== 0 &&
+          playableUrl.indexOf(origin + '/api/legacy-audio?') !== 0) {
+        setStatus('该歌曲未获得可交给原生播放器的本站安全音频地址。', 'fail');
+        handleAudioError(token, playableUrl);
+        return;
+      }
+      setStatus('已通过本站 HTTPS 代理交给 Android 原生播放器，正在获取歌曲……', 'warn');
       try { global.LXNativeAudio.play(playableUrl, token); }
       catch (error) {
         setStatus('Android 原生桥未能启动：' + escapeHtml(String(error)), 'fail');
@@ -2113,7 +2128,10 @@
       setStatus('请先点选一首歌曲，等待播放地址返回，再选择传输线路。', 'warn');
       return;
     }
-    legacyPreferDirect = direct === true;
+    // Direct CDN links are intentionally unsupported by the companion APK
+    // native bridge. A manual "direct" retry must not bypass that boundary.
+    var inCompanion = nativeAudioReady();
+    legacyPreferDirect = direct === true && !inCompanion;
     var state = playbackState;
     var oldUrl = state.sourceUrl;
     var quality = state.quality;
@@ -2123,8 +2141,12 @@
     useResolvedUrl(oldUrl,quality,state.token,state.music,source,
       buildMusicInfo(state.music,source),getPlaySettings(),
       state.resolver,state.resolverProvider,!legacyPreferDirect);
-    setStatus('已切换至'+(legacyPreferDirect?'直接连接':'项目代理')+
-      '线路。请再次点击下方原生音频控件中的 ▶。', 'warn');
+    if (inCompanion) {
+      setStatus('Android 4.4 原生播放器仅支持本站安全代理线路，已重新尝试播放。', 'warn');
+    } else {
+      setStatus('已切换至'+(legacyPreferDirect?'直接连接':'项目代理')+
+        '线路。请再次点击下方原生音频控件中的 ▶。', 'warn');
+    }
   }
 
   global.OnlyTestingMusicApp = {
