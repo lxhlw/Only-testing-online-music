@@ -15,6 +15,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.WebResourceResponse;
 import android.webkit.ValueCallback;
 import android.graphics.Color;
 import android.view.View;
@@ -55,6 +56,8 @@ public final class MainActivity extends Activity {
     private int xhrExpected, xhrReceived, xhrGeneration = -1;
     private TextView status;
     private WebView web;
+    private ModernPageInterceptor secureWeb;
+    private String trustInitProblem;
     private volatile boolean webPageFinished = false;
     private volatile boolean webTopPageError = false;
     private volatile String webPageErrorDetail = "";
@@ -108,7 +111,21 @@ public final class MainActivity extends Activity {
         settings.setAllowFileAccess(false);
         settings.setSavePassword(false);
         web.setWebChromeClient(new WebChromeClient());
+        try {
+            secureWeb = new ModernPageInterceptor(this);
+            Log.i(LOG_TAG, "Modern CA roots initialized for strict verified native HTTPS");
+        } catch (Exception trustError) {
+            trustInitProblem = trustError.getClass().getSimpleName();
+            Log.e(LOG_TAG, "Unable to initialize modern CA roots", trustError);
+            showStatus("新的证书库初始化失败：" + trustInitProblem);
+        }
         web.setWebViewClient(new WebViewClient() {
+            @Override public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+                if (secureWeb != null && ModernPageInterceptor.firstParty(url)) {
+                    return secureWeb.intercept(url);
+                }
+                return null;
+            }
             @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
                 webPageFinished = false;
                 webTopPageError = false;
@@ -251,7 +268,10 @@ public final class MainActivity extends Activity {
                     connection = (HttpsURLConnection)new URL(url).openConnection();
                     // Android 4.4 supports TLS1.2, but its default client
                     // socket settings may disable it.
-                    connection.setSSLSocketFactory(new Tls12Factory());
+                    if (secureWeb == null) {
+                        throw new IOException("Modern CA trust store unavailable: " + trustInitProblem);
+                    }
+                    connection.setSSLSocketFactory(secureWeb.sockets());
                     connection.setConnectTimeout(14000);
                     connection.setReadTimeout(14000);
                     connection.setInstanceFollowRedirects(false);
