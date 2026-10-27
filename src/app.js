@@ -1156,6 +1156,10 @@
   }
 
   var SOURCE_RESOLVE_TIMEOUT_MS = 8000;
+  // v0.17 wrongly stopped Flower at 18 seconds even though L101 has
+  // successfully resolved the same song in ~52 seconds. This is a single
+  // Flower LX musicUrl deadline, not an invitation to try other providers.
+  var FLOWER_NATIVE_RESOLVE_TIMEOUT_MS = 75000;
 
   // Offer an opt-in, channel-preserving retry rather than retrying suspended
   // fallback providers. The upstream Flower source passed live 4-channel
@@ -1283,6 +1287,7 @@
     var resolveAttemptId = playbackState.resolveAttemptId;
     var settled = false;
     var sourceTimer = null;
+    var flowerProgressTimer = null;
     var fastRaceTimer = null;
     var fastRaceStarted = false;
     var fastEnabled = false && NATIVE_COMPANION && !playbackState.forceFullResolve &&
@@ -1302,6 +1307,10 @@
       if (sourceTimer) {
         global.clearTimeout(sourceTimer);
         sourceTimer = null;
+      }
+      if (flowerProgressTimer) {
+        global.clearTimeout(flowerProgressTimer);
+        flowerProgressTimer = null;
       }
       if (fastRaceTimer) {
         global.clearTimeout(fastRaceTimer);
@@ -1479,16 +1488,48 @@
         statusEl.appendChild(slowButton);
       }, 21000);
     } else {
-      sourceTimer = global.setTimeout(function () {
-        if (!isCurrentAttempt() || settled) return;
-        if (NATIVE_COMPANION) {
-          return runFallback('野花音源解析超过 18 秒');
-        }
-        runFallback(
-          '原始音源解析超过 ' + Math.round(SOURCE_RESOLVE_TIMEOUT_MS / 1000)
-          + ' 秒，正在切换备用解析器……'
-        );
-      }, NATIVE_COMPANION ? 18000 : SOURCE_RESOLVE_TIMEOUT_MS);
+      if (NATIVE_COMPANION) {
+        var resolveStarted = Date.now ? Date.now() : new Date().getTime();
+        var initialRequests = active && active.runtime &&
+          active.runtime.__debugRequests ? active.runtime.__debugRequests.length : 0;
+        // An upstream Flower request can take substantially longer than 18s.
+        // Inform the user instead of discarding a still-live request. Never
+        // initiate a Huibq/GD/TuneHub request while this one is pending.
+        var progressFlower = function() {
+          if (!isCurrentAttempt() || settled) return;
+          var now = Date.now ? Date.now() : new Date().getTime();
+          var waitedSeconds = Math.max(0, Math.round((now - resolveStarted) / 1000));
+          var activeNow = global.LXSourceManager.getActive();
+          var requests = activeNow && activeNow.runtime &&
+            activeNow.runtime.__debugRequests;
+          var requestCount = Math.max(0, (requests && requests.length ? requests.length : 0) - initialRequests);
+          setStatus('野花正在等待歌曲地址（已等 ' + waitedSeconds +
+            ' 秒，已发起 ' + requestCount +
+            ' 次音源网络请求）。不会切换其他音源，最多等待 ' +
+            Math.round(FLOWER_NATIVE_RESOLVE_TIMEOUT_MS / 1000) +
+            ' 秒。', 'warn');
+          flowerProgressTimer = global.setTimeout(progressFlower, 12000);
+        };
+        flowerProgressTimer = global.setTimeout(progressFlower, 18000);
+        sourceTimer = global.setTimeout(function() {
+          if (!isCurrentAttempt() || settled) return;
+          var activeNow = global.LXSourceManager.getActive();
+          var count = activeNow && activeNow.runtime &&
+            activeNow.runtime.__debugRequests ?
+            Math.max(0, activeNow.runtime.__debugRequests.length - initialRequests) : 0;
+          runFallback('野花网络请求超过 ' +
+            Math.round(FLOWER_NATIVE_RESOLVE_TIMEOUT_MS / 1000) +
+            ' 秒仍未返回（本次音源网络请求 ' + count + ' 次）');
+        }, FLOWER_NATIVE_RESOLVE_TIMEOUT_MS);
+      } else {
+        sourceTimer = global.setTimeout(function () {
+          if (!isCurrentAttempt() || settled) return;
+          runFallback(
+            '原始音源解析超过 ' + Math.round(SOURCE_RESOLVE_TIMEOUT_MS / 1000)
+            + ' 秒，正在切换备用解析器……'
+          );
+        }, SOURCE_RESOLVE_TIMEOUT_MS);
+      }
     }
 
     global.LXSourceManager.requestAction(
@@ -1503,7 +1544,9 @@
 
         if (err) {
           if (fastEnabled) { startFastRace(); return; }
-          return runFallback('原始音源解析失败，正在切换备用解析器……');
+          return runFallback(NATIVE_COMPANION ?
+            '野花返回解析错误：' + (err && (err.message || err) || '网络错误') :
+            '原始音源解析失败，正在切换备用解析器……');
         }
 
         var url = typeof result === 'string'
