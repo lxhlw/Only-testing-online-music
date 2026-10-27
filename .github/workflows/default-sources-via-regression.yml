@@ -7,6 +7,7 @@ on:
       - "src/app.js"
       - "scripts/test-native-companion-browser.mjs"
       - "index.html"
+      - "scripts/test-resolver-outage-cooldown-browser.mjs"
       - "scripts/test-android44-native-media-url-browser.mjs"
       - "src/android-native-resolver.js"
       - "scripts/test-android44-native-resolver-browser.mjs"
@@ -63,6 +64,7 @@ jobs:
         run: |
           node --check src/source-manager.js
           node --check src/app.js
+          node --check scripts/test-resolver-outage-cooldown-browser.mjs
           node --check scripts/test-android44-native-media-url-browser.mjs
           node --check src/android-native-resolver.js
           node --check scripts/test-android44-native-resolver-browser.mjs
@@ -118,6 +120,9 @@ jobs:
 
       - name: Verify resolved media addresses and direct retry stay first-party in native APK
         run: node scripts/test-android44-native-media-url-browser.mjs
+
+      - name: Verify provider outage skip and original platform fallback
+        run: node scripts/test-resolver-outage-cooldown-browser.mjs
 
       - name: Verify API19 native resolver GET POST statuses
         run: node scripts/test-android44-native-resolver-browser.mjs
