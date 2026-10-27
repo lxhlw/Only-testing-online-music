@@ -409,6 +409,24 @@
     installFromUrl(BUILTIN_HUIBQ_URL, callback, options);
   }
 
+  // Import Flower only after an explicit tap. Preserve the currently chosen
+  // source until the caller verifies this import supports the requested
+  // channel and deliberately activates it. Never silently replace user
+  // selections on import failure or after another selection intervenes.
+  function installVerifiedFlower(callback) {
+    var expected = String(active && active.id || '');
+    var opts = { preserveActive:true, expectedActiveId:expected };
+    installFromUrl(DEFAULT_FLOWER_URL, function (mirrorErr, item) {
+      if (!mirrorErr) {
+        if (callback) callback(null, item);
+        return;
+      }
+      installFromUrl(DEFAULT_FLOWER_RAW_URL, function (rawErr, rawItem) {
+        if (callback) callback(rawErr, rawItem);
+      }, opts);
+    }, opts);
+  }
+
   function hasDefaultFlower() {
     for (var i = 0; i < sources.length; i += 1) {
       var item = sources[i];
@@ -618,7 +636,8 @@
 
   global.LXSourceManager={
     init:init,installFromUrl:installFromUrl,installFromCode:installFromCode,
-    installBuiltinHuibq:installBuiltinHuibq,restoreDefaults:restoreDefaults,
+    installBuiltinHuibq:installBuiltinHuibq,installVerifiedFlower:installVerifiedFlower,
+    restoreDefaults:restoreDefaults,
     remove:remove,clear:clear,activate:activate,requestAction:requestAction,
     getSources:function(){return sources.slice();},
     getActive:function(){return active;}
