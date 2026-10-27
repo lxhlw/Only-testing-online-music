@@ -3468,11 +3468,68 @@
     return afterHuibq();
   }
 
+  // KitKat native companion: skip the historic serial ladder in which each
+  // failed provider (and alternative ID) waits for the previous one. All
+  // providers below are the same existing source-specific, authorized
+  // resolvers. No cross-platform substitutions or certificate bypasses.
+  function resolveMusicUrlFast(source, musicInfo, quality, callback) {
+    source = String(source || '').toLowerCase();
+    var tasks = [];
+    function addTask(name, work) {
+      if (resolverOutageError(name)) return;
+      tasks.push(work);
+    }
+    if (source === 'wy') tasks.push(function(done) { resolveNeteaseNativeUrl(musicInfo, quality, done); });
+    if (source === 'mg') tasks.push(function(done) { resolveMiguNativeUrl(musicInfo, quality, done); });
+    if (source === 'kw') tasks.push(function(done) { resolveKuwoNativeUrl(musicInfo, quality, done); });
+    if (source === 'kg') tasks.push(function(done) { resolveKugouNativeUrl(musicInfo, quality, done); });
+    if (source === 'tx') tasks.push(function(done) { resolveTencentAggregateUrl(musicInfo, quality, done); });
+    addTask('huibq', function(done) { resolveHuibqUrl(source, musicInfo, quality, done); });
+    if (TUNEFREE_SOURCE_MAP[source])
+      addTask('tune-free', function(done) { resolveTuneFreeUrl(source, musicInfo, quality, done); });
+    addTask('gd-studio', function(done) { resolveGdStudioUrl(source, musicInfo, quality, done); });
+    if (!tasks.length) { callback(new Error('当前没有可用的同平台解析服务')); return; }
+
+    var finished = false, pending = tasks.length, timer = null;
+    var lastError = null;
+    function finish(error, result) {
+      if (finished) return;
+      finished = true;
+      if (timer) global.clearTimeout(timer);
+      callback(error, result);
+    }
+    // Bounds the *whole* provider race rather than letting several 16s
+    // upstream timeouts add to a 52s playback startup.
+    timer = global.setTimeout(function() {
+      finish(new Error('快速解析未在 16 秒内获得播放地址'));
+    }, 16000);
+    for (var i=0; i<tasks.length; i++) {
+      try {
+        tasks[i](function(error, result) {
+          if (finished) return;
+          if (!error && result && /^https?:\\/\\//i.test(String(result.url || '')) &&
+              !isCrossPlatformPlaybackUrl(source, result.url)) {
+            finish(null, result);
+            return;
+          }
+          if (error) lastError = error;
+          pending--;
+          if (pending <= 0) finish(lastError || new Error('本次解析没有可用的歌曲地址'));
+        });
+      } catch(e) {
+        lastError = e;
+        pending--;
+        if (pending <= 0) finish(lastError);
+      }
+    }
+  }
+
   global.LXMusicSearch = {
     search: search,
     sourceMap: SOURCE_MAP,
     normalizeSong: normalizeSong,
     resolveMusicUrl: resolveMusicUrl,
+    resolveMusicUrlFast: resolveMusicUrlFast,
     isPlayableUrlForSource: function (source, url) {
       return !isCrossPlatformPlaybackUrl(source, url);
     }
