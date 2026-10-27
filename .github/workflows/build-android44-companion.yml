@@ -87,15 +87,15 @@ jobs:
         run: |
           set -euo pipefail
           ORIGINAL="android-companion/app/build/outputs/apk/debug/app-debug.apk"
-          NAMED="android-companion/LXMusic-Android44-v0.6-KitKat-Buttons.apk"
+          NAMED="android-companion/LXMusic-Android44-v0.7-StrictMode-Fix.apk"
           cp "$ORIGINAL" "$NAMED"
           cmp "$ORIGINAL" "$NAMED"
           sha256sum "$NAMED"
       - name: Upload named installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LXMusic-Android44-v0.6-KitKat-Buttons
-          path: android-companion/LXMusic-Android44-v0.6-KitKat-Buttons.apk
+          name: LXMusic-Android44-v0.7-StrictMode-Fix
+          path: android-companion/LXMusic-Android44-v0.7-StrictMode-Fix.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -105,14 +105,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="android44-kitkat-buttons-v06-20261027"
-          NAMED_APK="android-companion/LXMusic-Android44-v0.6-KitKat-Buttons.apk"
-          FRIENDLY_NAME="LXMusic-Android44-v0.6-KitKat-Buttons.apk"
+          TAG="android44-strict-mode-v07-20261027"
+          NAMED_APK="android-companion/LXMusic-Android44-v0.7-StrictMode-Fix.apk"
+          FRIENDLY_NAME="LXMusic-Android44-v0.7-StrictMode-Fix.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" "$NAMED_APK" \
               --target "$GITHUB_SHA" \
-              --title "LX Music Android 4.4 - Chrome 30 strict syntax and APK script routing beta 0.6" \
-              --notes "Android 4.4 API 19 v0.6 strict ES5 script repair and tested bundled APK script URL routing. Physical v0.5 had parser error and unresponsive import/search buttons. Preserve validated TLS and audible MediaPlayer. True Chrome30 button operation must be re-tested on L101. Debug prerelease." \
+              --title "LX Music Android 4.4 - Chrome 30 strict IIFE block-function fix beta 0.7" \
+              --notes "Android 4.4 API19 beta v0.7 fixes real L101 Chrome 30 strict block function syntax in src/app.js line 782, adds AST regression test. Other native HTTPS and audio components remain unchanged. Real tablet button verification required. Debug prerelease." \
               --prerelease
           else
             # Repair the previously published Release asset *in place*. Only
