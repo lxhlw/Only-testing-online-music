@@ -15,6 +15,18 @@
   var LEGACY_HUIBQ_MARKER = 'only-testing-online-music verified built-in adapter marker';
   var sources = [];
   var active = null;
+  // A native KitKat APK uses only Flower for playback. Search channels (wy,
+  // mg, kw, kg, tx) remain independent of imported LX playback scripts.
+  var FLOWER_ONLY_NATIVE = false;
+  try {
+    FLOWER_ONLY_NATIVE = !!(global.LXNativeAudio &&
+      typeof global.LXNativeAudio.isAvailable === 'function' &&
+      global.LXNativeAudio.isAvailable());
+  } catch (e) {}
+  function isFlower(item) {
+    return !!item && String(item.url || '').indexOf(
+      'pdone/lx-music-source/main/flower/latest.js') >= 0;
+  }
 
   function trim(s) { return String(s || '').replace(/^\s+|\s+$/g, ''); }
 
@@ -559,9 +571,47 @@
     });
   }
 
+  // APK: an existing cached Flower is enough; never download another source.
+  // If no cached Flower is present, import only the official Flower script.
+  // Do not use Huibq or the historic default-source retry cooldown.
+  function ensureNativeFlower(force, callback) {
+    if (!FLOWER_ONLY_NATIVE) {
+      if (callback) callback(new Error('Not a native Flower-only session'));
+      return;
+    }
+    if (!force && active && isFlower(active) && active.code &&
+        active.code.length > 100 && !active.error) {
+      if (callback) callback(null,active);
+      return;
+    }
+    installFromUrl(DEFAULT_FLOWER_RAW_URL, function (rawError, item) {
+      if (!rawError) {
+        if (callback) callback(null,item);
+        return;
+      }
+      // Two addresses of the SAME Flower script, not two playback sources.
+      installFromUrl(DEFAULT_FLOWER_URL, function (mirrorError, fallbackItem) {
+        if (callback) callback(mirrorError || null,fallbackItem || item);
+      }, {autoDefault:true});
+    }, {autoDefault:true});
+  }
+
   function init() {
     var savedId=loadActiveId();
     sources=loadRaw();
+    if (FLOWER_ONLY_NATIVE) {
+      var cachedFlower = null;
+      for (var fi=0;fi<sources.length;fi+=1) {
+        if (isFlower(sources[fi]) &&
+            (String(sources[fi].id)===savedId || !cachedFlower)) {
+          cachedFlower=sources[fi];
+          if (String(cachedFlower.id)===savedId) break;
+        }
+      }
+      // Remove obsolete Huibq/custom scripts from the native APK only.
+      // Regular web browsers retain their own independent source manager.
+      sources=cachedFlower ? [cachedFlower] : [];
+    }
     active=null;
     for (var i=0;i<sources.length;i+=1) {
       if (String(sources[i].id)===savedId) {
@@ -575,9 +625,18 @@
     function next(index) {
       if (index >= sources.length) {
         persist(); notify();
-        // Do not stall the search UI while remote Flower imports on a slow
-        // Android 4.4 device; Huibq initializes from a tiny bundled adapter.
-        global.setTimeout(function () { ensureDefaultSources(false); }, 80);
+        // Never fetch Huibq/TuneHub/GD Studio in the native APK.
+        // A cached Flower is rehydrated locally, without another download.
+        global.setTimeout(function () {
+          if (FLOWER_ONLY_NATIVE) {
+            ensureNativeFlower(false,function(err) {
+              if (err && global.OnlyTestingMusicApp &&
+                  global.OnlyTestingMusicApp.onFlowerBootstrapError) {
+                global.OnlyTestingMusicApp.onFlowerBootstrapError(err);
+              }
+            });
+          } else ensureDefaultSources(false);
+        }, 80);
         return;
       }
       rehydrate(sources[index],function(){
@@ -608,6 +667,7 @@
   }
 
   function restoreDefaults(callback) {
+    if (FLOWER_ONLY_NATIVE) return ensureNativeFlower(true,callback);
     try {
       localStorage.removeItem(DEFAULT_SOURCE_DISABLED_KEY);
       localStorage.removeItem(DEFAULT_SOURCE_LAST_ATTEMPT_KEY);
@@ -640,6 +700,8 @@
     restoreDefaults:restoreDefaults,
     remove:remove,clear:clear,activate:activate,requestAction:requestAction,
     getSources:function(){return sources.slice();},
-    getActive:function(){return active;}
+    getActive:function(){return active;},
+    isFlowerOnlyNative:function(){return FLOWER_ONLY_NATIVE;},
+    ensureNativeFlower:ensureNativeFlower
   };
 })(window);
