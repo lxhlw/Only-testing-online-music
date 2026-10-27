@@ -15,6 +15,8 @@ on:
       - "scripts/test-chrome30-strict-syntax.mjs"
       - "package.json"
       - "scripts/bundle-android44-webui.mjs"
+      - "scripts/test-android44-apk-babel-offline-browser.mjs"
+      - "src/source-transpiler.js"
       - "scripts/test-android44-bundled-ui-browser.mjs"
       - "android-companion/app/src/main/java/dev/lxmusic/legacy/ModernPageInterceptor.java"
       - "src/android-native-xhr-fallback.js"
@@ -71,6 +73,7 @@ jobs:
           node --check src/android-native-resolver.js
           node --check scripts/test-android44-native-resolver-browser.mjs
           node --check scripts/bundle-android44-webui.mjs
+          node --check scripts/test-android44-apk-babel-offline-browser.mjs
           node --check scripts/test-android44-bundled-ui-browser.mjs
           node --check src/android-native-xhr-fallback.js
           node --check scripts/test-android44-tls-xhr-fallback-browser.mjs
@@ -119,6 +122,9 @@ jobs:
         run: |
           node scripts/bundle-android44-webui.mjs
           node scripts/test-android44-bundled-ui-browser.mjs
+
+      - name: Verify offline APK Babel handles modern LX source with live Babel unavailable
+        run: node scripts/test-android44-apk-babel-offline-browser.mjs
 
       - name: Verify resolved media addresses and direct retry stay first-party in native APK
         run: node scripts/test-android44-native-media-url-browser.mjs
