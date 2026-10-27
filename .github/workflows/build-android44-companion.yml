@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'android-companion/**'
+      - 'src/android-native-xhr-fallback.js'
       - 'src/app.js'
       - 'index.html'
       - 'scripts/test-native-companion-browser.mjs'
@@ -65,15 +66,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="android44-phase1-test-20261027"
+          TAG="android44-tlsfix-test-20261027"
           APK="android-companion/app/build/outputs/apk/debug/app-debug.apk"
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Existing test release found: not overwriting the publicly downloadable APK."
           else
-            gh release create "$TAG" "$APK#LXMusic-Android44-Phase1.apk" \
+            gh release create "$TAG" "$APK#LXMusic-Android44-TLSFix.apk" \
               --target "$GITHUB_SHA" \
-              --title "LX Music Android 4.4 - Phase 1 native audio test APK" \
-              --notes "Android 4.4.2/API 19 native MediaPlayer companion, Phase 1 debug build. This is a prerelease for physical tablet sound validation, not a verified production app. On the tablet, test 本地试听 first, then 联网试听, then music search. If you have an older debug APK installed, Android may require uninstalling it because CI debug signing keys can differ." \
+              --title "LX Music Android 4.4 - TLS/XHR native audio beta 0.2" \
+              --notes "Android 4.4.2/API 19 MediaPlayer with independently verified browser-XHR audio fallback for native SSL handshake failures, debug build. This is a prerelease for physical tablet sound validation, not a verified production app. On the tablet, test 本地试听 first, then 联网试听, then music search. If you have an older debug APK installed, Android may require uninstalling it because CI debug signing keys can differ." \
               --prerelease
           fi
           gh release view "$TAG" --json url -q .url
