@@ -41,7 +41,7 @@ async function scenario(cached,reject=false){
    if(cached){
      localStorage.setItem('only-testing-online-music.lx-sources',JSON.stringify([
        {id:'old-source',url:'https://example.test/old.js',code:'/* @name Huibq */'},
-       {id:'flower-existing',url:flowerUrl,code:flowerCode}
+       {id:'flower-existing',url:flowerUrl,name:'野花🌷',code:flowerCode}
      ]))
      localStorage.setItem('only-testing-online-music.active-source-id','old-source')
    }
