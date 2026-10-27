@@ -632,10 +632,6 @@ public final class MainActivity extends Activity {
             xhrFallbackGeneration.set(-1);
             browserFastStartGeneration = -1;
             browserFastStartUrl = null;
-            if (activeToken >= 0 && audioRoutePreference != null) {
-                audioRoutePreference.succeededThroughBrowser();
-                getPreferences(MODE_PRIVATE).edit().putBoolean(PREFERRED_BROWSER_AUDIO_KEY, true).apply();
-            }
             ui.post(new Runnable() {
                 @Override public void run() {
                     if (g == generation.get()) {
@@ -695,6 +691,15 @@ public final class MainActivity extends Activity {
                     prepared = true;
                     try {
                         mp.start();
+                        // Remember only audio that MediaPlayer actually started.
+                        // A valid-looking downloaded file alone is insufficient.
+                        if (token >= 0 && activeFile != null &&
+                                activeFile.getName().endsWith("-xhr.bin") &&
+                                audioRoutePreference != null) {
+                            audioRoutePreference.succeededThroughBrowser();
+                            getPreferences(MODE_PRIVATE).edit()
+                                    .putBoolean(PREFERRED_BROWSER_AUDIO_KEY, true).apply();
+                        }
                         long elapsed = audioStartElapsedMs > 0 ? SystemClock.elapsedRealtime() - audioStartElapsedMs : 0;
                         showStatus(token < 0 ? "原生测试音播放中，请听是否有声音" :
                                 "音乐已开始播放（本次下载与准备约 " + (elapsed / 1000) + " 秒）");
