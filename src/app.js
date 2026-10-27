@@ -2045,6 +2045,21 @@
 
   function bind() {
     bindInstallButton();
+    if (NATIVE_COMPANION) {
+      // The APK has exactly one playback source. Hide the old imports,
+      // delete/switch-source controls and misleading diagnostics, but keep
+      // the one useful Flower refresh action.
+      var obsoleteIds=['install-btn','verified-install-btn','sixyin-install-btn',
+        'clear-btn','source-url','runtime-info'];
+      for (var oi=0;oi<obsoleteIds.length;oi++) {
+        var oldControl=document.getElementById(obsoleteIds[oi]);
+        if (oldControl) oldControl.style.display='none';
+      }
+      var sourceUrlLabel=document.querySelector('label[for="source-url"]');
+      if (sourceUrlLabel) sourceUrlLabel.style.display='none';
+      var flowerRefresh=document.getElementById('restore-default-sources-btn');
+      if (flowerRefresh) flowerRefresh.textContent='重新加载野花音源';
+    }
     statusEl = document.getElementById('status');
     listEl = document.getElementById('source-list');
     countEl = document.getElementById('source-count');
@@ -2165,11 +2180,14 @@
     var restoreSourcesButton = document.getElementById('restore-default-sources-btn');
     if (restoreSourcesButton) restoreSourcesButton.onclick = function () {
       restoreSourcesButton.disabled = true;
-      setStatus('正在恢复 Flower 与 Huibq 默认音源，请稍候……');
+      setStatus(NATIVE_COMPANION ? '正在重新加载野花音源……' :
+        '正在恢复 Flower 与 Huibq 默认音源，请稍候……');
       global.LXSourceManager.restoreDefaults(function (err) {
         restoreSourcesButton.disabled = false;
         if (err) setStatus('部分默认音源导入失败：' + escapeHtml(err.message || err), 'warn');
-        else setStatus('默认音源已就绪。可在上方选择当前音源。', 'ready');
+        else setStatus(NATIVE_COMPANION ?
+          '已重新加载野花音源，初始化完成后可以继续播放。' :
+          '默认音源已就绪。可在上方选择当前音源。', 'ready');
       });
     };
 
