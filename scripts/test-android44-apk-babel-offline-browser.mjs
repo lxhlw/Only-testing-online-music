@@ -5,13 +5,15 @@ import { chromium } from 'playwright'
 
 const base=process.env.TEST_BASE_URL||'http://127.0.0.1:8788'
 const localBabel='android-companion/app/src/main/assets/web/vendor/babel.min.js'
+const localPolyfills='android-companion/app/src/main/assets/web/vendor/core-js.min.js'
 assert.ok(statSync(localBabel).size>500000,'Actual APK Babel asset must exist after bundle')
+assert.ok(statSync(localPolyfills).size>100000,'Actual APK core-js asset must exist after bundle')
 const browser=await chromium.launch({headless:true})
 try {
  const page=await browser.newPage({
    userAgent:'Mozilla/5.0 (Linux; Android 4.4.2; L101) AppleWebKit/537.36 Version/4.0 Chrome/30.0.0.0 Safari/537.36'
  })
- const pageErrors=[],requests={local:0,remote:0}
+ const pageErrors=[],requests={local:0,polyfills:0,remote:0}
  page.on('pageerror',error=>pageErrors.push(String(error)))
  await page.addInitScript(()=>{
    localStorage.setItem('only-testing-online-music.default-source-disabled','1')
@@ -20,6 +22,10 @@ try {
      isAvailable:function(){return true},play:function(){},pause:function(){},
      resume:function(){},seek:function(){}
    }
+ })
+ await page.route('**/vendor/core-js.min.js',async route=>{
+   requests.polyfills++
+   await route.fulfill({status:200,contentType:'application/javascript',body:readFileSync(localPolyfills)})
  })
  await page.route('**/vendor/babel.min.js',async route=>{
    requests.local++
@@ -86,6 +92,7 @@ try {
  assert.equal(action.error,null)
  assert.equal(action.url,'https://media.example.test/ok.mp3')
  assert.equal(requests.local,1,'Should load APK-local Babel exactly once')
+ assert.equal(requests.polyfills,1,'Should load APK-local ES5 polyfills exactly once')
  assert.equal(requests.remote,0,'No live /api/babel request is permitted when local runtime exists')
  assert.deepEqual(pageErrors,[])
  console.log('PASS: APK-only 7.29.9 Babel works with network Babel HTTP 503; transpiles ES2020 to ES5 and runs LX musicUrl')
