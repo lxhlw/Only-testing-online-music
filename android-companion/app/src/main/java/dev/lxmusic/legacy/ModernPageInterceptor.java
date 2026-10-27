@@ -1,7 +1,6 @@
 package dev.lxmusic.legacy;
 
 import android.content.Context;
-import android.content.res.AssetManager;
 import android.util.Log;
 import android.webkit.WebResourceResponse;
 import java.io.ByteArrayInputStream;
@@ -24,11 +23,9 @@ public final class ModernPageInterceptor {
     private static final String TAG = "LXMusicNative";
     private static final String HOST = "only-testing-online-music.pages.dev";
     private final SSLSocketFactory sockets;
-    private final AssetManager appAssets;
 
     public ModernPageInterceptor(Context context) throws Exception {
         sockets = ModernTrust.create(context.getApplicationContext());
-        appAssets = context.getApplicationContext().getAssets();
     }
 
     public SSLSocketFactory sockets() { return sockets; }
@@ -69,14 +66,15 @@ public final class ModernPageInterceptor {
      * on Android KitKat fetching 16+ scripts reliably via its obsolete SSL
      * engine. API endpoints and downloaded music are NEVER served from assets.
      */
-    private WebResourceResponse bundledUi(String target) {
+    public static WebResourceResponse bundledUi(Context context, String target) {
+        if (!firstParty(target)) return null;
         try {
             URL u = new URL(target);
             String path = u.getPath();
             if (path == null || path.length() == 0 || "/".equals(path)) path = "/index.html";
             String relative = BundledAssetPath.resolve(path);
             if (relative == null) return null;
-            InputStream resource = appAssets.open("web/" + relative);
+            InputStream resource = context.getApplicationContext().getAssets().open("web/" + relative);
             String type = relative.endsWith(".css") ? "text/css" :
                     relative.endsWith(".js") ? "application/javascript" : "text/html";
             Log.i(TAG, "APK UI asset " + relative);
@@ -89,8 +87,6 @@ public final class ModernPageInterceptor {
 
     public WebResourceResponse intercept(String url) {
         if (!firstParty(url)) return null;
-        WebResourceResponse local = bundledUi(url);
-        if (local != null) return local;
         HttpsURLConnection connection = null;
         try {
             connection = (HttpsURLConnection) new URL(url).openConnection();
