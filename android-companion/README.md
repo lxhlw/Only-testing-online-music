@@ -1,5 +1,46 @@
 # LX Music Android 4.4 Companion — Phase 1 and TLS fix 0.2
 
+## v0.4: Android 4.4 WebView SSL_UNTRUSTED (error 3)
+
+Physical screenshot from L101 Android 4.4.2: `安全 XHR 备用通道失败：
+网页 HTTPS 未就绪：WebView SSL 3`, with blank embedded WebView.
+Android documents error 3 as `SSL_UNTRUSTED` (certificate issuer not
+trusted); the APK's local MediaPlayer tone is confirmed audible.
+
+v0.4 adds a curated set of current WebPKI CA trust anchors from Mozilla's
+certifi, including Google Trust Services, ISRG/Let's Encrypt, SSL.com,
+GlobalSign and Sectigo. Native `HttpsURLConnection` now uses a composite
+Android-system + updated-CA `X509TrustManager`, preserving TLS 1.2,
+certificate chain validation and the *default hostname verifier*.
+
+Android WebView API19 does not use an app-provided Java trust manager
+automatically. A first-party-only `shouldInterceptRequest` handler therefore
+fetches trusted `https://only-testing-online-music.pages.dev/` GET resources
+with that same CA-verified transport and hands them to WebView. Nonmatching
+origins, HTTP, redirects, untrusted chains and invalid hostnames are never
+accepted; there is no `SslErrorHandler.proceed()`, trust-all manager, or
+`HostnameVerifier` override.
+
+This is an exploratory beta. Old TLS cipher support, WebView's handling of
+intercepted subresources and non-GET network requests may still limit the
+website. A real device must verify the page visibly loads and the top
+**联网试听** actually sounds.
+
+Install the GitHub prerelease `android44-modern-ca-v04-20261027` APK from
+Windows:
+```bat
+adb install -r "C:\\adb\\app-debug.apk"
+adb shell am force-stop dev.lxmusic.legacy
+adb shell am start -n dev.lxmusic.legacy/.MainActivity
+```
+
+If debug signing keys differ, upgrade may report
+`INSTALL_FAILED_UPDATE_INCOMPATIBLE`; only then uninstall (clears data).
+For a failure take a photo of the app's top status, or capture diagnostics:
+```bat
+adb logcat -d -s LXMusicNative:W AndroidRuntime:E
+```
+
 ## Physical test: v0.2 WebView fallback unavailable (v0.3 fix)
 
 The Android 4.4.2 L101 confirmed **local native tone audible**.

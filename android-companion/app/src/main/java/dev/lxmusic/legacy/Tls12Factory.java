@@ -10,8 +10,14 @@ import javax.net.ssl.SSLSocketFactory;
 // all client sockets. Preserve Android's default trust manager and hostname
 // checks; never use an "accept all certificates" workaround.
 public final class Tls12Factory extends SSLSocketFactory {
-    private final SSLSocketFactory delegate =
-        (SSLSocketFactory) SSLSocketFactory.getDefault();
+    private final SSLSocketFactory delegate;
+    public Tls12Factory() {
+        this((SSLSocketFactory) SSLSocketFactory.getDefault());
+    }
+    public Tls12Factory(SSLSocketFactory trustedDelegate) {
+        if (trustedDelegate == null) throw new IllegalArgumentException("TLS factory missing");
+        this.delegate = trustedDelegate;
+    }
 
     private Socket enable(Socket socket) {
         if (socket instanceof SSLSocket) {
