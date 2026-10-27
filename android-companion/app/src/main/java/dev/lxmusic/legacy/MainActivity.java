@@ -121,9 +121,11 @@ public final class MainActivity extends Activity {
                 if (item != null && item.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
                     String msg = item.message() == null ? "" : item.message();
                     webScriptErrorCount++;
-                    lastWebScriptError = msg.substring(0, Math.min(120, msg.length()));
-                    Log.e(LOG_TAG, "WebView JS " + item.sourceId() + ":" + item.lineNumber() +
-                            " " + lastWebScriptError);
+                    String script = item.sourceId() == null ? "unknown" : item.sourceId();
+                    if (script.length() > 75) script = script.substring(script.length() - 75);
+                    lastWebScriptError = script + ":" + item.lineNumber() + " " +
+                            msg.substring(0, Math.min(135, msg.length()));
+                    Log.e(LOG_TAG, "WebView JS " + lastWebScriptError);
                 }
                 return super.onConsoleMessage(item);
             }
