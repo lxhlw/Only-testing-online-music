@@ -61,6 +61,8 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check src/app.js
+          node --check src/android-native-xhr-fallback.js
+          node --check scripts/test-android44-tls-xhr-fallback-browser.mjs
           node --check scripts/test-native-companion-browser.mjs
           node --check src/android-external-audio.js
           node --check scripts/test-android-external-intent-browser.mjs
@@ -122,6 +124,9 @@ jobs:
 
       - name: Verify Android native companion bridge
         run: node scripts/test-native-companion-browser.mjs
+
+      - name: Verify Android 4.4 XHR to native TLS fallback
+        run: node scripts/test-android44-tls-xhr-fallback-browser.mjs
 
       - name: Verify manual Android external audio Intent handoff
         run: node scripts/test-android-external-intent-browser.mjs
@@ -319,6 +324,11 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
         run: node scripts/test-native-companion-browser.mjs
+
+      - name: Verify deployed Android XHR native TLS fallback
+        env:
+          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
+        run: node scripts/test-android44-tls-xhr-fallback-browser.mjs
 
       - name: Verify deployed manual Android native-player audio handoff
         env:
