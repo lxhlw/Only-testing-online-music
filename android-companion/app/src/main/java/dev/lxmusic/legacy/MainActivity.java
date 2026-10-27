@@ -12,6 +12,7 @@ import android.webkit.JavascriptInterface;
 import android.webkit.SslErrorHandler;
 import android.net.http.SslError;
 import android.webkit.WebChromeClient;
+import android.webkit.ConsoleMessage;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -56,6 +57,8 @@ public final class MainActivity extends Activity {
     private int xhrExpected, xhrReceived, xhrGeneration = -1;
     private TextView status;
     private WebView web;
+    private String lastWebScriptError = "";
+    private int webScriptErrorCount = 0;
     private ModernPageInterceptor secureWeb;
     private String trustInitProblem;
     private volatile boolean webPageFinished = false;
@@ -103,6 +106,9 @@ public final class MainActivity extends Activity {
         actions.addView(button("播放/暂停", new View.OnClickListener() {
             @Override public void onClick(View v) { togglePause(); }
         }), new LinearLayout.LayoutParams(0, -2, 1));
+        actions.addView(button("检查按钮", new View.OnClickListener() {
+            @Override public void onClick(View v) { inspectWebButtons(true); }
+        }), new LinearLayout.LayoutParams(0, -2, 1));
         shell.addView(actions);
         web = new WebView(this);
         WebSettings settings = web.getSettings();
@@ -110,7 +116,18 @@ public final class MainActivity extends Activity {
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(false);
         settings.setSavePassword(false);
-        web.setWebChromeClient(new WebChromeClient());
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override public boolean onConsoleMessage(ConsoleMessage item) {
+                if (item != null && item.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
+                    String msg = item.message() == null ? "" : item.message();
+                    webScriptErrorCount++;
+                    lastWebScriptError = msg.substring(0, Math.min(120, msg.length()));
+                    Log.e(LOG_TAG, "WebView JS " + item.sourceId() + ":" + item.lineNumber() +
+                            " " + lastWebScriptError);
+                }
+                return super.onConsoleMessage(item);
+            }
+        });
         try {
             secureWeb = new ModernPageInterceptor(this);
             Log.i(LOG_TAG, "Modern CA roots initialized for strict verified native HTTPS");
@@ -135,6 +152,9 @@ public final class MainActivity extends Activity {
                 webPageFinished = true;
                 Log.i(LOG_TAG, "WebView finished; first-party=" + isTrustedPageUrl(url) +
                         ", topPageError=" + webTopPageError);
+                ui.postDelayed(new Runnable() {
+                    @Override public void run() { inspectWebButtons(false); }
+                }, 1200);
             }
             @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 if (url.equals(ORIGIN) || url.startsWith(ORIGIN + "/") ||
@@ -169,6 +189,41 @@ public final class MainActivity extends Activity {
         setContentView(shell);
         ui.post(progressTick);
         web.loadUrl(ORIGIN + "/?native-companion=1");
+    }
+
+    private void inspectWebButtons(final boolean manual) {
+        if (web == null || !webPageFinished || !isTrustedPageUrl(web.getUrl())) {
+            if (manual) showStatus("网页尚未加载完成，按钮暂时无法检测");
+            return;
+        }
+        // All checks are read-only and ES5; the interface may be visible
+        // even if its JavaScript resources or event handlers did not load.
+        final String probe = "(function(){var a=document.getElementById('install-btn');" +
+                "var b=document.getElementById('global-search-btn');" +
+                "return 'app='+typeof window.OnlyTestingMusicApp+" +
+                "',source='+typeof window.LXSourceManager+" +
+                "',import='+(a?typeof a.onclick:'missing')+" +
+                "',search='+(b?typeof b.onclick:'missing')+" +
+                "',navigate='+typeof window.OnlyTestingNavigate;})()";
+        web.evaluateJavascript(probe, new ValueCallback<String>() {
+            @Override public void onReceiveValue(String value) {
+                String summary = String.valueOf(value);
+                Log.i(LOG_TAG, "APK UI readiness probe: " + summary);
+                boolean ready = summary.contains("app=object") &&
+                        summary.contains("source=object") &&
+                        summary.contains("import=function") &&
+                        summary.contains("search=function") &&
+                        summary.contains("navigate=function");
+                if (ready) {
+                    if (manual) showStatus("网页按钮已绑定，请再尝试搜索/导入音源");
+                } else {
+                    String cause = lastWebScriptError.length() > 0 ?
+                            (" | JS异常：" + lastWebScriptError) : "";
+                    showStatus("网页按钮未就绪：" + summary +
+                            " | 错误数=" + webScriptErrorCount + cause);
+                }
+            }
+        });
     }
 
     private Button button(String label, View.OnClickListener onClick) {

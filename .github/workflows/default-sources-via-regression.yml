@@ -7,6 +7,9 @@ on:
       - "src/app.js"
       - "scripts/test-native-companion-browser.mjs"
       - "index.html"
+      - "scripts/bundle-android44-webui.mjs"
+      - "scripts/test-android44-bundled-ui-browser.mjs"
+      - "android-companion/app/src/main/java/dev/lxmusic/legacy/ModernPageInterceptor.java"
       - "src/android-native-xhr-fallback.js"
       - "scripts/test-android44-tls-xhr-fallback-browser.mjs"
       - "scripts/test-android44-bundled-fallback-browser.mjs"
@@ -55,6 +58,8 @@ jobs:
         run: |
           node --check src/source-manager.js
           node --check src/app.js
+          node --check scripts/bundle-android44-webui.mjs
+          node --check scripts/test-android44-bundled-ui-browser.mjs
           node --check src/android-native-xhr-fallback.js
           node --check scripts/test-android44-tls-xhr-fallback-browser.mjs
           node --check scripts/test-android44-bundled-fallback-browser.mjs
@@ -94,6 +99,11 @@ jobs:
 
       - name: Verify Android 4.4 XHR-to-native TLS fallback byte integrity
         run: node scripts/test-android44-tls-xhr-fallback-browser.mjs
+
+      - name: Verify APK-pinned UI initializes controls in simulated Android 4.4
+        run: |
+          node scripts/bundle-android44-webui.mjs
+          node scripts/test-android44-bundled-ui-browser.mjs
 
       - name: Verify Android 4.4 external player ACTION_VIEW intent handoff
         run: node scripts/test-android-external-intent-browser.mjs
