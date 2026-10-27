@@ -16,7 +16,8 @@
   var loadError = null;
   var loadIndex = 0;
   var timer = null;
-  var LOAD_TIMEOUT_MS = 15000;
+  var LOAD_TIMEOUT_MS = isNativeCompanion ? 60000 : 15000;
+  var LEGACY_POLYFILLS_URL = '/vendor/core-js.min.js';
 
   var HUIBQ_LEGACY = "(function (global) {\n" +
     "  'use strict';\n" +
@@ -108,13 +109,62 @@
     }, LOAD_TIMEOUT_MS);
   }
 
+  // Babel 7's bundle parses as ES5 but uses Map/Symbol/Set internally.
+  // KitKat's stock WebView lacks some of these constructors. Supply pinned
+  // ES5 polyfills from APK before executing the 3MB Babel bundle.
+  function loadLegacyPolyfills(callback) {
+    if (!isNativeCompanion) { callback(null); return; }
+    var script = global.document.createElement('script');
+    var finished = false;
+    var timeout = null;
+    function done(err) {
+      if (finished) return;
+      finished = true;
+      if (timeout && global.clearTimeout) global.clearTimeout(timeout);
+      script.onload = script.onreadystatechange = script.onerror = null;
+      if (err && script.parentNode) script.parentNode.removeChild(script);
+      callback(err || null);
+    }
+    script.type = 'text/javascript';
+    script.async = true;
+    script.src = LEGACY_POLYFILLS_URL;
+    script.onload = function () {
+      if (typeof global.Map !== 'function' || typeof global.Symbol !== 'function' ||
+          typeof global.Set !== 'function') {
+        done(new Error('APK 内置旧浏览器兼容组件未正常运行'));
+      } else done(null);
+    };
+    script.onreadystatechange = function () {
+      if (script.readyState === 'loaded' || script.readyState === 'complete') {
+        if (typeof global.Map === 'function' && typeof global.Symbol === 'function' &&
+            typeof global.Set === 'function') done(null);
+      }
+    };
+    script.onerror = function () {
+      done(new Error('APK 内置旧浏览器兼容组件加载失败'));
+    };
+    timeout = global.setTimeout(function () {
+      done(new Error('APK 内置旧浏览器兼容组件加载超时'));
+    }, 20000);
+    try {
+      var head = global.document.getElementsByTagName('head')[0] || global.document.documentElement;
+      head.appendChild(script);
+    } catch (e) {
+      done(new Error('无法加载 APK 内置旧浏览器兼容组件'));
+    }
+  }
+
   function loadBabel(callback) {
     if (global.Babel && typeof global.Babel.transform === 'function') loadState = 2;
     if (loadState === 2) { schedule(function () { callback(null, global.Babel); }); return; }
     if (loadState === -1) { schedule(function () { callback(loadError, null); }); return; }
     loadQueue.push(callback);
     if (loadState === 1) return;
-    loadState = 1; loadIndex = 0; loadNext();
+    loadState = 1; loadIndex = 0;
+    loadLegacyPolyfills(function (compatErr) {
+      if (compatErr) { finishLoad(compatErr); return; }
+      loadNext();
+    });
   }
 
   function canParse(code) {
