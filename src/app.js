@@ -784,8 +784,8 @@
     if (!button) return;
     var play = button.querySelector('.player-play-icon');
     var pause = button.querySelector('.player-pause-icon');
-    if (play) { play.style.display = playing ? 'none' : 'block'; play.className = playing ? 'player-play-icon hidden' : 'player-play-icon'; }
-    if (pause) { pause.style.display = playing ? 'block' : 'none'; pause.className = playing ? 'player-pause-icon' : 'player-pause-icon hidden'; }
+    if (play) { play.style.display = playing ? 'none' : 'block'; play.setAttribute('class', playing ? 'player-play-icon hidden' : 'player-play-icon'); }
+    if (pause) { pause.style.display = playing ? 'block' : 'none'; pause.setAttribute('class', playing ? 'player-pause-icon' : 'player-pause-icon hidden'); }
     button.setAttribute('aria-label', playing ? '暂停' : '继续播放');
     button.title = playing ? '暂停' : '继续播放';
   }
