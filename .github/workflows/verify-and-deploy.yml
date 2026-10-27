@@ -61,6 +61,7 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check src/app.js
+          node --check scripts/test-android44-native-media-url-browser.mjs
           node --check src/android-native-resolver.js
           node --check scripts/test-android44-native-resolver-browser.mjs
           node --check scripts/bundle-android44-webui.mjs
@@ -140,6 +141,9 @@ jobs:
         run: |
           node scripts/bundle-android44-webui.mjs
           node scripts/test-android44-bundled-ui-browser.mjs
+
+      - name: Verify native Android 4.4 song URL always uses same-origin proxy
+        run: node scripts/test-android44-native-media-url-browser.mjs
 
       - name: Verify Android4.4 native resolver GET POST status behavior
         run: node scripts/test-android44-native-resolver-browser.mjs
