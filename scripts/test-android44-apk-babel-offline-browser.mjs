@@ -46,7 +46,7 @@ try {
    'api.send(api.EVENT_NAMES.inited,{status:true, sources:{',
    '  wy:{name:\'wy\',type:\'music\',actions:[\'musicUrl\'],qualitys:[\'128k\']}',
    '}});'
- ].join('\\n')
+ ].join('\n')
  const forced=await page.evaluate(source=>new Promise(resolve=>{
    window.LXSourceTranspiler.prepare(source,'flower/latest.js',
      function(err,transformed,used){resolve({error:err?err.message:null,code:transformed,used:used})},
