@@ -8,7 +8,9 @@
  }
  function allowed(url) {
    var origin=root.location.protocol+'//'+root.location.host;
-   if(origin!=='https://only-testing-online-music.pages.dev')return false;
+   var preview=(root.location.protocol==='http:' &&
+     /^(127[.]0[.]0[.]1|localhost)$/.test(root.location.hostname));
+   if(origin!=='https://only-testing-online-music.pages.dev' && !preview)return false;
    var target=String(url||'');
    return target.indexOf(origin+'/api/legacy-audio?')===0 ||
           target.indexOf(origin+'/api/proxy?')===0;
