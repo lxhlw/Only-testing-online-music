@@ -1,6 +1,7 @@
 package dev.lxmusic.legacy;
 
 import android.content.Context;
+import android.content.res.AssetManager;
 import android.util.Log;
 import android.webkit.WebResourceResponse;
 import java.io.ByteArrayInputStream;
@@ -23,9 +24,11 @@ public final class ModernPageInterceptor {
     private static final String TAG = "LXMusicNative";
     private static final String HOST = "only-testing-online-music.pages.dev";
     private final SSLSocketFactory sockets;
+    private final AssetManager appAssets;
 
     public ModernPageInterceptor(Context context) throws Exception {
         sockets = ModernTrust.create(context.getApplicationContext());
+        appAssets = context.getApplicationContext().getAssets();
     }
 
     public SSLSocketFactory sockets() { return sockets; }
@@ -60,8 +63,39 @@ public final class ModernPageInterceptor {
         return "text/html";
     }
 
+    /**
+     * Use a pinned, audited copy of the website UI shipped with the installed
+     * APK. The HTTPS origin remains first-party, but startup no longer depends
+     * on Android KitKat fetching 16+ scripts reliably via its obsolete SSL
+     * engine. API endpoints and downloaded music are NEVER served from assets.
+     */
+    private WebResourceResponse bundledUi(String target) {
+        try {
+            URL u = new URL(target);
+            String path = u.getPath();
+            if (path == null || path.length() == 0 || "/".equals(path)) path = "/index.html";
+            String relative;
+            if ("/index.html".equals(path)) relative = "index.html";
+            else if ("/styles.css".equals(path)) relative = "styles.css";
+            else if ("/vendor/forge.min.js".equals(path)) relative = "vendor/forge.min.js";
+            else if (path.matches("^/src/[A-Za-z0-9._-]+\\\\.js$") &&
+                    !path.contains("..")) relative = path.substring(1);
+            else return null;
+            InputStream resource = appAssets.open("web/" + relative);
+            String type = relative.endsWith(".css") ? "text/css" :
+                    relative.endsWith(".js") ? "application/javascript" : "text/html";
+            Log.i(TAG, "APK UI asset " + relative);
+            return new WebResourceResponse(type, "UTF-8", resource);
+        } catch (java.io.IOException missing) {
+            Log.w(TAG, "APK UI asset missing; verified HTTPS fallback", missing);
+            return null;
+        }
+    }
+
     public WebResourceResponse intercept(String url) {
         if (!firstParty(url)) return null;
+        WebResourceResponse local = bundledUi(url);
+        if (local != null) return local;
         HttpsURLConnection connection = null;
         try {
             connection = (HttpsURLConnection) new URL(url).openConnection();
