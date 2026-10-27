@@ -777,6 +777,18 @@
       ':' + ('0' + seconds % 60).slice(-2);
   }
 
+  function syncNativeTransportIcon(playing) {
+    if (!NATIVE_COMPANION) return;
+    var button = document.getElementById('player-toggle-btn');
+    if (!button) return;
+    var play = button.querySelector('.player-play-icon');
+    var pause = button.querySelector('.player-pause-icon');
+    if (play) { play.style.display = playing ? 'none' : 'block'; play.className = playing ? 'player-play-icon hidden' : 'player-play-icon'; }
+    if (pause) { pause.style.display = playing ? 'block' : 'none'; pause.className = playing ? 'player-pause-icon' : 'player-pause-icon hidden'; }
+    button.setAttribute('aria-label', playing ? '暂停' : '继续播放');
+    button.title = playing ? '暂停' : '继续播放';
+  }
+
   global.LXNativeAudioEvent = function (token, eventName, positionMs, durationMs) {
     if (!nativeAudioReady()) return;
     var state = playbackState;
@@ -788,6 +800,7 @@
       state.playing = true;
       clearPlaybackConfirmTimer(state);
       clearMiguPlaybackDeadline(state);
+      syncNativeTransportIcon(true);
       if (eventName === 'playing')
         setStatus('Android 原生 MediaPlayer 已开始播放；歌曲地址解析约 ' +
           (Number(state.addressResolveMs || 0) / 1000).toFixed(1) +
@@ -805,11 +818,14 @@
         ' 秒，正在完整下载音频……', 'warn');
     } else if (eventName === 'paused') {
       state.playing = false;
+      syncNativeTransportIcon(false);
       setStatus('Android 原生播放器已暂停；使用 APK 顶部按钮继续。', 'warn');
     } else if (eventName === 'completed') {
       state.playing = false;
+      syncNativeTransportIcon(false);
       setStatus('Android 原生播放器已完成当前歌曲。', 'ready');
     } else if (eventName === 'error') {
+      syncNativeTransportIcon(false);
       setStatus('Android 原生音频读取或解码失败，尝试其他可用音源……', 'warn');
       handleAudioError(state.token, state.url);
     }
@@ -2018,6 +2034,21 @@
                mode === 'single-loop' ? '单曲循环' : '随机播放'), 'ready');
           }
         });
+      }
+      if (NATIVE_COMPANION) {
+        var nativeToggle = document.getElementById('player-toggle-btn');
+        if (nativeToggle) nativeToggle.onclick = function() {
+          var current = playbackState;
+          if (!current || !current.url || !current.nativePlayback) {
+            setStatus('请先选择歌曲，等待音频下载完成后使用播放按钮。', 'warn');
+            return;
+          }
+          try {
+            if (current.playing) global.LXNativeAudio.pause();
+            else global.LXNativeAudio.resume();
+          } catch (e) { setStatus('原生播放控制暂时不可用。', 'fail'); }
+        };
+        syncNativeTransportIcon(false);
       }
       audio.onerror = function () {
         var state = playbackState;
