@@ -820,15 +820,26 @@
     } else if (eventName === 'paused') {
       state.playing = false;
       syncNativeTransportIcon(false);
-      setStatus('Android 原生播放器已暂停；使用 APK 顶部按钮继续。', 'warn');
+      setStatus('原生播放器已暂停；点击绿色播放按钮继续。', 'warn');
     } else if (eventName === 'completed') {
       state.playing = false;
       syncNativeTransportIcon(false);
       setStatus('Android 原生播放器已完成当前歌曲。', 'ready');
     } else if (eventName === 'error') {
+      // Always end loading/playing on native failure, including failed HTTP
+      // media proxies and unsupported codec contents. Do not resurrect old
+      // multi-provider fallback or display a misleading "still playing" icon.
+      state.playing = false;
       syncNativeTransportIcon(false);
-      setStatus('Android 原生音频读取或解码失败，尝试其他可用音源……', 'warn');
       handleAudioError(state.token, state.url);
+      if (NATIVE_COMPANION) {
+        var errorId = Number(positionMs || 0);
+        var extraId = Number(durationMs || 0);
+        var detail = errorId || extraId ?
+          '（MediaPlayer ' + errorId + ' / ' + extraId + '）' : '';
+        setStatus('野花已返回播放地址，但音频下载或播放失败' + detail +
+          '。请重试或换一首歌曲；不会切换其他音源。', 'fail');
+      }
     }
   };
 
