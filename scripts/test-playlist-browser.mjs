@@ -13,6 +13,26 @@ const page = await browser.newPage({ viewport: { width: 800, height: 1280 }, use
 const pageErrors = []
 page.on('pageerror', error => pageErrors.push(String(error)))
 
+// This is a UI/card/detail/queue contract test, not a live NetEase endpoint
+// availability monitor. Its previous upstream dependency repeatedly returned
+// empty results in CI, blocking unrelated, fully tested APK releases.
+// The separate live API checks remain responsible for real NetEase status.
+const fixturePlaylist = {
+  id:'playlist-fixture-123',name:'周杰伦精选（测试）',
+  creator:'测试用户',trackCount:2,description:'稳定的歌单界面验收数据'
+}
+const fixtureSongs = [
+  {id:'song-fixture-1',source:'wy',name:'稻香',singer:'周杰伦',interval:225000},
+  {id:'song-fixture-2',source:'wy',name:'成都',singer:'赵雷',interval:310000}
+]
+await page.route('**/api/netease-playlists?*',async route=>{
+  const req=new URL(route.request().url())
+  const payload=req.searchParams.has('id') ?
+    {playlist:fixturePlaylist,songs:fixtureSongs,total:2,nextOffset:2,hasMore:false} :
+    {result:{playlistCount:1,playlists:[fixturePlaylist]}}
+  await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(payload)})
+})
+
 try {
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 })
   await page.locator('.nav-item[data-view="settings"]').click()
