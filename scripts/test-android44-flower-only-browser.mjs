@@ -100,6 +100,17 @@ async function scenario(cached,reject=false){
    const expected=new URL(base).origin+'/api/proxy?url='+
     encodeURIComponent('https://audio.example.test/song.mp3?auth=123')
    assert.equal(result.nativeTracks[0].url,expected)
+   // Reproduce the device's "resolved, then playback abnormal" condition:
+   // the native player reports failure AFTER Flower returned a valid URL.
+   await page.evaluate(()=>{
+     var played=window.__nativeTracks[0]
+     window.LXNativeAudioEvent(played.token,'error',1,-1004)
+   })
+   const failed=await page.locator('#status').textContent()
+   assert.match(failed,/野花已返回播放地址，但音频下载或播放失败/)
+   assert.match(failed,/MediaPlayer 1 \/ -1004/)
+   assert.equal(await page.evaluate(()=>window.__nativeTracks.length),1,
+      'Native playback error must not trigger another resolver/transport')
  }
  assert.deepEqual(errors,[])
  assert.deepEqual(external,[],'No other LX playback services should be requested')
