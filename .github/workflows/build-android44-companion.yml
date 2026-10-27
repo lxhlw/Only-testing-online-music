@@ -90,6 +90,19 @@ jobs:
           node --input-type=module -e "import {readFileSync} from 'node:fs'; import {parse} from 'acorn'; const s=readFileSync('android-companion/app/src/main/assets/web/vendor/babel.min.js','utf8'); try {parse(s,{ecmaVersion:5,sourceType:'script'});console.log('BABEL_CHROME30_ES5_PASS '+s.length)} catch(e) {console.error('BABEL_CHROME30_ES5_FAIL '+e.message);process.exitCode=1;}"
       - name: Require Babel conversion with missing Chrome30 native ES6 APIs
         run: node scripts/diagnose-android44-babel-runtime.mjs
+      - name: Install Chromium for full offline Flower import regression
+        run: npx playwright install chromium
+      - name: Verify APK polyfills + offline Babel + LX musicUrl with /api/babel HTTP 503
+        run: |
+          set -euo pipefail
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/lx-apk-wrangler.log 2>&1 &
+          READY=0
+          for i in {1..45}; do
+            if curl --fail --silent http://127.0.0.1:8788/ >/dev/null; then READY=1; break; fi
+            sleep 1
+          done
+          if [ "$READY" != 1 ]; then cat /tmp/lx-apk-wrangler.log; exit 1; fi
+          node scripts/test-android44-apk-babel-offline-browser.mjs
       - name: Build signed debug APK
         run: gradle --no-daemon -p android-companion :app:testDebugUnitTest :app:assembleDebug
       - name: Check APK existence and min SDK
