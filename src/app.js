@@ -762,6 +762,14 @@
   // The companion APK injects LXNativeAudio before loading the existing
   // LX Music Web. Audio bytes are downloaded and decoded natively; Via/Chrome
   // 30 HTML5 Audio is never used in this branch.
+  // Chrome 30 rejects function declarations nested in an if block when
+  // the enclosing IIFE is in strict mode. Keep the formatter at function scope.
+  function formatNativeClock(ms) {
+    var seconds = Math.floor(ms / 1000);
+    return ('0' + Math.floor(seconds / 60)).slice(-2) +
+      ':' + ('0' + seconds % 60).slice(-2);
+  }
+
   global.LXNativeAudioEvent = function (token, eventName, positionMs, durationMs) {
     if (!nativeAudioReady()) return;
     var state = playbackState;
@@ -779,13 +787,9 @@
       // companion APK buttons for pause/resume until native controls sync.
       var current = document.getElementById('player-current-time');
       var duration = document.getElementById('player-duration');
-      function clock(ms) {
-        var seconds = Math.floor(ms / 1000);
-        return ('0' + Math.floor(seconds / 60)).slice(-2) +
-          ':' + ('0' + seconds % 60).slice(-2);
-      }
-      if (current) current.textContent = clock(elapsed);
-      if (duration && total) duration.textContent = clock(total);
+
+      if (current) current.textContent = formatNativeClock(elapsed);
+      if (duration && total) duration.textContent = formatNativeClock(total);
     } else if (eventName === 'loading') {
       setStatus('Android 原生播放器正在下载并缓存音频……', 'warn');
     } else if (eventName === 'paused') {

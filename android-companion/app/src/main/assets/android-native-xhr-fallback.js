@@ -49,7 +49,7 @@
           !allowed(xhr.responseURL))throw new Error('cross-origin redirect');
        if(!root.LXNativeAudio.beginXhr(g,n))throw new Error('native begin refused');
        var offset=0;
-       function sendChunk(){
+       var sendChunk = function(){
          try {
            var groups=0;
            while(offset<n && groups<8){
