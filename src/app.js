@@ -1528,6 +1528,15 @@
       if(legacyPlan.length)plan=legacyPlan;
     }
 
+    if (NATIVE_COMPANION) {
+      // Native MediaPlayer does not emit HTMLAudioElement metadata events.
+      // Show the selected song immediately instead of "未播放" during playback.
+      var songTitle = document.getElementById('player-title');
+      var songArtist = document.getElementById('player-artist');
+      if (songTitle) songTitle.textContent = String(music && music.name || '未知歌曲');
+      if (songArtist) songArtist.textContent = String(music && (music.singer || music.artist) || '—');
+      syncNativeTransportIcon(false);
+    }
     playbackToken += 1;
     updateExternalPlayerUrl('');
     var token = playbackToken;
