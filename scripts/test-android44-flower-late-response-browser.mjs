@@ -73,8 +73,25 @@ try {
   await page.waitForTimeout(550)
   assert.equal(await page.evaluate(()=>window.__nativeCalls.length),1,
     'Expired watchdog must not fire after a successful late Flower response')
+  // If Flower *never* responds, the 75s deadline still ends the operation.
+  // The same time compression makes this a sub-second regression assertion.
+  await page.evaluate(()=>{
+    window.__nativeCalls=[]
+    window.LXSourceManager.requestAction=function(source,action,info,callback){
+      window.__flowerRequests=(window.__flowerRequests||0)+1
+      // Deliberately never resolve; there must be no second playback source.
+    }
+    window.OnlyTestingMusicApp.playMusic({
+      id:'song-hung-2',songmid:'song-hung-2',name:'超时测试',singer:'测试',source:'wy',interval:180
+    })
+  })
+  await page.waitForFunction(()=>
+    /超过 75 秒/.test(document.getElementById('status').textContent||''),null,{timeout:4500})
+  assert.equal(await page.evaluate(()=>window.__nativeCalls.length),0)
+  assert.equal(await page.evaluate(()=>window.__oldFallback||0),0)
+  assert.equal(await page.evaluate(()=>window.__fastFallback||0),0)
   assert.deepEqual(pageErrors,[])
-  console.log('PASS: Flower-only LX musicUrl result arriving after former 18s boundary still starts Android native player; no other resolvers')
+  console.log('PASS: Flower-only late result is accepted beyond 18s, hanging Flower stops at 75s, no extra providers')
 } finally {
   await browser.close()
 }
