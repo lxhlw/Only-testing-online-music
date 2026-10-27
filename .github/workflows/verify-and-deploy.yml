@@ -88,6 +88,7 @@ jobs:
           node --check src/sha1.js
           node --check src/source-manager.js
           node --check src/source-transpiler.js
+          node --check scripts/test-android44-apk-babel-offline-browser.mjs
 
       - name: Install Chromium
         run: npx playwright install chromium
@@ -143,6 +144,9 @@ jobs:
         run: |
           node scripts/bundle-android44-webui.mjs
           node scripts/test-android44-bundled-ui-browser.mjs
+
+      - name: Verify offline Babel in APK transpiles and initializes LX source
+        run: node scripts/test-android44-apk-babel-offline-browser.mjs
 
       - name: Verify native Android 4.4 song URL always uses same-origin proxy
         run: node scripts/test-android44-native-media-url-browser.mjs
