@@ -6,6 +6,7 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.util.Base64;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
@@ -47,7 +48,9 @@ public final class MainActivity extends Activity {
     private static final String TONE_URL = ORIGIN + "/api/legacy-audio?type=mp3&v=native1";
     private static final int MAX_AUDIO_BYTES = 30 * 1024 * 1024;
     private final Handler ui = new Handler();
+    // A stalled metadata/resolver request must not queue ahead of the audio download.
     private final ExecutorService downloads = Executors.newSingleThreadExecutor();
+    private final ExecutorService resolverDownloads = Executors.newFixedThreadPool(2);
     private final AtomicInteger generation = new AtomicInteger();
     private final AtomicInteger xhrFallbackGeneration = new AtomicInteger(-1);
     private final NativeBridge nativeBridge = new NativeBridge();
@@ -65,6 +68,11 @@ public final class MainActivity extends Activity {
     private volatile boolean webTopPageError = false;
     private volatile String webPageErrorDetail = "";
     private String bundledXhrScript;
+    private AudioRoutePreference audioRoutePreference;
+    private int browserFastStartGeneration = -1;
+    private String browserFastStartUrl;
+    private volatile long audioStartElapsedMs = 0;
+    private static final String PREFERRED_BROWSER_AUDIO_KEY = "verified_browser_audio_v1";
     private static final int MAX_WEB_READY_POLLS = 25;
     private MediaPlayer player;
     private File activeFile;
@@ -85,6 +93,8 @@ public final class MainActivity extends Activity {
     @Override @SuppressLint("SetJavaScriptEnabled")
     public void onCreate(Bundle saved) {
         super.onCreate(saved);
+        audioRoutePreference = new AudioRoutePreference(
+                getPreferences(MODE_PRIVATE).getBoolean(PREFERRED_BROWSER_AUDIO_KEY, false));
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
         LinearLayout shell = new LinearLayout(this);
         shell.setOrientation(LinearLayout.VERTICAL);
@@ -262,7 +272,7 @@ public final class MainActivity extends Activity {
                 sendResolverResult(requestId, 403, "{\"error\":\"Native resolver request blocked\"}");
                 return;
             }
-            downloads.execute(new Runnable() {
+            resolverDownloads.execute(new Runnable() {
                 @Override public void run() {
                     int statusCode=0;
                     String response="";
@@ -360,14 +370,31 @@ public final class MainActivity extends Activity {
         final int g = generation.incrementAndGet();
         releasePlayer();
         discardBrowserTransfer();
+        browserFastStartGeneration = -1;
+        browserFastStartUrl = null;
         activeToken = token;
+        audioStartElapsedMs = SystemClock.elapsedRealtime();
         if (!allowedUrl(url)) {
             showStatus("原生播放已拒绝非本站 HTTPS 音频地址");
             sendEvent(token, "error", 0, 0);
             return;
         }
-        showStatus("原生引擎下载音频中（可能受旧系统 TLS/证书限制）");
+        showStatus("准备下载整首音频（下载完整后再播放）");
         sendEvent(token, "loading", 0, 0);
+        boolean trustedBrowser = web != null && webPageFinished && !webTopPageError &&
+                isTrustedPageUrl(web.getUrl());
+        if (audioRoutePreference != null &&
+                audioRoutePreference.browserFirst(token >= 0, trustedBrowser)) {
+            // This XHR path already played real audio on this device. Try it
+            // immediately instead of spending another KitKat TLS handshake.
+            // Only the same strictly restricted, same-origin HTTPS URL is used.
+            browserFastStartGeneration = g;
+            browserFastStartUrl = url;
+            xhrFallbackGeneration.set(g);
+            showStatus("采用上次播放成功的安全网络通道，直接下载歌曲……");
+            waitForTrustedWebPage(g, token, url, 0);
+            return;
+        }
         downloads.execute(new Runnable() {
             @Override public void run() {
                 File part = new File(getCacheDir(), "audio-" + g + ".part");
@@ -603,6 +630,12 @@ public final class MainActivity extends Activity {
             xhrPart = null;
             xhrGeneration = -1;
             xhrFallbackGeneration.set(-1);
+            browserFastStartGeneration = -1;
+            browserFastStartUrl = null;
+            if (activeToken >= 0 && audioRoutePreference != null) {
+                audioRoutePreference.succeededThroughBrowser();
+                getPreferences(MODE_PRIVATE).edit().putBoolean(PREFERRED_BROWSER_AUDIO_KEY, true).apply();
+            }
             ui.post(new Runnable() {
                 @Override public void run() {
                     if (g == generation.get()) {
@@ -620,10 +653,26 @@ public final class MainActivity extends Activity {
 
     private void failBrowserTransfer(final int g, final String reason) {
         if (g != generation.get() || g != xhrFallbackGeneration.get()) return;
+        final String nativeRetryUrl = browserFastStartGeneration == g ? browserFastStartUrl : null;
+        final int nativeRetryToken = activeToken;
+        browserFastStartGeneration = -1;
+        browserFastStartUrl = null;
         discardBrowserTransfer();
+        if (nativeRetryUrl != null && audioRoutePreference != null) {
+            // Only bypass native TLS after a *successful* previous XHR. If
+            // this preferred route no longer works, restore the old native
+            // verified-HTTPS-first path for this attempt and future requests.
+            audioRoutePreference.browserFailed();
+            getPreferences(MODE_PRIVATE).edit().putBoolean(PREFERRED_BROWSER_AUDIO_KEY, false).apply();
+        }
         ui.post(new Runnable() {
             @Override public void run() {
                 if (g != generation.get()) return;
+                if (nativeRetryUrl != null) {
+                    showStatus("快速通道未成功，自动改用原生安全网络通道……");
+                    playRemote(nativeRetryUrl, nativeRetryToken);
+                    return;
+                }
                 String detail = reason == null ? "" : reason.replaceAll("[\\r\\n]", " ");
                 showStatus("安全 XHR 备用通道失败：" + detail.substring(0, Math.min(95, detail.length())));
                 sendEvent(activeToken, "error", 0, 0);
@@ -646,7 +695,9 @@ public final class MainActivity extends Activity {
                     prepared = true;
                     try {
                         mp.start();
-                        showStatus(token < 0 ? "原生测试音播放中，请听是否有声音" : "原生播放器：已开始播放");
+                        long elapsed = audioStartElapsedMs > 0 ? SystemClock.elapsedRealtime() - audioStartElapsedMs : 0;
+                        showStatus(token < 0 ? "原生测试音播放中，请听是否有声音" :
+                                "音乐已开始播放（本次下载与准备约 " + (elapsed / 1000) + " 秒）");
                         sendEvent(token, "playing", mp.getCurrentPosition(), mp.getDuration());
                     } catch (Exception e) { showStatus("原生播放启动失败"); sendEvent(token, "error", 0, 0); }
                 }
@@ -673,7 +724,8 @@ public final class MainActivity extends Activity {
             try { player.setDataSource(in.getFD()); }
             finally { in.close(); }
             player.prepareAsync();
-            showStatus("已取得音频文件，正在等待原生 MediaPlayer 解码");
+            long elapsed = audioStartElapsedMs > 0 ? SystemClock.elapsedRealtime() - audioStartElapsedMs : 0;
+            showStatus("整首音频已下载（约 " + (elapsed / 1000) + " 秒），正在解码……");
         } catch (Exception e) {
             showStatus("原生媒体解码失败：" + e.getClass().getSimpleName());
             sendEvent(token, "error", 0, 0);
@@ -764,6 +816,7 @@ public final class MainActivity extends Activity {
         releasePlayer();
         discardBrowserTransfer();
         downloads.shutdownNow();
+        resolverDownloads.shutdownNow();
         if (web != null) {
             web.removeJavascriptInterface("LXNativeAudio");
             web.destroy();
