@@ -1,4 +1,46 @@
-# LX Music Android 4.4 Companion — Phase 1
+# LX Music Android 4.4 Companion — Phase 1 and TLS fix 0.2
+
+## Android 4.4 native TLS handshake fix (0.2 beta)
+
+Physical test: on the L101 Android 4.4.2 tablet, **本地试听 is audible**. This
+confirms Android `MediaPlayer` can decode/output the generated PCM WAV.
+**联网试听 throws `SSLHandshakeException`** in Java `HttpsURLConnection`.
+The root cause could be an outdated trust store, incompatible cipher suite,
+SNI or intermediate certificate; TLS 1.2 enablement alone is insufficient.
+
+Version 0.2 keeps native HTTPS as the primary path and, **only after an
+`SSLException`**, attempts to retrieve media using the embedded WebView's
+own independently certificate-verified HTTPS XHR transport (not HTML5 Audio).
+Audio is copied in bounded 4096-byte Base64 chunks to app-private cache,
+validated against announced HTTP length and checked for audio signature,
+then played by native `MediaPlayer`. The companion can therefore work if
+its WebView networking succeeds even though Android Java TLS does not.
+
+No SSL trust-all factory, certificate bypass, HTTP downgrade, or arbitrary
+third-party URL handoff is permitted. WebView must successfully load the
+first-party HTTPS page; if it cannot, the fallback will fail clearly. This
+fallback has automated byte-transfer tests but **has not yet been confirmed
+audible on physical Android 4.4 hardware**.
+
+Get prerelease `android44-tlsfix-test-20261027` and download
+`LXMusic-Android44-TLSFix.apk`. On Windows with ADB:
+
+```bat
+adb install -r "LXMusic-Android44-TLSFix.apk"
+adb shell am start -n dev.lxmusic.legacy/.MainActivity
+```
+
+If `INSTALL_FAILED_UPDATE_INCOMPATIBLE` occurs, debug signing keys may
+have changed between CI builds. Run `adb uninstall dev.lxmusic.legacy`,
+then install again (this clears the app's data). Click 本地试听, 联网试听,
+and a searched song. Send a photo of the app's concise status on failure,
+rather than copying logs. ADB additional debug option:
+
+```bat
+adb logcat -d -s LXMusicNative:W AndroidRuntime:E
+```
+
+
 
 This independent APK uses the existing LX Music Web pages for search, playlists and song resolution, but routes resolved audio to a native Android `MediaPlayer` instead of the Android 4.4 / Via HTML5 media pipeline.
 
