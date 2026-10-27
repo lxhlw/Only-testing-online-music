@@ -214,6 +214,18 @@
     var proxyHeaders = {
       'X-LX-Headers': JSON.stringify(headers || {})
     };
+    // Android 4.4 WebView may report HTTP 0 for first-party proxy XHR,
+    // particularly POST or non-200 error responses intercepted on API19.
+    // The APK uses its independently verified CA trust store for just the
+    // three known playback resolver hosts; other browsers keep normal XHR.
+    var nativeResolver = global.LXNativeResolverTransport;
+    if (nativeResolver && nativeResolver.enabled) {
+      var nativeCancel = nativeResolver.request(proxyUrl, method, body,
+        proxyHeaders['X-LX-Headers'], function(status, responseText) {
+          parseBrowserResponse({ status:status, responseText:responseText }, parseJson, callback);
+        });
+      if (nativeCancel) return nativeCancel;
+    }
     return requestBrowserXhr(proxyUrl, method, body, proxyHeaders, parseJson, callback, 16000);
   }
 
