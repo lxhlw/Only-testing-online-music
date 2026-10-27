@@ -1270,7 +1270,8 @@
     var fastRaceTimer = null;
     var fastRaceStarted = false;
     var fastEnabled = NATIVE_COMPANION && !playbackState.forceFullResolve &&
-      !!(active && active.inited && active.runtime &&
+      !!(active && String(active.url || '').indexOf('pdone/lx-music-source/main/flower/latest.js') >= 0 &&
+      active.inited && active.runtime &&
       active.sources && active.sources[source] &&
       global.LXMusicSearch && typeof global.LXMusicSearch.resolveMusicUrlFast === 'function');
 
