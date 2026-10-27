@@ -124,7 +124,9 @@
       buttons.appendChild(remove);
 
       box.innerHTML = meta;
-      box.appendChild(buttons);
+      // There is exactly one playback LX source in the native APK; exposing
+      // 'switch' and 'delete' would just break the working Flower session.
+      if (!NATIVE_COMPANION) box.appendChild(buttons);
       listEl.appendChild(box);
     }
 
