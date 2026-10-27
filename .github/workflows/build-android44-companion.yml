@@ -5,6 +5,7 @@ on:
     paths:
       - 'android-companion/**'
       - 'scripts/test-android44-native-resolver-browser.mjs'
+      - 'scripts/test-android44-native-media-url-browser.mjs'
       - 'scripts/bundle-android44-webui.mjs'
       - 'scripts/test-chrome30-strict-syntax.mjs'
       - 'package.json'
@@ -66,6 +67,8 @@ jobs:
         run: node scripts/test-android44-modern-trust.mjs
       - name: Install strict ES5 script parser
         run: npm install --no-audit --no-fund
+      - name: Check actual native media URL regression syntax
+        run: node --check scripts/test-android44-native-media-url-browser.mjs
       - name: Check native resolver bridge test syntax
         run: node --check scripts/test-android44-native-resolver-browser.mjs
       - name: Verify all UI scripts parse on Android Chrome 30
@@ -90,15 +93,15 @@ jobs:
         run: |
           set -euo pipefail
           ORIGINAL="android-companion/app/build/outputs/apk/debug/app-debug.apk"
-          NAMED="android-companion/LXMusic-Android44-v0.8-NativeResolver.apk"
+          NAMED="android-companion/LXMusic-Android44-v0.9-MediaProxy.apk"
           cp "$ORIGINAL" "$NAMED"
           cmp "$ORIGINAL" "$NAMED"
           sha256sum "$NAMED"
       - name: Upload named installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LXMusic-Android44-v0.8-NativeResolver
-          path: android-companion/LXMusic-Android44-v0.8-NativeResolver.apk
+          name: LXMusic-Android44-v0.9-MediaProxy
+          path: android-companion/LXMusic-Android44-v0.9-MediaProxy.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -108,14 +111,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="android44-native-resolver-v08-20261027"
-          NAMED_APK="android-companion/LXMusic-Android44-v0.8-NativeResolver.apk"
-          FRIENDLY_NAME="LXMusic-Android44-v0.8-NativeResolver.apk"
+          TAG="android44-media-proxy-v09-20261027"
+          NAMED_APK="android-companion/LXMusic-Android44-v0.9-MediaProxy.apk"
+          FRIENDLY_NAME="LXMusic-Android44-v0.9-MediaProxy.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" "$NAMED_APK" \
               --target "$GITHUB_SHA" \
-              --title "LX Music Android 4.4 - native resolver HTTP bridge beta 0.8" \
-              --notes "Android 4.4 API19 beta v0.8 adds restricted CA-verified native HTTPS resolver requests for Huibq TuneHub and GD Studio. Preserves status codes and POST bodies, while retaining the known-working native audio and Chrome30 interface. External provider availability and real music playback require tablet verification. Debug prerelease." \
+              --title "LX Music Android 4.4 - native media same-origin proxy beta 0.9" \
+              --notes "Android 4.4 API19 beta v0.9 fixes real L101 error refusing non-site HTTPS media by always passing resolved tracks via the first-party /api/proxy URL to the native MediaPlayer, even after direct-route retry. Strict native URL restrictions, verified HTTPS and legacy browser UI remain intact. Real device track playback still needs verification. Debug prerelease." \
               --prerelease
           else
             # Repair the previously published Release asset *in place*. Only
