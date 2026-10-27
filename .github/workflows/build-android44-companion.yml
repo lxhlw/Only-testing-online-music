@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'android-companion/**'
+      - 'scripts/test-android44-modern-trust.mjs'
       - 'src/android-native-xhr-fallback.js'
       - 'scripts/test-android44-bundled-fallback-browser.mjs'
       - 'src/app.js'
@@ -48,6 +49,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Validate modern CA anchors and strict TLS wiring
+        run: node scripts/test-android44-modern-trust.mjs
       - name: Build signed debug APK
         run: gradle --no-daemon -p android-companion :app:assembleDebug
       - name: Check APK existence and min SDK
@@ -69,15 +72,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="android44-bundled-xhr-v03-20261027"
+          TAG="android44-modern-ca-v04-20261027"
           APK="android-companion/app/build/outputs/apk/debug/app-debug.apk"
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Existing test release found: not overwriting the publicly downloadable APK."
           else
-            gh release create "$TAG" "$APK#LXMusic-Android44-v0.3-BundledXHR.apk" \
+            gh release create "$TAG" "$APK#LXMusic-Android44-v0.4-ModernCA.apk" \
               --target "$GITHUB_SHA" \
-              --title "LX Music Android 4.4 - bundled XHR bootstrap beta 0.3" \
-              --notes "Android 4.4.2/API 19 MediaPlayer + APK-bundled ES5 XHR bootstrap; fixes WebView fallback unavailable failure, awaits page readiness, checks first-party HTTPS. Debug build. This is a prerelease for physical tablet sound validation, not a verified production app. On the tablet, test 本地试听 first, then 联网试听, then music search. If you have an older debug APK installed, Android may require uninstalling it because CI debug signing keys can differ." \
+              --title "LX Music Android 4.4 - modern CA trust beta 0.4" \
+              --notes "Android 4.4.2/API 19 MediaPlayer + updated Mozilla CA roots for verified HTTPS. Native media requests and first-party WebView GET assets use modern CA validation without SSL bypass. Real tablet verification pending. Debug build. This is a prerelease for physical tablet sound validation, not a verified production app. On the tablet, test 本地试听 first, then 联网试听, then music search. If you have an older debug APK installed, Android may require uninstalling it because CI debug signing keys can differ." \
               --prerelease
           fi
           gh release view "$TAG" --json url -q .url
