@@ -7,6 +7,8 @@ on:
       - "src/app.js"
       - "scripts/test-native-companion-browser.mjs"
       - "index.html"
+      - "scripts/test-chrome30-strict-syntax.mjs"
+      - "package.json"
       - "scripts/bundle-android44-webui.mjs"
       - "scripts/test-android44-bundled-ui-browser.mjs"
       - "android-companion/app/src/main/java/dev/lxmusic/legacy/ModernPageInterceptor.java"
@@ -86,6 +88,9 @@ jobs:
           done
           cat /tmp/default-via.log
           exit 1
+      - name: Strict ES5 parse of all Chrome 30 production scripts
+        run: node scripts/test-chrome30-strict-syntax.mjs
+
       - name: Verify legacy import-button click without source-bootstrap races
         run: node scripts/test-import-ui.mjs
       - name: Verify actual MP3/WAV decoders and playback progress
