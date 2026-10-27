@@ -155,7 +155,14 @@
 
       try {
         xhr.open(method, requestUrl, true);
-        if (opts.timeout && xhr.timeout !== undefined) xhr.timeout = Number(opts.timeout);
+        if (xhr.timeout !== undefined) {
+          // The Flower-only native APK must not leave a WebView XHR hanging
+          // forever after the visible player has timed out. Keep its per-XHR
+          // limit below the 75s app watchdog; explicit source timeouts win.
+          var explicitTimeout = Number(opts.timeout || 0);
+          if (explicitTimeout > 0) xhr.timeout = explicitTimeout;
+          else if (FLOWER_ONLY_NATIVE) xhr.timeout = 70000;
+        }
 
         if (opts.headers) {
           if (proxied) {
