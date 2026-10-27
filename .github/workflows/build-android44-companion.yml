@@ -7,6 +7,7 @@ on:
       - 'scripts/test-android44-native-resolver-browser.mjs'
       - 'scripts/test-android44-native-media-url-browser.mjs'
       - 'scripts/test-resolver-outage-cooldown-browser.mjs'
+      - 'scripts/test-android44-flower-optin-retry-browser.mjs'
       - 'scripts/bundle-android44-webui.mjs'
       - 'scripts/test-chrome30-strict-syntax.mjs'
       - 'package.json'
@@ -68,6 +69,8 @@ jobs:
         run: node scripts/test-android44-modern-trust.mjs
       - name: Install strict ES5 script parser
         run: npm install --no-audit --no-fund
+      - name: Check opt-in Flower retry test syntax
+        run: node --check scripts/test-android44-flower-optin-retry-browser.mjs
       - name: Check upstream service outage test syntax
         run: node --check scripts/test-resolver-outage-cooldown-browser.mjs
       - name: Check actual native media URL regression syntax
@@ -96,15 +99,15 @@ jobs:
         run: |
           set -euo pipefail
           ORIGINAL="android-companion/app/build/outputs/apk/debug/app-debug.apk"
-          NAMED="android-companion/LXMusic-Android44-v0.10-ResolverHealth.apk"
+          NAMED="android-companion/LXMusic-Android44-v0.11-FlowerRetry.apk"
           cp "$ORIGINAL" "$NAMED"
           cmp "$ORIGINAL" "$NAMED"
           sha256sum "$NAMED"
       - name: Upload named installable APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LXMusic-Android44-v0.10-ResolverHealth
-          path: android-companion/LXMusic-Android44-v0.10-ResolverHealth.apk
+          name: LXMusic-Android44-v0.11-FlowerRetry
+          path: android-companion/LXMusic-Android44-v0.11-FlowerRetry.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -114,14 +117,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="android44-resolver-health-v010-20261027"
-          NAMED_APK="android-companion/LXMusic-Android44-v0.10-ResolverHealth.apk"
-          FRIENDLY_NAME="LXMusic-Android44-v0.10-ResolverHealth.apk"
+          TAG="android44-flower-retry-v011-20261027"
+          NAMED_APK="android-companion/LXMusic-Android44-v0.11-FlowerRetry.apk"
+          FRIENDLY_NAME="LXMusic-Android44-v0.11-FlowerRetry.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" "$NAMED_APK" \
               --target "$GITHUB_SHA" \
-              --title "LX Music Android 4.4 - source service outage handling beta 0.10" \
-              --notes "Android 4.4 API19 beta v0.10 recognizes upstream Huibq HTTP 503, TuneHub 530 Cloudflare 1016 and GD non-JSON responses; pauses repeat calls per broken provider briefly, without caching track-specific errors, and improves safe Chinese diagnostics. Prior native TLS, browser and MediaPlayer improvements remain unchanged. A third-party outage cannot be fixed by APK updates. Debug prerelease." \
+              --title "LX Music Android 4.4 - one-tap opt-in Flower retry beta 0.11" \
+              --notes "Android 4.4 API19 beta v0.11 offers an explicit Flower source select/import and replay button when WY/KW/KG/TX song address resolution fails. Existing source is not replaced without a tap; successful GitHub live Flower 4-channel tests do not guarantee old tablet audio. Preserves v0.10 native TLS and MediaPlayer. Debug prerelease." \
               --prerelease
           else
             # Repair the previously published Release asset *in place*. Only

@@ -1114,6 +1114,81 @@
 
   var SOURCE_RESOLVE_TIMEOUT_MS = 8000;
 
+  // Offer an opt-in, channel-preserving retry rather than retrying suspended
+  // fallback providers. The upstream Flower source passed live 4-channel
+  // search+play browser checks, but still requires real KitKat validation.
+  function offerFlowerRetry(music, source, token) {
+    if (!LEGACY_NATIVE_MEDIA || ['kw','kg','tx','wy'].indexOf(source) < 0 ||
+        !global.LXSourceManager || !music || token !== playbackToken) return;
+    var manager = global.LXSourceManager;
+    var active = manager.getActive();
+    function isFlower(item) {
+      return item && String(item.url || '').indexOf(
+        'pdone/lx-music-source/main/flower/latest.js') >= 0;
+    }
+    if (isFlower(active) && active.inited) return;
+
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.id = 'flower-source-retry-btn';
+    button.className = 'secondary';
+    button.style.marginTop = '8px';
+    button.textContent = '使用 Flower（野花）音源重新试听';
+    statusEl.appendChild(button);
+
+    button.onclick = function () {
+      if (token !== playbackToken) return;
+      button.disabled = true;
+      var originalActive = String(manager.getActive() && manager.getActive().id || '');
+      var installed = manager.getSources();
+      var flower = null;
+      for (var i=0;i<installed.length;i++) {
+        if (isFlower(installed[i]) && installed[i].inited) {
+          flower = installed[i]; break;
+        }
+      }
+      function useFlower(err, candidate) {
+        if (token !== playbackToken) return;
+        if (err) {
+          setStatus('Flower 音源导入失败：' + escapeHtml(err.message || err), 'fail');
+          return;
+        }
+        var current = manager.getActive();
+        var currentId = String(current && current.id || '');
+        if (currentId !== originalActive &&
+            !(candidate && currentId === String(candidate.id || ''))) {
+          setStatus('音源已由你手动切换，停止自动重试。', 'warn');
+          return;
+        }
+        if (!isFlower(candidate) || !candidate.inited ||
+            !candidate.sources || !candidate.sources[source] ||
+            !candidate.sources[source].actions ||
+            candidate.sources[source].actions.indexOf('musicUrl') < 0) {
+          setStatus('Flower 音源尚未提供当前渠道的可用播放功能。', 'fail');
+          return;
+        }
+        var selected = manager.activate(candidate.id);
+        if (!selected) {
+          setStatus('Flower 音源选择失败，请在设置中手动切换。', 'fail');
+          return;
+        }
+        setStatus('已切换为 Flower（野花）音源，重新解析 ' +
+          escapeHtml(music.name || '当前歌曲') + '……', 'warn');
+        testMusic(music, true);
+      }
+      if (flower) {
+        useFlower(null,flower);
+        return;
+      }
+      setStatus('正在导入 Flower（野花）原始 LX 音源并验证可用渠道……', 'warn');
+      if (typeof manager.installVerifiedFlower !== 'function') {
+        setStatus('Flower 导入入口不可用，请在设置里导入音源。', 'fail');
+        return;
+      }
+      manager.installVerifiedFlower(useFlower);
+    };
+  }
+
   function requestQuality(music, source, musicInfo, plan, index, token) {
     var active = global.LXSourceManager.getActive();
     var settings = getPlaySettings();
@@ -1197,7 +1272,7 @@
             }
 
             if (source === 'mg') return concludeMiguUnavailable(token);
-            return setStatus(
+            setStatus(
               'musicUrl 备用解析失败（' + escapeHtml(quality) + '）：'
               + escapeHtml(
                 (fallbackErr && (fallbackErr.message || fallbackErr))
@@ -1205,6 +1280,8 @@
               ),
               'fail'
             );
+            offerFlowerRetry(music,source,token);
+            return;
           },
           { skipProvider: '' }
         );
