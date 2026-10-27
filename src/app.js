@@ -1160,7 +1160,7 @@
           setStatus('音源已由你手动切换，停止自动重试。', 'warn');
           return;
         }
-        if (!candidate || !candidate.inited ||
+        if (!isFlower(candidate) || !candidate.inited ||
             !candidate.sources || !candidate.sources[source] ||
             !candidate.sources[source].actions ||
             candidate.sources[source].actions.indexOf('musicUrl') < 0) {
