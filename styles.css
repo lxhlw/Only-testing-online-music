@@ -1095,3 +1095,46 @@ html.legacy-native-media .view-container{padding-bottom:210px}
   html.legacy-native-media #app{padding-bottom:195px}
   html.legacy-native-media .nav-rail{bottom:auto}
 }
+
+
+/* APK-only clean interface. Keep normal Android 4.4 Via fallback untouched.
+   The native bridge owns real audio, so the grey HTML5 controls and legacy
+   experimental proxy/direct/external player links must not be shown. */
+html.native-companion.legacy-native-media .native-audio-transport,
+html.native-companion.legacy-native-media .legacy-media-panel {
+  display:none!important
+}
+html.native-companion.legacy-native-media .player-bar {
+  height:100px!important;min-height:100px!important;
+  flex-wrap:nowrap;justify-content:space-between;align-items:center;
+  padding:10px 12px!important;gap:8px
+}
+html.native-companion.legacy-native-media .player-song {
+  height:auto!important;min-height:0!important;
+  width:auto!important;flex:1 1 42%!important
+}
+html.native-companion.legacy-native-media .player-center {
+  height:auto!important;min-height:0!important;
+  width:auto!important;flex:1 1 58%!important
+}
+html.native-companion.legacy-native-media .player-transport {
+  height:42px!important;min-height:42px!important;gap:8px
+}
+html.native-companion.legacy-native-media .player-transport .player-icon-btn {
+  width:35px!important;min-width:35px!important;height:36px!important
+}
+html.native-companion.legacy-native-media .player-transport .player-main-toggle {
+  width:45px!important;min-width:45px!important;height:45px!important
+}
+html.native-companion.legacy-native-media .view-container {
+  padding-bottom:120px!important
+}
+html.native-companion.legacy-native-media .nav-rail {bottom:100px!important}
+html.native-companion.legacy-native-media #app {padding-bottom:105px!important}
+@media(max-width:680px) {
+  html.native-companion.legacy-native-media .player-bar {
+    height:98px!important;min-height:98px!important;padding:8px 10px!important
+  }
+  html.native-companion.legacy-native-media .nav-rail {bottom:auto!important}
+  html.native-companion.legacy-native-media .view-container {padding-bottom:115px!important}
+}
