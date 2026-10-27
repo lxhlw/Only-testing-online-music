@@ -16,6 +16,7 @@
   var shuffleCursor = -1;
   var playbackToken = 0;
   var searchToken = 0;
+  var legacyFullResolveNext = false;
   var MIN_UNKNOWN_MEDIA_DURATION_SECONDS = 15;
   var MIN_CONFIRMED_PLAYBACK_PROGRESS_SECONDS = 0.25;
   var PLAYBACK_CONFIRM_TIMEOUT_MS = 3500;
@@ -25,6 +26,13 @@
   var LEGACY_NATIVE_MEDIA = /Android 4[.]4(?:[.;\s]|$)/i.test(String(global.navigator && global.navigator.userAgent || ''));
   var legacyPreferDirect = false;
   if (LEGACY_NATIVE_MEDIA) document.documentElement.className += ' legacy-native-media';
+  // Only inside the trusted native APK. Keep the working Via HTML5 fallbacks
+  // and diagnostic pages unchanged for a standalone old browser.
+  var NATIVE_COMPANION = false;
+  try { NATIVE_COMPANION = !!(global.LXNativeAudio &&
+    typeof global.LXNativeAudio.isAvailable === 'function' &&
+    global.LXNativeAudio.isAvailable()); } catch (ignored) {}
+  if (NATIVE_COMPANION) document.documentElement.className += ' native-companion';
   // Migu-only budget for a single user-visible play attempt, across all
   // qualities and fallback providers. Do not bound other four channels.
   var MIGU_PLAYBACK_MAX_WAIT_MS = 25000;
@@ -770,6 +778,18 @@
       ':' + ('0' + seconds % 60).slice(-2);
   }
 
+  function syncNativeTransportIcon(playing) {
+    if (!NATIVE_COMPANION) return;
+    var button = document.getElementById('player-toggle-btn');
+    if (!button) return;
+    var play = button.querySelector('.player-play-icon');
+    var pause = button.querySelector('.player-pause-icon');
+    if (play) { play.style.display = playing ? 'none' : 'block'; play.setAttribute('class', playing ? 'player-play-icon hidden' : 'player-play-icon'); }
+    if (pause) { pause.style.display = playing ? 'block' : 'none'; pause.setAttribute('class', playing ? 'player-pause-icon' : 'player-pause-icon hidden'); }
+    button.setAttribute('aria-label', playing ? '暂停' : '继续播放');
+    button.title = playing ? '暂停' : '继续播放';
+  }
+
   global.LXNativeAudioEvent = function (token, eventName, positionMs, durationMs) {
     if (!nativeAudioReady()) return;
     var state = playbackState;
@@ -781,6 +801,7 @@
       state.playing = true;
       clearPlaybackConfirmTimer(state);
       clearMiguPlaybackDeadline(state);
+      syncNativeTransportIcon(true);
       if (eventName === 'playing')
         setStatus('Android 原生 MediaPlayer 已开始播放；歌曲地址解析约 ' +
           (Number(state.addressResolveMs || 0) / 1000).toFixed(1) +
@@ -798,11 +819,14 @@
         ' 秒，正在完整下载音频……', 'warn');
     } else if (eventName === 'paused') {
       state.playing = false;
+      syncNativeTransportIcon(false);
       setStatus('Android 原生播放器已暂停；使用 APK 顶部按钮继续。', 'warn');
     } else if (eventName === 'completed') {
       state.playing = false;
+      syncNativeTransportIcon(false);
       setStatus('Android 原生播放器已完成当前歌曲。', 'ready');
     } else if (eventName === 'error') {
+      syncNativeTransportIcon(false);
       setStatus('Android 原生音频读取或解码失败，尝试其他可用音源……', 'warn');
       handleAudioError(state.token, state.url);
     }
@@ -1243,6 +1267,13 @@
     var resolveAttemptId = playbackState.resolveAttemptId;
     var settled = false;
     var sourceTimer = null;
+    var fastRaceTimer = null;
+    var fastRaceStarted = false;
+    var fastEnabled = NATIVE_COMPANION && !playbackState.forceFullResolve &&
+      !!(active && String(active.url || '').indexOf('pdone/lx-music-source/main/flower/latest.js') >= 0 &&
+      active.inited && active.runtime &&
+      active.sources && active.sources[source] &&
+      global.LXMusicSearch && typeof global.LXMusicSearch.resolveMusicUrlFast === 'function');
 
     function isCurrentAttempt() {
       return token === playbackToken &&
@@ -1255,6 +1286,10 @@
       if (sourceTimer) {
         global.clearTimeout(sourceTimer);
         sourceTimer = null;
+      }
+      if (fastRaceTimer) {
+        global.clearTimeout(fastRaceTimer);
+        fastRaceTimer = null;
       }
     }
 
@@ -1333,6 +1368,29 @@
       return setStatus('当前音质无法播放，且没有可用的备用解析器。', 'fail');
     }
 
+    function startFastRace() {
+      if (!fastEnabled || fastRaceStarted || settled || !isCurrentAttempt()) return;
+      fastRaceStarted = true;
+      setStatus('Flower 正在解析；已同时启用快速同平台备用解析……', 'warn');
+      // Keep waiting for Flower's real musicUrl in parallel. Whichever valid
+      // same-platform link arrives first wins. Late callbacks are ignored.
+      global.LXMusicSearch.resolveMusicUrlFast(source, musicInfo, quality,
+        function(error, result) {
+          if (!isCurrentAttempt() || settled) return;
+          if (!error && result && result.url &&
+              (!global.LXMusicSearch.isPlayableUrlForSource ||
+               global.LXMusicSearch.isPlayableUrlForSource(source, result.url))) {
+            if (!finishAttempt()) return;
+            useResolvedUrl(result.url, quality, token, music, source, musicInfo,
+              settings, providerLabel(result.provider), result.provider);
+            return;
+          }
+          // The original Flower request may still succeed after the faster
+          // provider race exhausted its bounded upstream window.
+          setStatus('快速备用解析未成功，仍在等待当前 Flower 音源……', 'warn');
+        });
+    }
+
     setStatus(
       (index === 0 ? '正在请求' : '当前音质失败，正在自动切换')
       + ' ' + escapeHtml(quality) + '：' + escapeHtml(music.name) + '……'
@@ -1349,13 +1407,34 @@
       return;
     }
 
-    sourceTimer = global.setTimeout(function () {
-      if (!isCurrentAttempt() || settled) return;
-      runFallback(
-        '原始音源解析超过 ' + Math.round(SOURCE_RESOLVE_TIMEOUT_MS / 1000)
-        + ' 秒，正在切换备用解析器……'
-      );
-    }, SOURCE_RESOLVE_TIMEOUT_MS);
+    if (fastEnabled) {
+      // On the legacy native APK, begin the safe same-platform alternatives
+      // while Flower is pending, not after several sequential failures.
+      fastRaceTimer = global.setTimeout(startFastRace, 2000);
+      sourceTimer = global.setTimeout(function() {
+        if (!isCurrentAttempt() || settled) return;
+        finishAttempt();
+        setStatus('快速解析 21 秒内未得到地址，已停止无效等待。', 'warn');
+        var slowButton = document.createElement('button');
+        slowButton.type = 'button';
+        slowButton.className = 'secondary';
+        slowButton.textContent = '继续完整解析（可能较慢）';
+        slowButton.onclick = function () {
+          if (token !== playbackToken) return;
+          legacyFullResolveNext = true;
+          testMusic(music, false);
+        };
+        statusEl.appendChild(slowButton);
+      }, 21000);
+    } else {
+      sourceTimer = global.setTimeout(function () {
+        if (!isCurrentAttempt() || settled) return;
+        runFallback(
+          '原始音源解析超过 ' + Math.round(SOURCE_RESOLVE_TIMEOUT_MS / 1000)
+          + ' 秒，正在切换备用解析器……'
+        );
+      }, SOURCE_RESOLVE_TIMEOUT_MS);
+    }
 
     global.LXSourceManager.requestAction(
       source,
@@ -1368,9 +1447,8 @@
         if (!isCurrentAttempt() || settled) return;
 
         if (err) {
-          return runFallback(
-            '原始音源解析失败，正在切换备用解析器……'
-          );
+          if (fastEnabled) { startFastRace(); return; }
+          return runFallback('原始音源解析失败，正在切换备用解析器……');
         }
 
         var url = typeof result === 'string'
@@ -1379,9 +1457,8 @@
         if (url != null) url = String(url).replace(/^\\s+|\\s+$/g, '');
 
         if (!url || !/^https?:/i.test(url)) {
-          return runFallback(
-            '原始音源返回的播放地址无效，正在切换备用解析器……'
-          );
+          if (fastEnabled) { startFastRace(); return; }
+          return runFallback('原始音源返回的播放地址无效，正在切换备用解析器……');
         }
 
         if (
@@ -1389,9 +1466,8 @@
           typeof global.LXMusicSearch.isPlayableUrlForSource === 'function' &&
           !global.LXMusicSearch.isPlayableUrlForSource(source, url)
         ) {
-          return runFallback(
-            '原始音源返回了其他渠道的播放地址，正在使用当前渠道解析器……'
-          );
+          if (fastEnabled) { startFastRace(); return; }
+          return runFallback('原始音源返回了其他渠道的播放地址，正在使用当前渠道解析器……');
         }
 
         if (!finishAttempt()) return;
@@ -1452,6 +1528,15 @@
       if(legacyPlan.length)plan=legacyPlan;
     }
 
+    if (NATIVE_COMPANION) {
+      // Native MediaPlayer does not emit HTMLAudioElement metadata events.
+      // Show the selected song immediately instead of "未播放" during playback.
+      var songTitle = document.getElementById('player-title');
+      var songArtist = document.getElementById('player-artist');
+      if (songTitle) songTitle.textContent = String(music && music.name || '未知歌曲');
+      if (songArtist) songArtist.textContent = String(music && (music.singer || music.artist) || '—');
+      syncNativeTransportIcon(false);
+    }
     playbackToken += 1;
     updateExternalPlayerUrl('');
     var token = playbackToken;
@@ -1475,8 +1560,10 @@
       miguDeadlineTimer: null,
       miguLastAudioTime: 0,
       miguLastProgressAt: 0,
-      activeSourceId: String(active && (active.id || active.url) || '')
+      activeSourceId: String(active && (active.id || active.url) || ''),
+      forceFullResolve: legacyFullResolveNext
     };
+    legacyFullResolveNext = false;
 
     armMiguPlaybackDeadline(playbackState);
     requestQuality(music, source, buildMusicInfo(music, source), plan, 0, token);
@@ -1971,6 +2058,21 @@
                mode === 'single-loop' ? '单曲循环' : '随机播放'), 'ready');
           }
         });
+      }
+      if (NATIVE_COMPANION) {
+        var nativeToggle = document.getElementById('player-toggle-btn');
+        if (nativeToggle) nativeToggle.onclick = function() {
+          var current = playbackState;
+          if (!current || !current.url || !current.nativePlayback) {
+            setStatus('请先选择歌曲，等待音频下载完成后使用播放按钮。', 'warn');
+            return;
+          }
+          try {
+            if (current.playing) global.LXNativeAudio.pause();
+            else global.LXNativeAudio.resume();
+          } catch (e) { setStatus('原生播放控制暂时不可用。', 'fail'); }
+        };
+        syncNativeTransportIcon(false);
       }
       audio.onerror = function () {
         var state = playbackState;
