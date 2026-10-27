@@ -254,7 +254,7 @@ public final class MainActivity extends Activity {
                 final String packedHeaders) {
             if (requestId < 1 || requestId > 1000000000 ||
                     !LegacyResolverProxy.allowed(path, method, body, packedHeaders)) {
-                sendResolverResult(requestId, 403, "{\\"error\\":\\"Native resolver request blocked\\"}");
+                sendResolverResult(requestId, 403, "{\"error\":\"Native resolver request blocked\"}");
                 return;
             }
             downloads.execute(new Runnable() {
@@ -270,7 +270,7 @@ public final class MainActivity extends Activity {
                     } catch (Exception e) {
                         Log.w(LOG_TAG, "Native resolver transport failed: " +
                                 e.getClass().getSimpleName(), e);
-                        response="{\\"error\\":\\"Native TLS request failed\\"}";
+                        response="{\"error\":\"Native TLS request failed\"}";
                     }
                     sendResolverResult(requestId,statusCode,response);
                 }
