@@ -1256,6 +1256,9 @@
     var settings = getPlaySettings();
     if (token !== playbackToken) return;
 
+    // Only one Flower quality per click on Android 4.4: no automatic
+    // cross-source retries or repeated multibit-rate waterfalls.
+    if (NATIVE_COMPANION && plan.length > 1) plan = [plan[0]];
     var quality = plan[index];
     playbackState.index = index;
     playbackState.quality = quality;
@@ -1269,7 +1272,7 @@
     var sourceTimer = null;
     var fastRaceTimer = null;
     var fastRaceStarted = false;
-    var fastEnabled = NATIVE_COMPANION && !playbackState.forceFullResolve &&
+    var fastEnabled = false && NATIVE_COMPANION && !playbackState.forceFullResolve &&
       !!(active && String(active.url || '').indexOf('pdone/lx-music-source/main/flower/latest.js') >= 0 &&
       active.inited && active.runtime &&
       active.sources && active.sources[source] &&
@@ -1312,6 +1315,11 @@
     function runFallback(reason) {
       if (!isCurrentAttempt() || !finishAttempt()) return;
 
+      if (NATIVE_COMPANION) {
+        setStatus('野花音源未取得可播放地址：' + escapeHtml(reason || '解析失败') +
+          '。请重试或选择另一首歌曲。', 'fail');
+        return;
+      }
       if (reason) setStatus(reason, 'warn');
 
       if (global.LXMusicSearch && typeof global.LXMusicSearch.resolveMusicUrl === 'function') {
@@ -1403,6 +1411,37 @@
     // channel's native resolver when the Flower source cannot respond.
     if (!active || !active.inited || !active.runtime ||
         !active.sources || !active.sources[source]) {
+      if (NATIVE_COMPANION) {
+        // First installation and Babel startup complete asynchronously.
+        // Allow one bounded wait for Flower to be ready, with no fallback.
+        var started = Date.now ? Date.now() : new Date().getTime();
+        setStatus('正在准备野花音源，初始化成功后自动解析歌曲……', 'warn');
+        var pollFlower = function () {
+          if (!isCurrentAttempt() || settled) return;
+          var ready = global.LXSourceManager.getActive();
+          if (ready && ready.inited && ready.runtime &&
+              ready.sources && ready.sources[source]) {
+            finishAttempt();
+            requestQuality(music,source,musicInfo,plan,index,token);
+            return;
+          }
+          if (ready && ready.error) {
+            finishAttempt();
+            setStatus('野花音源初始化失败：' + escapeHtml(ready.error) +
+              '。可在设置中重新加载野花。', 'fail');
+            return;
+          }
+          var now = Date.now ? Date.now() : new Date().getTime();
+          if (now-started>=25000) {
+            finishAttempt();
+            setStatus('野花音源尚未准备好，已停止等待。请在设置中重新加载野花。','fail');
+            return;
+          }
+          global.setTimeout(pollFlower,200);
+        };
+        global.setTimeout(pollFlower,200);
+        return;
+      }
       runFallback('该渠道 LX 音源尚未就绪，正在尝试同平台备用解析……');
       return;
     }
@@ -1429,11 +1468,14 @@
     } else {
       sourceTimer = global.setTimeout(function () {
         if (!isCurrentAttempt() || settled) return;
+        if (NATIVE_COMPANION) {
+          return runFallback('野花音源解析超过 18 秒');
+        }
         runFallback(
           '原始音源解析超过 ' + Math.round(SOURCE_RESOLVE_TIMEOUT_MS / 1000)
           + ' 秒，正在切换备用解析器……'
         );
-      }, SOURCE_RESOLVE_TIMEOUT_MS);
+      }, NATIVE_COMPANION ? 18000 : SOURCE_RESOLVE_TIMEOUT_MS);
     }
 
     global.LXSourceManager.requestAction(
@@ -1691,6 +1733,10 @@
       );
     }
 
+    if (NATIVE_COMPANION) {
+      setStatus('野花音源已取得地址，但原生播放器读取失败。请重试或选择另一首。', 'fail');
+      return;
+    }
     if (settings.autoFallback && global.LXMusicSearch &&
         typeof global.LXMusicSearch.resolveMusicUrl === 'function') {
       return global.LXMusicSearch.resolveMusicUrl(
@@ -2388,7 +2434,13 @@
       global.LXMusicLibrary.addQueue(music);
       renderLibrary();
     },
-    renderLibraryListForExternal: renderLibraryList
+    renderLibraryListForExternal: renderLibraryList,
+    onFlowerBootstrapError: function(error) {
+      if (!NATIVE_COMPANION) return;
+      setStatus('野花音源自动导入失败：' +
+        escapeHtml(error && (error.message || error) || '网络连接失败') +
+        '。请在设置中点击「重新加载野花」。', 'fail');
+    }
   };
 
   var appStarted = false;
