@@ -8,7 +8,7 @@ on:
       - "scripts/test-native-companion-browser.mjs"
       - "index.html"
       - "scripts/test-resolver-outage-cooldown-browser.mjs"
-      - "scripts/test-android44-flower-optin-retry-browser.mjs"
+      - "scripts/test-android44-flower-only-browser.mjs"
       - "scripts/test-android44-native-media-url-browser.mjs"
       - "src/android-native-resolver.js"
       - "scripts/test-android44-native-resolver-browser.mjs"
@@ -68,7 +68,7 @@ jobs:
           node --check src/source-manager.js
           node --check src/app.js
           node --check scripts/test-resolver-outage-cooldown-browser.mjs
-          node --check scripts/test-android44-flower-optin-retry-browser.mjs
+          node --check scripts/test-android44-flower-only-browser.mjs
           node --check scripts/test-android44-native-media-url-browser.mjs
           node --check src/android-native-resolver.js
           node --check scripts/test-android44-native-resolver-browser.mjs
@@ -129,8 +129,8 @@ jobs:
       - name: Verify resolved media addresses and direct retry stay first-party in native APK
         run: node scripts/test-android44-native-media-url-browser.mjs
 
-      - name: Verify explicit Flower selection and source musicUrl retry on Android 4.4
-        run: node scripts/test-android44-flower-optin-retry-browser.mjs
+      - name: Verify Flower is the only Android 4.4 playback source
+        run: node scripts/test-android44-flower-only-browser.mjs
 
       - name: Verify provider outage skip and original platform fallback
         run: node scripts/test-resolver-outage-cooldown-browser.mjs
