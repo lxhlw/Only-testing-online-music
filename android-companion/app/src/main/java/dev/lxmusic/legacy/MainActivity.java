@@ -249,6 +249,33 @@ public final class MainActivity extends Activity {
     // code or unrestricted network URLs.
     public final class NativeBridge {
         @JavascriptInterface public boolean isAvailable() { return true; }
+        @JavascriptInterface public void fetchResolver(final int requestId,
+                final String path, final String method, final String body,
+                final String packedHeaders) {
+            if (requestId < 1 || requestId > 1000000000 ||
+                    !LegacyResolverProxy.allowed(path, method, body, packedHeaders)) {
+                sendResolverResult(requestId, 403, "{\\"error\\":\\"Native resolver request blocked\\"}");
+                return;
+            }
+            downloads.execute(new Runnable() {
+                @Override public void run() {
+                    int statusCode=0;
+                    String response="";
+                    try {
+                        if (secureWeb == null) throw new IOException("Modern trust store unavailable");
+                        LegacyResolverProxy.Result fetched=LegacyResolverProxy.fetch(
+                                secureWeb.sockets(),path,method,body,packedHeaders);
+                        statusCode=fetched.status;
+                        response=fetched.body;
+                    } catch (Exception e) {
+                        Log.w(LOG_TAG, "Native resolver transport failed: " +
+                                e.getClass().getSimpleName(), e);
+                        response="{\\"error\\":\\"Native TLS request failed\\"}";
+                    }
+                    sendResolverResult(requestId,statusCode,response);
+                }
+            });
+        }
         @JavascriptInterface public void play(final String url, final int token) {
             ui.post(new Runnable() { @Override public void run() {
                 playRemote(url, token);
@@ -282,6 +309,22 @@ public final class MainActivity extends Activity {
                 }
             }});
         }
+    }
+
+    private void sendResolverResult(final int requestId, final int httpStatus,
+                                    final String responseBody) {
+        if (requestId < 1 || web == null) return;
+        final String cmd = "if(window.LXNativeResolverTransport)" +
+                "window.LXNativeResolverTransport.receive(" +
+                requestId + "," + httpStatus + "," +
+                JSONObject.quote(responseBody == null ? "" : responseBody) + ");";
+        ui.post(new Runnable() {
+            @Override public void run() {
+                if (web != null && webPageFinished && isTrustedPageUrl(web.getUrl())) {
+                    web.evaluateJavascript(cmd,null);
+                }
+            }
+        });
     }
 
     private static boolean allowedUrl(String value) {
