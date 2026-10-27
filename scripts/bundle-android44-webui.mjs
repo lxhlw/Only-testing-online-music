@@ -43,3 +43,16 @@ copyFileSync(babelSource,babelTarget)
 assert.deepEqual(readFileSync(babelSource),readFileSync(babelTarget),
   'APK Babel must match the pinned npm version byte-for-byte')
 console.log('PASS: APK-local Babel standalone '+babelSize+' bytes; Flower import will not depend on live /api/babel')
+
+ // Chrome 30 lacks ES2015 globals used by Babel 7 despite Babel's ES5
+ // syntax. Ship an audited, pinned core-js bundle and load it BEFORE Babel.
+const polyfillsSource='node_modules/core-js-bundle/minified.js'
+const polyfillsTarget=join(destination,'vendor/core-js.min.js')
+assert.ok(existsSync(polyfillsSource),'Run npm install before bundling the legacy polyfills')
+const polyfillsSize=statSync(polyfillsSource).size
+assert.ok(polyfillsSize>100000&&polyfillsSize<2000000,'Unexpected core-js artifact size')
+mkdirSync(dirname(polyfillsTarget),{recursive:true})
+copyFileSync(polyfillsSource,polyfillsTarget)
+assert.deepEqual(readFileSync(polyfillsSource),readFileSync(polyfillsTarget),
+  'APK core-js must match the pinned npm version byte-for-byte')
+console.log('PASS: APK-local ES5 compatibility polyfills '+polyfillsSize+' bytes')
