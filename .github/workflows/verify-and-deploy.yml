@@ -62,7 +62,7 @@ jobs:
         run: |
           node --check src/app.js
           node --check scripts/test-resolver-outage-cooldown-browser.mjs
-          node --check scripts/test-android44-flower-optin-retry-browser.mjs
+          node --check scripts/test-android44-flower-only-browser.mjs
           node --check scripts/test-android44-native-media-url-browser.mjs
           node --check src/android-native-resolver.js
           node --check scripts/test-android44-native-resolver-browser.mjs
@@ -151,8 +151,8 @@ jobs:
       - name: Verify native Android 4.4 song URL always uses same-origin proxy
         run: node scripts/test-android44-native-media-url-browser.mjs
 
-      - name: Verify opt-in Flower retry preserves same-channel playback and safe native proxy
-        run: node scripts/test-android44-flower-optin-retry-browser.mjs
+      - name: Verify native APK Flower-only playback and safe proxy
+        run: node scripts/test-android44-flower-only-browser.mjs
 
       - name: Verify known service outages do not exhaust tablet retry chain
         run: node scripts/test-resolver-outage-cooldown-browser.mjs
