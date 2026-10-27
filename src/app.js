@@ -1161,7 +1161,7 @@
         if (isFlower(candidate) && !candidate.inited && !candidate.error) {
           var waitStarted = Date.now ? Date.now() : new Date().getTime();
           setStatus('Flower 音源已下载，正在等待初始化完成后自动试听……', 'warn');
-          function waitForFlowerInit() {
+          var waitForFlowerInit = function () {
             if (token !== playbackToken) return;
             var selected = manager.getActive();
             var selectedId = String(selected && selected.id || '');
