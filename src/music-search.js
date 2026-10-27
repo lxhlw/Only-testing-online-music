@@ -3507,7 +3507,7 @@
       try {
         tasks[i](function(error, result) {
           if (finished) return;
-          if (!error && result && /^https?:\\/\\//i.test(String(result.url || '')) &&
+          if (!error && result && /^https?:/i.test(String(result.url || '')) &&
               !isCrossPlatformPlaybackUrl(source, result.url)) {
             finish(null, result);
             return;
