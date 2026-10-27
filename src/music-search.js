@@ -73,6 +73,54 @@
   var miguResolveFailureOrder = [];
   var gdMiguChallengeUntil = 0;
 
+  // Provider-wide outages are not track-specific. Avoid retrying a suspended
+  // host or broken origin DNS for every song/quality while keeping platform
+  // first-party resolvers and imported LX musicUrl fully available.
+  // Short-lived, memory-only cache; no URLs, song IDs or credentials stored.
+  var resolverOutages = {};
+  var RESOLVER_OUTAGE_MS = 120000;
+
+  function resolverOutageError(provider) {
+    var state = resolverOutages[provider];
+    if (!state) return null;
+    var now = Date.now ? Date.now() : new Date().getTime();
+    if (now >= state.until) {
+      delete resolverOutages[provider];
+      return null;
+    }
+    return new Error(state.label + ' 暂时不可用：' + state.reason +
+      '（约 ' + Math.ceil((state.until - now) / 60000) + ' 分钟后自动重试）');
+  }
+
+  function rememberResolverOutage(provider, error) {
+    var text = String(error && (error.message || error) || '');
+    var reason = '';
+    if (provider === 'huibq' &&
+        /(?:HTTP\s*503\b|service (?:is )?suspended)/i.test(text)) {
+      reason = 'HTTP 503，服务暂停';
+    } else if (provider === 'tune-free' &&
+        /(?:HTTP\s*530\b|error code:\s*1016|origin dns error)/i.test(text)) {
+      reason = 'HTTP 530 / Cloudflare 1016，源站 DNS 故障';
+    } else if (provider === 'gd-studio' &&
+        /(?:response is not JSON|HTTP\s*5\d\d\b|Cloudflare.*challenge)/i.test(text)) {
+      reason = '未返回有效 JSON，解析服务异常';
+    }
+    if (!reason) return error;
+    var labels = {huibq:'Huibq', 'tune-free':'TuneHub', 'gd-studio':'GD Studio'};
+    var label = labels[provider] || provider;
+    resolverOutages[provider] = {
+      until: (Date.now ? Date.now() : new Date().getTime()) + RESOLVER_OUTAGE_MS,
+      reason: reason,
+      label: label
+    };
+    // Never forward the whole HTML error page into the small tablet UI.
+    return new Error(label + '：' + reason + '（短时暂停重试）');
+  }
+
+  function clearResolverOutage(provider) {
+    if (resolverOutages[provider]) delete resolverOutages[provider];
+  }
+
   function miguFailureKey(musicInfo, quality, skipProvider) {
     var info = musicInfo || {};
     var id = info.copyrightId || info.copyright_id ||
@@ -2984,6 +3032,8 @@
 
     var id = getHuibqPlaybackId(source, musicInfo);
     if (!id) return callback(new Error('No platform track id for Huibq playback: ' + source));
+    var huibqDown = resolverOutageError('huibq');
+    if (huibqDown) return callback(huibqDown);
 
     var requestedQuality = String(quality || '').toLowerCase();
     var huibqQuality = HUIBQ_QUALITY_MAP[requestedQuality] || '128k';
@@ -3003,7 +3053,7 @@
       },
       true,
       function (err, data) {
-        if (err) return callback(err);
+        if (err) return callback(rememberResolverOutage('huibq', err));
 
         var code = data && data.code != null ? Number(data.code) : NaN;
         var returnedUrl = data && typeof data.url === 'string' ? data.url : '';
@@ -3012,6 +3062,7 @@
           return callback(new Error(message));
         }
 
+        clearResolverOutage('huibq');
         callback(null, {
           url: String(returnedUrl).replace(/^\s+|\s+$/g, ''),
           source: source,
@@ -3055,6 +3106,8 @@
 
     var ids = getTuneFreePlaybackIds(source, musicInfo);
     if (!ids.length) return callback(new Error('No platform track id for TuneHub playback: ' + source));
+    var tuneDown = resolverOutageError('tune-free');
+    if (tuneDown) return callback(tuneDown);
 
     var br = TUNEFREE_QUALITY_MAP[String(quality || '').toLowerCase()] || '128k';
     var lastError = null;
@@ -3081,7 +3134,8 @@
         false,
         function (err, data) {
           if (err) {
-            lastError = err;
+            lastError = rememberResolverOutage('tune-free', err);
+            if (resolverOutageError('tune-free')) return callback(lastError);
             return tryId(index + 1);
           }
 
@@ -3105,6 +3159,7 @@
               (parsedMeta && parsedMeta.data && parsedMeta.data.br != null ? parsedMeta.data.br : '');
           } catch (e2) {}
 
+          clearResolverOutage('tune-free');
           callback(null, {
             url: String(returnedUrl).replace(/^\\s+|\\s+$/g, ''),
             source: source,
@@ -3130,6 +3185,8 @@
     }
     var mapped = SOURCE_MAP[source];
     if (!mapped) return callback(new Error('Unsupported playback source: ' + source));
+    var gdDown = resolverOutageError('gd-studio');
+    if (gdDown) return callback(gdDown);
 
     var ids = getGdPlaybackIds(source, musicInfo);
     if (!ids.length) return callback(new Error('No platform track id for ' + source));
@@ -3173,7 +3230,8 @@
           true,
           function (err, data) {
             if (err) {
-              lastError = err;
+              lastError = rememberResolverOutage('gd-studio', err);
+              if (resolverOutageError('gd-studio')) return callback(lastError);
               if (source === 'mg' && /HTTP 403/i.test(String(err.message || err)) &&
                   /Just a moment|cf-chl-|Cloudflare.*challenge/i.test(String(err.message || err))) {
                 gdMiguChallengeUntil =
@@ -3197,6 +3255,7 @@
             var actualBr = data && data.br != null ? data.br :
               (data && data.data && data.data.br != null ? data.data.br : br);
 
+            clearResolverOutage('gd-studio');
             callback(null, {
               url: String(returnedUrl).replace(/^\s+|\s+$/g, ''),
               source: source,
@@ -3280,6 +3339,7 @@
     source = String(source || '').toLowerCase();
     options = options || {};
     var skipProvider = String(options.skipProvider || '').toLowerCase();
+    var officialFailure = '';
 
     if (source === 'mg') {
       var cacheKey = miguFailureKey(musicInfo, quality, skipProvider);
@@ -3310,10 +3370,11 @@
       resolveGdStudioUrl(source, musicInfo, quality, function (gdErr, result) {
         if (!gdErr && result && result.url) return callback(null, result);
 
-        var message = 'Playback fallback failed for ' + source;
-        if (huibqErr && huibqErr.message) message += '；Huibq: ' + huibqErr.message;
-        if (tuneErr && tuneErr.message) message += '；TuneHub: ' + tuneErr.message;
-        if (gdErr && gdErr.message) message += '；GD Studio: ' + gdErr.message;
+        var message = '当前歌曲未取得可用播放地址（' + source + '）';
+        if (officialFailure) message += '；平台解析：' + officialFailure;
+        if (huibqErr && huibqErr.message) message += '；' + huibqErr.message;
+        if (tuneErr && tuneErr.message) message += '；' + tuneErr.message;
+        if (gdErr && gdErr.message) message += '；' + gdErr.message;
         callback(new Error(message));
       });
     }
@@ -3387,6 +3448,12 @@
     if (source === 'wy' && skipProvider !== 'netease-native') {
       return resolveNeteaseNativeUrl(musicInfo, quality, function (nativeErr, nativeResult) {
         if (!nativeErr && nativeResult && nativeResult.url) return callback(null, nativeResult);
+        // The native platform is always attempted first. Report a safe
+        // category rather than raw authenticated upstream response bodies.
+        var reason = String(nativeErr && nativeErr.message || '');
+        officialFailure = /HTTP\s*40[13]\b/i.test(reason) ? '需要授权或访问被拒绝' :
+          /(?:no playable URL|returned no playable)/i.test(reason) ?
+          '未提供该歌曲的可播放地址' : '请求未成功';
         afterHuibq();
       });
     }
