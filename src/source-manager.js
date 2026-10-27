@@ -264,6 +264,14 @@
   }
 
   function addOrReplace(item, preserveActive) {
+    if (FLOWER_ONLY_NATIVE && isFlower(item)) {
+      // A refresh must replace the old mirror/raw Flower rather than
+      // accumulating duplicate Flower rows in APK storage.
+      sources=[item];
+      active=item;
+      persist(); notify();
+      return;
+    }
     var next=[];
     var replacingActive=false;
     for (var i=0;i<sources.length;i+=1) {
