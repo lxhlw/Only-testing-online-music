@@ -61,6 +61,8 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check src/app.js
+          node --check scripts/bundle-android44-webui.mjs
+          node --check scripts/test-android44-bundled-ui-browser.mjs
           node --check src/android-native-xhr-fallback.js
           node --check scripts/test-android44-tls-xhr-fallback-browser.mjs
           node --check scripts/test-android44-bundled-fallback-browser.mjs
@@ -131,6 +133,11 @@ jobs:
 
       - name: Verify Android 4.4 XHR to native TLS fallback
         run: node scripts/test-android44-tls-xhr-fallback-browser.mjs
+
+      - name: Verify APK-bundled UI controls and navigation
+        run: |
+          node scripts/bundle-android44-webui.mjs
+          node scripts/test-android44-bundled-ui-browser.mjs
 
       - name: Verify manual Android external audio Intent handoff
         run: node scripts/test-android-external-intent-browser.mjs
