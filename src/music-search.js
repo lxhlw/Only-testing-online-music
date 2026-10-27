@@ -2134,7 +2134,7 @@
           var text = String(raw || '').replace(/^\s+|\s+$/g, '');
           var parsed = null;
           try {
-            var callbackMatch = text.match(/^\s*[^\(]+\((.*)\)\s*;?\s*$/s);
+            var callbackMatch = text.match(/^\s*[^\(]+\(([\s\S]*)\)\s*;?\s*$/);
             parsed = JSON.parse(callbackMatch ? callbackMatch[1] : text);
           } catch (e) {}
           var detail = parsed && parsed.data ? parsed.data : parsed;
