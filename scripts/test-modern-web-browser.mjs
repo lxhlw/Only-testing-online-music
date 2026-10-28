@@ -92,7 +92,7 @@ try {
   await page.goto(url,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.LXSourceManager?.getActive()?.inited,{timeout:14000});
   assert.equal(await page.locator('.brand').textContent(),'LX Music Web');
-  assert.equal(await page.locator('#app-version').textContent(),'v0.4.4');
+  assert.equal(await page.locator('#app-version').textContent(),'v0.4.5');
   assert.equal(await page.locator('#top-source-label').textContent(),'当前音源：野花🌷');
   assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(x=>x.name)),['野花🌷']);
   assert.equal(await page.locator('#legacy-media-panel').count(),0);
@@ -119,6 +119,8 @@ try {
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('.global-search-bar')).display==='none');
 
   assert.equal(await page.locator('#restore-default-sources-btn').isVisible(),true);
+  assert.equal(await page.locator('#inline-fallback').isVisible(),true,
+    'Listeners must see the downgrade setting rather than a hidden checkbox');
   const quality=await page.evaluate(()=>{
     const planLabel=document.getElementById('quality-summary').textContent;
     const available=window.LXSourceManager.getActive().sources.wy.qualitys;
@@ -190,6 +192,35 @@ try {
   assert.deepEqual(await page.evaluate(()=>window.__qualityTypes.slice(0,2)),['320k','128k'],
     'Automatic must try 320k first, then a single low-bitrate fallback');
   checks.push('bounded-quality-fallback');
+
+  // Fixed Hi-Res has no right to silently substitute 128k or 320k.
+  await page.locator('[data-view="settings"]').click();
+  await page.locator('#inline-quality').selectOption('flac32bit');
+  assert.equal(await page.locator('#inline-fallback').isChecked(),false,
+    'Explicit fixed-quality choice disables surprise fallback');
+  await page.locator('#inline-save-settings').click();
+  const beforeFixed=await page.evaluate(()=>window.__qualityTypes.length);
+  await page.locator('#inline-replay-quality').click();
+  await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('未声明支持'),{timeout:4500});
+  assert.equal(await page.evaluate(()=>window.__qualityTypes.length),beforeFixed,
+    'Unsupported fixed FLAC32 must never request 128k');
+  await page.locator('#inline-quality').selectOption('320k');
+  await page.locator('#inline-save-settings').click();
+  await page.evaluate(()=>{
+    window.__qualityTypes=[];
+    window.LXSourceManager.requestAction=(source,action,params,done)=>{
+      window.__qualityTypes.push(params.type);
+      done(null,{url:'https://media.example.test/song.wav?id=manual320'});
+    };
+  });
+  await page.locator('#inline-replay-quality').click();
+  await page.waitForFunction(()=>window.__qualityTypes.length>0,{timeout:4500});
+  assert.deepEqual(await page.evaluate(()=>window.__qualityTypes),['320k'],
+    'Manual 320k must not initiate any lower-quality request');
+  await page.locator('#inline-reset-settings').click();
+  assert.equal(await page.locator('#inline-fallback').isChecked(),true);
+  checks.push('fixed-quality-honored-no-hidden-downgrade');
+  await page.locator('[data-view="search"]').click();
   await page.evaluate(()=>{
     window.LXSourceManager.requestAction=(source,action,params,done)=>
       done(null,{url:'https://media.example.test/song.wav?id=good'});
@@ -285,6 +316,17 @@ try {
   await page.waitForFunction(()=>document.querySelectorAll('#ranking-list .ranking-item').length>0,{timeout:5000});
   await page.locator('#ranking-list .ranking-item').first().click();
   await page.waitForFunction(()=>document.querySelector('#ranking-songs')?.textContent.includes('QQ热歌'),{timeout:5000});
+  assert.equal(await page.locator('#ranking-songs .chart-song-info').count(),1);
+  await page.locator('#ranking-songs .chart-song-info').click();
+  await page.waitForFunction(()=>document.getElementById('player-title')?.textContent==='QQ热歌',{timeout:5000});
+  const buttonVisual=await page.locator('#ranking-songs .chart-play-btn').evaluate(el=>{
+    const css=getComputedStyle(el);
+    return {bg:css.backgroundColor,radius:css.borderRadius,minHeight:el.getBoundingClientRect().height};
+  });
+  assert.ok(buttonVisual.radius!=='0px'&&buttonVisual.bg.startsWith('rgb('),
+    'Chart buttons must follow mint theme, not browser defaults: '+JSON.stringify(buttonVisual));
+  assert.ok(buttonVisual.minHeight>=32,'Chart buttons must be tap-sized');
+  checks.push('ranking-tap-song-and-themed-button');
   await page.locator('[data-ranking-source="wy"]').click();
   await page.locator('[data-view="playlist"]').click();
   assert.equal(await page.locator('#view-playlist [data-catalog-source="tx"]').isVisible(),true);
@@ -308,7 +350,30 @@ try {
   assert.ok(measure.page<=measure.viewport+2,'No sideways mobile scrolling');
   assert.equal(measure.nav,5,'Five bottom/top mobile navigation choices visible');
   assert.ok(measure.controls.width>=40,'Transport remains easily tappable');
-
+  await page.locator('[data-view="ranking"]').click();
+  await page.locator('[data-ranking-source="tx"]').click();
+  await page.waitForFunction(()=>document.querySelectorAll('#ranking-songs .chart-song-row').length>0,{timeout:5000});
+  const compact=await page.evaluate(()=>{
+    const row=document.querySelector('#ranking-songs .chart-song-row');
+    const info=row?.querySelector('.chart-song-info')?.getBoundingClientRect();
+    const play=row?.querySelector('.chart-play-btn')?.getBoundingClientRect();
+    return {page:document.documentElement.scrollWidth,viewport:innerWidth,
+      infoWidth:info?.width,playLeft:play?.left,infoRight:info?.right,
+      playRight:play?.right};
+  });
+  assert.ok(compact.page<=compact.viewport+2,'Ranking must not overflow phone: '+JSON.stringify(compact));
+  assert.ok(compact.infoWidth>100&&compact.infoRight<=compact.playLeft+8,
+    'Song title must remain readable and separate from play button: '+JSON.stringify(compact));
+  assert.ok(compact.playRight<=compact.viewport,'Chart play button must fit viewport');
+  await page.setViewportSize({width:320,height:740});
+  const narrow=await page.evaluate(()=>({
+    width:document.documentElement.scrollWidth,viewport:innerWidth,
+    playRight:document.querySelector('.chart-play-btn')?.getBoundingClientRect().right
+  }));
+  assert.ok(narrow.width<=narrow.viewport+2 && narrow.playRight<=narrow.viewport,
+    '320px chart layout must remain readable without horizontal overflow');
+  await page.setViewportSize({width:390,height:844});
+  checks.push('ranking-390-and-320-responsive');
   await page.locator('[data-view="mylist"]').click();
   const mobileLibrary=await page.evaluate(()=>({
     layout:getComputedStyle(document.querySelector('.music-library-workspace')).flexDirection,
