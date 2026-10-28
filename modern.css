@@ -47,7 +47,7 @@ a{color:var(--mint)}
 .global-status.fail{color:#ffadad;background:rgba(147,48,62,.16)}
 .view-container{max-width:1640px;margin:0 auto;padding:23px clamp(20px,3vw,50px) 145px}
 .view-panel{display:none}
-.view-panel.active{display:block;animation:stage-enter .28s ease-out both}
+.view-panel.active{display:block;animation:stage-enter .28s ease-out}
 .view-header{align-items:center;margin:0 0 25px;padding:0 2px}
 .panel-kicker{font-size:11px;letter-spacing:3px;color:var(--mint2);font-weight:750}
 .view-header h1{font-size:clamp(30px,3vw,40px);color:var(--text);letter-spacing:-1.8px;line-height:1.17;margin:7px 0 0;font-weight:800}
@@ -207,3 +207,7 @@ html.modern-web #view-playlist>.playlist-filter-stack>.sub-toolbar{
 html.modern-web .topbar{
   position:sticky;left:auto;right:auto;top:0;width:100%;
 }
+
+/* Modern scroll containers own their own player clearance. The former #app
+   padding lived below the sticky rail's boundary and pulled it off screen. */
+html.modern-web #app{padding-bottom:0}
