@@ -463,7 +463,7 @@ html.modern-web .source-setting-actions>:not(#restore-default-sources-btn),
 html.modern-web .settings-section [for="source-url"],
 html.modern-web #source-url,
 html.modern-web .source-buttons,
-html.modern-web .settings-section:has(#runtime-info),
+html.modern-web .settings-section:has(#runtime-info){display:none!important}
 /* The quality downgrade toggle is now a visible consent control. */
 
 /* Only first 10 new entries fade in; no continuous animations or huge blur. */
