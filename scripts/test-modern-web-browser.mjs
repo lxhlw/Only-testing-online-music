@@ -396,6 +396,12 @@ try {
   assert.equal(await page.locator('#my-favorite-panel').isVisible(),true);
   checks.push('mobile-library');
 
+  // QQ chart songs may legitimately lack cover metadata. Restore a
+  // NetEase song with known mock art before asserting real cover images.
+  await page.evaluate(()=>window.OnlyTestingMusicApp.playMusic({
+    id:'123456',songmid:'123456',name:'歌词同步测试',singer:'测试歌手',source:'wy',interval:8
+  }));
+  await page.waitForFunction(()=>document.getElementById('player-cover-image')?.naturalWidth>0,{timeout:5500});
   await page.locator('#player-cover-button').click();
   assert.equal(await page.locator('#lyrics-overlay').isVisible(),true);
   const fullMobile=await page.evaluate(()=>{
