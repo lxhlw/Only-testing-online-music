@@ -217,3 +217,22 @@ html.modern-web #app{padding-bottom:0}
 @media(max-width:740px){
   html.modern-web,html.modern-web body{overflow-x:clip;overflow-y:visible}
 }
+
+/* Keep the 390px transport in ONE vertical column. Legacy mobile CSS left
+   flex-wrap:wrap on .player-bar, which split its children into offscreen
+   horizontal columns even though the modern direction is column. */
+@media(max-width:740px){
+  html.modern-web .player-bar{
+    flex-direction:column;
+    flex-wrap:nowrap;
+    align-content:normal;
+    justify-content:center;
+  }
+  html.modern-web .player-song,
+  html.modern-web .player-center{
+    margin-left:0;
+    margin-right:0;
+    min-width:0;
+    max-width:100%;
+  }
+}
