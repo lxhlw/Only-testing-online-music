@@ -472,6 +472,72 @@ async function fetchFlowerResolverViaHttpBridge(target, request) {
   });
 }
 
+// Fast path for the SAME Flower resolver, not a different playback provider.
+// Previously a failing TCP connection was awaited before many DNS/relay
+// addresses, turning a single musicUrl request into a long serial waterfall.
+// Race three published Flower host aliases and its canonical socket under one
+// strict deadline. Keep all original safety checks for every redirect.
+async function fetchFlowerResolverFast(target, request) {
+  const operation = String(request.method || 'GET').toUpperCase();
+  if (operation !== 'GET' && operation !== 'HEAD') {
+    return new Response(JSON.stringify({error:'Flower supports GET/HEAD only'}),{
+      status:405,headers:{'Content-Type':'application/json; charset=utf-8'}
+    });
+  }
+  const ctrl = new AbortController();
+  const originalPath = target.pathname + target.search;
+  const shortPath = (target.pathname.startsWith('/flower/v1/')
+    ? target.pathname.slice('/flower/v1'.length)
+    : target.pathname) + target.search;
+  const endpoints = [
+    'http://ts.tempmusic.tk'+shortPath,
+    'http://tm.tempmusic.tk'+shortPath,
+    'https://ts.tempmusic.tk'+originalPath,
+    'https://tm.tempmusic.tk'+originalPath
+  ];
+  const tasks = endpoints.map(async endpoint=>{
+    const upstream = await fetchSafeUpstream(endpoint,{
+      method:operation,
+      redirect:'manual',
+      signal:ctrl.signal,
+      headers:{Accept:'application/json, text/plain, */*'}
+    });
+    if(upstream.status<200 || upstream.status>=300)
+      throw new Error('Flower host HTTP '+upstream.status);
+    const text=await upstream.text();
+    const payload=extractFlowerResolverPayload(text);
+    if(!payload)throw new Error('Flower host returned no usable resolver payload');
+    return new Response(payload.body,{
+      status:200,
+      headers:{'Content-Type':payload.contentType,'Cache-Control':'no-store'}
+    });
+  });
+  // Keep the original canonical endpoint as an equal competitor.
+  tasks.push(fetchFlowerResolverViaSocket(target,request).then(response=>{
+    if(response.status<200||response.status>=300)
+      throw new Error('Flower canonical socket unavailable');
+    return response;
+  }));
+  let timer;
+  try{
+    const deadline = new Promise((_,reject)=>{
+      timer=setTimeout(()=>reject(new Error('Flower fast resolver deadline')),9000);
+    });
+    return await Promise.race([Promise.any(tasks),deadline]);
+  }catch(error){
+    return new Response(JSON.stringify({
+      error:'Flower resolver unavailable',
+      message:'The Flower resolver did not return a valid music address within 9 seconds'
+    }),{
+      status:502,
+      headers:Object.assign({'Content-Type':'application/json; charset=utf-8'},corsHeaders(request))
+    });
+  }finally{
+    clearTimeout(timer);
+    ctrl.abort();
+  }
+}
+
 function corsHeaders(request) {
   // This is a same-origin browser proxy, not an arbitrary CORS relay.
   var selfOrigin = new URL(request.url).origin;
@@ -540,7 +606,8 @@ async function fetchSafeUpstream(input, options) {
   for (var hop = 0; hop <= 3; hop += 1) {
     if (!validateProxyTarget(current)) throw new Error('Blocked unsafe upstream or redirect target');
     var response = await fetch(current.toString(), {
-      method: method, headers: headers, body: body, redirect: 'manual'
+      method: method, headers: headers, body: body, redirect: 'manual',
+      signal: options && options.signal
     });
     if (response.status !== 301 && response.status !== 302 &&
         response.status !== 303 && response.status !== 307 &&
@@ -898,42 +965,9 @@ export async function onRequest(context) {
   // its resolver on this IP, so try known DNS aliases for the same origin.
   if (target.hostname.toLowerCase() === '97.64.37.235'
       && /^\/flower\/v1\/url\//.test(target.pathname)) {
-    // Cloudflare's ordinary fetch path rejects this public HTTP IP. Use the
-    // Workers Socket API first so the canonical Flower resolver can still be
-    // reached without changing the imported LX source URL.
-    var flowerSocketResponse = await fetchFlowerResolverViaSocket(target, request);
-    if (flowerSocketResponse.status >= 200 && flowerSocketResponse.status < 300) {
-      return flowerSocketResponse;
-    }
-
-    // If the socket route is unavailable, retain the existing hostname and
-    // HTTPS bridge fallbacks as secondary compatibility paths.
-    var flowerHostResponse = await fetchFlowerResolverViaHost(target, request);
-    if (flowerHostResponse.status >= 200 && flowerHostResponse.status < 300) {
-      return flowerHostResponse;
-    }
-
-    var flowerBridgeResponse = await fetchFlowerResolverViaHttpBridge(target, request);
-    if (flowerBridgeResponse.status >= 200 && flowerBridgeResponse.status < 300) {
-      return flowerBridgeResponse;
-    }
-
-    var flowerDirectResponse = await fetchFlowerResolverViaDirectFetch(target, request);
-    if (flowerDirectResponse.status >= 200 && flowerDirectResponse.status < 300) {
-      return flowerDirectResponse;
-    }
-
-    // Do not use the legacy TCP socket fallback here. Cloudflare Workers
-    // can reject public HTTP socket connections, and the old socket fallback
-    // was the source of Worker 1101 crashes. Return a normal 502 instead so
-    // the browser-side playback layer can activate native platform fallback.
-    return new Response(JSON.stringify({
-      error: 'Flower resolver unavailable',
-      message: 'All Flower HTTP resolver routes failed'
-    }), {
-      status: 502,
-      headers: Object.assign({'Content-Type': 'application/json; charset=utf-8'}, corsHeaders(request))
-    });
+    // v0.3 web-only: all attempts are at the same published Flower source
+    // endpoint, raced concurrently under one 9s budget rather than queued.
+    return await fetchFlowerResolverFast(target, request);
   }
 
   var candidateUrls = target.protocol === 'http:'

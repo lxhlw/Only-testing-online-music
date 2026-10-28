@@ -17,12 +17,10 @@
   var active = null;
   // A native KitKat APK uses only Flower for playback. Search channels (wy,
   // mg, kw, kg, tx) remain independent of imported LX playback scripts.
-  var FLOWER_ONLY_NATIVE = false;
-  try {
-    FLOWER_ONLY_NATIVE = !!(global.LXNativeAudio &&
-      typeof global.LXNativeAudio.isAvailable === 'function' &&
-      global.LXNativeAudio.isAvailable());
-  } catch (e) {}
+  // v0.3 web-first: a single Flower LX playback script. Search platforms
+  // are independent, so this removes the old Huibq/TuneHub/GD waterfall
+  // without sacrificing search, playlists, favorites or the play queue.
+  var FLOWER_ONLY_NATIVE = true;
   function isFlower(item) {
     return !!item && String(item.url || '').indexOf(
       'pdone/lx-music-source/main/flower/latest.js') >= 0;
@@ -161,7 +159,7 @@
           // limit below the 75s app watchdog; explicit source timeouts win.
           var explicitTimeout = Number(opts.timeout || 0);
           if (explicitTimeout > 0) xhr.timeout = explicitTimeout;
-          else if (FLOWER_ONLY_NATIVE) xhr.timeout = 70000;
+          else if (FLOWER_ONLY_NATIVE) xhr.timeout = 11000;
         }
 
         if (opts.headers) {

@@ -1,0 +1,132 @@
+// Modern, framework-free interaction layer.
+// Progressive enhancement only: all music, library and playlist logic remains
+// in the existing app modules. No intervals or heavy visual libraries.
+const root=document.documentElement;
+const $=id=>document.getElementById(id);
+const status=$('status'), audio=$('audio');
+const input=$('global-search-input');
+const searchBtn=$('global-search-btn');
+const title=$('player-title');
+const source=$('top-source-label');
+const results=$('search-results');
+const lyric=$('player-lyric');
+
+let animationFrame=0;
+const schedule=work=>{
+  if(animationFrame)return;
+  animationFrame=requestAnimationFrame(()=>{
+    animationFrame=0;
+    if(!document.hidden)work();
+  });
+};
+const syncStatus=()=>{
+  if(!status)return;
+  const value=(status.textContent||'').toLowerCase();
+  const fetching=/正在|连接|请求|解析|等待|下载|准备/.test(value)&&
+    !/已开始播放|搜索完成|已经播放/.test(value);
+  root.classList.toggle('is-resolving',fetching);
+  root.classList.toggle('has-error',status.classList.contains('fail'));
+  const footer=$('bottom-play-status');
+  if(footer)footer.textContent=(status.textContent||'就绪').slice(0,44);
+};
+const updateNowPlaying=()=>{
+  if(!audio)return;
+  root.classList.toggle('is-playing',!audio.paused&&!audio.ended&&audio.readyState>1);
+};
+const syncLyric=()=>{
+  if(!lyric)return;
+  const active=document.querySelector('.lyrics-line.active');
+  const text=active?.textContent?.trim();
+  const next=text?'歌词：'+text:'歌词：—';
+  if(lyric.textContent!==next)lyric.textContent=next;
+};
+if(status)new MutationObserver(()=>schedule(syncStatus))
+  .observe(status,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']});
+if(source)new MutationObserver(()=>schedule(()=>{
+  const active=window.LXSourceManager?.getActive?.();
+  const name=active?.name||'正在准备';
+  const label='当前音源：'+name;
+  if(source.textContent!==label)source.textContent=label;
+})).observe(source,{childList:true,characterData:true});
+const lyrics=$('lyrics-lines');
+if(lyrics)new MutationObserver(()=>schedule(syncLyric))
+  .observe(lyrics,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
+if(audio){
+  for(const event of ['playing','pause','ended','waiting','canplay','error','emptied']){
+    audio.addEventListener(event,()=>schedule(updateNowPlaying),{passive:true});
+  }
+}
+if(input&&searchBtn){
+  input.addEventListener('keydown',ev=>{
+    // The existing app navigation already handles Enter once. Do not
+    // duplicate its request and waste two API calls per search.
+    if(ev.key==='Escape'){input.blur()}
+  });
+}
+document.addEventListener('keydown',ev=>{
+  const editing=ev.target instanceof HTMLElement &&
+    (ev.target.matches('input,textarea,select')||ev.target.isContentEditable);
+  if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==='k'){
+    ev.preventDefault();input?.focus();input?.select();return;
+  }
+  if(!editing&&ev.key==='/'){
+    ev.preventDefault();input?.focus();return;
+  }
+  if(!editing&&ev.code==='Space'&&!ev.repeat){
+    const current=window.OnlyTestingMusicApp;
+    if(current&&audio&&audio.currentSrc){
+      ev.preventDefault();$('player-toggle-btn')?.click();
+    }
+  }
+});
+const animateAdded=container=>{
+  if(!container)return;
+  // Cap animated entries to protect mid-range devices and long playlists.
+  const entries=Array.from(container.children).slice(0,12);
+  for(let i=0;i<entries.length;i++){
+    const el=entries[i];
+    if(el.dataset.motionSeen==='1')continue;
+    el.dataset.motionSeen='1';
+    el.classList.add('reveal-item');
+    el.style.animationDelay=(i*20)+'ms';
+    el.addEventListener('animationend',()=>{
+      el.classList.remove('reveal-item');
+      el.style.animationDelay='';
+    },{once:true});
+  }
+};
+for(const id of ['search-results','playlist-results','playlist-featured','ranking-songs','playlist-detail-songs']){
+  const node=$(id);
+  if(node)new MutationObserver(()=>schedule(()=>animateAdded(node)))
+    .observe(node,{childList:true});
+}
+const modernClick=ev=>{
+  if(ev.target.closest('.search-actions button:first-child,.playlist-song-play,.playlist-card-actions button')){
+    root.classList.add('is-resolving');
+  }
+};
+document.addEventListener('click',modernClick,{passive:true});
+if('mediaSession' in navigator){
+  navigator.mediaSession.setActionHandler?.('play',()=>audio?.play().catch(()=>{}));
+  navigator.mediaSession.setActionHandler?.('pause',()=>audio?.pause());
+  navigator.mediaSession.setActionHandler?.('seekto',e=>{
+    if(audio&&Number.isFinite(audio.duration)&&e.seekTime!=null)
+      audio.currentTime=Math.max(0,Math.min(e.seekTime,audio.duration));
+  });
+  const updateMetadata=()=>{
+    const name=(title?.textContent||'').trim();
+    if(name&&!['未播放',''].includes(name)){
+      try{
+        navigator.mediaSession.metadata=new MediaMetadata({
+          title:name,
+          artist:($('player-artist')?.textContent||'').trim(),
+          album:'LX Music Web'
+        });
+      }catch{}
+    }
+  };
+  if(title)new MutationObserver(()=>schedule(updateMetadata))
+    .observe(title,{childList:true,characterData:true,subtree:true});
+}
+syncStatus();
+updateNowPlaying();

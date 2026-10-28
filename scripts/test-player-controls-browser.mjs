@@ -96,9 +96,13 @@ async function test(viewport, legacy){
   }
   await assertSingleIcon('播放')
   await page.evaluate(()=>{
-   window.LXSourceManager.getActive=function(){return null}
-   window.LXMusicSearch.resolveMusicUrl=function(source,info,quality,cb){
-     cb(null,{url:'https://player-mock.invalid/audio.mp3',provider:'netease-native'})
+   // Modern web uses Flower's requestAction exclusively, never the
+   // legacy native fallback resolver. Simulate that exact source contract.
+   window.LXSourceManager.getActive=function(){
+     return {inited:true,runtime:{__debugRequests:[]},sources:{wy:{actions:['musicUrl']}}}
+   }
+   window.LXSourceManager.requestAction=function(source,action,params,cb){
+     cb(null,{url:'https://player-mock.invalid/audio.mp3'})
    }
    const audio=document.getElementById('audio')
    window.__simulatedTime=1
@@ -178,10 +182,24 @@ async function test(viewport, legacy){
   if (!legacy) {
     const seekBox=await page.locator('#player-seek').boundingBox()
     assert.ok(seekBox && seekBox.width>80)
+    assert.ok(seekBox.x>=0 && seekBox.x+seekBox.width<=viewport.width+1,
+      'The whole progress slider must fit inside '+viewport.width+'px viewport: '+JSON.stringify(seekBox))
     await page.mouse.move(seekBox.x+seekBox.width*0.75,seekBox.y+seekBox.height/2)
     await page.mouse.down()
     await page.mouse.move(seekBox.x+seekBox.width*0.25,seekBox.y+seekBox.height/2,{steps:8})
     await page.mouse.up()
+    console.log('Seek drag geometry and value '+viewport.width+'px:',JSON.stringify(await page.evaluate(()=>{
+      const slider=document.getElementById('player-seek')
+      const rect=slider.getBoundingClientRect()
+      const boxes={}
+      for(const key of ['player-bar','player-song','player-center','player-transport','player-timeline','player-seek-wrap','player-seek']){
+        const el=document.querySelector('.'+key)||document.getElementById(key)
+        if(!el)continue
+        const b=el.getBoundingClientRect(),cs=getComputedStyle(el)
+        boxes[key]={x:b.x,y:b.y,w:b.width,h:b.height,d:cs.display,dir:cs.flexDirection,align:cs.alignItems,pos:cs.position,flex:cs.flex,width:cs.width}
+      }
+      return {value:slider.value,simulatedTime:window.__simulatedTime,rect:{x:rect.x,y:rect.y,width:rect.width,height:rect.height},currentTime:document.getElementById('player-current-time').textContent,boxes}
+    })))
     await page.waitForFunction(()=>Math.abs(window.__simulatedTime-50)<12,null,{timeout:3000})
     console.log('PASS: custom seek range drag moves HTMLAudioElement currentTime')
   } else {
@@ -247,6 +265,10 @@ async function test(viewport, legacy){
   if (legacy) assert.ok(dimensions.bar.width>170,'Android 4.4 native audio controls must be wide enough')
   else assert.ok(dimensions.seek.width>80,'Custom timeline must be draggable')
   assert.ok(dimensions.next.right<=dimensions.viewport+1,'Transport cannot overflow mobile viewport')
+  assert.ok(dimensions.transport.left>=0 && dimensions.transport.right<=dimensions.viewport+1,
+    'Play toggle must be fully onscreen')
+  assert.ok(dimensions.seek.left>=0 && dimensions.seek.right<=dimensions.viewport+1,
+    'Progress slider must be fully onscreen')
   assert.ok(dimensions.mode.left>=0,'Mode button cannot overflow')
   await page.locator('#player-mode-btn').click()
   assert.equal(await page.locator('#player-mode-menu').isVisible(),true)
@@ -261,5 +283,5 @@ async function test(viewport, legacy){
 try {
  await test({width:1280,height:840},false)
  await test({width:1792,height:850},false)
- await test({width:390,height:844},true)
+ await test({width:390,height:844},false)
 }finally{await browser.close()}

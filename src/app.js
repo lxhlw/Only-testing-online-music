@@ -15,6 +15,8 @@
   var shuffleHistory = [];
   var shuffleCursor = -1;
   var playbackToken = 0;
+  var MODERN_WEB = true;
+  var MODERN_FLOWER_TIMEOUT_MS = 12000;
   var searchToken = 0;
   var legacyFullResolveNext = false;
   var MIN_UNKNOWN_MEDIA_DURATION_SECONDS = 15;
@@ -23,7 +25,7 @@
   var PLAYBACK_CONNECT_TIMEOUT_MS = 7000;
   // Android 4.4 Chromium WebView can require touching the native media UI;
   // auto-play from an asynchronous resolver has no valid tap gesture.
-  var LEGACY_NATIVE_MEDIA = /Android 4[.]4(?:[.;\s]|$)/i.test(String(global.navigator && global.navigator.userAgent || ''));
+  var LEGACY_NATIVE_MEDIA = !MODERN_WEB && /Android 4[.]4(?:[.;\s]|$)/i.test(String(global.navigator && global.navigator.userAgent || ''));
   var legacyPreferDirect = false;
   if (LEGACY_NATIVE_MEDIA) document.documentElement.className += ' legacy-native-media';
   // Only inside the trusted native APK. Keep the working Via HTML5 fallbacks
@@ -189,6 +191,15 @@
     var available = activeSource.sources[channel].qualitys || [];
     if (global.LXPlaySettings) {
       var settings = getPlaySettings();
+      // Modern web: prioritize initial sound over huge lossless files.
+      if (MODERN_WEB && settings.qualityMode === 'highest') {
+        for (var modernQ=0;modernQ<available.length;modernQ++)
+          if (String(available[modernQ]).toLowerCase()==='128k') return [available[modernQ]];
+      }
+      if (MODERN_WEB) {
+        var requested=global.LXPlaySettings.buildPlan(available,settings);
+        return requested.length?[requested[0]]:[];
+      }
       // Android 4.4 browsers often cannot decode FLAC/Hi-Res streams.
       // On the default automatic setting, prefer an MP3-sized stream first;
       // never override a quality explicitly chosen by the listener.
@@ -260,7 +271,7 @@
       if (!available.length) {
         qualitySummaryEl.innerHTML = '<span class="muted">' +
           (!active || !active.inited || !active.sources || !active.sources[selectedChannel]
-            ? '音源正在准备；搜索可直接使用，播放将尝试同平台备用解析。'
+            ? '野花音源正在准备；搜索可以先使用。'
             : '当前渠道未声明音质列表，运行时将使用默认音质。') + '</span>';
       } else {
         var settingsLabel = global.LXPlaySettings ?
@@ -268,7 +279,8 @@
         var highest = global.LXPlaySettings ?
           global.LXPlaySettings.getPreferredQuality(available, { qualityMode: 'highest', autoFallback: true }) :
           available[0];
-        var nextText = plan.length > 1 ? ' · 降级顺序：' + escapeHtml(plan.join(' → ')) : '';
+        var nextText = MODERN_WEB ? ' · 极速模式：一次解析' :
+          (plan.length > 1 ? ' · 降级顺序：' + escapeHtml(plan.join(' → ')) : '');
         qualitySummaryEl.innerHTML =
           '<span class="quality-summary-label">' + escapeHtml(settingsLabel) + '</span>' +
           '<span class="quality-summary-detail">当前渠道最高：' + escapeHtml(highest || '—') +
@@ -921,7 +933,8 @@
       clearPlaybackConfirmTimer(playbackState);
       clearMiguPlaybackDeadline(playbackState);
       setStatus(
-        '歌曲地址已获得，但旧版浏览器阻止自动播放。请直接点击下方播放器的 ▶ 播放按钮。' +
+        (MODERN_WEB ? '浏览器阻止自动播放，请点击底部绿色播放按钮继续。' :
+         '歌曲地址已获得，但旧版浏览器阻止自动播放。请直接点击下方播放器的 ▶ 播放按钮。') +
         (error && error.name === 'NotSupportedError' ? ' 如仍无法播放，请切换较低音质。' : ''),
         'warn'
       );
@@ -982,7 +995,7 @@
         setStatus('歌曲地址已准备好。Android 4.4.2 请点击底部“原生音频播放”灰色控件里的 ▶；网页圆形播放键可能被系统限制。', 'warn');
         return;
       }
-      startAudioPlayback();
+      if (!MODERN_WEB) startAudioPlayback();
     };
     audio.onended = function () {
       if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
@@ -1017,6 +1030,8 @@
     audio.preload = LEGACY_NATIVE_MEDIA ? 'metadata' : 'auto';
     audio.src = playableUrl;
     if (!LEGACY_NATIVE_MEDIA && typeof audio.load === 'function') audio.load();
+    // Start streaming immediately instead of waiting for onloadedmetadata.
+    if (MODERN_WEB) startAudioPlayback();
 
     // Start the real-media connection timeout when the URL is attached, not
     // only after a "playing" event. A stalled CDN can stop at loadstart forever
@@ -1275,7 +1290,7 @@
 
     // Only one Flower quality per click on Android 4.4: no automatic
     // cross-source retries or repeated multibit-rate waterfalls.
-    if (NATIVE_COMPANION && plan.length > 1) plan = [plan[0]];
+    if ((NATIVE_COMPANION || MODERN_WEB) && plan.length > 1) plan = [plan[0]];
     var quality = plan[index];
     playbackState.index = index;
     playbackState.quality = quality;
@@ -1337,9 +1352,17 @@
     function runFallback(reason) {
       if (!isCurrentAttempt() || !finishAttempt()) return;
 
-      if (NATIVE_COMPANION) {
-        setStatus('野花音源未取得可播放地址：' + escapeHtml(reason || '解析失败') +
-          '。请重试或选择另一首歌曲。', 'fail');
+      if (NATIVE_COMPANION || MODERN_WEB) {
+        setStatus('野花暂时无法提供播放地址：' + escapeHtml(reason || '解析失败') +
+          '。没有调用其他解析服务。', 'fail');
+        if (MODERN_WEB) {
+          var retry = document.createElement('button');
+          retry.type = 'button';
+          retry.className = 'secondary';
+          retry.textContent = '重试这首歌';
+          retry.onclick = function(){ if(token===playbackToken) testMusic(music,false); };
+          statusEl.appendChild(retry);
+        }
         return;
       }
       if (reason) setStatus(reason, 'warn');
@@ -1433,7 +1456,7 @@
     // channel's native resolver when the Flower source cannot respond.
     if (!active || !active.inited || !active.runtime ||
         !active.sources || !active.sources[source]) {
-      if (NATIVE_COMPANION) {
+      if (NATIVE_COMPANION || MODERN_WEB) {
         // First installation and Babel startup complete asynchronously.
         // Allow one bounded wait for Flower to be ready, with no fallback.
         var started = Date.now ? Date.now() : new Date().getTime();
@@ -1454,7 +1477,7 @@
             return;
           }
           var now = Date.now ? Date.now() : new Date().getTime();
-          if (now-started>=25000) {
+          if (now-started>=(MODERN_WEB ? 10000 : 25000)) {
             finishAttempt();
             setStatus('野花音源尚未准备好，已停止等待。请在设置中重新加载野花。','fail');
             return;
@@ -1488,7 +1511,7 @@
         statusEl.appendChild(slowButton);
       }, 21000);
     } else {
-      if (NATIVE_COMPANION) {
+      if (NATIVE_COMPANION || MODERN_WEB) {
         var resolveStarted = Date.now ? Date.now() : new Date().getTime();
         var initialRequests = active && active.runtime &&
           active.runtime.__debugRequests ? active.runtime.__debugRequests.length : 0;
@@ -1510,7 +1533,7 @@
             ' 秒。', 'warn');
           flowerProgressTimer = global.setTimeout(progressFlower, 12000);
         };
-        flowerProgressTimer = global.setTimeout(progressFlower, 18000);
+        flowerProgressTimer = MODERN_WEB ? null : global.setTimeout(progressFlower, 18000);
         sourceTimer = global.setTimeout(function() {
           if (!isCurrentAttempt() || settled) return;
           var activeNow = global.LXSourceManager.getActive();
@@ -1518,9 +1541,9 @@
             activeNow.runtime.__debugRequests ?
             Math.max(0, activeNow.runtime.__debugRequests.length - initialRequests) : 0;
           runFallback('野花网络请求超过 ' +
-            Math.round(FLOWER_NATIVE_RESOLVE_TIMEOUT_MS / 1000) +
-            ' 秒仍未返回（本次音源网络请求 ' + count + ' 次）');
-        }, FLOWER_NATIVE_RESOLVE_TIMEOUT_MS);
+            Math.round((MODERN_WEB ? MODERN_FLOWER_TIMEOUT_MS : FLOWER_NATIVE_RESOLVE_TIMEOUT_MS) / 1000) +
+            ' 秒仍未返回（本次请求 ' + count + ' 次）');
+        }, MODERN_WEB ? MODERN_FLOWER_TIMEOUT_MS : FLOWER_NATIVE_RESOLVE_TIMEOUT_MS);
       } else {
         sourceTimer = global.setTimeout(function () {
           if (!isCurrentAttempt() || settled) return;
@@ -1789,8 +1812,9 @@
       );
     }
 
-    if (NATIVE_COMPANION) {
-      setStatus('野花音源已取得地址，但原生播放器读取失败。请重试或选择另一首。', 'fail');
+    if (NATIVE_COMPANION || MODERN_WEB) {
+      setStatus(MODERN_WEB ? '音频播放连接失败。请重新点选歌曲。' :
+        '野花已返回地址，但原生播放失败。', 'fail');
       return;
     }
     if (settings.autoFallback && global.LXMusicSearch &&

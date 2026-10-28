@@ -1,8 +1,8 @@
 (function (global) {
   'use strict';
   global.OnlyTestingMusicVersion = {
-    version: '0.2.36',
-    releaseDate: '2026-10-06',
+    version: '0.3.0',
+    releaseDate: '2026-10-28',
     name: 'Only Testing Online Music'
   };
 })(window);

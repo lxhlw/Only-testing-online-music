@@ -6,9 +6,7 @@ const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8788'
 async function testViewport(browser, viewport, label) {
   const context = await browser.newContext({
     viewport,
-    userAgent: viewport.width <= 680
-      ? 'Mozilla/5.0 (Linux; Android 4.4.2; L101 Build/L101_V1.0) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/49.0.2623.112 Mobile Safari/537.36 Via/5.3'
-      : 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 Chrome/49.0.2623.112 Safari/537.36'
+    ...(viewport.width <= 680 ? { isMobile: true, hasTouch: true } : {})
   })
   const page = await context.newPage()
   const errors = []
@@ -21,6 +19,7 @@ async function testViewport(browser, viewport, label) {
       const panel = document.getElementById('view-playlist')
       const main = document.querySelector('.main-stage')
       const nav = document.querySelector('.nav-rail')
+      const topbar = document.querySelector('.topbar')
       const activeNav = document.querySelector('.nav-item.active')
       function hasActiveClass(node) {
         return Boolean(node && String(node.className || '').split(/\s+/).indexOf('active') >= 0)
@@ -30,6 +29,7 @@ async function testViewport(browser, viewport, label) {
         activeNav: activeNav ? activeNav.getAttribute('data-view') : '',
         hash: location.hash,
         navBottom: nav ? nav.getBoundingClientRect().bottom : 0,
+        topbarBottom: topbar ? topbar.getBoundingClientRect().bottom : 0,
         mainTop: main ? main.getBoundingClientRect().top : 0,
         viewportWidth: document.documentElement.clientWidth,
         scrollWidth: document.documentElement.scrollWidth,
@@ -42,7 +42,10 @@ async function testViewport(browser, viewport, label) {
     if (viewport.width <= 680) {
       assert.ok(state.mainTop >= state.navBottom - 2, label + ': mobile main content must be below the top navigation')
     } else {
-      assert.ok(state.mainTop >= 45 && state.mainTop <= 70, label + ': tablet/desktop main content must begin below the top bar')
+      assert.ok(
+        state.mainTop >= state.topbarBottom - 2 && state.mainTop <= state.topbarBottom + 16,
+        label + ': tablet/desktop main content must begin immediately below the top bar; topbarBottom=' + state.topbarBottom + ', mainTop=' + state.mainTop
+      )
     }
 
     await page.locator('.nav-item[data-view="search"]').click()

@@ -5,7 +5,7 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:8788'
 const browser = await chromium.launch({ headless: true })
 const page = await browser.newPage({
   viewport: { width: 360, height: 640 },
-  userAgent: 'Mozilla/5.0 (Linux; Android 4.4.2; Via) AppleWebKit/537.36 Mobile Safari/537.36'
+  userAgent: 'Mozilla/5.0 (Linux; Android 16; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0 Mobile Safari/537.36'
 })
 const errors = []
 page.on('pageerror', e => errors.push(String(e)))
@@ -55,11 +55,13 @@ await page.route('https://playlist-audio.invalid/**', route =>
 try {
   await page.goto(base + '/', { waitUntil: 'domcontentloaded' })
   await page.evaluate(() => {
-    // The page's native same-platform resolver can be deterministically
-    // exercised without depending on current third-party music availability.
-    window.LXSourceManager.getActive = function () { return null }
-    window.LXMusicSearch.resolveMusicUrl = function (source, info, quality, cb) {
-      cb(null, { url: 'https://playlist-audio.invalid/song.mp3', provider: 'netease-native' })
+    // Play All now uses Flower's single musicUrl request, not the retired
+    // native fallback. Keep the upstream deterministic for queue semantics.
+    window.LXSourceManager.getActive = function () {
+      return { inited: true, runtime: { __debugRequests: [] }, sources: { wy: { actions: ['musicUrl'] } } }
+    }
+    window.LXSourceManager.requestAction = function (source, action, payload, cb) {
+      cb(null, { url: 'https://playlist-audio.invalid/song.mp3' })
     }
     const audio = document.getElementById('audio')
     audio.load = function () {}
@@ -69,7 +71,33 @@ try {
   await page.locator('#playlist-featured .playlist-open-button').first().click()
   await page.waitForFunction(() =>
     document.querySelectorAll('#playlist-detail-songs .playlist-song-row').length === 50)
-  await page.locator('#playlist-play-all-btn').click()
+  // A tall sticky mobile header leaves a deliberate narrow content corridor.
+  // Playwright's default center-of-viewport scroll places this button behind
+  // the sticky filters. Scroll to the genuinely unobstructed area and click
+  // through a real pointer interaction (not element.click() or force:true).
+  const clickInVisibleCorridor = async locator => {
+    const position = await locator.evaluate(el => {
+      const rect = el.getBoundingClientRect()
+      const sticky = ['.topbar','.nav-rail','#persistent-top-stack','#playlist-filter-stack']
+      const yTop = Math.max(0, ...sticky.map(sel => {
+        const node = document.querySelector(sel)
+        return node ? node.getBoundingClientRect().bottom : 0
+      })) + 10
+      const player = document.querySelector('.player-bar')
+      const yBottom = (player ? player.getBoundingClientRect().top : innerHeight) - 10
+      const destination = (yTop + yBottom) / 2
+      window.scrollBy({ top: rect.top + rect.height/2 - destination, behavior: 'instant' })
+      return { yTop, yBottom }
+    })
+    await page.waitForTimeout(100)
+    const bounds = await locator.boundingBox()
+    assert.ok(bounds && bounds.y + bounds.height/2 > position.yTop &&
+      bounds.y + bounds.height/2 < position.yBottom,
+      'Playlist action must be scrollable into the clear space between sticky filters and player: '+
+      JSON.stringify({bounds,position}))
+    await locator.click({ timeout: 10000 })
+  }
+  await clickInVisibleCorridor(page.locator('#playlist-play-all-btn'))
   const first = await page.evaluate(() => ({
     ids: window.LXMusicLibrary.snapshot().queue.map(track => track.id),
     title: document.getElementById('player-title').textContent
@@ -137,7 +165,7 @@ try {
   })
   assert.equal(await page.locator('#player-title').textContent(), 'Song 101')
   const finalQueue = await page.evaluate(() => window.LXMusicLibrary.snapshot().queue)
-  assert.equal(finalQueue.length, 100, 'Old Via devices should retain the most useful 100-track window')
+  assert.equal(finalQueue.length, 100, 'Queue must retain the most useful 100-track window')
   assert.ok(finalQueue.some(track => track.id === '101'), 'Rolling queue must include track 101')
   await page.locator('#prev-track-btn').click()
   assert.equal(await page.locator('#player-title').textContent(), 'Song 100')
@@ -148,7 +176,7 @@ try {
   console.log('PASS: track 100 to 101 with bounded queue, Back and real last-track guard')
   // Any song row is directly clickable. Selecting one midway must start
   // from that position, show an active-row state and retain song order.
-  await page.locator('#playlist-detail-songs .playlist-song-row').nth(6).click()
+  await clickInVisibleCorridor(page.locator('#playlist-detail-songs .playlist-song-row').nth(6))
   assert.equal(await page.locator('#player-title').textContent(), 'Song 7')
   assert.equal(await page.locator('#playlist-detail-songs .playlist-song-row.is-playing').count(), 1)
   assert.equal(await page.locator('#playlist-detail-songs .playlist-song-row.is-playing').getAttribute('data-track-index'), '6')
@@ -160,14 +188,14 @@ try {
   console.log('PASS: click a middle playlist row, highlight it and keep Next/Previous in song order')
 
   const seventh = page.locator('#playlist-detail-songs .playlist-song-row').nth(6)
-  await seventh.locator('.playlist-add-queue').click()
+  await clickInVisibleCorridor(seventh.locator('.playlist-add-queue'))
   assert.equal(await page.locator('#player-title').textContent(), 'Song 7', 'Queue-only button must not launch playback')
-  await seventh.locator('.playlist-fav-song').click()
+  await clickInVisibleCorridor(seventh.locator('.playlist-fav-song'))
   assert.equal(await page.locator('#player-title').textContent(), 'Song 7', 'Favorite button must not launch playback')
   await page.locator('#playlist-detail-songs .playlist-song-row').nth(9).focus()
   await page.keyboard.press('Enter')
   assert.equal(await page.locator('#player-title').textContent(), 'Song 10')
-  await page.locator('#playlist-detail-songs .playlist-song-row').nth(3).locator('.playlist-song-play').click()
+  await clickInVisibleCorridor(page.locator('#playlist-detail-songs .playlist-song-row').nth(3).locator('.playlist-song-play'))
   assert.equal(await page.locator('#player-title').textContent(), 'Song 4')
   console.log('PASS: keyboard and explicit Play button select arbitrary tracks without duplicate click playback')
 
@@ -183,10 +211,10 @@ try {
       artistDisplay: getComputedStyle(row.querySelector('.playlist-song-artist')).display
     }
   })
-  assert.ok(mobileLayout.actionsRight <= mobileLayout.viewportWidth + 1, 'All playlist controls must fit old mobile screens')
+  assert.ok(mobileLayout.actionsRight <= mobileLayout.viewportWidth + 1, 'All playlist controls must fit modern mobile screens')
   assert.ok(mobileLayout.titleRight <= mobileLayout.actionsRight, 'Song title must not overlap buttons')
   assert.equal(mobileLayout.artistDisplay, 'none', 'Small screens hide secondary columns for uncluttered touch targets')
-  console.log('PASS: Via mobile playlist controls remain within viewport')
+  console.log('PASS: modern mobile playlist controls remain within viewport')
 
   await page.setViewportSize({ width: 1320, height: 850 })
   const desktopLayout = await page.evaluate(() => {
