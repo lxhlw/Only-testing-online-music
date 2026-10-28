@@ -25,7 +25,7 @@
   var PLAYBACK_CONNECT_TIMEOUT_MS = 7000;
   // Android 4.4 Chromium WebView can require touching the native media UI;
   // auto-play from an asynchronous resolver has no valid tap gesture.
-  var LEGACY_NATIVE_MEDIA = /Android 4[.]4(?:[.;\s]|$)/i.test(String(global.navigator && global.navigator.userAgent || ''));
+  var LEGACY_NATIVE_MEDIA = !MODERN_WEB && /Android 4[.]4(?:[.;\s]|$)/i.test(String(global.navigator && global.navigator.userAgent || ''));
   var legacyPreferDirect = false;
   if (LEGACY_NATIVE_MEDIA) document.documentElement.className += ' legacy-native-media';
   // Only inside the trusted native APK. Keep the working Via HTML5 fallbacks
