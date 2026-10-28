@@ -609,9 +609,9 @@
     target.innerHTML = '';
     var fragment=document.createDocumentFragment();
 
-    for (var i = 0; i < items.length; i += 1) {
-      var item = items[i];
-      var row = document.createElement('div');
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      const row = document.createElement('div');
       row.className = 'library-row';
       if (playbackState && musicKey(playbackState.music) === musicKey(item)) {
         row.className += ' is-playing';
@@ -662,6 +662,21 @@
         ));
       }
 
+      main.setAttribute('role','button');
+      main.tabIndex=0;
+      main.setAttribute('aria-label','播放 '+String(item.name||'未知歌曲'));
+      main.title='点击播放歌曲';
+      row.onclick=function(event){
+        if(event.target.closest('button,a,summary,details'))return;
+        playLibraryMusic(item);
+      };
+      main.onkeydown=function(event){
+        if(event.key==='Enter'||event.key===' '){
+          event.preventDefault();event.stopPropagation();
+          playLibraryMusic(item);
+        }
+      };
+      row.classList.add('tap-to-play');
       row.appendChild(main);
       row.appendChild(actions);
       fragment.appendChild(row);
