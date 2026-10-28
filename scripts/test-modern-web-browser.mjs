@@ -441,8 +441,9 @@ try {
   await page.locator('#search-results .song-more summary').first().click();
   assert.equal(await page.locator('#search-results .song-more').first().getAttribute('open'),'',
     'Secondary actions should be in a discoverable overflow menu');
+  const beforeMenuQueue=await page.locator('#player-title').textContent();
   await page.locator('#search-results .song-more-menu .song-action-queue').first().click();
-  assert.equal(await page.locator('#player-title').textContent(),'滑动搜索歌曲 21',
+  assert.equal(await page.locator('#player-title').textContent(),beforeMenuQueue,
     'Queue action must not accidentally start another song');
   checks.push('390px-search-row-density-and-safe-overflow-menu');
   await page.locator('[data-view="mylist"]').click();
