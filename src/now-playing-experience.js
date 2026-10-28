@@ -211,6 +211,7 @@ function openScreen(){
   document.documentElement.classList.add('lyrics-open');
   setTab('lyrics');
   updateTransport();
+  syncMode();syncVolume();
   $('lyrics-close-btn').focus();
   requestAnimationFrame(()=>centerActiveLyric(true));
 }
@@ -237,6 +238,35 @@ $('comments-refresh-btn')?.addEventListener('click',()=>loadComments(true));
 $('detail-prev-btn')?.addEventListener('click',()=>$('prev-track-btn')?.click());
 $('detail-next-btn')?.addEventListener('click',()=>$('next-track-btn')?.click());
 $('detail-toggle-btn')?.addEventListener('click',()=>$('player-toggle-btn')?.click());
+const playbackModes=['sequence','list-loop','single-loop','shuffle'];
+const modeLabels={sequence:'顺序', 'list-loop':'列表循环','single-loop':'单曲循环',shuffle:'随机'};
+const modeButton=$('detail-mode-btn');
+const syncMode=()=>{
+  const mode=window.LXPlayerControls?.getMode?.()||'sequence';
+  modeButton.textContent=modeLabels[mode]||'播放模式';
+  modeButton.title='切换播放模式，当前：'+modeButton.textContent;
+};
+modeButton?.addEventListener('click',()=>{
+  const player=window.LXPlayerControls;
+  if(!player?.setMode)return;
+  const current=player.getMode(),index=playbackModes.indexOf(current);
+  player.setMode(playbackModes[(index+1)%playbackModes.length]);
+  syncMode();
+});
+syncMode();
+const detailVolume=$('detail-volume'),baseVolume=$('player-volume');
+const syncVolume=()=>{
+  if(detailVolume&&baseVolume&&document.activeElement!==detailVolume)
+    detailVolume.value=String(baseVolume.value||80);
+};
+detailVolume?.addEventListener('input',()=>{
+  if(!baseVolume)return;
+  baseVolume.value=detailVolume.value;
+  baseVolume.dispatchEvent(new Event('input',{bubbles:true}));
+});
+baseVolume?.addEventListener('input',syncVolume);
+syncVolume();
+
 fullSeek?.addEventListener('input',()=>{
   if(!baseSeek||baseSeek.disabled)return;
   baseSeek.value=fullSeek.value;
