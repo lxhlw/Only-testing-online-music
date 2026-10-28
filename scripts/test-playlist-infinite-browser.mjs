@@ -41,6 +41,10 @@ try{
       if(width<741){
         await page.waitForFunction(()=>document.documentElement.classList.contains('mobile-shell-ready'))
         await page.locator('.mobile-menu-button').click()
+        await page.waitForFunction(()=>{
+          const r=document.querySelector('.nav-rail')?.getBoundingClientRect()
+          return r&&r.left>=-1&&r.right>200
+        })
         const drawer=await page.evaluate(()=>{
           const rail=document.querySelector('.nav-rail')
           const b=rail.getBoundingClientRect()
@@ -73,7 +77,8 @@ try{
         'Catalog scroll must fetch true subsequent offsets: '+catalogPages)
       if(width>=741){
         const controls=await page.locator('#playlist-featured .playlist-card').evaluateAll(cards=>{
-          const row=cards.slice(0,6)
+          const firstTop=Math.round(cards[0].getBoundingClientRect().top)
+          const row=cards.filter(card=>Math.abs(Math.round(card.getBoundingClientRect().top)-firstTop)<2)
           return row.map(card=>{
             const a=card.querySelector('.playlist-card-actions').getBoundingClientRect()
             const buttons=[...card.querySelectorAll('.playlist-card-actions button')]
