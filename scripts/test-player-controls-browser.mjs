@@ -35,7 +35,7 @@ async function test(viewport, legacy){
   // underlying shared controls without requiring hidden mini buttons to be hit.
   const tapMode=async()=>{
     if(viewport.width<=740)await page.evaluate(()=>document.getElementById('player-mode-btn').click())
-    else await tapMode()
+    else await page.locator('#player-mode-btn').click()
   }
   const chooseMode=async mode=>{
     if(viewport.width<=740)
