@@ -2,7 +2,18 @@ import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
 const url = process.env.TEST_BASE_URL || 'http://127.0.0.1:8788';
-const browser = await chromium.launch({headless:true});
+const browser = await chromium.launch({headless:true,args:['--autoplay-policy=no-user-gesture-required']});
+function makeWav(seconds=8,rate=8000){
+  const frames=seconds*rate;
+  const out=Buffer.alloc(44+frames*2);
+  out.write('RIFF',0);out.writeUInt32LE(out.length-8,4);
+  out.write('WAVE',8);out.write('fmt ',12);out.writeUInt32LE(16,16);
+  out.writeUInt16LE(1,20);out.writeUInt16LE(1,22);
+  out.writeUInt32LE(rate,24);out.writeUInt32LE(rate*2,28);
+  out.writeUInt16LE(2,32);out.writeUInt16LE(16,34);
+  out.write('data',36);out.writeUInt32LE(frames*2,40);
+  return out;
+}
 const fixture = [
   '/** @name 野花🌷 */',
   '(function(){',
@@ -26,9 +37,10 @@ try {
   await page.addInitScript(({sourceUrl,fixture})=>{
     window.__audioPlayCalls=0;
     window.__resolvedActions=0;
+    const originalPlay=HTMLMediaElement.prototype.play;
     HTMLMediaElement.prototype.play=function(){
       window.__audioPlayCalls++;
-      return Promise.resolve();
+      return originalPlay.apply(this,arguments);
     };
     localStorage.setItem('only-testing-online-music.lx-sources',JSON.stringify([
       {id:'old-huibq',url:'https://example.test/old-source.js',name:'Huibq',code:'/** @name Huibq */'},
@@ -37,7 +49,7 @@ try {
     localStorage.setItem('only-testing-online-music.active-source-id','old-huibq');
   },{sourceUrl,fixture});
   await page.route('https://media.example.test/**',route=>route.fulfill({
-    status:200,contentType:'audio/wav',body:Buffer.alloc(44)
+    status:200,contentType:'audio/wav',body:makeWav()
   }));
   await page.goto(url,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.LXSourceManager?.getActive()?.inited,{timeout:14000});
@@ -55,7 +67,7 @@ try {
   await page.evaluate(()=>{
     window.LXMusicSearch.resolveMusicUrl=()=>{throw new Error('legacy waterfall invoked')};
     window.LXMusicSearch.resolveMusicUrlFast=()=>{throw new Error('legacy provider race invoked')};
-    window.OnlyTestingMusicApp.playMusic({id:'demo',songmid:'demo',name:'成都',singer:'赵雷',source:'wy',interval:5});
+    window.OnlyTestingMusicApp.playMusic({id:'demo',songmid:'demo',name:'成都',singer:'赵雷',source:'wy',interval:8});
   });
   await page.waitForFunction(()=>window.__audioPlayCalls>=1,{timeout:6000});
   const state=await page.evaluate(()=>({
@@ -66,7 +78,10 @@ try {
   }));
   assert.equal(state.requests,1,'Modern Flower must resolve exactly once');
   assert.ok(state.audioPlays>=1,'Audio.play must begin without waiting for metadata');
-  assert.match(state.src,/media\.example\.test\/song\.wav/);
+  assert.equal(new URL(state.src).origin,new URL(url).origin,
+    'Signed media is kept behind the existing first-party proxy when needed');
+  assert.equal(new URL(state.src).searchParams.get('url'),
+    'https://media.example.test/song.wav?id=demo');
   assert.equal(state.title,'成都');
   const old=requests.filter(p=>/promise-lite|android-native-|android-external-audio|\/api\/babel|babel\.min\.js/.test(p));
   assert.deepEqual(old,[],'Legacy compatibility scripts must not load');
