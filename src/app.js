@@ -12,6 +12,9 @@
   var lyricsActiveIndex = -1;
   var selectedChannel = null;
   var playbackState = null;
+  // Keep the most recently selected track even when a strict quality check
+  // rejects playback. User may change the format and retry that same song.
+  var lastRequestedPlayback = null;
   var playlistPlayback = null;
   var shuffleHistory = [];
   var shuffleCursor = -1;
@@ -1659,6 +1662,7 @@
   }
 
   function startPlayback(music, source) {
+    lastRequestedPlayback = {music: music, source: source};
     var active = global.LXSourceManager.getActive();
     // The platform search and its fallback resolver work independently of
     // LX source bootstrap. Do not block a real user gesture on old Via.
@@ -2632,8 +2636,10 @@
       testMusic(music, true);
     },
     replayCurrentWithSettings: function(){
-      if (!playbackState || !playbackState.music)return false;
-      var music=playbackState.music,source=playbackState.source;
+      var current=lastRequestedPlayback||
+        (playbackState&&playbackState.music?{music:playbackState.music,source:playbackState.source}:null);
+      if(!current)return false;
+      var music=current.music,source=current.source;
       selectedChannel=source;
       renderChannelSelectors();
       startPlayback(music,source);
