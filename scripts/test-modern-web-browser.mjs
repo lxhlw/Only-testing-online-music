@@ -59,10 +59,16 @@ try {
     status:200,contentType:'image/png',
     body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a8X0AAAAASUVORK5CYII=','base64')
   }));
-  await page.route('**/api/netease-comments?*',route=>route.fulfill({
-    status:200,contentType:'application/json',
-    body:JSON.stringify({source:'wy',id:'123456',kind:'hot',total:120,comments:[{id:'a',user:'网易云听友',content:'真喜欢这首歌的旋律',likedCount:18}]})
-  }));
+  await page.route('**/api/netease-comments?*',route=>{
+    const q=new URL(route.request().url()).searchParams;
+    const recent=q.get('mode')==='recent',offset=Number(q.get('offset')||0);
+    const list=recent?Array.from({length:20},(_,i)=>({
+      id:'new-'+(offset+i),user:'最新评论用户',content:'真实新评论 '+(offset+i),likedCount:0
+    })):[{id:'a',user:'网易云听友',content:'真喜欢这首歌的旋律',likedCount:18}];
+    return route.fulfill({status:200,contentType:'application/json',
+      body:JSON.stringify({source:'wy',id:'123456',kind:recent?'recent':'hot',
+        total:120,offset,hasMore:recent&&offset<100,comments:list})});
+  });
   await page.route('**/api/netease-lyrics?*',route=>route.fulfill({
     status:200,contentType:'application/json',
     body:JSON.stringify({lyric:'[00:00.00]第一行测试\\n[00:01.00]第二行测试'})
@@ -97,6 +103,15 @@ try {
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('.global-search-bar')).display==='none');
 
   assert.equal(await page.locator('#restore-default-sources-btn').isVisible(),true);
+  const quality=await page.evaluate(()=>{
+    const planLabel=document.getElementById('quality-summary').textContent;
+    const available=window.LXSourceManager.getActive().sources.wy.qualitys;
+    return {available,label:planLabel};
+  });
+  assert.ok(quality.available.includes('320k'));
+  assert.ok(quality.label.includes('320k'),'Automatic mode must no longer hard force 128k: '+quality.label);
+  checks.push('high-quality-default');
+
   await page.locator('[data-view="search"]').click();
   assert.equal(await page.locator('.search-inspiration').isVisible(),true,'Search landing must not be a blank canvas');
   assert.equal(await page.locator('.search-suggestions button').count(),5);
@@ -174,6 +189,17 @@ try {
   await page.locator('#comments-tab').click();
   await page.waitForFunction(()=>document.querySelectorAll('.now-comment-card').length===1,{timeout:5500});
   assert.equal(await page.locator('.now-comment-card p').first().textContent(),'真喜欢这首歌的旋律');
+  await page.locator('#comments-recent-btn').click();
+  await page.waitForFunction(()=>document.querySelectorAll('.now-comment-card').length===20,{timeout:5500});
+  assert.equal(await page.locator('.now-comment-card p').first().textContent(),'真实新评论 0');
+  assert.equal(await page.locator('#comments-load-more').isVisible(),true);
+  await page.locator('#comments-load-more').click();
+  await page.waitForFunction(()=>document.querySelectorAll('.now-comment-card').length===40,{timeout:5500});
+  assert.equal(await page.locator('.now-comment-card p').last().textContent(),'真实新评论 39');
+  await page.locator('#comments-hot-btn').click();
+  await page.waitForFunction(()=>document.querySelectorAll('.now-comment-card').length===1,{timeout:5500});
+  checks.push('hot-latest-comment-pagination');
+
   assert.ok((await page.locator('#comments-official-link').getAttribute('href')).endsWith('id=123456'));
   await page.locator('.now-playing-cover-box').click();
   assert.equal(await page.locator('#lyrics-overlay').isVisible(),true,'Clicking left side never dismisses full-screen player');
@@ -217,6 +243,11 @@ try {
   await page.locator('[data-view="playlist"]').click();
   await page.waitForTimeout(100);
   assert.equal(await page.locator('#view-playlist').evaluate(el=>el.classList.contains('active')),true);
+  await page.locator('[data-view="ranking"]').click();
+  assert.equal(await page.locator('[data-ranking-source="tx"]').isVisible(),true);
+  await page.locator('[data-view="playlist"]').click();
+  assert.equal(await page.locator('[data-catalog-source="tx"]').isVisible(),true);
+  checks.push('platform-catalog-controls');
   checks.push('navigation');
   await page.setViewportSize({width:390,height:844});
   await page.waitForTimeout(100);
