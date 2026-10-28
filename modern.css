@@ -1664,7 +1664,8 @@ html.modern-web :is(#playlist-load-more-btn,
   border:1px solid #bcdcc6!important;border-radius:10px!important;
   background:#e7f5eb!important;color:#2b7d53!important;
   padding:8px 14px;min-height:36px;line-height:1.25;
-  font:650 12px/1.25 inherit;box-shadow:none!important;
+  font-size:12px;font-weight:650;line-height:1.25;font-family:inherit;
+  box-shadow:none!important;
   cursor:pointer;transition:background-color .12s ease,border-color .12s ease
 }
 html.modern-web #playlist-load-more-btn{
@@ -1798,5 +1799,39 @@ html.modern-web #view-mylist .list-toolbar button{
   html.modern-web #search-results>.search-song-row .song-more,
   html.modern-web #search-results>.search-song-row .song-more>summary{
     width:36px;min-width:36px;height:38px;min-height:38px
+  }
+}
+
+/* Shared list-tap affordance for recent plays, favourites, and queue.
+   Playback still triggers only from the row body, never from its actions. */
+html.modern-web .library-row.tap-to-play .library-main{
+  cursor:pointer;min-width:0;border-radius:7px
+}
+html.modern-web .library-row.tap-to-play .library-main:hover{background:#eef8f0}
+html.modern-web .library-row.tap-to-play .library-main:focus-visible{
+  outline:2px solid #58ae7e;outline-offset:3px
+}
+@media(max-width:740px){
+  html.modern-web #view-mylist .library-row.tap-to-play{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:9px;min-height:60px;padding:9px 4px;
+  }
+  html.modern-web #view-mylist .library-row .library-main{
+    flex:1 1 auto;min-width:0;padding-right:4px
+  }
+  html.modern-web #view-mylist .library-row .library-title{
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+  }
+  html.modern-web #view-mylist .library-row .library-actions{
+    flex:0 0 auto;display:flex;align-items:center
+  }
+  html.modern-web #view-mylist .library-row .library-actions button{
+    min-height:35px;padding:6px 9px;border-radius:9px
+  }
+  html.modern-web #playlist-detail-songs>.playlist-song-row{
+    cursor:pointer
+  }
+  html.modern-web #playlist-detail-songs>.playlist-song-row:focus-visible{
+    outline:2px solid #58ae7e;outline-offset:-2px
   }
 }
