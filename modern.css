@@ -1263,6 +1263,11 @@ html.modern-web .chart-song-row{
 html.modern-web .chart-song-number{
   color:#92a89a;font-size:12px;text-align:center;font-variant-numeric:tabular-nums
 }
+/* Legacy search-row counter generated an extra grid child and squeezed
+   phone song titles into a 23px column. Chart rows own their number now. */
+html.modern-web #ranking-songs>.chart-song-row::before{
+  content:none!important;display:none!important
+}
 html.modern-web .chart-song-row:nth-child(-n+3) .chart-song-number{
   color:#2d956b;font-weight:850
 }
