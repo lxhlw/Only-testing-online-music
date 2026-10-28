@@ -54,7 +54,7 @@ try {
   await page.goto(url,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.LXSourceManager?.getActive()?.inited,{timeout:14000});
   assert.equal(await page.locator('.brand').textContent(),'LX Music Web');
-  assert.equal(await page.locator('#app-version').textContent(),'v0.4.0');
+  assert.equal(await page.locator('#app-version').textContent(),'v0.4.1');
   assert.equal(await page.locator('#top-source-label').textContent(),'当前音源：野花🌷');
   assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(x=>x.name)),['野花🌷']);
   assert.equal(await page.locator('#legacy-media-panel').count(),0);
@@ -107,6 +107,53 @@ try {
   assert.ok(mediaUrl.protocol==='https:'||mediaUrl.origin===new URL(url).origin,
     'Media may stream directly over HTTPS or use the protected first-party proxy');
   assert.equal(state.title,'成都');
+
+  // A live Flower upstream can fail. Verify that one same-platform
+  // replacement resolves without installing a second LX source script.
+  await page.evaluate(()=>{
+    window.__fallbackCalls=0;
+    window.LXSourceManager.requestAction=(source,action,params,done)=>
+      done(new Error('Flower upstream temporarily unavailable'));
+    window.LXMusicSearch.resolveMusicUrlFast=(source,musicInfo,quality,done)=>{
+      window.__fallbackCalls++;
+      done(null,{url:'https://media.example.test/song.wav?id=backup',provider:'netease-native'});
+    };
+    window.OnlyTestingMusicApp.playMusic({
+      id:'backup-test',songmid:'backup-test',name:'备用解析验证',singer:'测试',
+      source:'wy',interval:8
+    });
+  });
+  await page.waitForFunction(()=>window.__fallbackCalls===1 && window.__audioPlayCalls>=2,{timeout:5000});
+  assert.equal(await page.locator('#player-title').textContent(),'备用解析验证');
+  assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(s=>s.name)),['野花🌷']);
+  checks.push('Flower-failure-recovery');
+
+  // Exercise the library as a real desktop split-view with 50 songs.
+  await page.evaluate(()=>{
+    for(let i=0;i<50;i++)window.LXMusicLibrary.addHistory({
+      id:'history-'+i,name:'收藏试听 '+i,singer:'演唱者 '+i,source:'wy'
+    });
+    window.OnlyTestingMusicApp.renderLibraryListForExternal(
+      document.getElementById('history-list'),
+      window.LXMusicLibrary.snapshot().history,'history');
+  });
+  await page.locator('[data-view="mylist"]').click();
+  assert.equal(await page.locator('.music-library-sidebar').isVisible(),true);
+  assert.equal(await page.locator('#history-list .library-row').count(),50);
+  const library=await page.evaluate(()=>{
+    const pane=document.querySelector('.music-library-content');
+    return {height:pane.clientHeight,scroll:pane.scrollHeight,columns:getComputedStyle(
+      document.querySelector('.music-library-workspace')).gridTemplateColumns.split(' ').length};
+  });
+  assert.equal(library.columns,2,'Desktop library must have two columns');
+  assert.ok(library.scroll>library.height,'Large library must scroll inside right panel');
+  await page.locator('[data-my-tab="queue"]').click();
+  assert.equal(await page.locator('#my-queue-panel').isVisible(),true);
+  assert.equal(await page.locator('#my-history-panel').isVisible(),false);
+  await page.locator('[data-my-tab="history"]').click();
+  checks.push('library-split');
+  await page.locator('[data-view="search"]').click();
+
   const old=requests.filter(p=>/promise-lite|android-native-|android-external-audio|\/api\/babel|babel\.min\.js/.test(p));
   assert.deepEqual(old,[],'Legacy compatibility scripts must not load');
   assert.deepEqual(failures,[],'No page errors on desktop');
@@ -126,6 +173,19 @@ try {
   assert.ok(measure.page<=measure.viewport+2,'No sideways mobile scrolling');
   assert.equal(measure.nav,5,'Five bottom/top mobile navigation choices visible');
   assert.ok(measure.controls.width>=40,'Transport remains easily tappable');
+
+  await page.locator('[data-view="mylist"]').click();
+  const mobileLibrary=await page.evaluate(()=>({
+    layout:getComputedStyle(document.querySelector('.music-library-workspace')).flexDirection,
+    page:document.documentElement.scrollWidth,width:innerWidth,
+    scroll:getComputedStyle(document.querySelector('.music-library-content')).overflowY
+  }));
+  assert.equal(mobileLibrary.layout,'column','Mobile library must stack vertically');
+  assert.ok(mobileLibrary.page<=mobileLibrary.width+2,'Mobile library must not overflow horizontally');
+  await page.locator('[data-my-tab="favorite"]').click();
+  assert.equal(await page.locator('#my-favorite-panel').isVisible(),true);
+  checks.push('mobile-library');
+
   checks.push('mobile');
-  console.log('PASS modern-web:',checks.join(', '),'Flower-only, one request, immediate stream, no legacy assets');
+  console.log('PASS modern-web:',checks.join(', '),'Flower-first recovery, bounded playback and responsive library');
 }finally{await browser.close()}

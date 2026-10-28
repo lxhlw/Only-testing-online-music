@@ -100,4 +100,16 @@ assert.equal(reloaded.snapshot().queue[99].id, '100')
 assert.equal(createLibrary(storage).snapshot().queue[0].id, '1')
 console.log('PASS: ordered atomic playlist queue keeps first 100 tracks and persists without reordering')
 
+// Modern browser history retains a deeper collection, with a fixed bound.
+const largeHistory = Array.from({length:340},(_,i)=>({
+  id:'history-'+i,source:'wy',name:'History '+i,singer:'Singer'
+}))
+for (const song of largeHistory) reloaded.addHistory(song)
+const recent = reloaded.snapshot().history
+assert.equal(recent.length,300)
+assert.equal(recent[0].id,'history-339')
+assert.equal(recent[299].id,'history-40')
+assert.equal(createLibrary(storage).snapshot().history.length,300)
+console.log('PASS: modern 300-song listening history persists and evicts oldest first')
+
 console.log('PASS: music library queue/history/favorites persistence')

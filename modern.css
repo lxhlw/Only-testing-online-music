@@ -656,3 +656,117 @@ html.modern-web .search-inspiration-foot{
     display:flex;flex:0 0 auto;width:auto;max-width:100%;margin:0
   }
 }
+
+/* v0.4.1 Music library: a persistent category rail and a separately scrolling
+   song pane, with all existing storage/playlist IDs retained. */
+html.modern-web #view-mylist .music-library-workspace{
+  display:grid;grid-template-columns:238px minmax(0,1fr);
+  gap:0;height:clamp(420px,calc(100dvh - 290px),840px);
+  min-height:0;overflow:hidden;border:1px solid #d7e8da;
+  border-radius:18px;background:#fff;
+  box-shadow:0 7px 28px rgba(44,85,58,.045)
+}
+html.modern-web #view-mylist .music-library-sidebar{
+  display:flex;flex-direction:column;min-width:0;
+  padding:21px 12px 15px;background:#edf6eb;
+  border-right:1px solid #d7e9da
+}
+html.modern-web #view-mylist .library-sidebar-caption{
+  color:#73917b;font-size:11px;letter-spacing:1.7px;
+  font-weight:780;padding:0 13px 15px
+}
+html.modern-web #view-mylist .my-tabs{
+  display:flex;flex-direction:column;align-items:stretch;gap:6px;margin:0
+}
+html.modern-web #view-mylist .my-tab{
+  display:flex;align-items:center;justify-content:flex-start;
+  gap:10px;width:100%;height:47px;min-height:47px;
+  margin:0;padding:0 12px;text-align:left;font-size:13px;
+  border:1px solid transparent;border-radius:11px;
+  background:transparent;color:#587767
+}
+html.modern-web #view-mylist .my-tab:hover{background:#e2f0e1}
+html.modern-web #view-mylist .my-tab.active{
+  color:#237a55;background:#fff;border-color:#d5e9d8;
+  box-shadow:inset 3px 0 #4cb287,0 2px 9px rgba(49,103,68,.03)
+}
+html.modern-web #view-mylist .my-tab-icon{
+  flex:0 0 23px;font-size:19px;text-align:center;line-height:1
+}
+html.modern-web #view-mylist .my-tab-text{min-width:0;white-space:nowrap}
+html.modern-web #view-mylist .library-tab-count{
+  margin-left:auto;min-width:24px;padding:2px 7px;
+  border-radius:8px;background:#e0ede1;
+  color:#5d8068;font-size:11px;text-align:center;font-variant-numeric:tabular-nums
+}
+html.modern-web #view-mylist .my-tab.active .library-tab-count{background:#e6f4ea;color:#277e5a}
+html.modern-web #view-mylist .library-sidebar-footer{
+  margin-top:auto;padding:18px 12px 0;font-size:11px;line-height:1.6;
+  border-top:1px solid #d9e8d8;color:#839887
+}
+html.modern-web #view-mylist .music-library-content{
+  min-width:0;min-height:0;overflow-y:auto;overflow-x:hidden;
+  overscroll-behavior:contain;scrollbar-gutter:stable;
+  padding:0 22px 18px;background:#fff
+}
+html.modern-web #view-mylist .my-panel,
+html.modern-web #view-mylist .queue-panel{
+  margin:0;padding:0;background:transparent;border:0;box-shadow:none;
+  border-radius:0;min-width:0
+}
+html.modern-web #view-mylist .my-panel.hidden,
+html.modern-web #view-mylist .queue-panel.hidden{display:none!important}
+html.modern-web #view-mylist .list-toolbar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  min-height:75px;margin:0;padding:13px 2px;border-bottom:1px solid #e3eee4
+}
+html.modern-web #view-mylist .list-toolbar strong{font-size:17px;color:#2a523b}
+html.modern-web #view-mylist .library-column-header{
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:2;
+  height:37px;padding:0 9px;margin:0;
+  color:#849889;background:#f6faf4;border-bottom:1px solid #e5efe7;
+  font-size:11px;font-weight:650
+}
+html.modern-web #view-mylist .library-row{
+  min-height:67px;margin:0;padding:12px 9px;border:0;
+  border-bottom:1px solid #eaf1ea;border-radius:0
+}
+html.modern-web #view-mylist .library-title{font-size:14px;color:#2b5138}
+html.modern-web #view-mylist .library-meta{font-size:12px}
+html.modern-web #view-mylist .library-actions button{min-height:32px}
+html.modern-web #view-mylist #playlist-favorite-list{padding:13px 0}
+@media(max-width:900px) and (min-width:741px){
+  html.modern-web #view-mylist .music-library-workspace{grid-template-columns:184px minmax(0,1fr)}
+  html.modern-web #view-mylist .music-library-sidebar{padding:16px 7px}
+  html.modern-web #view-mylist .music-library-content{padding:0 13px 16px}
+}
+@media(max-width:740px){
+  html.modern-web #view-mylist .music-library-workspace{
+    display:flex;flex-direction:column;height:auto;min-height:0;overflow:visible
+  }
+  html.modern-web #view-mylist .music-library-sidebar{
+    display:block;padding:12px 10px 8px;border:0;border-bottom:1px solid #daeadc
+  }
+  html.modern-web #view-mylist .library-sidebar-caption,
+  html.modern-web #view-mylist .library-sidebar-footer{display:none}
+  html.modern-web #view-mylist .my-tabs{
+    display:flex;flex-direction:row;gap:6px;overflow-x:auto;
+    scrollbar-width:none;padding-bottom:4px
+  }
+  html.modern-web #view-mylist .my-tabs::-webkit-scrollbar{display:none}
+  html.modern-web #view-mylist .my-tab{
+    flex:0 0 auto;width:auto;padding:0 10px;height:41px;min-height:41px;
+    font-size:12px;gap:5px
+  }
+  html.modern-web #view-mylist .my-tab-icon{font-size:16px;flex-basis:18px}
+  html.modern-web #view-mylist .library-tab-count{margin-left:2px}
+  html.modern-web #view-mylist .music-library-content{
+    max-height:none;overflow:visible;padding:0 12px 18px
+  }
+  html.modern-web #view-mylist .list-toolbar{min-height:65px}
+  html.modern-web #view-mylist .library-row{gap:6px;padding:11px 3px}
+  html.modern-web #view-mylist .library-title{font-size:13px}
+  html.modern-web #view-mylist .library-actions{gap:5px}
+  html.modern-web #view-mylist .library-actions button{font-size:11px;padding:5px 8px}
+}
