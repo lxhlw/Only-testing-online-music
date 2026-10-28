@@ -190,28 +190,57 @@
 
           <section id="view-mylist" class="view-panel">
             <div class="view-header">
-              <div><div class="panel-kicker">MUSIC LIBRARY</div><h1>我的列表</h1></div>
+              <div><div class="panel-kicker">YOUR LIBRARY</div><h1>我的音乐库</h1></div>
+              <span class="view-note">分类整理 · 轻松查找 · 快速播放</span>
             </div>
-            <div class="my-tabs">
-              <button type="button" class="my-tab active" data-my-tab="history">我的试听列表</button>
-              <button type="button" class="my-tab" data-my-tab="favorite">我的歌曲收藏</button>
-              <button type="button" class="my-tab" data-my-tab="playlist-favorite">我的歌单收藏</button>
-            </div>
-            <div id="my-history-panel" class="my-panel active">
-              <div class="list-toolbar"><strong>最近播放</strong><button id="clear-history-btn" type="button" class="secondary compact-button">清空</button></div>
-              <div id="history-list" class="library-list"></div>
-            </div>
-            <div id="my-favorite-panel" class="my-panel hidden">
-              <div class="list-toolbar"><strong>歌曲收藏</strong><button id="clear-favorites-btn" type="button" class="secondary compact-button">清空</button></div>
-              <div id="favorite-list" class="library-list"></div>
-            </div>
-            <div id="my-playlist-favorite-panel" class="my-panel hidden">
-              <div class="list-toolbar"><strong>歌单收藏</strong><span class="muted">保存在当前设备</span></div>
-              <div id="playlist-favorite-list" class="playlist-grid"></div>
-            </div>
-            <div class="queue-panel">
-              <div class="list-toolbar"><strong>试听队列</strong><button id="clear-queue-btn" type="button" class="secondary compact-button">清空</button></div>
-              <div id="queue-list" class="library-list"></div>
+            <div class="music-library-workspace">
+              <aside class="music-library-sidebar" aria-label="音乐库分类">
+                <div class="library-sidebar-caption">我的音乐</div>
+                <nav class="my-tabs" aria-label="选择列表">
+                  <button type="button" class="my-tab active" data-my-tab="history">
+                    <span class="my-tab-icon" aria-hidden="true">♫</span>
+                    <span class="my-tab-text">试听列表</span>
+                    <span id="library-count-history" class="library-tab-count">0</span>
+                  </button>
+                  <button type="button" class="my-tab" data-my-tab="favorite">
+                    <span class="my-tab-icon" aria-hidden="true">♡</span>
+                    <span class="my-tab-text">歌曲收藏</span>
+                    <span id="library-count-favorite" class="library-tab-count">0</span>
+                  </button>
+                  <button type="button" class="my-tab" data-my-tab="playlist-favorite">
+                    <span class="my-tab-icon" aria-hidden="true">▤</span>
+                    <span class="my-tab-text">歌单收藏</span>
+                    <span id="library-count-playlist-favorite" class="library-tab-count">0</span>
+                  </button>
+                  <button type="button" class="my-tab" data-my-tab="queue">
+                    <span class="my-tab-icon" aria-hidden="true">≡</span>
+                    <span class="my-tab-text">播放队列</span>
+                    <span id="library-count-queue" class="library-tab-count">0</span>
+                  </button>
+                </nav>
+                <div class="library-sidebar-footer">内容仅保存在当前浏览器</div>
+              </aside>
+              <div class="music-library-content" aria-label="当前音乐列表">
+                <div id="my-history-panel" class="my-panel active">
+                  <div class="list-toolbar"><strong>试听列表</strong><button id="clear-history-btn" type="button" class="secondary compact-button">清空记录</button></div>
+                  <div class="library-column-header" aria-hidden="true"><span>歌曲</span><span>操作</span></div>
+                  <div id="history-list" class="library-list"></div>
+                </div>
+                <div id="my-favorite-panel" class="my-panel hidden">
+                  <div class="list-toolbar"><strong>我的歌曲收藏</strong><button id="clear-favorites-btn" type="button" class="secondary compact-button">清空收藏</button></div>
+                  <div class="library-column-header" aria-hidden="true"><span>歌曲</span><span>操作</span></div>
+                  <div id="favorite-list" class="library-list"></div>
+                </div>
+                <div id="my-playlist-favorite-panel" class="my-panel hidden">
+                  <div class="list-toolbar"><strong>收藏的歌单</strong><span class="muted">保存在当前设备</span></div>
+                  <div id="playlist-favorite-list" class="playlist-grid"></div>
+                </div>
+                <div class="queue-panel hidden" id="my-queue-panel">
+                  <div class="list-toolbar"><strong>播放队列</strong><button id="clear-queue-btn" type="button" class="secondary compact-button">清空队列</button></div>
+                  <div class="library-column-header" aria-hidden="true"><span>歌曲</span><span>操作</span></div>
+                  <div id="queue-list" class="library-list"></div>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -341,13 +370,13 @@
   <script src="src/source-transpiler-modern.js"></script>
   <script src="src/sha1.js"></script>
   <script src="src/play-settings.js"></script>
-  <script src="src/music-search.js?v=0.3.0"></script>
+  <script src="src/music-search.js?v=0.4.1"></script>
   <script src="src/lx-runtime.js"></script>
   <script src="src/source-manager.js?v=0.3.0"></script>
   <script src="src/music-library.js"></script>
   <script src="src/music-lyrics.js"></script>
   <script src="src/player-controls.js"></script>
-  <script src="src/app.js?v=0.3.0"></script>
+  <script src="src/app.js?v=0.4.1"></script>
   <script>
   (function (global) {
     'use strict';
@@ -485,9 +514,10 @@
     function renderMyList(){
       var tabs=all('.my-tab');
       for(var i=0;i<tabs.length;i+=1){
-        if(tabs[i].getAttribute('data-my-tab')===myTab) addClass(tabs[i],'active'); else removeClass(tabs[i],'active');
+        if(tabs[i].getAttribute('data-my-tab')===myTab){addClass(tabs[i],'active');tabs[i].setAttribute('aria-current','page');}
+        else{removeClass(tabs[i],'active');tabs[i].removeAttribute('aria-current');}
       }
-      var ids={history:'my-history-panel',favorite:'my-favorite-panel','playlist-favorite':'my-playlist-favorite-panel'};
+      var ids={history:'my-history-panel',favorite:'my-favorite-panel','playlist-favorite':'my-playlist-favorite-panel',queue:'my-queue-panel'};
       for(var k in ids){
         if(!Object.prototype.hasOwnProperty.call(ids,k)) continue;
         var p=el(ids[k]);
@@ -495,6 +525,11 @@
         if(k===myTab) removeClass(p,'hidden'); else addClass(p,'hidden');
       }
       renderPlaylistFavorites();
+      var favorites=loadPlaylistFavorites();
+      var countNode=el('library-count-playlist-favorite');
+      if(countNode)countNode.textContent=String(favorites.length || 0);
+      var scrollbox=document.querySelector('.music-library-content');
+      if(scrollbox)scrollbox.scrollTop=0;
     }
 
     function loadInlineSettings(){
