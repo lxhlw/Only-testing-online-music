@@ -39,9 +39,11 @@ jobs:
           node --check src/source-transpiler-modern.js
           node --check src/modern-ui.js
           node --check scripts/test-modern-web-browser.mjs
+          node --check scripts/test-modern-flower-proxy.mjs
       - name: Security and local music library regression
         run: |
           node scripts/test-proxy-security.mjs
+          node scripts/test-modern-flower-proxy.mjs
           node scripts/test-music-library.mjs
       - name: Install Chromium
         run: npx playwright install chromium
