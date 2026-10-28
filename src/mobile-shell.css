@@ -276,7 +276,9 @@
   html.modern-web.mobile-shell-ready .playlist-card-actions button.secondary::before{
     content:'♡';font:700 18px/1 Arial,sans-serif
   }
-  html.modern-web.mobile-shell-ready .playlist-card-actions button.secondary:has(+*)::before{content:'♡'}
+  html.modern-web.mobile-shell-ready .playlist-card-actions button.secondary.is-favorite::before{
+    content:'♥';color:#2c9c68
+  }
   html.modern-web.mobile-shell-ready #playlist-filter-stack{
     position:static!important;top:auto!important;
     background:transparent!important;margin-bottom:6px
