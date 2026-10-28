@@ -1542,10 +1542,17 @@
               ready.sources && ready.sources[source]) {
             finishAttempt();
             var freshPlan=getQualityPlan(ready,source);
+            // Some LX sources omit the quality list entirely. In that case
+            // preserve the user's requested format and let the provider decide.
             if(!freshPlan.length){
-              setStatus('野花音源已就绪，但不支持所选 '+escapeHtml(getPlaySettings().fixedQuality)+
-                ' 音质；不会自动改成128k。','fail');
-              return;
+              var declared=ready.sources[source].qualitys;
+              if(Array.isArray(declared)&&declared.length){
+                setStatus('野花音源已就绪，但不支持所选 '+escapeHtml(getPlaySettings().fixedQuality)+
+                  ' 音质；不会自动改成128k。','fail');
+                return;
+              }
+              freshPlan=[getPlaySettings().qualityMode==='fixed'?
+                getPlaySettings().fixedQuality:'128k'];
             }
             playbackState.plan=freshPlan;
             playbackState.initialQuality=freshPlan[0];
@@ -1697,7 +1704,9 @@
 
     var plan = getQualityPlan(active, source);
     if (MODERN_WEB && !plan.length && active && active.inited &&
-        active.sources && active.sources[source]) {
+        active.sources && active.sources[source] &&
+        Array.isArray(active.sources[source].qualitys) &&
+        active.sources[source].qualitys.length) {
       var requested=getPlaySettings();
       var advertised=active.sources[source].qualitys||[];
       setStatus('当前野花渠道未声明支持 '+escapeHtml(requested.qualityMode==='fixed'?requested.fixedQuality:'所选音质')+
