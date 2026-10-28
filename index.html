@@ -525,7 +525,7 @@
         if(k===myTab) removeClass(p,'hidden'); else addClass(p,'hidden');
       }
       renderPlaylistFavorites();
-      var favorites=loadPlaylistFavorites();
+      var favorites=safePlaylistFavorites();
       var countNode=el('library-count-playlist-favorite');
       if(countNode)countNode.textContent=String(favorites.length || 0);
       var scrollbox=document.querySelector('.music-library-content');
