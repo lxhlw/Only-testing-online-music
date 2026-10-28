@@ -149,6 +149,7 @@ try {
 
   // Exercise the library as a real desktop split-view with 50 songs.
   await page.evaluate(()=>{
+    window.LXMusicLibrary.clearHistory();
     for(let i=0;i<50;i++)window.LXMusicLibrary.addHistory({
       id:'history-'+i,name:'收藏试听 '+i,singer:'演唱者 '+i,source:'wy'
     });
