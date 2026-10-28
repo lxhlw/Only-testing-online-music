@@ -1,44 +1,67 @@
-function corsHeaders(request) {
-  return {'Access-Control-Allow-Origin':request.headers.get('Origin')||'*','Access-Control-Allow-Methods':'GET,OPTIONS','Access-Control-Allow-Headers':'Content-Type,Range,If-Range,If-None-Match,If-Modified-Since,X-LX-Headers','Cache-Control':'no-store','Vary':'Origin'};
+// Correctly normalize NetEase chart songs from trackIds. Public read-only.
+const headers={'Content-Type':'application/json; charset=utf-8','Cache-Control':'public, max-age=180, s-maxage=400','X-Content-Type-Options':'nosniff'};
+const respond=(value,status=200)=>new Response(JSON.stringify(value),{status,headers});
+const fallbackCharts=[
+  {id:'19723756',name:'飙升榜'},
+  {id:'3779629',name:'新歌榜'},
+  {id:'2884035',name:'原创榜'},
+  {id:'3778678',name:'热歌榜'}
+];
+async function getJson(url,signal){
+  const r=await fetch(url,{headers:{'User-Agent':'Mozilla/5.0','Referer':'https://music.163.com/','Accept':'application/json'},signal});
+  if(!r.ok)throw Error('Upstream HTTP '+r.status);
+  const text=await r.text();
+  if(text.length>1700000)throw Error('Chart response too large');
+  return JSON.parse(text.replace(/^\\uFEFF/,''));
 }
-function jsonResponse(value,status,request){return new Response(JSON.stringify(value),{status:status,headers:Object.assign({'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'},corsHeaders(request))});}
-export async function onRequestOptions(context){return new Response(null,{status:204,headers:corsHeaders(context.request)});}
-async function fetchJson(target,signal){
-  var upstream=await fetch(target,{method:'GET',headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36','Referer':'https://music.163.com/','Accept':'application/json, text/plain, */*'},signal:signal});
-  var text=await upstream.text();
-  if(upstream.status<200||upstream.status>=300)throw new Error('HTTP '+upstream.status);
-  return JSON.parse(String(text||'').replace(/^\uFEFF/,'').replace(/^\s+|\s+$/g,''));
+const compact=(s,n=100)=>String(s||'').slice(0,n);
+function song(track){
+  const artists=track.ar||track.artists||[],album=track.al||track.album||{};
+  const id=compact(track.id,30);
+  return {id,songId:id,songmid:id,name:compact(track.name,170),
+    singer:Array.isArray(artists)?artists.map(a=>a?.name||'').filter(Boolean).join('、').slice(0,180):'',
+    albumName:compact(album.name,170),albumId:compact(album.id,30),
+    image:compact(album.picUrl||album.pic_url,300),
+    interval:Number(track.dt||track.duration||0)||0,source:'wy'};
 }
-export async function onRequest(context){
-  var request=context.request;
-  if(String(request.method||'GET').toUpperCase()!=='GET')return jsonResponse({error:'Method Not Allowed'},405,request);
-  var url=new URL(request.url);var id=String(url.searchParams.get('id')||'');var limit=Number(url.searchParams.get('limit')||30);
-  if(!isFinite(limit)||limit<1)limit=30;limit=Math.min(Math.floor(limit),50);
-  var controller=new AbortController();var timer=setTimeout(function(){try{controller.abort();}catch(e){}},10000);
+export async function onRequestGet({request}){
+  const q=new URL(request.url).searchParams,id=q.get('id')||'';
+  const limit=Math.max(1,Math.min(50,Math.floor(Number(q.get('limit')||30)||30)));
+  if(id&&!/^[0-9]{1,20}$/.test(id))return respond({error:'Invalid chart ID'},400);
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),11000);
   try{
     if(!id){
-      var data=await fetchJson('https://music.163.com/api/toplist',controller.signal);
-      var list=data&&Array.isArray(data.list)?data.list:[];
-      var slim=[];
-      for(var i=0;i<list.length;i+=1){
-        var item=list[i]||{};
-        if(item.id==null||!item.name)continue;
-        slim.push({id:item.id,name:item.name,coverImgUrl:item.coverImgUrl||'',updateFrequency:item.updateFrequency||'',trackCount:Number(item.trackCount)||0});
-      }
-      return jsonResponse({list:slim},200,request);
+      try{
+        const raw=await getJson('https://music.163.com/api/toplist',controller.signal);
+        const list=(Array.isArray(raw.list)?raw.list:[]).filter(x=>x?.id&&x?.name)
+          .map(x=>({id:String(x.id),name:compact(x.name),coverImgUrl:compact(x.coverImgUrl,300),
+            trackCount:Number(x.trackCount)||0}));
+        if(list.length)return respond({list,source:'wy'});
+      }catch{}
+      // Official public IDs provide a visible, actionable directory, not
+      // fictional track data. Each chart still loads its actual trackIds.
+      return respond({list:fallbackCharts,source:'wy',directoryFallback:true});
     }
-    var detail=await fetchJson('https://music.163.com/api/playlist/detail?id='+encodeURIComponent(id)+'&limit='+String(limit),controller.signal);
-    var playlist=detail&&detail.playlist?detail.playlist:{};
-    var tracks=playlist&&Array.isArray(playlist.tracks)?playlist.tracks:[];
-    var songs=[];
-    for(var t=0;t<tracks.length&&songs.length<limit;t+=1){
-      var song=tracks[t]||{};if(song.id==null||!song.name)continue;
-      var artists=Array.isArray(song.ar)?song.ar:[];var names=[];
-      for(var a=0;a<artists.length;a+=1)if(artists[a]&&artists[a].name)names.push(artists[a].name);
-      songs.push({id:String(song.id),name:String(song.name),singer:names.join('、'),source:'wy',albumName:song.al&&song.al.name?String(song.al.name):'',albumId:song.al&&song.al.id?String(song.al.id):'',interval:song.dt?Math.round(Number(song.dt)/1000):0,lyricId:String(song.id)});
+    // /api/playlist/detail can return an empty preview even with hundreds
+    // of trackIds. /api/v6/playlist/detail reliably carries trackIds.
+    const detail=await getJson('https://music.163.com/api/v6/playlist/detail?id='+id+'&n=100000',controller.signal);
+    const playlist=detail?.playlist||{};
+    if(Number(detail?.code)!==200||!playlist.id)throw Error('No chart detail returned');
+    const ids=(Array.isArray(playlist.trackIds)?playlist.trackIds:[]).slice(0,limit)
+      .map(x=>String(x?.id||'')).filter(x=>/^\\d+$/.test(x));
+    let songs=[];
+    if(ids.length){
+      const items=await getJson('https://music.163.com/api/song/detail?id='+ids[0]+'&ids='+encodeURIComponent('['+ids.join(',')+']'),controller.signal);
+      const byId=new Map((items.songs||[]).map(x=>[String(x.id),x]));
+      songs=ids.map(x=>byId.get(x)).filter(Boolean).map(song).filter(x=>x.id&&x.name);
     }
-    return jsonResponse({playlist:{id:id,name:playlist.name||'',coverImgUrl:playlist.coverImgUrl||''},songs:songs},200,request);
+    if(!songs.length){
+      songs=(Array.isArray(playlist.tracks)?playlist.tracks:[]).slice(0,limit).map(song).filter(x=>x.id&&x.name);
+    }
+    return respond({playlist:{id,name:compact(playlist.name),coverImgUrl:compact(playlist.coverImgUrl,300)},
+      songs,total:Number(playlist.trackCount)||songs.length,source:'wy'});
   }catch(e){
-    return jsonResponse({error:'NetEase ranking request failed',message:e&&e.name==='AbortError'?'NetEase ranking upstream timed out':(e&&e.message?e.message:'Request failed')},502,request);
-  }finally{clearTimeout(timer);}
+    return respond({error:'Chart unavailable',message:e?.name==='AbortError'?'排行服务请求超时':'该榜单暂时无法取得实际歌曲，请重试'},502);
+  }finally{clearTimeout(timer)}
 }
+export async function onRequestOptions(){return new Response(null,{status:204,headers:{Allow:'GET, OPTIONS'}})}
