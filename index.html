@@ -119,9 +119,12 @@
             <div id="playlist-filter-stack" class="playlist-filter-stack">
           <div class="sub-toolbar playlist-service-note">
               <span>歌单来源</span>
-              <span class="playlist-service-label">网易云音乐 · 精选歌单</span>
+              <div class="catalog-source-tabs" role="group" aria-label="选择歌单平台">
+  <button type="button" data-catalog-source="wy" class="catalog-source active" aria-pressed="true">网易云音乐</button>
+  <button type="button" data-catalog-source="tx" class="catalog-source" aria-pressed="false">QQ音乐</button>
+</div>
             </div>
-            <div class="category-row">
+            <div class="category-row" id="playlist-category-row">
               <span>歌单分类</span>
               <button type="button" class="category-pill active" data-playlist-cat="all">全部</button>
               <button type="button" class="category-pill" data-playlist-cat="华语">华语</button>
@@ -171,6 +174,10 @@
             <div class="view-header">
               <div><div class="panel-kicker">TOP CHARTS</div><h1>排行榜</h1></div>
               <span class="view-note">选择榜单后显示歌曲</span>
+            </div>
+            <div class="ranking-source-switch" role="group" aria-label="选择排行榜平台">
+              <button type="button" class="catalog-source active" data-ranking-source="wy" aria-pressed="true">网易云音乐</button>
+              <button type="button" class="catalog-source" data-ranking-source="tx" aria-pressed="false">QQ音乐</button>
             </div>
             <div class="ranking-layout">
               <div class="ranking-sidebar">
@@ -635,16 +642,16 @@
 
     function togglePlaylistFavorite(item){
       var list=safePlaylistFavorites();
-      var id=String(item.id||'');
+      var id=String(item.id||'');var source=String(item.source||'wy');
       var found=-1;
-      for(var i=0;i<list.length;i+=1){if(String(list[i].id)===id){found=i;break;}}
+      for(var i=0;i<list.length;i+=1){if(String(list[i].id)===id&&String(list[i].source||'wy')===source){found=i;break;}}
       if(found>=0) list.splice(found,1); else list.unshift(item);
       savePlaylistFavorites(list);
     }
 
-    function playlistIsFavorite(id){
+    function playlistIsFavorite(id,source){
       var list=safePlaylistFavorites();
-      for(var i=0;i<list.length;i+=1) if(String(list[i].id)===String(id)) return true;
+      for(var i=0;i<list.length;i+=1) if(String(list[i].id)===String(id)&&String(list[i].source||'wy')===String(source||playlistPlatform)) return true;
       return false;
     }
 
@@ -680,11 +687,11 @@
       };
       actions.appendChild(open);
 
-      var fav=document.createElement('button'); fav.type='button'; fav.className='secondary'; fav.innerHTML=playlistIsFavorite(item.id)?'取消收藏':'收藏';
+      var fav=document.createElement('button'); fav.type='button'; fav.className='secondary'; fav.innerHTML=playlistIsFavorite(item.id,item.source||'wy')?'取消收藏':'收藏';
       fav.onclick=function(ev){
         if(ev&&ev.stopPropagation)ev.stopPropagation();
         togglePlaylistFavorite(item);
-        fav.innerHTML=playlistIsFavorite(item.id)?'取消收藏':'收藏';
+        fav.innerHTML=playlistIsFavorite(item.id,item.source||'wy')?'取消收藏':'收藏';
       };
       actions.appendChild(fav);
       box.appendChild(actions);
@@ -697,6 +704,7 @@
 
     function openPlaylist(item){
       if(!item||item.id==null)return;
+      item.source=item.source||playlistPlatform;
       // Duplicate click/touch events or stale card handlers must not restart
       // the detail request and blank its songs after it has opened.
       if(playlistDetailItem&&String(playlistDetailItem.id)===String(item.id)&&
@@ -723,7 +731,7 @@
       el('playlist-detail-count').innerHTML=escapeHtml((item.trackCount||0)+' 首歌曲');
       el('playlist-detail-description').innerHTML=escapeHtml(item.description||'暂无简介');
       el('playlist-detail-status').innerHTML='正在读取歌单歌曲……';
-      el('playlist-favorite-btn').innerHTML=playlistIsFavorite(item.id)?'取消收藏':'收藏歌单';
+      el('playlist-favorite-btn').innerHTML=playlistIsFavorite(item.id,item.source||'wy')?'取消收藏':'收藏歌单';
       el('playlist-detail-songs').innerHTML='<div class="loading-note">正在读取歌曲……</div>';
       var cover=el('playlist-detail-cover');
       if(item.coverImgUrl){cover.style.backgroundImage='url("'+String(item.coverImgUrl).replace(/"/g,'%22')+'")';cover.innerHTML='';}
@@ -739,7 +747,7 @@
       var more=el('playlist-load-more-btn');
       addClass(more,'hidden');
       el('playlist-detail-status').innerHTML=append?'正在加载更多歌曲……':'正在读取歌单歌曲……';
-      requestJson('/api/netease-playlists?id='+encodeURIComponent(String(item.id))+'&offset='+offset+'&limit=50',function(err,data){
+      requestJson(catalogEndpoint(item,offset,50),function(err,data){
         if(generation!==playlistPageGeneration || !playlistDetailItem || String(playlistDetailItem.id)!==String(item.id))return;
         if(err){
           el('playlist-detail-status').innerHTML='加载失败：'+escapeHtml(err.message||err);
@@ -794,8 +802,7 @@
         loadMore:function(done){
           if(!playlistId||!hasMore)return done(null,{songs:[],hasMore:false});
           var previousOffset=nextOffset;
-          requestJson('/api/netease-playlists?id='+encodeURIComponent(playlistId)+
-            '&offset='+previousOffset+'&limit=50',function(err,data){
+          requestJson(catalogEndpoint(item,previousOffset,50),function(err,data){
             if(err)return done(err);
             var next=Number(data&&data.nextOffset);
             nextOffset=isFinite(next)&&next>previousOffset?next:previousOffset+50;
@@ -924,13 +931,29 @@
       setTimeout(function(){if(done)return;try{xhr.abort();}catch(e){};finish(new Error('请求超时'));},timeoutMs||12000);
     }
 
+    function catalogEndpoint(item,offset,limit){
+      var source=String(item&&item.source||'wy');
+      var route=source==='tx'?'/api/qq-catalog?kind=playlist&id=':'/api/netease-playlists?id=';
+      return route+encodeURIComponent(String(item.id))+'&offset='+offset+'&limit='+limit;
+    }
+    function refreshCatalogTabs(){
+      var nodes=all('[data-catalog-source]');
+      for(var n=0;n<nodes.length;n++){
+        var yes=nodes[n].getAttribute('data-catalog-source')===playlistPlatform;
+        if(yes)addClass(nodes[n],'active');else removeClass(nodes[n],'active');
+        nodes[n].setAttribute('aria-pressed',String(yes));
+      }
+      var cats=el('playlist-category-row');
+      if(cats)cats.style.display=playlistPlatform==='tx'?'none':'';
+    }
     function searchPlaylists(keyword,hostId){
       var host=el(hostId); if(!host)return;
       var generation=(playlistSearchGeneration[hostId]||0)+1;
       playlistSearchGeneration[hostId]=generation;
       host.innerHTML='<div class="loading-note">正在搜索歌单……</div>';
       var q='?s='+encodeURIComponent(keyword||'')+'&offset=0&limit=20';
-      requestJson('/api/netease-playlists'+q,function(err,data){
+      var route=playlistPlatform==='tx'?'/api/qq-catalog?kind=playlist':'/api/netease-playlists';
+      requestJson(route+q,function(err,data){
         if(playlistSearchGeneration[hostId]!==generation)return;
         if(err){host.innerHTML='<div class="empty-note">歌单搜索失败：'+escapeHtml(err.message||err)+'</div>';return;}
         var list=normalizePlaylistItems(data);
@@ -944,8 +967,8 @@
       if (playlistDetailItem) return;
       var host=el('playlist-featured'); if(!host)return;
       host.innerHTML='<div class="loading-note">正在读取推荐歌单……</div>';
-      var q='?s='+encodeURIComponent(playlistCategory==='all'?'热门':playlistCategory)+'&offset=0&limit=12';
-      searchPlaylists(playlistCategory==='all'?'热门':playlistCategory,'playlist-featured');
+      refreshCatalogTabs();
+      searchPlaylists(playlistPlatform==='tx'?'':(playlistCategory==='all'?'热门':playlistCategory),'playlist-featured');
     }
 
     function loadRankings(){
@@ -953,7 +976,8 @@
       if(!listHost||listHost.dataset.loaded==='1'||listHost.dataset.loading==='1')return;
       listHost.dataset.loading='1';
       listHost.innerHTML='<div class="loading-note">正在读取榜单……</div>';
-      requestJson('/api/netease-toplist',function(err,data){
+      var route=rankingSource==='tx'?'/api/qq-catalog?kind=rank':'/api/netease-toplist';
+      requestJson(route,function(err,data){
         listHost.dataset.loading='0';
         if(err){listHost.innerHTML='<div class="empty-note">排行榜加载失败：'+escapeHtml(err.message||err)+' <button type="button" id="ranking-retry">重试</button></div>';el('ranking-retry').onclick=function(){loadRankings();};return;}
         listHost.dataset.loaded='1';
@@ -981,7 +1005,11 @@
     function loadRankingSongs(id,name){
       el('ranking-title').innerHTML=escapeHtml(name||'排行榜');
       var host=el('ranking-songs');host.innerHTML='<div class="loading-note">正在读取榜单歌曲……</div>';
-      requestJson('/api/netease-toplist?id='+encodeURIComponent(String(id))+'&limit=30',function(err,data){
+      var requestedSource=rankingSource,requestedId=String(id);
+      var generation=(host.dataset.generation=String(Number(host.dataset.generation||0)+1));
+      var route=rankingSource==='tx'?'/api/qq-catalog?kind=rank&id=':'/api/netease-toplist?id=';
+      requestJson(route+encodeURIComponent(String(id))+'&limit=30',function(err,data){
+        if(host.dataset.generation!==generation||rankingSource!==requestedSource||String(rankingId)!==requestedId)return;
         if(err){host.innerHTML='<div class="empty-note">榜单歌曲加载失败：'+escapeHtml(err.message||err)+'</div>';return;}
         var songs=data&&data.songs instanceof Array?data.songs:[];
         host.innerHTML='';
@@ -1088,6 +1116,27 @@
       var allCats=all('.category-pill');for(var q=0;q<allCats.length;q+=1)removeClass(allCats[q],'active');
       addClass(btn,'active'); if(currentView==='playlist'&&!playlistDetailItem)loadFeaturedPlaylists();
     };})(cats[c]);
+    var catalogTabs=all('[data-catalog-source]');
+    for(var k=0;k<catalogTabs.length;k++)catalogTabs[k].onclick=(function(btn){return function(){
+      if(playlistDetailItem)return;
+      playlistPlatform=btn.getAttribute('data-catalog-source')||'wy';
+      refreshCatalogTabs();
+      if(currentView==='playlist')loadFeaturedPlaylists();
+    };})(catalogTabs[k]);
+    var rankingTabs=all('[data-ranking-source]');
+    for(var rk=0;rk<rankingTabs.length;rk++)rankingTabs[rk].onclick=(function(btn){return function(){
+      rankingSource=btn.getAttribute('data-ranking-source')||'wy';
+      rankingId='';
+      var host=el('ranking-list');
+      host.dataset.loaded='0';host.dataset.loading='0';
+      el('ranking-songs').innerHTML='<div class="empty-note">请选择左侧榜单</div>';
+      for(var ri=0;ri<rankingTabs.length;ri++){
+        var active=rankingTabs[ri].getAttribute('data-ranking-source')===rankingSource;
+        if(active)addClass(rankingTabs[ri],'active');else removeClass(rankingTabs[ri],'active');
+        rankingTabs[ri].setAttribute('aria-pressed',String(active));
+      }
+      loadRankings();
+    };})(rankingTabs[rk]);
     var plats=all('.platform-pill');
     for(var p=0;p<plats.length;p+=1) if(!hasClass(plats[p],'disabled')) plats[p].onclick=function(){
       playlistPlatform=this.getAttribute('data-playlist-platform')||'wy'; 
