@@ -7,8 +7,8 @@
   <meta name="description" content="LX Music — 轻盈流畅的现代网页音乐播放器。">
   <script>document.documentElement.classList.add("modern-web");</script>
   <title>LX Music — 轻盈护眼音乐空间</title>
-  <link rel="stylesheet" href="styles.css?v=0.4.0">
-  <link rel="stylesheet" href="modern.css?v=0.4.0">
+  <link rel="stylesheet" href="styles.css?v=0.4.1">
+  <link rel="stylesheet" href="modern.css?v=0.4.1">
 </head>
 <body>
   <div id="app">
@@ -16,7 +16,7 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.0</span></div>
+          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.1</span></div>
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">护眼淡绿模式</span>
@@ -253,7 +253,7 @@
             <div class="settings-section">
               <h2>播放设置</h2>
               <div class="setting-row-inline">
-                <div><strong>播放音质</strong><p>默认使用更轻的 MP3，减少首播等待；也可以手动指定。</p></div>
+                <div><strong>播放音质</strong><p>野花优先；连接失败或响应较慢时，自动尝试同平台备用链接，不增加其他音源脚本。</p></div>
                 <select id="inline-quality">
                   <option value="highest">优先快速播放（128k）</option>
                   <option value="128k">128k</option>
@@ -291,7 +291,7 @@
 
             <div class="settings-section">
               <h2>版本信息</h2>
-              <div class="version-detail"><strong id="version-current">v0.4.0</strong><span id="version-release-date">2026-10-28</span></div>
+              <div class="version-detail"><strong id="version-current">v0.4.1</strong><span id="version-release-date">2026-10-28</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
             </div>
@@ -372,7 +372,7 @@
   <script src="src/play-settings.js"></script>
   <script src="src/music-search.js?v=0.4.1"></script>
   <script src="src/lx-runtime.js"></script>
-  <script src="src/source-manager.js?v=0.3.0"></script>
+  <script src="src/source-manager.js?v=0.4.1"></script>
   <script src="src/music-library.js"></script>
   <script src="src/music-lyrics.js"></script>
   <script src="src/player-controls.js"></script>
@@ -1067,6 +1067,6 @@
     };
   })(window);
   </script>
-  <script type="module" src="src/modern-ui.js?v=0.3.0"></script>
+  <script type="module" src="src/modern-ui.js?v=0.4.1"></script>
 </body>
 </html>
