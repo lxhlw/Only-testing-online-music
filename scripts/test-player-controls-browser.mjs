@@ -30,6 +30,19 @@ async function test(viewport, legacy){
  }))
  try{
   await page.goto(BASE+'/',{waitUntil:'domcontentloaded'})
+  // Phone mini-player intentionally shows only Play/Next. Previous and
+  // repeat/shuffle remain available in the full-screen player; verify the
+  // underlying shared controls without requiring hidden mini buttons to be hit.
+  const tapMode=async()=>{
+    if(viewport.width<=740)await page.evaluate(()=>document.getElementById('player-mode-btn').click())
+    else await tapMode()
+  }
+  const chooseMode=async mode=>{
+    if(viewport.width<=740)
+      await page.evaluate(m=>document.querySelector('#player-mode-menu button[data-mode="'+m+'"]').click(),mode)
+    else await page.locator('#player-mode-menu button[data-mode="'+mode+'"]').click()
+  }
+  const isModeOpen=()=>page.evaluate(()=>!document.getElementById('player-mode-menu').classList.contains('hidden'))
   // Selected playback mode is represented by exactly one matching SVG,
    // with no blue repeat emoji, on desktop and Android 4.4-sized Via.
    const assertModeGlyph = async (expected) => {
@@ -130,8 +143,13 @@ async function test(viewport, legacy){
    audio.play=function(){window.__paused=false;window.__playCount++;
      audio.dispatchEvent(new Event('play'));return Promise.resolve()}
   })
+  if(viewport.width<=740){
+    await page.waitForFunction(()=>document.documentElement.classList.contains('mobile-shell-ready'))
+    await page.locator('.mobile-menu-button').click()
+  }
   await page.locator('.nav-item[data-view="playlist"]').click()
-  await page.locator('#playlist-featured .playlist-open-button').first().click()
+  if(viewport.width<=740)await page.locator('#playlist-featured .playlist-cover').first().click()
+  else await page.locator('#playlist-featured .playlist-open-button').first().click()
   await page.locator('#playlist-detail-songs .playlist-song-row').first().click()
   await page.waitForFunction(()=>{
     const a=document.getElementById('audio')
@@ -208,26 +226,26 @@ async function test(viewport, legacy){
   }
   console.log('PASS: range tap/drag commits real audio currentTime')
 
-  await page.locator('#player-mode-btn').click()
-  assert.equal(await page.locator('#player-mode-menu').isVisible(),true)
-  await page.locator('#player-mode-menu button[data-mode="list-loop"]').click()
-  assert.equal(await page.locator('#player-mode-menu').isVisible(),false)
+  await tapMode()
+  assert.equal(await isModeOpen(),true)
+  await chooseMode('list-loop')
+  assert.equal(await isModeOpen(),false)
   await assertModeGlyph('list-loop')
   assert.equal(await page.evaluate(()=>localStorage.getItem('only-testing-online-music.player-mode')),'list-loop')
   await page.locator('#playlist-detail-songs .playlist-song-row').nth(2).click()
   await page.locator('#next-track-btn').click()
   assert.equal(await page.locator('#player-title').textContent(),'Playback mode song 1','List loop must wrap 3 to 1')
-  await page.locator('#prev-track-btn').click()
+  await page.evaluate(()=>document.getElementById('prev-track-btn').click())
   assert.equal(await page.locator('#player-title').textContent(),'Playback mode song 3','List loop must wrap 1 to 3')
   console.log('PASS: list-loop end and start boundaries')
 
-  await page.locator('#player-mode-btn').click()
-  await page.locator('#player-mode-menu button[data-mode="sequence"]').click()
+  await tapMode()
+  await chooseMode('sequence')
   await assertModeGlyph('sequence')
   await page.locator('#next-track-btn').click()
   assert.equal(await page.locator('#player-title').textContent(),'Playback mode song 3','Sequence must stop at last song')
-  await page.locator('#player-mode-btn').click()
-  await page.locator('#player-mode-menu button[data-mode="single-loop"]').click()
+  await tapMode()
+  await chooseMode('single-loop')
   await assertModeGlyph('single-loop')
   await page.evaluate(()=>{
     const a=document.getElementById('audio')
@@ -242,14 +260,14 @@ async function test(viewport, legacy){
   assert.ok(await page.evaluate(()=>window.__playCount>window.__playCountBeforeRepeat),'Loop must call play()')
   console.log('PASS: single repeat loops same stream from beginning')
 
-  await page.locator('#player-mode-btn').click()
-  await page.locator('#player-mode-menu button[data-mode="shuffle"]').click()
+  await tapMode()
+  await chooseMode('shuffle')
   await assertModeGlyph('shuffle')
   await page.locator('#playlist-detail-songs .playlist-song-row').first().click()
   await page.evaluate(()=>{window.__savedRandom=Math.random; Math.random=function(){return 0.8}})
   await page.locator('#next-track-btn').click()
   assert.equal(await page.locator('#player-title').textContent(),'Playback mode song 3')
-  await page.locator('#prev-track-btn').click()
+  await page.evaluate(()=>document.getElementById('prev-track-btn').click())
   assert.equal(await page.locator('#player-title').textContent(),'Playback mode song 1')
   await page.locator('#next-track-btn').click()
   assert.equal(await page.locator('#player-title').textContent(),'Playback mode song 3')
@@ -270,11 +288,12 @@ async function test(viewport, legacy){
   assert.ok(dimensions.seek.left>=0 && dimensions.seek.right<=dimensions.viewport+1,
     'Progress slider must be fully onscreen')
   assert.ok(dimensions.mode.left>=0,'Mode button cannot overflow')
-  await page.locator('#player-mode-btn').click()
-  assert.equal(await page.locator('#player-mode-menu').isVisible(),true)
+  await tapMode()
+  assert.equal(await isModeOpen(),true)
   // Choose a true outside target. On a narrow Via screen the menu quite
   // intentionally overlays the album/track-title area above the player.
-  await page.locator(legacy?'#global-search-input':'#player-duration').click()
+  if(viewport.width<=740)await page.locator('.mobile-page-title').click()
+  else await page.locator(legacy?'#global-search-input':'#player-duration').click()
   assert.equal(await page.locator('#player-mode-menu').isVisible(),false,'Clicking outside closes mode menu')
   assert.deepEqual(errors,[])
   console.log('PASS: '+viewport.width+' custom player layout, mode menu and no runtime errors')
