@@ -8,7 +8,7 @@
   <script>document.documentElement.classList.add("modern-web");</script>
   <title>LX Music — 轻盈护眼音乐空间</title>
   <link rel="stylesheet" href="styles.css?v=0.4.1">
-  <link rel="stylesheet" href="modern.css?v=0.4.3">
+  <link rel="stylesheet" href="modern.css?v=0.4.4">
 </head>
 <body>
   <div id="app">
@@ -16,7 +16,7 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.3</span></div>
+          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.4</span></div>
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">护眼淡绿模式</span>
@@ -92,13 +92,12 @@
             <div id="search-playlist-view" class="secondary-view hidden">
               <div class="sub-toolbar">
                 <span>歌单渠道</span>
-                <div class="platform-pills">
-                  <button type="button" class="platform-pill active" data-playlist-platform="wy">网易云音乐</button>
-                  
-                  
+                <div class="catalog-source-tabs" role="group" aria-label="搜索歌单的平台">
+                  <button type="button" class="catalog-source active" data-catalog-source="wy" aria-pressed="true">网易云音乐</button>
+                  <button type="button" class="catalog-source" data-catalog-source="tx" aria-pressed="false">QQ音乐</button>
                 </div>
               </div>
-              <div class="category-row">
+              <div class="category-row" id="search-playlist-category-row">
                 <span>分类</span>
                 <button type="button" class="category-pill active" data-playlist-cat="all">全部</button>
                 <button type="button" class="category-pill" data-playlist-cat="华语">华语</button>
@@ -119,9 +118,12 @@
             <div id="playlist-filter-stack" class="playlist-filter-stack">
           <div class="sub-toolbar playlist-service-note">
               <span>歌单来源</span>
-              <span class="playlist-service-label">网易云音乐 · 精选歌单</span>
+              <div class="catalog-source-tabs" role="group" aria-label="选择歌单平台">
+  <button type="button" data-catalog-source="wy" class="catalog-source active" aria-pressed="true">网易云音乐</button>
+  <button type="button" data-catalog-source="tx" class="catalog-source" aria-pressed="false">QQ音乐</button>
+</div>
             </div>
-            <div class="category-row">
+            <div class="category-row" id="playlist-category-row">
               <span>歌单分类</span>
               <button type="button" class="category-pill active" data-playlist-cat="all">全部</button>
               <button type="button" class="category-pill" data-playlist-cat="华语">华语</button>
@@ -171,6 +173,10 @@
             <div class="view-header">
               <div><div class="panel-kicker">TOP CHARTS</div><h1>排行榜</h1></div>
               <span class="view-note">选择榜单后显示歌曲</span>
+            </div>
+            <div class="ranking-source-switch" role="group" aria-label="选择排行榜平台">
+              <button type="button" class="catalog-source active" data-ranking-source="wy" aria-pressed="true">网易云音乐</button>
+              <button type="button" class="catalog-source" data-ranking-source="tx" aria-pressed="false">QQ音乐</button>
             </div>
             <div class="ranking-layout">
               <div class="ranking-sidebar">
@@ -251,7 +257,7 @@
               <div class="setting-row-inline">
                 <div><strong>播放音质</strong><p>野花优先；连接失败或响应较慢时，自动尝试同平台备用链接，不增加其他音源脚本。</p></div>
                 <select id="inline-quality">
-                  <option value="highest">优先快速播放（128k）</option>
+                  <option value="highest">自动选择最佳音质（优先 MP3）</option>
                   <option value="128k">128k</option>
                   <option value="192k">192k</option>
                   <option value="256k">256k</option>
@@ -287,7 +293,7 @@
 
             <div class="settings-section">
               <h2>版本信息</h2>
-              <div class="version-detail"><strong id="version-current">v0.4.3</strong><span id="version-release-date">2026-10-28</span></div>
+              <div class="version-detail"><strong id="version-current">v0.4.4</strong><span id="version-release-date">2026-10-28</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
             </div>
@@ -314,7 +320,7 @@
           </div>
           <div class="lyrics-sheet-actions">
             <button id="lyrics-refresh-btn" type="button" class="lyrics-refresh" title="重新获取歌词">刷新歌词</button>
-            <button id="lyrics-close-btn" type="button" class="lyrics-close" aria-label="返回音乐库">返回 <span aria-hidden="true">✕</span></button>
+            <button id="lyrics-close-btn" type="button" class="lyrics-close" aria-label="退出全屏播放界面"><span aria-hidden="true">‹</span> 返回音乐</button>
           </div>
         </header>
         <div class="now-playing-body">
@@ -345,8 +351,16 @@
             </section>
             <section id="comments-view" class="now-playing-tab-content hidden" role="tabpanel" aria-labelledby="comments-tab" hidden>
               <div class="comments-title-row"><div><h3>听友评论</h3><p id="comments-source-note">仅展示当前歌曲对应平台的公开评论</p></div><button type="button" id="comments-refresh-btn" aria-label="重新加载评论">刷新</button></div>
+              <div class="comment-sort-bar" role="group" aria-label="评论排序">
+                <button id="comments-hot-btn" type="button" class="comment-sort active" aria-pressed="true">热门评论</button>
+                <button id="comments-recent-btn" type="button" class="comment-sort" aria-pressed="false">最新评论</button>
+              </div>
               <div id="comments-status" class="comments-status" role="status">选择歌曲后查看评论</div>
               <div id="comments-list" class="comments-list" aria-live="polite"></div>
+              <div class="comments-pagination">
+                <span id="comments-page-note" aria-live="polite"></span>
+                <button id="comments-load-more" type="button" class="secondary" hidden>加载更多评论</button>
+              </div>
               <div id="comments-link-wrap" class="comments-link-wrap" hidden><a id="comments-official-link" href="#" target="_blank" rel="noopener noreferrer">在网易云音乐查看这首歌的评论</a></div>
             </section>
           </div>
@@ -436,7 +450,7 @@
   <script src="src/music-library.js?v=0.4.1"></script>
   <script src="src/music-lyrics.js?v=0.4.2"></script>
   <script src="src/player-controls.js"></script>
-  <script src="src/app.js?v=0.4.3"></script>
+  <script src="src/app.js?v=0.4.4"></script>
   <script>
   (function (global) {
     'use strict';
@@ -627,16 +641,16 @@
 
     function togglePlaylistFavorite(item){
       var list=safePlaylistFavorites();
-      var id=String(item.id||'');
+      var id=String(item.id||'');var source=String(item.source||'wy');
       var found=-1;
-      for(var i=0;i<list.length;i+=1){if(String(list[i].id)===id){found=i;break;}}
+      for(var i=0;i<list.length;i+=1){if(String(list[i].id)===id&&String(list[i].source||'wy')===source){found=i;break;}}
       if(found>=0) list.splice(found,1); else list.unshift(item);
       savePlaylistFavorites(list);
     }
 
-    function playlistIsFavorite(id){
+    function playlistIsFavorite(id,source){
       var list=safePlaylistFavorites();
-      for(var i=0;i<list.length;i+=1) if(String(list[i].id)===String(id)) return true;
+      for(var i=0;i<list.length;i+=1) if(String(list[i].id)===String(id)&&String(list[i].source||'wy')===String(source||playlistPlatform)) return true;
       return false;
     }
 
@@ -656,7 +670,7 @@
       else img.innerHTML='♫';
       box.appendChild(img);
       var name=document.createElement('div'); name.className='playlist-name'; name.innerHTML=escapeHtml(item.name||'未命名歌单'); box.appendChild(name);
-      var meta=document.createElement('div'); meta.className='playlist-meta'; meta.innerHTML=escapeHtml((item.trackCount||0)+' 首歌曲 · '+(item.creator||'未知创建者')); box.appendChild(meta);
+      var meta=document.createElement('div'); meta.className='playlist-meta'; meta.innerHTML=escapeHtml((item.source==='tx'?'QQ音乐':'网易云音乐')+' · '+(item.trackCount||0)+' 首歌曲 · '+(item.creator||'未知创建者')); box.appendChild(meta);
       var actions=document.createElement('div'); actions.className='playlist-card-actions';
 
       var open=document.createElement('button'); open.type='button'; open.className='playlist-open-button'; open.innerHTML='打开歌单';
@@ -672,11 +686,11 @@
       };
       actions.appendChild(open);
 
-      var fav=document.createElement('button'); fav.type='button'; fav.className='secondary'; fav.innerHTML=playlistIsFavorite(item.id)?'取消收藏':'收藏';
+      var fav=document.createElement('button'); fav.type='button'; fav.className='secondary'; fav.innerHTML=playlistIsFavorite(item.id,item.source||'wy')?'取消收藏':'收藏';
       fav.onclick=function(ev){
         if(ev&&ev.stopPropagation)ev.stopPropagation();
         togglePlaylistFavorite(item);
-        fav.innerHTML=playlistIsFavorite(item.id)?'取消收藏':'收藏';
+        fav.innerHTML=playlistIsFavorite(item.id,item.source||'wy')?'取消收藏':'收藏';
       };
       actions.appendChild(fav);
       box.appendChild(actions);
@@ -689,6 +703,7 @@
 
     function openPlaylist(item){
       if(!item||item.id==null)return;
+      item.source=item.source||playlistPlatform;
       // Duplicate click/touch events or stale card handlers must not restart
       // the detail request and blank its songs after it has opened.
       if(playlistDetailItem&&String(playlistDetailItem.id)===String(item.id)&&
@@ -715,7 +730,7 @@
       el('playlist-detail-count').innerHTML=escapeHtml((item.trackCount||0)+' 首歌曲');
       el('playlist-detail-description').innerHTML=escapeHtml(item.description||'暂无简介');
       el('playlist-detail-status').innerHTML='正在读取歌单歌曲……';
-      el('playlist-favorite-btn').innerHTML=playlistIsFavorite(item.id)?'取消收藏':'收藏歌单';
+      el('playlist-favorite-btn').innerHTML=playlistIsFavorite(item.id,item.source||'wy')?'取消收藏':'收藏歌单';
       el('playlist-detail-songs').innerHTML='<div class="loading-note">正在读取歌曲……</div>';
       var cover=el('playlist-detail-cover');
       if(item.coverImgUrl){cover.style.backgroundImage='url("'+String(item.coverImgUrl).replace(/"/g,'%22')+'")';cover.innerHTML='';}
@@ -731,7 +746,7 @@
       var more=el('playlist-load-more-btn');
       addClass(more,'hidden');
       el('playlist-detail-status').innerHTML=append?'正在加载更多歌曲……':'正在读取歌单歌曲……';
-      requestJson('/api/netease-playlists?id='+encodeURIComponent(String(item.id))+'&offset='+offset+'&limit=50',function(err,data){
+      requestJson(catalogEndpoint(item,offset,50),function(err,data){
         if(generation!==playlistPageGeneration || !playlistDetailItem || String(playlistDetailItem.id)!==String(item.id))return;
         if(err){
           el('playlist-detail-status').innerHTML='加载失败：'+escapeHtml(err.message||err);
@@ -786,8 +801,7 @@
         loadMore:function(done){
           if(!playlistId||!hasMore)return done(null,{songs:[],hasMore:false});
           var previousOffset=nextOffset;
-          requestJson('/api/netease-playlists?id='+encodeURIComponent(playlistId)+
-            '&offset='+previousOffset+'&limit=50',function(err,data){
+          requestJson(catalogEndpoint(item,previousOffset,50),function(err,data){
             if(err)return done(err);
             var next=Number(data&&data.nextOffset);
             nextOffset=isFinite(next)&&next>previousOffset?next:previousOffset+50;
@@ -916,13 +930,30 @@
       setTimeout(function(){if(done)return;try{xhr.abort();}catch(e){};finish(new Error('请求超时'));},timeoutMs||12000);
     }
 
+    function catalogEndpoint(item,offset,limit){
+      var source=String(item&&item.source||'wy');
+      var route=source==='tx'?'/api/qq-catalog?kind=playlist&id=':'/api/netease-playlists?id=';
+      return route+encodeURIComponent(String(item.id))+'&offset='+offset+'&limit='+limit;
+    }
+    function refreshCatalogTabs(){
+      var nodes=all('[data-catalog-source]');
+      for(var n=0;n<nodes.length;n++){
+        var yes=nodes[n].getAttribute('data-catalog-source')===playlistPlatform;
+        if(yes)addClass(nodes[n],'active');else removeClass(nodes[n],'active');
+        nodes[n].setAttribute('aria-pressed',String(yes));
+      }
+      var cats=el('playlist-category-row'),searchCats=el('search-playlist-category-row');
+      if(cats)cats.style.display=playlistPlatform==='tx'?'none':'';
+      if(searchCats)searchCats.style.display=playlistPlatform==='tx'?'none':'';
+    }
     function searchPlaylists(keyword,hostId){
       var host=el(hostId); if(!host)return;
       var generation=(playlistSearchGeneration[hostId]||0)+1;
       playlistSearchGeneration[hostId]=generation;
       host.innerHTML='<div class="loading-note">正在搜索歌单……</div>';
       var q='?s='+encodeURIComponent(keyword||'')+'&offset=0&limit=20';
-      requestJson('/api/netease-playlists'+q,function(err,data){
+      var route=playlistPlatform==='tx'?'/api/qq-catalog?kind=playlist':'/api/netease-playlists';
+      requestJson(route+q,function(err,data){
         if(playlistSearchGeneration[hostId]!==generation)return;
         if(err){host.innerHTML='<div class="empty-note">歌单搜索失败：'+escapeHtml(err.message||err)+'</div>';return;}
         var list=normalizePlaylistItems(data);
@@ -936,20 +967,24 @@
       if (playlistDetailItem) return;
       var host=el('playlist-featured'); if(!host)return;
       host.innerHTML='<div class="loading-note">正在读取推荐歌单……</div>';
-      var q='?s='+encodeURIComponent(playlistCategory==='all'?'热门':playlistCategory)+'&offset=0&limit=12';
-      searchPlaylists(playlistCategory==='all'?'热门':playlistCategory,'playlist-featured');
+      refreshCatalogTabs();
+      searchPlaylists(playlistPlatform==='tx'?'':(playlistCategory==='all'?'热门':playlistCategory),'playlist-featured');
     }
 
     function loadRankings(){
       var listHost=el('ranking-list');
       if(!listHost||listHost.dataset.loaded==='1'||listHost.dataset.loading==='1')return;
       listHost.dataset.loading='1';
+      var directoryToken=listHost.dataset.requestToken=String(Number(listHost.dataset.requestToken||0)+1);
+      var currentRankingSource=rankingSource;
       listHost.innerHTML='<div class="loading-note">正在读取榜单……</div>';
-      requestJson('/api/netease-toplist',function(err,data){
+      var route=rankingSource==='tx'?'/api/qq-catalog?kind=rank':'/api/netease-toplist';
+      requestJson(route,function(err,data){
+        if(directoryToken!==listHost.dataset.requestToken||rankingSource!==currentRankingSource)return;
         listHost.dataset.loading='0';
         if(err){listHost.innerHTML='<div class="empty-note">排行榜加载失败：'+escapeHtml(err.message||err)+' <button type="button" id="ranking-retry">重试</button></div>';el('ranking-retry').onclick=function(){loadRankings();};return;}
-        listHost.dataset.loaded='1';
         var list=data&&data.list instanceof Array?data.list:[];
+        listHost.dataset.loaded=list.length?'1':'0';
         listHost.innerHTML='';
         if(!list.length){listHost.innerHTML='<div class="empty-note">暂无榜单</div>';return;}
         for(var i=0;i<list.length;i+=1){
@@ -973,8 +1008,12 @@
     function loadRankingSongs(id,name){
       el('ranking-title').innerHTML=escapeHtml(name||'排行榜');
       var host=el('ranking-songs');host.innerHTML='<div class="loading-note">正在读取榜单歌曲……</div>';
-      requestJson('/api/netease-toplist?id='+encodeURIComponent(String(id))+'&limit=30',function(err,data){
-        if(err){host.innerHTML='<div class="empty-note">榜单歌曲加载失败：'+escapeHtml(err.message||err)+'</div>';return;}
+      var requestedSource=rankingSource,requestedId=String(id);
+      var generation=(host.dataset.generation=String(Number(host.dataset.generation||0)+1));
+      var route=rankingSource==='tx'?'/api/qq-catalog?kind=rank&id=':'/api/netease-toplist?id=';
+      requestJson(route+encodeURIComponent(String(id))+'&limit=30',function(err,data){
+        if(host.dataset.generation!==generation||rankingSource!==requestedSource||String(rankingId)!==requestedId)return;
+        if(err){host.innerHTML='<div class="empty-note">榜单歌曲加载失败：'+escapeHtml(err.message||err)+' <button type="button" id="retry-rank-songs">重试</button></div>';el('retry-rank-songs').onclick=function(){loadRankingSongs(id,name);};return;}
         var songs=data&&data.songs instanceof Array?data.songs:[];
         host.innerHTML='';
         if(!songs.length){host.innerHTML='<div class="empty-note">该榜单没有可用歌曲</div>';return;}
@@ -1080,6 +1119,28 @@
       var allCats=all('.category-pill');for(var q=0;q<allCats.length;q+=1)removeClass(allCats[q],'active');
       addClass(btn,'active'); if(currentView==='playlist'&&!playlistDetailItem)loadFeaturedPlaylists();
     };})(cats[c]);
+    var catalogTabs=all('[data-catalog-source]');
+    for(var k=0;k<catalogTabs.length;k++)catalogTabs[k].onclick=(function(btn){return function(){
+      if(playlistDetailItem)return;
+      playlistPlatform=btn.getAttribute('data-catalog-source')||'wy';
+      refreshCatalogTabs();
+      if(currentView==='playlist')loadFeaturedPlaylists();
+      else if(currentView==='search'&&searchKind==='playlist')searchPlaylists('','playlist-results');
+    };})(catalogTabs[k]);
+    var rankingTabs=all('[data-ranking-source]');
+    for(var rk=0;rk<rankingTabs.length;rk++)rankingTabs[rk].onclick=(function(btn){return function(){
+      rankingSource=btn.getAttribute('data-ranking-source')||'wy';
+      rankingId='';
+      var host=el('ranking-list');
+      host.dataset.loaded='0';host.dataset.loading='0';
+      el('ranking-songs').innerHTML='<div class="empty-note">请选择左侧榜单</div>';
+      for(var ri=0;ri<rankingTabs.length;ri++){
+        var active=rankingTabs[ri].getAttribute('data-ranking-source')===rankingSource;
+        if(active)addClass(rankingTabs[ri],'active');else removeClass(rankingTabs[ri],'active');
+        rankingTabs[ri].setAttribute('aria-pressed',String(active));
+      }
+      loadRankings();
+    };})(rankingTabs[rk]);
     var plats=all('.platform-pill');
     for(var p=0;p<plats.length;p+=1) if(!hasClass(plats[p],'disabled')) plats[p].onclick=function(){
       playlistPlatform=this.getAttribute('data-playlist-platform')||'wy'; 
@@ -1143,6 +1204,6 @@
   })(window);
   </script>
   <script type="module" src="src/modern-ui.js?v=0.4.3"></script>
-  <script type="module" src="src/now-playing-experience.js?v=0.4.3"></script>
+  <script type="module" src="src/now-playing-experience.js?v=0.4.4"></script>
 </body>
 </html>

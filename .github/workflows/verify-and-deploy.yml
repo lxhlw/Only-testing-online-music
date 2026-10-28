@@ -41,6 +41,8 @@ jobs:
           node --check src/now-playing-experience.js
           node --check functions/api/netease-song-meta.js
           node --check functions/api/netease-comments.js
+          node --check functions/api/qq-catalog.js
+          node --check functions/api/netease-toplist.js
           node --check scripts/test-modern-web-browser.mjs
           node --check scripts/test-modern-flower-proxy.mjs
       - name: Security and local music library regression
@@ -51,6 +53,7 @@ jobs:
           node scripts/test-music-lyrics.mjs
           node scripts/test-netease-lyrics.mjs
           node scripts/test-now-playing-apis.mjs
+          node scripts/test-chart-catalog.mjs
       - name: Install Chromium
         run: npx playwright install chromium
       - name: Start Cloudflare Pages emulator and run modern web browser regression
@@ -95,7 +98,7 @@ jobs:
           set -euo pipefail
           READY=0
           for i in {1..12}; do
-            if curl -fsSL 'https://only-testing-online-music.pages.dev/?v=0.4.3' -o /tmp/lx-modern-index.html && grep -Fq 'modern.css?v=0.4.3' /tmp/lx-modern-index.html; then
+            if curl -fsSL 'https://only-testing-online-music.pages.dev/?v=0.4.4' -o /tmp/lx-modern-index.html && grep -Fq 'modern.css?v=0.4.4' /tmp/lx-modern-index.html; then
               READY=1
               break
             fi

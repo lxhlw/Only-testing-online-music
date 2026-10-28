@@ -192,14 +192,32 @@
     var available = activeSource.sources[channel].qualitys || [];
     if (global.LXPlaySettings) {
       var settings = getPlaySettings();
-      // Modern web: prioritize initial sound over huge lossless files.
+      // Modern browser: automatic means the best *lossy/MP3-size* quality
+      // explicitly declared by this Flower channel, not a hard-coded 128k.
+      // Lossless remains a manual selection because it may start more slowly.
       if (MODERN_WEB && settings.qualityMode === 'highest') {
-        for (var modernQ=0;modernQ<available.length;modernQ++)
-          if (String(available[modernQ]).toLowerCase()==='128k') return [available[modernQ]];
+        var preferredMp3=['320k','256k','192k','128k'],best='';
+        for(var mp=0;mp<preferredMp3.length&&!best;mp++)
+          for(var aq=0;aq<available.length;aq++)
+            if(String(available[aq]).toLowerCase()===preferredMp3[mp]){best=available[aq];break;}
+        if(best){
+          var quick=[best];
+          if(settings.autoFallback&&String(best).toLowerCase()!=='128k')
+            for(var low=0;low<available.length;low++)
+              if(String(available[low]).toLowerCase()==='128k'){quick.push(available[low]);break;}
+          return quick;
+        }
       }
       if (MODERN_WEB) {
+        // Manually selected FLAC/Hi-Res is tried first. If enabled, allow
+        // just one cheap 128k fallback, never a slow quality waterfall.
         var requested=global.LXPlaySettings.buildPlan(available,settings);
-        return requested.length?[requested[0]]:[];
+        if(!requested.length)return [];
+        var compact=[requested[0]];
+        if(settings.autoFallback&&String(compact[0]).toLowerCase()!=='128k')
+          for(var quickLow=0;quickLow<available.length;quickLow++)
+            if(String(available[quickLow]).toLowerCase()==='128k'){compact.push(available[quickLow]);break;}
+        return compact;
       }
       // Android 4.4 browsers often cannot decode FLAC/Hi-Res streams.
       // On the default automatic setting, prefer an MP3-sized stream first;
@@ -280,7 +298,7 @@
         var highest = global.LXPlaySettings ?
           global.LXPlaySettings.getPreferredQuality(available, { qualityMode: 'highest', autoFallback: true }) :
           available[0];
-        var nextText = MODERN_WEB ? ' · 极速模式：一次解析' :
+        var nextText = MODERN_WEB ? ' · 首选：'+escapeHtml(plan[0]||'未知')+' · 降级：'+escapeHtml(plan.length>1?plan.slice(1).join(' → '):'无') :
           (plan.length > 1 ? ' · 降级顺序：' + escapeHtml(plan.join(' → ')) : '');
         qualitySummaryEl.innerHTML =
           '<span class="quality-summary-label">' + escapeHtml(settingsLabel) + '</span>' +
@@ -1107,7 +1125,7 @@
     document.getElementById('player-artist').innerHTML = escapeHtml(music.singer);
     setStatus(
       (CHANNEL_NAMES[source] || source.toUpperCase()) +
-      ' 已返回 ' + escapeHtml(quality) + ' 播放地址' +
+      ' 已返回请求音质 ' + escapeHtml(quality) + ' 的播放地址' +
       (viaLabel ? '（' + escapeHtml(viaLabel) + '）' : '') +
       (LEGACY_NATIVE_MEDIA ? '，请点下方原生音频控件的 ▶ 播放键。' : '，正在验证媒体信息。'),
       LEGACY_NATIVE_MEDIA ? 'warn' : 'ready'
@@ -1332,7 +1350,7 @@
 
     // Only one Flower quality per click on Android 4.4: no automatic
     // cross-source retries or repeated multibit-rate waterfalls.
-    if ((NATIVE_COMPANION || MODERN_WEB) && plan.length > 1) plan = [plan[0]];
+    if (NATIVE_COMPANION && plan.length > 1) plan = [plan[0]];
     var quality = plan[index];
     playbackState.index = index;
     playbackState.quality = quality;
@@ -1395,6 +1413,10 @@
     function runFallback(reason) {
       if (!isCurrentAttempt() || !finishAttempt()) return;
 
+      if (MODERN_WEB && settings.autoFallback && index + 1 < plan.length) {
+        setStatus('当前音质 '+escapeHtml(quality)+' 暂不可用，快速尝试 '+escapeHtml(plan[index+1])+'……','warn');
+        return requestQuality(music,source,musicInfo,plan,index+1,token);
+      }
       if (NATIVE_COMPANION || MODERN_WEB) {
         setStatus('当前歌曲暂未取得播放地址：' + escapeHtml(reason || '解析失败') +
           (MODERN_WEB ? '。野花与同平台备用解析均未成功。' : '。'), 'fail');
@@ -1539,10 +1561,14 @@
       // Give Flower a 1.6s head start. In parallel, race same-platform
       // resolver endpoints only; never install another LX source script.
       if (fastEnabled) fastRaceTimer = global.setTimeout(startFastRace, 1600);
+      // Entire two-quality flow is bounded to ~13.5 seconds, not 24s.
+      var elapsed=(Date.now?Date.now():new Date().getTime())-Number(playbackState.startedResolvingAtMs||0);
+      var left=Math.max(1200,13500-elapsed);
+      var qualityWindow=index===0&&plan.length>1?Math.min(8500,left):Math.min(12000,left);
       sourceTimer = global.setTimeout(function(){
         if (!isCurrentAttempt() || settled) return;
-        runFallback(flowerFailed || '12 秒内未取得可播放地址');
-      }, MODERN_FLOWER_TIMEOUT_MS);
+        runFallback(flowerFailed || '音质解析超时');
+      },qualityWindow);
     } else if (NATIVE_COMPANION) {
       sourceTimer = global.setTimeout(function(){
         if (!isCurrentAttempt() || settled) return;
@@ -1739,7 +1765,7 @@
     }
     setStatus(
       (CHANNEL_NAMES[state.source] || state.source.toUpperCase()) +
-      ' 正在播放 · ' + escapeHtml(state.quality),
+      ' 正在播放 · 请求音质 ' + escapeHtml(state.quality)+'（实际码率由媒体服务决定）',
       'ready'
     );
     loadLyricsForState(state);

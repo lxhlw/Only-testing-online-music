@@ -1174,3 +1174,56 @@ html.modern-web .now-playing-volume input{min-width:0;width:100%;flex:1;accent-c
   html.modern-web #detail-mode-btn{min-width:51px;font-size:10px;padding:0 4px}
   html.modern-web .now-playing-transport-buttons{gap:clamp(12px,3vw,23px)}
 }
+
+/* v0.4.4 focused UX: one clean back affordance and discoverable tabs. */
+html.modern-web #lyrics-close-btn{
+  display:inline-flex!important;align-items:center;justify-content:center;
+  gap:7px;width:auto!important;min-width:114px;height:40px!important;
+  padding:8px 15px!important;font-size:13px!important;font-weight:710;
+  white-space:nowrap;border:1px solid #c9e3d2;border-radius:10px;
+  color:#376f50;background:#fff;line-height:1.3
+}
+html.modern-web #lyrics-close-btn span{display:inline-block;line-height:1;font-size:22px}
+html.modern-web #lyrics-close-btn:hover{background:#e8f5e9;border-color:#96c6a7}
+html.modern-web .catalog-source-tabs,html.modern-web .ranking-source-switch{
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap
+}
+html.modern-web .ranking-source-switch{
+  margin:0 0 13px;padding:10px 14px;
+  border:1px solid #d8e9db;border-radius:12px;background:#f9fcf7
+}
+html.modern-web .catalog-source{
+  min-height:35px;padding:7px 16px;
+  border:1px solid #d5e6d7;border-radius:10px;
+  color:#607a66;background:#fff;font-size:13px;font-weight:620
+}
+html.modern-web .catalog-source.active{
+  color:#267c54;background:#dff2e4;border-color:#a5dab8
+}
+html.modern-web .catalog-source:hover{border-color:#93cbac}
+html.modern-web .comment-sort-bar{
+  display:flex;gap:8px;align-items:center;flex-shrink:0;
+  padding:9px 5px;border-bottom:1px solid #e4eee4
+}
+html.modern-web .comment-sort{
+  padding:7px 14px;border-radius:9px;border:1px solid #d6e8da;
+  background:#fff;color:#728b78;font-size:12px;font-weight:700
+}
+html.modern-web .comment-sort.active{
+  color:#238055;background:#e2f3e5;border-color:#abd8ba
+}
+html.modern-web .comments-pagination{
+  display:flex;justify-content:space-between;align-items:center;flex-shrink:0;
+  padding:9px 8px;gap:10px;border-top:1px solid #e5eee4;
+  font-size:11px;color:#829887
+}
+html.modern-web #comments-load-more{
+  padding:7px 15px;min-height:33px;border:1px solid #bcdcc7;
+  border-radius:9px;background:#e9f6ec;color:#287753;font-weight:700
+}
+html.modern-web #comments-load-more[hidden]{display:none!important}
+@media(max-width:740px){
+  html.modern-web #lyrics-close-btn{min-width:84px;padding:6px 10px!important;font-size:11px!important}
+  html.modern-web .catalog-source{font-size:12px;padding:6px 10px;min-height:33px}
+  html.modern-web .comments-pagination{font-size:10px}
+}

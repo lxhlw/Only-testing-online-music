@@ -59,10 +59,32 @@ try {
     status:200,contentType:'image/png',
     body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a8X0AAAAASUVORK5CYII=','base64')
   }));
-  await page.route('**/api/netease-comments?*',route=>route.fulfill({
-    status:200,contentType:'application/json',
-    body:JSON.stringify({source:'wy',id:'123456',kind:'hot',total:120,comments:[{id:'a',user:'网易云听友',content:'真喜欢这首歌的旋律',likedCount:18}]})
-  }));
+  await page.route('**/api/netease-comments?*',route=>{
+    const q=new URL(route.request().url()).searchParams;
+    const recent=q.get('mode')==='recent',offset=Number(q.get('offset')||0);
+    const list=recent?Array.from({length:20},(_,i)=>({
+      id:'new-'+(offset+i),user:'最新评论用户',content:'真实新评论 '+(offset+i),likedCount:0
+    })):[{id:'a',user:'网易云听友',content:'真喜欢这首歌的旋律',likedCount:18}];
+    return route.fulfill({status:200,contentType:'application/json',
+      body:JSON.stringify({source:'wy',id:'123456',kind:recent?'recent':'hot',
+        total:120,offset,hasMore:recent&&offset<100,comments:list})});
+  });
+  await page.route('**/api/qq-catalog?*',route=>{
+    const q=new URL(route.request().url()).searchParams;
+    const kind=q.get('kind'),id=q.get('id');
+    let data;
+    if(kind==='rank'){
+      data=id?{songs:[{id:'QQMid123',songmid:'QQMid123',name:'QQ热歌',singer:'歌手',source:'tx'}]}
+        :{list:[{id:'26',name:'QQ音乐热歌榜',source:'tx'}]};
+    }else if(id){
+      data={playlist:{id,name:'QQ测试歌单',source:'tx',trackCount:1},songs:[{
+        id:'QQMid123',songmid:'QQMid123',name:'QQ歌单歌曲',singer:'QQ歌手',source:'tx'
+      }],nextOffset:50,hasMore:false};
+    }else{
+      data={result:{playlists:[{id:'1234',name:'QQ测试歌单',source:'tx',trackCount:1}]}};
+    }
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
+  });
   await page.route('**/api/netease-lyrics?*',route=>route.fulfill({
     status:200,contentType:'application/json',
     body:JSON.stringify({lyric:'[00:00.00]第一行测试\\n[00:01.00]第二行测试'})
@@ -70,7 +92,7 @@ try {
   await page.goto(url,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.LXSourceManager?.getActive()?.inited,{timeout:14000});
   assert.equal(await page.locator('.brand').textContent(),'LX Music Web');
-  assert.equal(await page.locator('#app-version').textContent(),'v0.4.3');
+  assert.equal(await page.locator('#app-version').textContent(),'v0.4.4');
   assert.equal(await page.locator('#top-source-label').textContent(),'当前音源：野花🌷');
   assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(x=>x.name)),['野花🌷']);
   assert.equal(await page.locator('#legacy-media-panel').count(),0);
@@ -97,6 +119,15 @@ try {
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('.global-search-bar')).display==='none');
 
   assert.equal(await page.locator('#restore-default-sources-btn').isVisible(),true);
+  const quality=await page.evaluate(()=>{
+    const planLabel=document.getElementById('quality-summary').textContent;
+    const available=window.LXSourceManager.getActive().sources.wy.qualitys;
+    return {available,label:planLabel};
+  });
+  assert.ok(quality.available.includes('320k'));
+  assert.ok(quality.label.includes('320k'),'Automatic mode must no longer hard force 128k: '+quality.label);
+  checks.push('high-quality-default');
+
   await page.locator('[data-view="search"]').click();
   assert.equal(await page.locator('.search-inspiration').isVisible(),true,'Search landing must not be a blank canvas');
   assert.equal(await page.locator('.search-suggestions button').count(),5);
@@ -144,6 +175,26 @@ try {
   assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(s=>s.name)),['野花🌷']);
   checks.push('Flower-failure-recovery');
   await page.evaluate(()=>{
+    window.__qualityTypes=[];
+    window.LXSourceManager.requestAction=(source,action,params,done)=>{
+      window.__qualityTypes.push(params.type);
+      if(params.type==='128k')return done(null,{url:'https://media.example.test/song.wav?id=128'});
+      return done(new Error('高音质暂不可用'));
+    };
+    window.LXMusicSearch.resolveMusicUrlFast=(source,info,quality,done)=>done(new Error('高音质不可用'));
+    window.OnlyTestingMusicApp.playMusic({
+      id:'fallback-quality',songmid:'fallback-quality',name:'音质降级测试',singer:'测试歌手',source:'wy',interval:8
+    });
+  });
+  await page.waitForFunction(()=>window.__qualityTypes.includes('128k')&&window.__audioPlayCalls>=3,{timeout:6000});
+  assert.deepEqual(await page.evaluate(()=>window.__qualityTypes.slice(0,2)),['320k','128k'],
+    'Automatic must try 320k first, then a single low-bitrate fallback');
+  checks.push('bounded-quality-fallback');
+  await page.evaluate(()=>{
+    window.LXSourceManager.requestAction=(source,action,params,done)=>
+      done(null,{url:'https://media.example.test/song.wav?id=good'});
+  });
+  await page.evaluate(()=>{
     window.OnlyTestingMusicApp.playMusic({
       id:'123456',songmid:'123456',name:'歌词同步测试',singer:'测试歌手',source:'wy',interval:8
     });
@@ -174,6 +225,17 @@ try {
   await page.locator('#comments-tab').click();
   await page.waitForFunction(()=>document.querySelectorAll('.now-comment-card').length===1,{timeout:5500});
   assert.equal(await page.locator('.now-comment-card p').first().textContent(),'真喜欢这首歌的旋律');
+  await page.locator('#comments-recent-btn').click();
+  await page.waitForFunction(()=>document.querySelectorAll('.now-comment-card').length===20,{timeout:5500});
+  assert.equal(await page.locator('.now-comment-card p').first().textContent(),'真实新评论 0');
+  assert.equal(await page.locator('#comments-load-more').isVisible(),true);
+  await page.locator('#comments-load-more').click();
+  await page.waitForFunction(()=>document.querySelectorAll('.now-comment-card').length===40,{timeout:5500});
+  assert.equal(await page.locator('.now-comment-card p').last().textContent(),'真实新评论 39');
+  await page.locator('#comments-hot-btn').click();
+  await page.waitForFunction(()=>document.querySelectorAll('.now-comment-card').length===1,{timeout:5500});
+  checks.push('hot-latest-comment-pagination');
+
   assert.ok((await page.locator('#comments-official-link').getAttribute('href')).endsWith('id=123456'));
   await page.locator('.now-playing-cover-box').click();
   assert.equal(await page.locator('#lyrics-overlay').isVisible(),true,'Clicking left side never dismisses full-screen player');
@@ -217,6 +279,23 @@ try {
   await page.locator('[data-view="playlist"]').click();
   await page.waitForTimeout(100);
   assert.equal(await page.locator('#view-playlist').evaluate(el=>el.classList.contains('active')),true);
+  await page.locator('[data-view="ranking"]').click();
+  assert.equal(await page.locator('[data-ranking-source="tx"]').isVisible(),true);
+  await page.locator('[data-ranking-source="tx"]').click();
+  await page.waitForFunction(()=>document.querySelectorAll('#ranking-list .ranking-item').length>0,{timeout:5000});
+  await page.locator('#ranking-list .ranking-item').first().click();
+  await page.waitForFunction(()=>document.querySelector('#ranking-songs')?.textContent.includes('QQ热歌'),{timeout:5000});
+  await page.locator('[data-ranking-source="wy"]').click();
+  await page.locator('[data-view="playlist"]').click();
+  assert.equal(await page.locator('#view-playlist [data-catalog-source="tx"]').isVisible(),true);
+  await page.locator('#view-playlist [data-catalog-source="tx"]').click();
+  await page.waitForFunction(()=>document.querySelectorAll('#playlist-featured .playlist-card').length>0,{timeout:5000});
+  await page.locator('#playlist-featured .playlist-open-button').first().click();
+  await page.waitForFunction(()=>document.querySelector('#playlist-detail-songs')?.textContent.includes('QQ歌单歌曲'),{timeout:5000});
+  assert.equal(await page.locator('#view-playlist').evaluate(el=>el.classList.contains('is-detail-open')),true);
+  await page.locator('#playlist-back-btn').click();
+  await page.locator('#view-playlist [data-catalog-source="wy"]').click();
+  checks.push('multi-platform-catalog-list-detail');
   checks.push('navigation');
   await page.setViewportSize({width:390,height:844});
   await page.waitForTimeout(100);
