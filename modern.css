@@ -169,3 +169,35 @@ html.modern-web .source-setting-actions{margin:12px 0}
 html.modern-web .source-item .source-meta:nth-child(3){display:none}
 html.modern-web .status button{margin-left:12px;padding:6px 12px;border:1px solid rgba(112,239,189,.35);background:#23473d;color:var(--mint)}
 html.modern-web .setting-row-inline:has(#inline-fallback){display:none}
+
+/* Reset inherited legacy fixed positioning. The modern app must not waste a
+   70px phantom gutter nor a 98px mobile placeholder. */
+html.modern-web .lx-layout{padding-top:0;display:flex;align-items:stretch}
+html.modern-web .main-stage{margin-left:0;min-width:0}
+html.modern-web .persistent-top-stack{
+  position:sticky;top:80px;z-index:48;
+  background:rgba(8,17,25,.98);
+  border-bottom:1px solid var(--stroke);
+  box-shadow:none;
+}
+html.modern-web .playlist-filter-stack{
+  position:sticky;z-index:45;
+  background:rgba(13,25,34,.97);
+  border:1px solid var(--stroke);
+  border-radius:15px;margin-bottom:18px;
+}
+html.modern-web #view-playlist>.playlist-filter-stack>.sub-toolbar,
+html.modern-web #view-playlist>.playlist-filter-stack>.category-row{
+  background:transparent;border:0;border-radius:0
+}
+html.modern-web #view-playlist>.playlist-filter-stack>.sub-toolbar{
+  border-bottom:1px solid var(--stroke)
+}
+@media(max-width:740px){
+  html.modern-web .lx-layout{display:block;padding-top:0}
+  html.modern-web .main-stage{width:100%;margin-left:0}
+  html.modern-web .persistent-top-stack{top:124px}
+  html.modern-web .playlist-filter-stack{max-width:100%}
+  html.modern-web .player-bar{bottom:0}
+  html.modern-web .topbar{position:sticky}
+}
