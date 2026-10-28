@@ -975,13 +975,16 @@
       var listHost=el('ranking-list');
       if(!listHost||listHost.dataset.loaded==='1'||listHost.dataset.loading==='1')return;
       listHost.dataset.loading='1';
+      var directoryToken=listHost.dataset.requestToken=String(Number(listHost.dataset.requestToken||0)+1);
+      var currentRankingSource=rankingSource;
       listHost.innerHTML='<div class="loading-note">正在读取榜单……</div>';
       var route=rankingSource==='tx'?'/api/qq-catalog?kind=rank':'/api/netease-toplist';
       requestJson(route,function(err,data){
+        if(directoryToken!==listHost.dataset.requestToken||rankingSource!==currentRankingSource)return;
         listHost.dataset.loading='0';
         if(err){listHost.innerHTML='<div class="empty-note">排行榜加载失败：'+escapeHtml(err.message||err)+' <button type="button" id="ranking-retry">重试</button></div>';el('ranking-retry').onclick=function(){loadRankings();};return;}
-        listHost.dataset.loaded='1';
         var list=data&&data.list instanceof Array?data.list:[];
+        listHost.dataset.loaded=list.length?'1':'0';
         listHost.innerHTML='';
         if(!list.length){listHost.innerHTML='<div class="empty-note">暂无榜单</div>';return;}
         for(var i=0;i<list.length;i+=1){
@@ -1010,7 +1013,7 @@
       var route=rankingSource==='tx'?'/api/qq-catalog?kind=rank&id=':'/api/netease-toplist?id=';
       requestJson(route+encodeURIComponent(String(id))+'&limit=30',function(err,data){
         if(host.dataset.generation!==generation||rankingSource!==requestedSource||String(rankingId)!==requestedId)return;
-        if(err){host.innerHTML='<div class="empty-note">榜单歌曲加载失败：'+escapeHtml(err.message||err)+'</div>';return;}
+        if(err){host.innerHTML='<div class="empty-note">榜单歌曲加载失败：'+escapeHtml(err.message||err)+' <button type="button" id="retry-rank-songs">重试</button></div>';el('retry-rank-songs').onclick=function(){loadRankingSongs(id,name);};return;}
         var songs=data&&data.songs instanceof Array?data.songs:[];
         host.innerHTML='';
         if(!songs.length){host.innerHTML='<div class="empty-note">该榜单没有可用歌曲</div>';return;}
