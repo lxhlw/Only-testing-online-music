@@ -71,6 +71,12 @@ try {
   await page.locator('#playlist-featured .playlist-open-button').first().click()
   await page.waitForFunction(() =>
     document.querySelectorAll('#playlist-detail-songs .playlist-song-row').length === 50)
+  assert.equal(await page.locator('#playlist-filter-stack').isVisible(),false,
+    'Playlist categories must disappear inside the detail page');
+  assert.equal(await page.locator('#global-search-input').isVisible(),false,
+    'Playlist search must not misleadingly remain in detail mode');
+  assert.equal(await page.locator('#playlist-back-btn').isVisible(),true);
+  console.log('PASS: playlist detail hides inapplicable category/search controls');
   // A tall sticky mobile header leaves a deliberate narrow content corridor.
   // Playwright's default center-of-viewport scroll places this button behind
   // the sticky filters. Scroll to the genuinely unobstructed area and click
