@@ -8,8 +8,8 @@
   <script>document.documentElement.classList.add("modern-web");</script>
   <title>LX Music — 轻盈护眼音乐空间</title>
   <link rel="stylesheet" href="styles.css?v=0.4.1">
-  <link rel="stylesheet" href="modern.css?v=0.4.9">
-  <link rel="stylesheet" href="src/mobile-shell.css?v=0.4.9">
+  <link rel="stylesheet" href="modern.css?v=0.4.10">
+  <link rel="stylesheet" href="src/mobile-shell.css?v=0.4.10">
 </head>
 <body>
   <div id="app">
@@ -17,7 +17,7 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.9</span></div>
+          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.10</span></div>
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">护眼淡绿模式</span>
@@ -305,7 +305,7 @@
 
             <div class="settings-section">
               <h2>版本信息</h2>
-              <div class="version-detail"><strong id="version-current">v0.4.9</strong><span id="version-release-date">2026-10-28</span></div>
+              <div class="version-detail"><strong id="version-current">v0.4.10</strong><span id="version-release-date">2026-10-28</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
             </div>
@@ -462,7 +462,7 @@
   <script src="src/music-library.js?v=0.4.1"></script>
   <script src="src/music-lyrics.js?v=0.4.2"></script>
   <script src="src/player-controls.js"></script>
-  <script src="src/app.js?v=0.4.9"></script>
+  <script src="src/app.js?v=0.4.10"></script>
   <script>
   (function (global) {
     'use strict';
@@ -481,6 +481,8 @@
     var playlistNextOffset = 0;
     var playlistHasMore = false;
     var playlistPageLoading = false;
+    var playlistReturnView = 'playlist';
+    var playlistReturnScroll = 0;
     var playlistDetailObserver = null;
     var playlistCatalogObservers = {};
     var playlistCatalogSessions = {};
@@ -587,7 +589,7 @@
         context.innerHTML=searchKind==='song'?'搜索歌曲':'搜索歌单';
       }else if(name==='playlist'){
         input.disabled=false; button.disabled=false; input.placeholder='搜索歌单'; context.innerHTML='搜索歌单';
-        if(!playlistDetailItem) loadFeaturedPlaylists();
+        if(!playlistDetailItem&&!el('playlist-featured').querySelector('.playlist-card')) loadFeaturedPlaylists();
       }else if(name==='ranking'){
         input.disabled=true; button.disabled=true; input.placeholder='排行榜不需要搜索'; context.innerHTML='选择排行榜';
       }else if(name==='mylist'){
@@ -739,12 +741,28 @@
       // Publish detail state BEFORE navigation. Otherwise showView('playlist')
       // launches another featured-list search on slow legacy devices, which
       // can re-render cards during the touch/click transition.
+      // The detail is a new screen, not a panel appended below the source list.
+      // Preserve where it was opened (including saved playlists in My Music).
+      if(!playlistDetailItem){
+        playlistReturnView=currentView;
+        playlistReturnScroll=global.scrollY||document.documentElement.scrollTop||0;
+      }
       playlistDetailItem=item;
+      if(playlistCatalogObservers['playlist-featured']){
+        playlistCatalogObservers['playlist-featured'].disconnect();
+        delete playlistCatalogObservers['playlist-featured'];
+      }
       addClass(el('view-playlist'),'is-detail-open');
       document.documentElement.classList.add('is-playlist-detail');
       lastPlaylistOpenAt=Date.now?Date.now():(new Date()).getTime();
       playlistSearchGeneration['playlist-featured']=(playlistSearchGeneration['playlist-featured']||0)+1;
       showView('playlist');
+      // Immediately reset document scroll, rather than displaying the tail of
+      // the previous 3-column gallery above the new detail.
+      global.scrollTo(0,0);
+      var back=el('playlist-back-btn');
+      if(back)back.textContent=playlistReturnView==='mylist'?'← 返回我的歌单':
+        playlistReturnView==='search'?'← 返回搜索歌单':'← 返回歌单分类';
       playlistDetailSongs=[];
       playlistPageGeneration+=1;
       playlistNextOffset=0;
@@ -856,7 +874,17 @@
       playlistDetailSongs=[];
       addClass(el('playlist-detail-panel'),'hidden');
       removeClass(el('playlist-featured'),'hidden');
-      loadFeaturedPlaylists();
+      var from=playlistReturnView;
+      var restoreY=playlistReturnScroll;
+      playlistReturnView='playlist';playlistReturnScroll=0;
+      if(from==='mylist'||from==='search'){
+        showView(from);
+        // Restore the source screen after its own layout is reactivated.
+        global.requestAnimationFrame(function(){global.scrollTo(0,restoreY);});
+      }else{
+        showView('playlist');
+        global.requestAnimationFrame(function(){global.scrollTo(0,restoreY);});
+      }
     }
 
     function playPlaylistAt(startIndex){
@@ -1395,7 +1423,7 @@
   })(window);
   </script>
   <script type="module" src="src/modern-ui.js?v=0.4.3"></script>
-  <script type="module" src="src/now-playing-experience.js?v=0.4.9"></script>
-  <script type="module" src="src/mobile-shell.js?v=0.4.9"></script>
+  <script type="module" src="src/now-playing-experience.js?v=0.4.10"></script>
+  <script type="module" src="src/mobile-shell.js?v=0.4.10"></script>
 </body>
 </html>
