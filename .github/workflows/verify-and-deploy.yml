@@ -45,6 +45,8 @@ jobs:
           node scripts/test-proxy-security.mjs
           node scripts/test-modern-flower-proxy.mjs
           node scripts/test-music-library.mjs
+          node scripts/test-music-lyrics.mjs
+          node scripts/test-netease-lyrics.mjs
       - name: Install Chromium
         run: npx playwright install chromium
       - name: Start Cloudflare Pages emulator and run modern web browser regression
@@ -89,7 +91,7 @@ jobs:
           set -euo pipefail
           READY=0
           for i in {1..12}; do
-            if curl -fsSL 'https://only-testing-online-music.pages.dev/?v=0.4.1' -o /tmp/lx-modern-index.html && grep -Fq 'modern.css?v=0.4.1' /tmp/lx-modern-index.html; then
+            if curl -fsSL 'https://only-testing-online-music.pages.dev/?v=0.4.2' -o /tmp/lx-modern-index.html && grep -Fq 'modern.css?v=0.4.2' /tmp/lx-modern-index.html; then
               READY=1
               break
             fi
