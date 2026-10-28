@@ -8,7 +8,7 @@
   <script>document.documentElement.classList.add("modern-web");</script>
   <title>LX Music — 轻盈护眼音乐空间</title>
   <link rel="stylesheet" href="styles.css?v=0.4.1">
-  <link rel="stylesheet" href="modern.css?v=0.4.2">
+  <link rel="stylesheet" href="modern.css?v=0.4.3">
 </head>
 <body>
   <div id="app">
@@ -16,7 +16,7 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.2</span></div>
+          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.3</span></div>
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">护眼淡绿模式</span>
@@ -287,7 +287,7 @@
 
             <div class="settings-section">
               <h2>版本信息</h2>
-              <div class="version-detail"><strong id="version-current">v0.4.2</strong><span id="version-release-date">2026-10-28</span></div>
+              <div class="version-detail"><strong id="version-current">v0.4.3</strong><span id="version-release-date">2026-10-28</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
             </div>
@@ -306,37 +306,69 @@
     </main>
 
     <section id="lyrics-overlay" class="lyrics-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="lyrics-heading" aria-hidden="true">
-      <button id="lyrics-backdrop" type="button" class="lyrics-backdrop" aria-label="关闭歌词"></button>
-      <div class="lyrics-sheet">
+      <div class="lyrics-sheet now-playing-screen">
         <header class="lyrics-sheet-header">
-          <div class="lyrics-sheet-heading">
-            <div class="panel-kicker">NOW PLAYING · LYRICS</div>
-            <h2 id="lyrics-heading">正在播放的歌词</h2>
+          <div class="now-playing-header-brand">
+            <span class="now-playing-brand-mark" aria-hidden="true">♫</span>
+            <div><div class="panel-kicker">LX MUSIC · NOW PLAYING</div><h2 id="lyrics-heading">沉浸聆听</h2></div>
           </div>
           <div class="lyrics-sheet-actions">
             <button id="lyrics-refresh-btn" type="button" class="lyrics-refresh" title="重新获取歌词">刷新歌词</button>
-            <button id="lyrics-close-btn" type="button" class="lyrics-close" aria-label="关闭歌词">✕</button>
+            <button id="lyrics-close-btn" type="button" class="lyrics-close" aria-label="返回音乐库">返回 <span aria-hidden="true">✕</span></button>
           </div>
         </header>
-        <div class="lyrics-song-head">
-          <div class="lyrics-art" aria-hidden="true">♫</div>
-          <div class="lyrics-song-meta">
-            <h3 id="lyrics-title">未选择歌曲</h3>
-            <div id="lyrics-status" class="lyrics-status" role="status">播放歌曲后显示歌词</div>
+        <div class="now-playing-body">
+          <aside class="now-playing-album-column">
+            <div class="now-playing-cover-box">
+              <img id="lyrics-cover-image" alt="当前歌曲专辑封面" loading="eager" decoding="async" hidden>
+              <div class="now-playing-cover-fallback" aria-hidden="true">♫</div>
+            </div>
+            <div class="lyrics-song-meta">
+              <h3 id="lyrics-title">未选择歌曲</h3>
+              <div id="now-playing-artist">—</div>
+              <div id="now-playing-album">专辑：—</div>
+              <div id="now-playing-platform">平台：—</div>
+              <div id="lyrics-status" class="lyrics-status" role="status">播放歌曲后显示同步歌词</div>
+            </div>
+          </aside>
+          <div class="now-playing-detail-column">
+            <div class="now-playing-tabs" role="tablist" aria-label="正在播放详情">
+              <button type="button" class="now-playing-tab active" id="lyrics-tab" role="tab" aria-selected="true" aria-controls="lyrics-view" data-detail-tab="lyrics">同步歌词</button>
+              <button type="button" class="now-playing-tab" id="comments-tab" role="tab" aria-selected="false" aria-controls="comments-view" data-detail-tab="comments">歌曲评论 <span id="comments-count" aria-hidden="true"></span></button>
+            </div>
+            <section id="lyrics-view" class="now-playing-tab-content" role="tabpanel" aria-labelledby="lyrics-tab">
+              <div class="lyrics-scroll" id="lyrics-scroll" tabindex="0" aria-label="逐行同步歌词">
+                <div id="lyrics-lines" class="lyrics-lines" aria-live="off">
+                  <div class="lyrics-empty">请选择歌曲开始播放</div>
+                </div>
+              </div>
+            </section>
+            <section id="comments-view" class="now-playing-tab-content hidden" role="tabpanel" aria-labelledby="comments-tab" hidden>
+              <div class="comments-title-row"><div><h3>听友评论</h3><p id="comments-source-note">仅展示当前歌曲对应平台的公开评论</p></div><button type="button" id="comments-refresh-btn" aria-label="重新加载评论">刷新</button></div>
+              <div id="comments-status" class="comments-status" role="status">选择歌曲后查看评论</div>
+              <div id="comments-list" class="comments-list" aria-live="polite"></div>
+              <div id="comments-link-wrap" class="comments-link-wrap" hidden><a id="comments-official-link" href="#" target="_blank" rel="noopener noreferrer">在网易云音乐查看这首歌的评论</a></div>
+            </section>
           </div>
         </div>
-        <div class="lyrics-scroll" id="lyrics-scroll" tabindex="0" aria-label="歌词内容，滚动查看">
-          <div id="lyrics-lines" class="lyrics-lines" aria-live="off">
-            <div class="lyrics-empty">请选择歌曲开始播放</div>
+        <footer class="now-playing-transport" aria-label="全屏播放控制">
+          <div class="now-playing-transport-buttons">
+            <button type="button" id="detail-prev-btn" aria-label="上一首" title="上一首"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5v14M18 5 8 12l10 7V5Z" fill="currentColor"/></svg></button>
+            <button type="button" id="detail-toggle-btn" class="detail-main-toggle" aria-label="播放" title="播放"><svg class="detail-play-icon" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 4 13 8-13 8Z" fill="currentColor"/></svg><svg class="detail-pause-icon" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true" hidden><rect x="7" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/></svg></button>
+            <button type="button" id="detail-next-btn" aria-label="下一首" title="下一首"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5v14M6 5l10 7-10 7V5Z" fill="currentColor"/></svg></button>
           </div>
-        </div>
-        <footer class="lyrics-sheet-footer">歌词随音乐进度同步 · 仅展示当前歌曲可用内容</footer>
+          <div class="now-playing-timeline">
+            <span id="detail-current-time">0:00</span>
+            <input id="detail-seek" type="range" min="0" max="1000" value="0" step="1" disabled aria-label="调整播放进度">
+            <span id="detail-duration">0:00</span>
+          </div>
+        </footer>
       </div>
     </section>
 
     <footer class="player-bar">
       <div class="player-song">
-        <div class="player-art">♪</div>
+        <button id="player-cover-button" type="button" class="player-art" aria-label="打开正在播放的全屏歌词和评论" aria-controls="lyrics-overlay" aria-expanded="false" title="打开正在播放"><img id="player-cover-image" alt="" loading="eager" decoding="async" hidden><span class="player-cover-fallback" aria-hidden="true">♫</span></button>
         <div class="player-meta">
           <div id="player-title">未播放</div>
           <div id="player-artist">—</div>
@@ -365,7 +397,7 @@
           <button id="next-track-btn" type="button" class="player-icon-btn" title="下一首" aria-label="下一首">
             <svg viewBox="0 0 24 24" width="23" height="23" aria-hidden="true"><path d="M19 5v14M6 5l10 7-10 7V5Z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>
           </button>
-          <button id="open-lyrics-btn" type="button" class="player-icon-btn player-lyrics-toggle" aria-label="打开歌词界面" aria-controls="lyrics-overlay" aria-expanded="false" title="查看同步歌词">词</button>
+          
         </div>
         <div class="player-timeline" aria-label="播放进度调整">
           <span id="player-current-time" class="player-time" aria-live="off">00:00</span>
@@ -382,7 +414,7 @@
           <button id="player-volume-btn" type="button" class="player-icon-btn player-volume-btn" aria-label="静音" title="静音">♫</button>
           <input id="player-volume" type="range" min="0" max="100" step="1" value="80" aria-label="音量">
         </div>
-        <button id="player-lyric" type="button" class="player-lyric" aria-label="打开歌词界面" title="点击查看完整歌词">歌词：—</button>
+        <span id="player-lyric" class="player-lyric" aria-live="off">歌词：—</span>
       </div>
       <div class="player-status">
         <span id="bottom-play-status">就绪</span>
@@ -396,13 +428,13 @@
   <script src="src/source-transpiler-modern.js"></script>
   <script src="src/sha1.js"></script>
   <script src="src/play-settings.js"></script>
-  <script src="src/music-search.js?v=0.4.1"></script>
+  <script src="src/music-search.js?v=0.4.3"></script>
   <script src="src/lx-runtime.js"></script>
   <script src="src/source-manager.js?v=0.4.1"></script>
   <script src="src/music-library.js?v=0.4.1"></script>
   <script src="src/music-lyrics.js?v=0.4.2"></script>
   <script src="src/player-controls.js"></script>
-  <script src="src/app.js?v=0.4.2"></script>
+  <script src="src/app.js?v=0.4.3"></script>
   <script>
   (function (global) {
     'use strict';
@@ -1108,6 +1140,7 @@
     };
   })(window);
   </script>
-  <script type="module" src="src/modern-ui.js?v=0.4.2"></script>
+  <script type="module" src="src/modern-ui.js?v=0.4.3"></script>
+  <script type="module" src="src/now-playing-experience.js?v=0.4.3"></script>
 </body>
 </html>
