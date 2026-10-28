@@ -12,6 +12,9 @@
   var lyricsActiveIndex = -1;
   var selectedChannel = null;
   var playbackState = null;
+  // Keep the most recently selected track even when a strict quality check
+  // rejects playback. User may change the format and retry that same song.
+  var lastRequestedPlayback = null;
   var playlistPlayback = null;
   var shuffleHistory = [];
   var shuffleCursor = -1;
@@ -1659,12 +1662,19 @@
   }
 
   function startPlayback(music, source) {
+    lastRequestedPlayback = {music: music, source: source};
     var active = global.LXSourceManager.getActive();
     // The platform search and its fallback resolver work independently of
     // LX source bootstrap. Do not block a real user gesture on old Via.
     // A new click owns a new deadline; the previous track must not be able
     // to time out and overwrite its status.
     clearMiguPlaybackDeadline(playbackState);
+    // Invalidate any earlier media/resolver callbacks BEFORE validation.
+    // A new high-quality request can be unsupported: its error must not be
+    // overwritten by the previous song's late "128k playing" confirmation.
+    playbackToken += 1;
+    playbackState = null;
+    updateExternalPlayerUrl('');
     var audio = document.getElementById('audio');
     if (audio) {
       audio.pause();
@@ -1742,8 +1752,6 @@
       if (songArtist) songArtist.textContent = String(music && (music.singer || music.artist) || '—');
       syncNativeTransportIcon(false);
     }
-    playbackToken += 1;
-    updateExternalPlayerUrl('');
     var token = playbackToken;
     playbackState = {
       token: token,
@@ -2628,8 +2636,10 @@
       testMusic(music, true);
     },
     replayCurrentWithSettings: function(){
-      if (!playbackState || !playbackState.music)return false;
-      var music=playbackState.music,source=playbackState.source;
+      var current=lastRequestedPlayback||
+        (playbackState&&playbackState.music?{music:playbackState.music,source:playbackState.source}:null);
+      if(!current)return false;
+      var music=current.music,source=current.source;
       selectedChannel=source;
       renderChannelSelectors();
       startPlayback(music,source);
