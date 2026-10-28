@@ -14,6 +14,7 @@ on:
       - "scripts/test-music-library.mjs"
       - "scripts/test-playlist-playall-browser.mjs"
       - "scripts/test-playlist-infinite-browser.mjs"
+      - "scripts/test-mobile-interaction-qa-browser.mjs"
       - "functions/api/netease-playlists.js"
       - "scripts/test-playlist-browser.mjs"
       - "scripts/test-netease-playlists-api.mjs"

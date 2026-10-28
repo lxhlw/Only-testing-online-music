@@ -15,6 +15,38 @@ async function getJson(path,query,signal){
  text=text.trim().replace(/^callback\(/,'').replace(/\);?$/,'');
  return JSON.parse(text);
 }
+// QQ's category directory cannot search by keyword. Use the separate
+// public SearchCgiService playlist search_type=3 instead of returning 422.
+async function searchPlaylists(term,offset,limit,signal){
+ const payload={'music.search.SearchCgiService':{
+  module:'music.search.SearchCgiService',method:'DoSearchForQQMusicDesktop',
+  param:{search_type:3,query:term,page_num:Math.floor(offset/limit)+1,num_per_page:limit}
+ }};
+ const res=await fetch('https://u.y.qq.com/cgi-bin/musicu.fcg',{
+  method:'POST',headers:{'Accept':'application/json','Content-Type':'application/json',
+   'Referer':'https://y.qq.com/','User-Agent':'Mozilla/5.0'},
+  body:JSON.stringify(payload),signal
+ });
+ if(!res.ok)throw Error('QQ search HTTP '+res.status);
+ const raw=await res.text();
+ if(raw.length>1300000)throw Error('QQ search response too large');
+ const data=JSON.parse(raw);
+ const answer=data?.['music.search.SearchCgiService']||data?.req_1||{};
+ if(data?.code!==0||answer?.code!==0)throw Error('QQ search service unavailable');
+ const body=answer?.data?.body||{};
+ const block=body.songlist||body.playlist||{};
+ if(!Array.isArray(block.list))throw Error('QQ playlist search response unavailable');
+ const list=block.list.map(x=>({
+  id:safe(x.dissid||x.tid||x.id,18),
+  name:safe(x.dissname||x.title||x.name,160),
+  creator:safe(x.creator?.name||x.creator?.nick||x.nickname||x.creator||'',80),
+  coverImgUrl:safe(x.imgurl||x.logo||x.cover||x.coverImgUrl||'',300),
+  trackCount:Number(x.song_count||x.songnum||x.song_cnt||x.songCount)||0,
+  description:'QQ音乐公开歌单',source:'tx'
+ })).filter(x=>/^[0-9]{1,18}$/.test(x.id)&&x.name);
+ const total=Number(block.totalnum||block.total||block.sum||block.total_count)||list.length;
+ return {result:{playlists:list,playlistCount:total},source:'tx'};
+}
 function normalizeTrack(src){
  const s=src?.data||src?.songInfo||src||{};
  const singers=Array.isArray(s.singer)?s.singer:Array.isArray(s.singers)?s.singers:[];
@@ -56,6 +88,7 @@ export async function onRequestGet({request}){
      return response({source:'tx',songs,total:Number(data?.total_song_num)||songs.length});
    }
    if(kind==='playlist'&&!id){
+     if(term)return response(await searchPlaylists(term,offset,limit,controller.signal));
      const data=await getJson('splcloud/fcgi-bin/fcg_get_diss_by_tag.fcg',{
        ...qqDefaults,picmid:'1',categoryId:'10000000',sortId:'5',sin:offset,ein:offset+limit-1
      },controller.signal);
@@ -67,9 +100,6 @@ export async function onRequestGet({request}){
        description:'QQ音乐公开歌单',source:'tx'
      })).filter(x=>x.id&&x.name);
      if(!list.length)throw Error('QQ playlist directory returned no data');
-     // Directory category endpoint has no reliable keyword parameter.
-     // Do not lie about a successful keyword search.
-     if(term)return response({error:'QQ 歌单目录暂不支持关键词搜索，请浏览推荐歌单'},422);
      return response({result:{playlists:list,playlistCount:Number(data?.data?.sum)||list.length},source:'tx'});
    }
    const data=await getJson('qzone/fcg-bin/fcg_ucc_getcdinfo_byids_cp.fcg',{
