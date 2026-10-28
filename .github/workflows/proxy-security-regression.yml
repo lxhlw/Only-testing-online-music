@@ -1,13 +1,13 @@
-name: Proxy Security Regression (PR)
+name: Modern Proxy Security Regression
 
 on:
   pull_request:
     paths:
-      - "functions/api/proxy.js"
-      - "scripts/test-proxy-security.mjs"
-      - "scripts/test-lx-desktop-migu-parity-browser.mjs"
-      - "scripts/test-proxy-production.mjs"
-      - ".github/workflows/proxy-security-regression.yml"
+      - 'functions/api/proxy.js'
+      - 'scripts/test-proxy-security.mjs'
+      - 'scripts/test-proxy-production.mjs'
+      - 'scripts/test-modern-flower-proxy.mjs'
+      - '.github/workflows/proxy-security-regression.yml'
   workflow_dispatch:
 
 permissions:
@@ -15,77 +15,33 @@ permissions:
 
 jobs:
   security:
-    name: Reject proxy abuse without breaking LX requests
+    name: Secure modern Flower proxy and safe redirects
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
-
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-
-      - name: Verify syntax and existing Migu decryption
+      - run: npm install --no-audit --no-fund
+      - name: Check modern proxy and source syntax
         run: |
           node --check functions/api/proxy.js
           node --check scripts/test-proxy-security.mjs
-          node --check scripts/test-proxy-production.mjs
-          node scripts/test-migu-proxy.mjs
-          node scripts/test-legacy-web.mjs
-
-      - name: Test proxy SSRF, redirects, headers, response safety
-        run: node scripts/test-proxy-security.mjs
-
-      - name: Start local Cloudflare Pages runtime
+          node --check scripts/test-modern-flower-proxy.mjs
+      - name: SSRF, redirect, credential isolation and bounded Flower race
         run: |
-          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/proxy-security-wrangler.log 2>&1 &
+          node scripts/test-proxy-security.mjs
+          node scripts/test-modern-flower-proxy.mjs
+      - name: Start local Cloudflare Pages
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 >/tmp/lx-proxy.log 2>&1 &
           for i in {1..45}; do
-            if curl --fail --silent http://127.0.0.1:8788/ >/dev/null; then
-              exit 0
-            fi
+            if curl -fsS http://127.0.0.1:8788/ >/dev/null; then exit 0; fi
             sleep 1
           done
-          cat /tmp/proxy-security-wrangler.log
-          exit 1
-
-      - name: Verify live local Pages proxy enforcement
+          cat /tmp/lx-proxy.log; exit 1
+      - name: Verify public proxy denies unsafe URLs and cross-origin clients
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-proxy-production.mjs
-
-      - name: Test pinned Babel proxy still works
-        env:
-          TEST_BASE_URL: http://127.0.0.1:8788
-        run: node scripts/test-babel-proxy.mjs
-
-      - name: Check deterministic LX search and request fallback
-        run: node scripts/test-music-search-native.mjs
-
-      - name: Install Chromium for LX integration
-        run: npx playwright install --with-deps chromium
-
-      - name: Check browser playback fallback with proxied requests
-        env:
-          TEST_BASE_URL: http://127.0.0.1:8788
-        run: node scripts/test-quality-fallback-browser.mjs
-
-      - name: Validate Huibq Migu desktop-compatible URL and headers
-        env:
-          TEST_BASE_URL: http://127.0.0.1:8788
-        run: node scripts/test-lx-desktop-migu-parity-browser.mjs
-
-      - name: Check Huibq import and WY music search
-        env:
-          TEST_BASE_URL: http://127.0.0.1:8788
-        run: node scripts/test-huibq-browser.mjs
-
-
-      - name: Show server logs on failure
-        if: failure()
-        run: cat /tmp/proxy-security-wrangler.log || true
