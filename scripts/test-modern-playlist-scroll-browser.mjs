@@ -69,10 +69,18 @@ try{
       assert.ok(after.stack.top>=after.topbar.bottom-3,'Search must not hide behind header')
       assert.ok(after.filter.bottom<=after.player.top-10,
         'Playlist filters must not overlap the floating player')
-      assert.ok(after.filter.top>=after.stack.bottom-3,
-        'Playlist categories must remain below the search and status')
-      assert.ok(await page.locator('#view-playlist .category-pill.active').isVisible())
-      assert.ok(await page.locator('#view-playlist .platform-pill.active').isVisible())
+      assert.equal(await page.locator('#playlist-filter-stack').isVisible(),false,
+        'Category filters must not appear while browsing one playlist')
+      assert.equal(await page.locator('#global-search-input').isVisible(),false,
+        'Playlist detail must not expose an ineffective global search')
+      await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}))
+      await page.locator('#playlist-back-btn').click()
+      await page.waitForFunction(()=>!document.querySelector('#view-playlist').classList.contains('is-detail-open'))
+      assert.equal(await page.locator('#playlist-filter-stack').isVisible(),true,
+        'Returning to discovery must restore filters')
+      assert.equal(await page.locator('#view-playlist .category-pill.active').isVisible(),true)
+      assert.equal(await page.locator('.playlist-service-label').isVisible(),true,
+        'Single available playlist platform is a label, not a fake toggle')
       assert.deepEqual(failures,[])
       console.log('PASS: modern playlist sticky navigation '+viewport.width+'px')
     }finally{await page.close()}

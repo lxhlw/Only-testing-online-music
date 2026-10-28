@@ -9,6 +9,7 @@
   var queueListEl, favoriteListEl, historyListEl;
   var lyricsStatusEl, lyricsTitleEl, lyricsLinesEl, lyricsRefreshBtn;
   var lyricsState = null;
+  var lyricsActiveIndex = -1;
   var selectedChannel = null;
   var playbackState = null;
   var playlistPlayback = null;
@@ -304,9 +305,10 @@
 
   function clearLyrics() {
     lyricsState = null;
-    if (lyricsTitleEl) lyricsTitleEl.innerHTML = '未选择歌曲';
-    if (lyricsLinesEl) lyricsLinesEl.innerHTML = '';
-    setLyricsStatus('播放支持歌词的 LX 音源后会自动尝试加载歌词。');
+    lyricsActiveIndex = -1;
+    if (lyricsTitleEl) lyricsTitleEl.textContent = '未选择歌曲';
+    if (lyricsLinesEl) lyricsLinesEl.innerHTML = '<div class="lyrics-empty">选择歌曲开始播放，歌词会自动载入</div>';
+    setLyricsStatus('播放歌曲后显示同步歌词');
   }
 
   function renderLyricsResult(music, result) {
@@ -317,6 +319,7 @@
 
     var normalized = global.LXMusicLyrics.normalize(result);
     var lines = global.LXMusicLyrics.parseLrc(normalized.lyric);
+    lyricsActiveIndex = -1;
     lyricsState = {
       musicKey: musicKey(music),
       music: music,
@@ -366,34 +369,63 @@
 
   function loadLyricsForState(state) {
     if (!state || !state.music) return;
-    if (!sourceSupportsAction(state.source, 'lyric')) {
-      setLyricsStatus('当前音源未声明 lyric 接口，跳过歌词请求。', 'warn');
-      return;
-    }
-
-    setLyricsStatus('正在加载歌词……');
-    global.LXSourceManager.requestAction(state.source, 'lyric', {
-      musicInfo: buildMusicInfo(state.music, state.source)
-    }, function (err, result) {
-      if (state.token !== playbackToken || !playbackState || musicKey(playbackState.music) !== musicKey(state.music)) return;
-      if (err) {
-        setLyricsStatus('歌词加载失败：' + escapeHtml(err.message || err), 'fail');
-        return;
+    var track=state.music;
+    var valid=function(){return !!(state.token===playbackToken &&
+      playbackState && musicKey(playbackState.music)===musicKey(track));};
+    if (lyricsTitleEl) lyricsTitleEl.textContent=String(track.name||'未知歌曲')+' · '+String(track.singer||'未知歌手');
+    if (lyricsLinesEl) lyricsLinesEl.innerHTML='<div class="lyrics-empty">正在获取歌词…</div>';
+    lyricsActiveIndex=-1;
+    setLyricsStatus('正在获取歌词…');
+    var fallback=function(previousError){
+      if(!valid())return;
+      // Never mix lyrics from a different platform or song. Official NetEase
+      // lyric ID lookup applies only to numeric NetEase track identifiers.
+      var rawId=track.lyricId||track.id||track.songId||track.songmid||'';
+      var id=String(rawId);
+      if(state.source!=='wy'||!/^[0-9]{1,20}$/.test(id)){
+        if(lyricsLinesEl)lyricsLinesEl.innerHTML='<div class="lyrics-empty">这首歌曲暂时没有可获取的歌词</div>';
+        setLyricsStatus('当前歌曲暂无可用歌词','warn');return;
       }
-      renderLyricsResult(state.music, result);
+      var controller=typeof AbortController==='function'?new AbortController():null;
+      var timer=global.setTimeout(function(){if(controller)controller.abort();},8500);
+      global.fetch('/api/netease-lyrics?id='+encodeURIComponent(id),
+        controller?{signal:controller.signal}:{})
+        .then(function(res){if(!res.ok)throw new Error('歌词服务暂不可用');return res.json();})
+        .then(function(data){
+          if(!valid())return;
+          renderLyricsResult(track,data);
+        })
+        .catch(function(){
+          if(!valid())return;
+          if(lyricsLinesEl)lyricsLinesEl.innerHTML='<div class="lyrics-empty">当前歌词暂不可用，你仍可以正常听歌</div>';
+          setLyricsStatus('暂时无法取得歌词，可点击「刷新歌词」重试','warn');
+        })
+        .finally(function(){global.clearTimeout(timer);});
+    };
+    if(!sourceSupportsAction(state.source,'lyric'))return fallback();
+    global.LXSourceManager.requestAction(state.source,'lyric',{
+      musicInfo:buildMusicInfo(track,state.source)
+    },function(err,result){
+      if(!valid())return;
+      if(err||!global.LXMusicLyrics.normalize(result).lyric){
+        fallback(err);return;
+      }
+      renderLyricsResult(track,result);
     });
   }
 
   function syncLyrics() {
     if (!lyricsState || !lyricsState.lines || !lyricsState.lines.length) return;
     var audio = document.getElementById('audio');
-    if (!audio) return;
-    var activeIndex = global.LXMusicLyrics.getActiveLine(lyricsState.lines, audio.currentTime);
-    var children = lyricsLinesEl ? lyricsLinesEl.childNodes : [];
-    for (var i = 0; i < children.length; i += 1) {
-      if (!children[i] || !children[i].getAttribute) continue;
-      var index = Number(children[i].getAttribute('data-lyric-index'));
-      children[i].className = 'lyrics-line' + (index === activeIndex ? ' active' : '');
+    if (!audio || !lyricsLinesEl) return;
+    var index = global.LXMusicLyrics.getActiveLine(lyricsState.lines,audio.currentTime);
+    if(index===lyricsActiveIndex)return; // Only touch the two changed DOM nodes.
+    var oldLine=lyricsLinesEl.querySelector('.lyrics-line.active');
+    if(oldLine)oldLine.classList.remove('active');
+    lyricsActiveIndex=index;
+    if(index>=0){
+      var newLine=lyricsLinesEl.querySelector('[data-lyric-index="'+index+'"]');
+      if(newLine)newLine.classList.add('active');
     }
   }
 
@@ -1597,6 +1629,9 @@
       try { if (typeof audio.load === 'function') audio.load(); } catch (e) {}
     }
 
+    // The lyrics panel is independent of the route: stale lyrics must never
+    // remain visible when the listener selects another track.
+    clearLyrics();
     // Keep the visible playlist selection synchronized with the current
     // player when a row, Next, Previous or audio-ended starts a new track.
     if (global.OnlyTestingPlaylistUI &&
@@ -2199,6 +2234,9 @@
       audio.ontimeupdate = function () {
         syncLyrics();
       };
+      // The page's legacy inline script may replace ontimeupdate later;
+      // keep synchronization attached as a durable event listener.
+      audio.addEventListener('timeupdate',syncLyrics);
     }
 
     document.getElementById('verified-install-btn').onclick = function () {
