@@ -96,9 +96,13 @@ async function test(viewport, legacy){
   }
   await assertSingleIcon('播放')
   await page.evaluate(()=>{
-   window.LXSourceManager.getActive=function(){return null}
-   window.LXMusicSearch.resolveMusicUrl=function(source,info,quality,cb){
-     cb(null,{url:'https://player-mock.invalid/audio.mp3',provider:'netease-native'})
+   // Modern web uses Flower's requestAction exclusively, never the
+   // legacy native fallback resolver. Simulate that exact source contract.
+   window.LXSourceManager.getActive=function(){
+     return {inited:true,runtime:{__debugRequests:[]},sources:{wy:{actions:['musicUrl']}}}
+   }
+   window.LXSourceManager.requestAction=function(source,action,params,cb){
+     cb(null,{url:'https://player-mock.invalid/audio.mp3'})
    }
    const audio=document.getElementById('audio')
    window.__simulatedTime=1
