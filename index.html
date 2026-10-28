@@ -817,10 +817,19 @@
         }
         var playlist=data&&data.playlist?data.playlist:item;
         var pageSongs=data&&data.songs instanceof Array?data.songs:[];
-        playlistDetailSongs=append?playlistDetailSongs.concat(pageSongs):pageSongs;
+        if(append){
+          var known={};
+          for(var k=0;k<playlistDetailSongs.length;k++)known[playlistSongKey(playlistDetailSongs[k])]=true;
+          for(var j=0;j<pageSongs.length;j++){
+            var songKey=playlistSongKey(pageSongs[j]);
+            if(songKey&&known[songKey])continue;
+            playlistDetailSongs.push(pageSongs[j]);known[songKey]=true;
+          }
+        }else playlistDetailSongs=pageSongs;
         playlistNextOffset=Number(data&&data.nextOffset);
         if(!isFinite(playlistNextOffset)||playlistNextOffset<=offset)playlistNextOffset=offset+50;
-        playlistHasMore=Boolean(data&&data.hasMore)&&pageSongs.length>0;
+        playlistHasMore=Boolean(data&&data.hasMore)&&pageSongs.length>0&&
+          (!append||playlistDetailSongs.length>offset);
         el('playlist-detail-name').innerHTML=escapeHtml(playlist.name||item.name||'未命名歌单');
         el('playlist-detail-creator').innerHTML='创建者：'+escapeHtml(playlist.creator||item.creator||'—');
         el('playlist-detail-count').innerHTML=escapeHtml((playlist.trackCount||playlistDetailSongs.length)+' 首歌曲');
@@ -1270,7 +1279,9 @@
     var mytabs=all('.my-tab');
     for(var m=0;m<mytabs.length;m+=1) mytabs[m].onclick=(function(btn){return function(){myTab=btn.getAttribute('data-my-tab');renderMyList();};})(mytabs[m]);
     el('playlist-load-more-btn').onclick=function(){
-      if(playlistDetailItem&&playlistHasMore)loadPlaylistPage(playlistDetailItem,true);
+      if(playlistDetailItem&&!playlistPageLoading){
+        loadPlaylistPage(playlistDetailItem,playlistDetailSongs.length>0);
+      }
     };
     var qualityInput=el('inline-quality');
     qualityInput.onchange=function(){
