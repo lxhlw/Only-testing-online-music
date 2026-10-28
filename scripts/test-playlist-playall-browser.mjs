@@ -5,7 +5,7 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:8788'
 const browser = await chromium.launch({ headless: true })
 const page = await browser.newPage({
   viewport: { width: 360, height: 640 },
-  userAgent: 'Mozilla/5.0 (Linux; Android 4.4.2; Via) AppleWebKit/537.36 Mobile Safari/537.36'
+  userAgent: 'Mozilla/5.0 (Linux; Android 16; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0 Mobile Safari/537.36'
 })
 const errors = []
 page.on('pageerror', e => errors.push(String(e)))
@@ -55,11 +55,13 @@ await page.route('https://playlist-audio.invalid/**', route =>
 try {
   await page.goto(base + '/', { waitUntil: 'domcontentloaded' })
   await page.evaluate(() => {
-    // The page's native same-platform resolver can be deterministically
-    // exercised without depending on current third-party music availability.
-    window.LXSourceManager.getActive = function () { return null }
-    window.LXMusicSearch.resolveMusicUrl = function (source, info, quality, cb) {
-      cb(null, { url: 'https://playlist-audio.invalid/song.mp3', provider: 'netease-native' })
+    // Play All now uses Flower's single musicUrl request, not the retired
+    // native fallback. Keep the upstream deterministic for queue semantics.
+    window.LXSourceManager.getActive = function () {
+      return { inited: true, runtime: { __debugRequests: [] }, sources: { wy: { actions: ['musicUrl'] } } }
+    }
+    window.LXSourceManager.requestAction = function (source, action, payload, cb) {
+      cb(null, { url: 'https://playlist-audio.invalid/song.mp3' })
     }
     const audio = document.getElementById('audio')
     audio.load = function () {}
@@ -137,7 +139,7 @@ try {
   })
   assert.equal(await page.locator('#player-title').textContent(), 'Song 101')
   const finalQueue = await page.evaluate(() => window.LXMusicLibrary.snapshot().queue)
-  assert.equal(finalQueue.length, 100, 'Old Via devices should retain the most useful 100-track window')
+  assert.equal(finalQueue.length, 100, 'Queue must retain the most useful 100-track window')
   assert.ok(finalQueue.some(track => track.id === '101'), 'Rolling queue must include track 101')
   await page.locator('#prev-track-btn').click()
   assert.equal(await page.locator('#player-title').textContent(), 'Song 100')
@@ -183,10 +185,10 @@ try {
       artistDisplay: getComputedStyle(row.querySelector('.playlist-song-artist')).display
     }
   })
-  assert.ok(mobileLayout.actionsRight <= mobileLayout.viewportWidth + 1, 'All playlist controls must fit old mobile screens')
+  assert.ok(mobileLayout.actionsRight <= mobileLayout.viewportWidth + 1, 'All playlist controls must fit modern mobile screens')
   assert.ok(mobileLayout.titleRight <= mobileLayout.actionsRight, 'Song title must not overlap buttons')
   assert.equal(mobileLayout.artistDisplay, 'none', 'Small screens hide secondary columns for uncluttered touch targets')
-  console.log('PASS: Via mobile playlist controls remain within viewport')
+  console.log('PASS: modern mobile playlist controls remain within viewport')
 
   await page.setViewportSize({ width: 1320, height: 850 })
   const desktopLayout = await page.evaluate(() => {
