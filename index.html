@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#080e16">
+  <meta name="theme-color" content="#f4f8f2">
   <meta name="description" content="LX Music — 轻盈流畅的现代网页音乐播放器。">
   <script>document.documentElement.classList.add("modern-web");</script>
-  <title>LX Music — 沉浸式在线音乐</title>
-  <link rel="stylesheet" href="styles.css?v=0.3.0">
-  <link rel="stylesheet" href="modern.css?v=0.3.0">
+  <title>LX Music — 轻盈护眼音乐空间</title>
+  <link rel="stylesheet" href="styles.css?v=0.4.0">
+  <link rel="stylesheet" href="modern.css?v=0.4.0">
 </head>
 <body>
   <div id="app">
@@ -16,10 +16,10 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">FLUID WEB EXPERIENCE · <span id="app-version">v0.3.0</span></div>
+          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.0</span></div>
         </div>
         <div class="topbar-actions">
-          <span class="topbar-chip">PURE WEB · 轻盈畅听</span>
+          <span class="topbar-chip">护眼淡绿模式</span>
           <span id="top-source-label" class="topbar-chip top-source-indicator" title="当前音源：未选择">当前音源：未选择</span>
         </div>
       </div>
@@ -27,7 +27,7 @@
 
     <main class="lx-layout">
       <aside class="nav-rail" aria-label="主导航">
-        <div class="nav-brand">DISCOVER / 探索</div>
+        <div class="nav-brand">MUSIC / 音乐空间</div>
         <nav class="main-nav">
           <a class="nav-item active" href="#search" data-view="search" onclick="return window.OnlyTestingNavigate ? window.OnlyTestingNavigate('search', event) : true;"><span class="nav-symbol">⌕</span><span>搜索</span></a>
           <a class="nav-item" href="#playlist" data-view="playlist" onclick="return window.OnlyTestingNavigate ? window.OnlyTestingNavigate('playlist', event) : true;"><span class="nav-symbol">▤</span><span>歌单</span></a>
@@ -54,7 +54,7 @@
           <section id="view-search" class="view-panel active">
             <div class="view-header">
               <div>
-                <div class="panel-kicker">SEARCH</div>
+                <div class="panel-kicker">DISCOVER MUSIC</div>
                 <h1>搜索</h1>
               </div>
               <div class="view-tabs">
@@ -74,6 +74,19 @@
               </div>
               <div class="results-head"><strong>歌曲</strong><span class="muted">按当前渠道搜索并播放</span></div>
               <div id="search-results" class="results-list" aria-live="polite"></div>
+              <div class="search-inspiration" aria-label="推荐搜索">
+                <div class="search-inspiration-icon" aria-hidden="true">♫</div>
+                <h2>今天想听什么？</h2>
+                <p>搜索歌曲、歌手，或者从熟悉的旋律开始。</p>
+                <div class="search-suggestions">
+                  <button type="button" data-suggest-query="晴天">晴天</button>
+                  <button type="button" data-suggest-query="起风了">起风了</button>
+                  <button type="button" data-suggest-query="稻香">稻香</button>
+                  <button type="button" data-suggest-query="陈奕迅">陈奕迅</button>
+                  <button type="button" data-suggest-query="轻音乐">轻音乐</button>
+                </div>
+                <div class="search-inspiration-foot">支持多平台搜索 · 野花音源解析播放</div>
+              </div>
             </div>
 
             <div id="search-playlist-view" class="secondary-view hidden">
@@ -81,8 +94,8 @@
                 <span>歌单渠道</span>
                 <div class="platform-pills">
                   <button type="button" class="platform-pill active" data-playlist-platform="wy">网易云音乐</button>
-                  <button type="button" class="platform-pill disabled" disabled>QQ音乐</button>
-                  <button type="button" class="platform-pill disabled" disabled>酷狗音乐</button>
+                  
+                  
                 </div>
               </div>
               <div class="category-row">
@@ -100,7 +113,7 @@
 
           <section id="view-playlist" class="view-panel">
             <div class="view-header">
-              <div><div class="panel-kicker">PLAYLISTS</div><h1>歌单</h1></div>
+              <div><div class="panel-kicker">YOUR PLAYLISTS</div><h1>歌单</h1></div>
               <span class="view-note">歌单分类 · 平台选择 · 歌单收藏</span>
             </div>
             <div id="playlist-filter-stack" class="playlist-filter-stack">
@@ -108,8 +121,8 @@
               <span>选择渠道</span>
               <div class="platform-pills">
                 <button type="button" class="platform-pill active" data-playlist-platform="wy">网易云音乐</button>
-                <button type="button" class="platform-pill disabled" disabled>QQ音乐</button>
-                <button type="button" class="platform-pill disabled" disabled>酷狗音乐</button>
+                
+                
               </div>
             </div>
             <div class="category-row">
@@ -160,7 +173,7 @@
 
           <section id="view-ranking" class="view-panel">
             <div class="view-header">
-              <div><div class="panel-kicker">RANKING</div><h1>排行榜</h1></div>
+              <div><div class="panel-kicker">TOP CHARTS</div><h1>排行榜</h1></div>
               <span class="view-note">选择榜单后显示歌曲</span>
             </div>
             <div class="ranking-layout">
@@ -177,7 +190,7 @@
 
           <section id="view-mylist" class="view-panel">
             <div class="view-header">
-              <div><div class="panel-kicker">MY MUSIC</div><h1>我的列表</h1></div>
+              <div><div class="panel-kicker">MUSIC LIBRARY</div><h1>我的列表</h1></div>
             </div>
             <div class="my-tabs">
               <button type="button" class="my-tab active" data-my-tab="history">我的试听列表</button>
@@ -204,7 +217,7 @@
 
           <section id="view-settings" class="view-panel">
             <div class="view-header">
-              <div><div class="panel-kicker">SETTINGS</div><h1>设置</h1></div>
+              <div><div class="panel-kicker">PREFERENCES</div><h1>设置</h1></div>
               <span class="view-note">以流畅性为优先的播放体验</span>
             </div>
 
@@ -223,10 +236,7 @@
                   <option value="flac32bit">FLAC 32bit</option>
                 </select>
               </div>
-              <div class="setting-row-inline">
-                <div><strong>备用音质</strong><p>极速网页模式每次只请求一种音质，不自动切换其他解析服务。</p></div>
-                <input id="inline-fallback" type="checkbox">
-              </div>
+              <input id="inline-fallback" type="checkbox" hidden aria-hidden="true">
               <div class="setting-actions">
                 <button id="inline-save-settings" type="button">保存设置</button>
                 <button id="inline-reset-settings" type="button" class="secondary">恢复默认</button>
@@ -252,7 +262,7 @@
 
             <div class="settings-section">
               <h2>版本信息</h2>
-              <div class="version-detail"><strong id="version-current">v0.3.0</strong><span id="version-release-date">2026-10-28</span></div>
+              <div class="version-detail"><strong id="version-current">v0.4.0</strong><span id="version-release-date">2026-10-28</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
             </div>

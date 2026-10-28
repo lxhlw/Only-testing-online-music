@@ -6,6 +6,21 @@ const $=id=>document.getElementById(id);
 const status=$('status'), audio=$('audio');
 const input=$('global-search-input');
 const searchBtn=$('global-search-btn');
+const nav=document.querySelector('.main-nav');
+const syncActiveView=()=>{
+  const active=nav?.querySelector('.nav-item.active');
+  root.dataset.activeView=active?.dataset.view||'search';
+};
+syncActiveView();
+if(nav)new MutationObserver(()=>schedule(syncActiveView))
+  .observe(nav,{subtree:true,attributes:true,attributeFilter:['class']});
+const moveToSearch=()=>{
+  if(root.dataset.activeView!=='search'){
+    nav?.querySelector('[data-view="search"]')?.click();
+    syncActiveView();
+  }
+  input?.focus();
+};
 const title=$('player-title');
 const source=$('top-source-label');
 const results=$('search-results');
@@ -67,10 +82,10 @@ document.addEventListener('keydown',ev=>{
   const editing=ev.target instanceof HTMLElement &&
     (ev.target.matches('input,textarea,select')||ev.target.isContentEditable);
   if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==='k'){
-    ev.preventDefault();input?.focus();input?.select();return;
+    ev.preventDefault();moveToSearch();input?.select();return;
   }
   if(!editing&&ev.key==='/'){
-    ev.preventDefault();input?.focus();return;
+    ev.preventDefault();moveToSearch();return;
   }
   if(!editing&&ev.code==='Space'&&!ev.repeat){
     const current=window.OnlyTestingMusicApp;
@@ -128,5 +143,17 @@ if('mediaSession' in navigator){
   if(title)new MutationObserver(()=>schedule(updateMetadata))
     .observe(title,{childList:true,characterData:true,subtree:true});
 }
+
+/* Popular search prompts are user-triggered shortcuts, not speculative
+   search results. They reuse the same app search event and network request. */
+document.querySelectorAll('[data-suggest-query]').forEach(button=>{
+  button.addEventListener('click',()=>{
+    if(!input||!searchBtn)return;
+    moveToSearch();
+    input.value=button.dataset.suggestQuery||'';
+    searchBtn.click();
+  });
+});
+
 syncStatus();
 updateNowPlaying();

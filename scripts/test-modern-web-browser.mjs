@@ -54,16 +54,38 @@ try {
   await page.goto(url,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.LXSourceManager?.getActive()?.inited,{timeout:14000});
   assert.equal(await page.locator('.brand').textContent(),'LX Music Web');
-  assert.equal(await page.locator('#app-version').textContent(),'v0.3.0');
+  assert.equal(await page.locator('#app-version').textContent(),'v0.4.0');
   assert.equal(await page.locator('#top-source-label').textContent(),'当前音源：野花🌷');
   assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(x=>x.name)),['野花🌷']);
   assert.equal(await page.locator('#legacy-media-panel').count(),0);
   await page.locator('[data-view="settings"]').click();
   assert.equal(await page.locator('#source-url').isVisible(),false);
+  const lightTheme=await page.evaluate(()=>{
+    const css=selector=>getComputedStyle(document.querySelector(selector));
+    const contrast=(a,b)=>{
+      const toLinear=n=>{n/=255;return n<=.04045?n/12.92:((n+.055)/1.055)**2.4};
+      const luminance=s=>{const rgb=(s.match(/[0-9]+(?:[.][0-9]+)?/g)||[]).slice(0,3).map(Number);return rgb.length===3?.2126*toLinear(rgb[0])+.7152*toLinear(rgb[1])+.0722*toLinear(rgb[2]):0};
+      const x=luminance(a),y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);
+    };
+    return {
+      main:css('.main-stage').backgroundColor,
+      sidebar:css('.nav-rail').backgroundColor,
+      settings:css('.settings-section').backgroundColor,
+      headingContrast:contrast(css('.view-header h1').color,css('.main-stage').backgroundColor)
+    };
+  });
+  assert.equal(lightTheme.main,'rgb(244, 248, 242)','Main background must stay eye-care mint');
+  assert.equal(lightTheme.sidebar,'rgb(234, 244, 233)','Navigation must be pale green, not charcoal gray');
+  assert.equal(lightTheme.settings,'rgb(255, 255, 255)','Settings cards must remain crisp white');
+  assert.ok(lightTheme.headingContrast>=7,'Headings must be readable with high contrast: '+JSON.stringify(lightTheme));
+  await page.waitForFunction(()=>getComputedStyle(document.querySelector('.global-search-bar')).display==='none');
+
   assert.equal(await page.locator('#restore-default-sources-btn').isVisible(),true);
   await page.locator('[data-view="search"]').click();
+  assert.equal(await page.locator('.search-inspiration').isVisible(),true,'Search landing must not be a blank canvas');
+  assert.equal(await page.locator('.search-suggestions button').count(),5);
   const style=await page.locator('body').evaluate(el=>getComputedStyle(el).backgroundColor);
-  assert.equal(style,'rgb(8, 14, 22)');
+  assert.equal(style,'rgb(244, 248, 242)');
   await page.evaluate(()=>{
     window.LXMusicSearch.resolveMusicUrl=()=>{throw new Error('legacy waterfall invoked')};
     window.LXMusicSearch.resolveMusicUrlFast=()=>{throw new Error('legacy provider race invoked')};

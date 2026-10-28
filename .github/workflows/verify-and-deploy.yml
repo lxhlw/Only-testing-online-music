@@ -88,7 +88,7 @@ jobs:
         run: |
           set -euo pipefail
           for i in {1..12}; do
-            if curl -fsSL 'https://only-testing-online-music.pages.dev/?v=0.3.0' | grep -q 'modern.css'; then
+            if curl -fsSL 'https://only-testing-online-music.pages.dev/?v=0.4.0' | grep -q 'modern.css'; then
               break
             fi
             sleep 5
