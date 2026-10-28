@@ -378,100 +378,35 @@
 
     function el(id){ return document.getElementById(id); }
 
-    // The sidebar never scrolls away. The search/status and channel/category
-    // bars are CSS-sticky on modern browsers. Android 4.4 WebView lacks
-    // reliable sticky support, so only that legacy case uses a small fixed-
-    // positioning fallback with placeholders to avoid jumping content.
-    // Browser sticky layers leave their containing block at the last row,
-    // especially on narrow screens. Use one consistent fixed+spacer approach
-    // for every browser, so scrolling the playlist cannot dismiss controls.
-    var stickyLegacy = true;
+
+    // Native position:sticky keeps navigation in the scroll flow. The old
+    // Android fixed-position/spacer fallback caused overflow and scroll jumps.
     var stickyTopNode = document.getElementById('persistent-top-stack');
     var stickyFilterNode = document.getElementById('playlist-filter-stack');
-    var stickyTopPlaceholder = null;
-    var stickyFilterPlaceholder = null;
-    var stickyFilterFixed = false;
     var stickyLayoutPending = false;
 
-    function stickyPlaceholder(node){
-      var placeholder=document.createElement('div');
-      placeholder.className='legacy-sticky-spacer';
-      placeholder.style.display='none';
-      node.parentNode.insertBefore(placeholder,node);
-      return placeholder;
-    }
-    function clearLegacyFixed(node,placeholder){
-      if(!node)return;
-      node.style.position='';
-      node.style.left='';
-      node.style.width='';
-      node.style.top='';
-      node.style.zIndex='';
-      if(placeholder)placeholder.style.display='none';
-    }
     function refreshStickyLayout(){
       if(!stickyTopNode||!stickyFilterNode)return;
       var topbar=document.querySelector('.topbar');
       var rail=document.querySelector('.nav-rail');
-      var main=document.querySelector('.main-stage');
-      if(!topbar||!main)return;
-      var topbarHeight=topbar.offsetHeight||58;
-      var mobile=global.innerWidth<=680;
-      var railHeight=mobile&&rail?rail.offsetHeight:0;
-      var headerTop=topbarHeight+railHeight;
-      var mainRect=main.getBoundingClientRect();
-      var mainWidth=mainRect.width;
-      stickyTopNode.style.top=headerTop+'px';
-      if(stickyLegacy){
-        if(!stickyTopPlaceholder)stickyTopPlaceholder=stickyPlaceholder(stickyTopNode);
-        stickyTopPlaceholder.style.display='block';
-        stickyTopPlaceholder.style.height=stickyTopNode.offsetHeight+'px';
-        stickyTopNode.style.position='fixed';
-        stickyTopNode.style.left=mainRect.left+'px';
-        stickyTopNode.style.width=mainWidth+'px';
-        stickyTopNode.style.top=headerTop+'px';
-        stickyTopNode.style.zIndex='40';
-      }
-      var filterTop=headerTop+stickyTopNode.offsetHeight;
-      if(!stickyLegacy){
-        stickyFilterNode.style.top=filterTop+'px';
-        return;
-      }
-      if(!stickyFilterPlaceholder)stickyFilterPlaceholder=stickyPlaceholder(stickyFilterNode);
-      var shouldShow=currentView==='playlist';
-      if(!shouldShow){
-        clearLegacyFixed(stickyFilterNode,stickyFilterPlaceholder);
-        stickyFilterFixed=false;
-        return;
-      }
-      var rect=stickyFilterFixed?
-        stickyFilterPlaceholder.getBoundingClientRect():
-        stickyFilterNode.getBoundingClientRect();
-      var fix=rect.top<=filterTop && stickyFilterNode.offsetHeight>0;
-      if(fix){
-        var w=main.getBoundingClientRect();
-        stickyFilterPlaceholder.style.height=stickyFilterNode.offsetHeight+'px';
-        stickyFilterPlaceholder.style.display='block';
-        stickyFilterNode.style.position='fixed';
-        stickyFilterNode.style.left=w.left+'px';
-        stickyFilterNode.style.width=w.width+'px';
-        stickyFilterNode.style.top=filterTop+'px';
-        stickyFilterNode.style.zIndex='38';
-        stickyFilterFixed=true;
-      }else{
-        clearLegacyFixed(stickyFilterNode,stickyFilterPlaceholder);
-        stickyFilterFixed=false;
-      }
+      var mobile=global.innerWidth<=740;
+      var offset=(topbar?topbar.offsetHeight:0)+(mobile&&rail?rail.offsetHeight:0);
+      stickyTopNode.style.top=offset+'px';
+      stickyFilterNode.style.top=(offset+stickyTopNode.offsetHeight)+'px';
     }
     function requestStickyLayout(){
       if(stickyLayoutPending)return;
       stickyLayoutPending=true;
-      var next=global.requestAnimationFrame||function(fn){return global.setTimeout(fn,32);};
-      next(function(){stickyLayoutPending=false;refreshStickyLayout();});
+      global.requestAnimationFrame(function(){
+        stickyLayoutPending=false;
+        refreshStickyLayout();
+      });
     }
     if(global.addEventListener){
-      global.addEventListener('scroll',requestStickyLayout,false);
       global.addEventListener('resize',requestStickyLayout,false);
+    }
+    if(global.ResizeObserver&&stickyTopNode){
+      new global.ResizeObserver(requestStickyLayout).observe(stickyTopNode);
     }
 
     // Playlist controls live in the navigation script, while app.js owns its
