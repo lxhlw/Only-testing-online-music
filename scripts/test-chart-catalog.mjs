@@ -34,7 +34,7 @@ try{
     if(url.pathname.includes('fcg_myqq_toplist.fcg'))return new Response(JSON.stringify({data:{topList:[{id:26,topTitle:'QQ热歌榜'}]}}));
     if(url.pathname.includes('fcg_v8_toplist_cp.fcg'))return new Response(JSON.stringify({songlist:[{data:{songmid:'QQMid',songname:'QQ歌曲',singer:[{name:'艺人'}],album:{name:'专辑'}}}]}));
     if(url.pathname.includes('fcg_get_diss_by_tag.fcg'))return new Response(JSON.stringify({data:{list:[{dissid:1234,dissname:'QQ歌单',creator:{name:'听友'},song_count:12}]}}));
-    if(url.pathname.includes('fcg_ucc_getcdinfo_byids_cp.fcg'))return new Response(JSON.stringify({cdlist:[{dissname:'QQ歌单',songnum:1,songlist:[{songmid:'QQMid',songname:'QQ歌曲',singer:[{name:'艺人'}]}]}]}}));
+    if(url.pathname.includes('fcg_ucc_getcdinfo_byids_cp.fcg'))return new Response(JSON.stringify({cdlist:[{dissname:'QQ歌单',songnum:1,songlist:[{songmid:'QQMid',songname:'QQ歌曲',singer:[{name:'艺人'}]}]}]}));
     throw Error('Unexpected '+url);
   };
   const qList=await qq({request:req('/api/qq-catalog?kind=rank')});
