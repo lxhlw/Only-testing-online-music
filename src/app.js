@@ -209,8 +209,14 @@
         }
       }
       if (MODERN_WEB) {
-        // Manually selected FLAC/Hi-Res is tried first. If enabled, allow
-        // just one cheap 128k fallback, never a slow quality waterfall.
+        // A fixed quality MUST be declared by Flower; an absent FLAC 32bit
+        // cannot be quietly translated into 128k, even when fallback is on.
+        var fixedKey=String(settings.fixedQuality||'').toLowerCase();
+        if(settings.qualityMode==='fixed'&&!available.some(function(q){
+          return String(q||'').toLowerCase()===fixedKey;
+        }))return [];
+        // For manually selected quality, only one optional low-quality
+        // fallback is allowed; do not traverse a slow ladder.
         var requested=global.LXPlaySettings.buildPlan(available,settings);
         if(!requested.length)return [];
         var compact=[requested[0]];
@@ -1414,7 +1420,9 @@
       if (!isCurrentAttempt() || !finishAttempt()) return;
 
       if (MODERN_WEB && settings.autoFallback && index + 1 < plan.length) {
-        setStatus('当前音质 '+escapeHtml(quality)+' 暂不可用，快速尝试 '+escapeHtml(plan[index+1])+'……','warn');
+        playbackState.qualityFallbackReason=String(reason||'高音质解析未成功').slice(0,110);
+        setStatus('已请求 '+escapeHtml(quality)+'，但解析失败；现按允许降级的设置改试 '+
+          escapeHtml(plan[index+1])+'。原因：'+escapeHtml(playbackState.qualityFallbackReason),'warn');
         return requestQuality(music,source,musicInfo,plan,index+1,token);
       }
       if (NATIVE_COMPANION || MODERN_WEB) {
@@ -1533,7 +1541,22 @@
           if (ready && ready.inited && ready.runtime &&
               ready.sources && ready.sources[source]) {
             finishAttempt();
-            requestQuality(music,source,musicInfo,plan,index,token);
+            var freshPlan=getQualityPlan(ready,source);
+            // Some LX sources omit the quality list entirely. In that case
+            // preserve the user's requested format and let the provider decide.
+            if(!freshPlan.length){
+              var declared=ready.sources[source].qualitys;
+              if(Array.isArray(declared)&&declared.length){
+                setStatus('野花音源已就绪，但不支持所选 '+escapeHtml(getPlaySettings().fixedQuality)+
+                  ' 音质；不会自动改成128k。','fail');
+                return;
+              }
+              freshPlan=[getPlaySettings().qualityMode==='fixed'?
+                getPlaySettings().fixedQuality:'128k'];
+            }
+            playbackState.plan=freshPlan;
+            playbackState.initialQuality=freshPlan[0];
+            requestQuality(music,source,musicInfo,freshPlan,0,token);
             return;
           }
           if (ready && ready.error) {
@@ -1680,7 +1703,23 @@
     }
 
     var plan = getQualityPlan(active, source);
-    if (!plan.length) plan = ['128k'];
+    if (MODERN_WEB && !plan.length && active && active.inited &&
+        active.sources && active.sources[source] &&
+        Array.isArray(active.sources[source].qualitys) &&
+        active.sources[source].qualitys.length) {
+      var requested=getPlaySettings();
+      var advertised=active.sources[source].qualitys||[];
+      setStatus('当前野花渠道未声明支持 '+escapeHtml(requested.qualityMode==='fixed'?requested.fixedQuality:'所选音质')+
+        '。可用：'+escapeHtml(advertised.join('、')||'未知')+'。未擅自改成128k。','fail');
+      return;
+    }
+    if (!plan.length) {
+      // Startup placeholder only: it MUST be recalculated after Flower
+      // initialization, never become a permanent forced 128k selection.
+      var savedSettings=getPlaySettings();
+      plan=[MODERN_WEB&&savedSettings.qualityMode==='fixed'
+        ?savedSettings.fixedQuality:'128k'];
+    }
     if (LEGACY_NATIVE_MEDIA) {
       // MP3-compatible qualities first even when a device previously saved
       // a FLAC-only preference that cannot be decoded on Android 4.4.
@@ -1713,6 +1752,8 @@
       plan: plan,
       index: 0,
       quality: plan[0],
+      initialQuality: plan[0],
+      qualityFallbackReason: '',
       url: '',
       waitingForAudio: false,
       playing: false,
@@ -1763,11 +1804,14 @@
       global.LXMusicLibrary.addHistory(state.music);
       renderLibrary();
     }
-    setStatus(
-      (CHANNEL_NAMES[state.source] || state.source.toUpperCase()) +
-      ' 正在播放 · 请求音质 ' + escapeHtml(state.quality)+'（实际码率由媒体服务决定）',
-      'ready'
-    );
+    var downgraded=state.initialQuality && state.initialQuality!==state.quality;
+    var qualityMessage='请求 '+state.quality+
+      (downgraded?'（由 '+state.initialQuality+' 降级；'+(state.qualityFallbackReason||'高音质不可用')+'）':'')+
+      ' · 实际码率未经检测';
+    setStatus((CHANNEL_NAMES[state.source]||state.source.toUpperCase())+
+      ' 正在播放 · '+escapeHtml(qualityMessage),'ready');
+    var playbackQualityNode=document.getElementById('inline-current-quality');
+    if(playbackQualityNode)playbackQualityNode.textContent='本曲：'+qualityMessage;
     loadLyricsForState(state);
     return true;
   }
@@ -1857,6 +1901,14 @@
       );
     }
 
+    if (MODERN_WEB && settings.autoFallback && state.index+1<state.plan.length) {
+      var lower=state.plan[state.index+1];
+      state.qualityFallbackReason='高音质地址返回后无法播放';
+      setStatus('请求 '+escapeHtml(failedQuality)+' 的链接无法播放，正在按设置降至 '+
+        escapeHtml(lower)+'……','warn');
+      return requestQuality(state.music,state.source,buildMusicInfo(state.music,state.source),
+        state.plan,state.index+1,state.token);
+    }
     if (NATIVE_COMPANION || MODERN_WEB) {
       setStatus(MODERN_WEB ? '音频播放连接失败。请重新点选歌曲。' :
         '野花已返回地址，但原生播放失败。', 'fail');
@@ -2574,6 +2626,14 @@
       if (source) selectedChannel = source;
       renderChannelSelectors();
       testMusic(music, true);
+    },
+    replayCurrentWithSettings: function(){
+      if (!playbackState || !playbackState.music)return false;
+      var music=playbackState.music,source=playbackState.source;
+      selectedChannel=source;
+      renderChannelSelectors();
+      startPlayback(music,source);
+      return true;
     },
     addToQueue: function (music) {
       if (!music || !global.LXMusicLibrary) return;

@@ -8,7 +8,7 @@
   <script>document.documentElement.classList.add("modern-web");</script>
   <title>LX Music — 轻盈护眼音乐空间</title>
   <link rel="stylesheet" href="styles.css?v=0.4.1">
-  <link rel="stylesheet" href="modern.css?v=0.4.4">
+  <link rel="stylesheet" href="modern.css?v=0.4.5">
 </head>
 <body>
   <div id="app">
@@ -16,7 +16,7 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.4</span></div>
+          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.5</span></div>
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">护眼淡绿模式</span>
@@ -185,6 +185,7 @@
               </div>
               <div class="ranking-content">
                 <div id="ranking-title" class="ranking-title">请选择排行榜</div>
+                <p class="ranking-play-hint">点击歌曲名称播放，右侧播放键也可直接播放</p>
                 <div id="ranking-songs" class="results-list"></div>
               </div>
             </div>
@@ -255,7 +256,7 @@
             <div class="settings-section">
               <h2>播放设置</h2>
               <div class="setting-row-inline">
-                <div><strong>播放音质</strong><p>野花优先；连接失败或响应较慢时，自动尝试同平台备用链接，不增加其他音源脚本。</p></div>
+                <div><strong>播放音质</strong><p>选择固定音质时将优先按指定规格请求。音源不支持时会明确提示；成功解析不代表媒体实际码率相同。</p></div>
                 <select id="inline-quality">
                   <option value="highest">自动选择最佳音质（优先 MP3）</option>
                   <option value="128k">128k</option>
@@ -267,11 +268,17 @@
                   <option value="flac32bit">FLAC 32bit</option>
                 </select>
               </div>
-              <input id="inline-fallback" type="checkbox" hidden aria-hidden="true">
+              <label class="quality-fallback-choice" for="inline-fallback">
+                <input id="inline-fallback" type="checkbox">
+                <span><strong>高音质失败后允许降到 128k</strong><small>开启可提高歌曲播放成功率，但可能降低音质；关闭则坚持所选音质。</small></span>
+              </label>
+              <p class="quality-effect-hint" id="inline-quality-hint">设置仅对下一次解析生效，不会悄悄替换正在播放的歌曲。</p>
+              <p id="inline-current-quality" class="quality-playing-summary" role="status">当前歌曲：尚未检测到本次请求音质</p>
               <div class="setting-actions">
                 <button id="inline-save-settings" type="button">保存设置</button>
                 <button id="inline-reset-settings" type="button" class="secondary">恢复默认</button>
                 <span id="inline-settings-status" class="muted"></span>
+                <button id="inline-replay-quality" type="button" class="secondary">按新音质重播当前歌曲</button>
               </div>
             </div>
 
@@ -293,7 +300,7 @@
 
             <div class="settings-section">
               <h2>版本信息</h2>
-              <div class="version-detail"><strong id="version-current">v0.4.4</strong><span id="version-release-date">2026-10-28</span></div>
+              <div class="version-detail"><strong id="version-current">v0.4.5</strong><span id="version-release-date">2026-10-28</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
             </div>
@@ -450,7 +457,7 @@
   <script src="src/music-library.js?v=0.4.1"></script>
   <script src="src/music-lyrics.js?v=0.4.2"></script>
   <script src="src/player-controls.js"></script>
-  <script src="src/app.js?v=0.4.4"></script>
+  <script src="src/app.js?v=0.4.5"></script>
   <script>
   (function (global) {
     'use strict';
@@ -611,7 +618,10 @@
       var s=global.LXPlaySettings.load();
       el('inline-quality').value=s.qualityMode==='fixed'?s.fixedQuality:'highest';
       el('inline-fallback').checked=s.autoFallback;
-      el('inline-settings-status').innerHTML=global.LXPlaySettings.getLabel(s);
+      el('inline-settings-status').innerHTML=global.LXPlaySettings.getLabel(s)+
+        (s.autoFallback?' · 允许降到128k':' · 坚持所选规格');
+      var replay=el('inline-replay-quality');
+      if(replay)replay.disabled=!global.__LXNowPlayingTrack?.id;
     }
 
     function saveInlineSettings(reset){
@@ -624,6 +634,8 @@
       if(reset){ s=global.LXPlaySettings.defaults(); }
       global.LXPlaySettings.save(s);
       loadInlineSettings();
+      var note=el('inline-quality-hint');
+      if(note)note.textContent='设置已保存。将从下一首歌或重播当前歌曲时生效。';
     }
 
     function safePlaylistFavorites(){
@@ -1022,13 +1034,30 @@
     }
 
     function renderSongListInto(host,list){
+      var fragment=document.createDocumentFragment();
       for(var i=0;i<list.length;i+=1){
-        var item=list[i]||{}; 
-        var row=document.createElement('div');row.className='search-row';
-        row.innerHTML='<div class="song-main"><b>'+escapeHtml(item.name||'未知歌曲')+'</b><span>'+escapeHtml(item.singer||'未知歌手')+'</span></div>';
-        var action=document.createElement('button');action.type='button';action.innerHTML='播放';action.onclick=(function(m){return function(){playRankOrPlaylistSong(m);};})(item);
-        row.appendChild(action);host.appendChild(row);
+        var item=list[i]||{},row=document.createElement('div');
+        row.className='search-row chart-song-row';
+        row.setAttribute('data-track-key',String(item.source||'wy')+':'+String(item.id||item.songmid||''));
+        var number=document.createElement('span');number.className='chart-song-number';number.textContent=String(i+1);
+        var info=document.createElement('div');info.className='song-main chart-song-info';
+        info.setAttribute('role','button');info.setAttribute('tabindex','0');
+        info.setAttribute('aria-label','播放 '+String(item.name||'未知歌曲'));
+        var name=document.createElement('b');name.textContent=String(item.name||'未知歌曲');
+        var artist=document.createElement('span');artist.textContent=String(item.singer||'未知歌手');
+        info.appendChild(name);info.appendChild(artist);
+        var action=document.createElement('button');action.type='button';
+        action.className='chart-play-btn';action.textContent='▶ 播放';
+        action.setAttribute('aria-label','播放 '+String(item.name||'未知歌曲'));
+        action.onclick=(function(m){return function(e){if(e)e.stopPropagation();playRankOrPlaylistSong(m);};})(item);
+        info.onclick=(function(m){return function(){playRankOrPlaylistSong(m);};})(item);
+        info.onkeydown=(function(m){return function(e){
+          if(e.key==='Enter'||e.key===' '){e.preventDefault();playRankOrPlaylistSong(m);}
+        };})(item);
+        row.append(number,info,action);
+        fragment.appendChild(row);
       }
+      host.appendChild(fragment);
     }
 
     function playRankOrPlaylistSong(item){
@@ -1109,6 +1138,24 @@
     for(var m=0;m<mytabs.length;m+=1) mytabs[m].onclick=(function(btn){return function(){myTab=btn.getAttribute('data-my-tab');renderMyList();};})(mytabs[m]);
     el('playlist-load-more-btn').onclick=function(){
       if(playlistDetailItem&&playlistHasMore)loadPlaylistPage(playlistDetailItem,true);
+    };
+    var qualityInput=el('inline-quality');
+    qualityInput.onchange=function(){
+      // Selecting a precise format is a deliberate quality choice.
+      // Do not keep the previous hidden automatic downgrade by surprise.
+      el('inline-fallback').checked=qualityInput.value==='highest';
+      var note=el('inline-quality-hint');
+      if(note)note.textContent=qualityInput.value==='highest'
+        ?'自动模式会优先请求最高可用 MP3 规格；如果启用降级，可降到128k。'
+        :'固定音质默认不降级。可以自行开启降级；保存后重新点歌才会生效。';
+    };
+    el('inline-replay-quality').onclick=function(){
+      var track=global.__LXNowPlayingTrack;
+      if(!track?.id){setStatus('请先播放一首歌曲，再按指定音质重播。','warn');return;}
+      saveInlineSettings(false);
+      if(global.OnlyTestingMusicApp?.replayCurrentWithSettings)
+        global.OnlyTestingMusicApp.replayCurrentWithSettings();
+      else setStatus('当前歌曲尚未准备好重播。','warn');
     };
     el('global-search-btn').onclick=doGlobalSearch;
     el('global-search-input').onkeydown=function(e){e=e||global.event;if(e&&e.keyCode===13)doGlobalSearch();};
@@ -1204,6 +1251,6 @@
   })(window);
   </script>
   <script type="module" src="src/modern-ui.js?v=0.4.3"></script>
-  <script type="module" src="src/now-playing-experience.js?v=0.4.4"></script>
+  <script type="module" src="src/now-playing-experience.js?v=0.4.5"></script>
 </body>
 </html>
