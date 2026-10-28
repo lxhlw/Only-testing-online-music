@@ -54,7 +54,7 @@ try {
   await page.goto(url,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.LXSourceManager?.getActive()?.inited,{timeout:14000});
   assert.equal(await page.locator('.brand').textContent(),'LX Music Web');
-  assert.equal(await page.locator('#app-version').textContent(),'v0.3.0');
+  assert.equal(await page.locator('#app-version').textContent(),'v0.4.0');
   assert.equal(await page.locator('#top-source-label').textContent(),'当前音源：野花🌷');
   assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(x=>x.name)),['野花🌷']);
   assert.equal(await page.locator('#legacy-media-panel').count(),0);
@@ -63,7 +63,7 @@ try {
   assert.equal(await page.locator('#restore-default-sources-btn').isVisible(),true);
   await page.locator('[data-view="search"]').click();
   const style=await page.locator('body').evaluate(el=>getComputedStyle(el).backgroundColor);
-  assert.equal(style,'rgb(8, 14, 22)');
+  assert.equal(style,'rgb(244, 248, 242)');
   await page.evaluate(()=>{
     window.LXMusicSearch.resolveMusicUrl=()=>{throw new Error('legacy waterfall invoked')};
     window.LXMusicSearch.resolveMusicUrlFast=()=>{throw new Error('legacy provider race invoked')};
