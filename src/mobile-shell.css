@@ -1,4 +1,4 @@
-/* LX Music Web — native-inspired mobile shell v0.4.8
+/* LX Music Web — native-inspired mobile shell v0.4.9
  * All selectors are scoped to mobile-shell-ready and touch breakpoints.
  * Desktop appearance, audio runtime, playlists and existing IDs are intact.
  * The reference is a design-language study, not a pixel-for-pixel copy.
@@ -449,4 +449,81 @@
 }
 @media(prefers-reduced-motion:reduce){
   html.modern-web.mobile-shell-ready .nav-rail{transition:none!important}
+}
+
+/* v0.4.9: consistent playlist tiles across desktop/tablet.
+   Each row's controls share one baseline, even for 1- and 2-line titles. */
+html.modern-web #playlist-featured .playlist-card,
+html.modern-web #playlist-results .playlist-card,
+html.modern-web #playlist-favorite-list .playlist-card{
+  display:flex;flex-direction:column;min-width:0;
+}
+@media(min-width:741px){
+  html.modern-web :is(#playlist-featured,#playlist-results,#playlist-favorite-list) .playlist-name{
+    display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+    white-space:normal;min-height:3.0em;max-height:3.0em;
+    overflow:hidden;line-height:1.5
+  }
+  html.modern-web :is(#playlist-featured,#playlist-results,#playlist-favorite-list) .playlist-meta{
+    display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+    min-height:3.0em;max-height:3.0em;
+    overflow:hidden;line-height:1.5
+  }
+  html.modern-web :is(#playlist-featured,#playlist-results,#playlist-favorite-list) .playlist-card-actions{
+    margin-top:auto;padding-top:12px;
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    align-items:stretch;gap:8px
+  }
+  html.modern-web :is(#playlist-featured,#playlist-results,#playlist-favorite-list) .playlist-card-actions button{
+    display:flex;justify-content:center;align-items:center;
+    width:100%;min-height:38px;height:38px!important;
+    margin:0!important;padding:0 7px!important;
+    border-radius:9px!important;line-height:1.2;
+    font-size:12px!important;white-space:nowrap
+  }
+}
+html.modern-web .playlist-scroll-footer{
+  display:block;text-align:center;padding:19px 10px 30px;
+  min-height:48px;color:#829787;font-size:12px;
+  letter-spacing:.15px
+}
+html.modern-web .playlist-scroll-footer[hidden]{display:none!important}
+html.modern-web .playlist-scroll-footer.is-error{
+  color:#aa6853;cursor:pointer;text-decoration:underline
+}
+html.modern-web #playlist-detail-footer{padding:17px 8px 24px}
+html.modern-web #playlist-load-more-btn{min-height:38px}
+@media(max-width:740px){
+  /* Menus are portaled into <body>, not clipped by the main scroll area. */
+  html.modern-web.mobile-shell-ready body.mobile-menu-locked{
+    overflow:hidden!important;overscroll-behavior:none
+  }
+  html.modern-web.mobile-shell-ready .mobile-menu-shade{z-index:998!important}
+  html.modern-web.mobile-shell-ready .nav-rail{
+    z-index:999!important;max-height:100dvh!important;
+    height:100dvh!important;padding-top:16px!important;
+    border-right:1px solid #e4eee5!important;
+    display:flex!important;flex-direction:column
+  }
+  html.modern-web.mobile-shell-ready .mobile-drawer-heading{
+    display:flex;align-items:center;justify-content:space-between;
+    flex:0 0 auto;min-height:48px;
+    padding:0 3px 10px 13px;margin-bottom:13px;
+    border-bottom:1px solid #ecf2ed;
+    color:#2c7451;font-size:18px
+  }
+  html.modern-web.mobile-shell-ready .mobile-drawer-close{
+    display:grid;place-items:center;
+    width:42px;height:42px;min-height:42px;padding:0;
+    border:0;border-radius:11px;background:#edf6ef;
+    color:#417759;font-size:27px;font-weight:400
+  }
+  html.modern-web.mobile-shell-ready .nav-brand{margin-bottom:11px!important}
+  html.modern-web.mobile-shell-ready .main-nav{flex:0 0 auto}
+  html.modern-web.mobile-shell-ready .playlist-scroll-footer{
+    padding:21px 5px 24px;font-size:12px
+  }
+}
+@media(min-width:741px){
+  .mobile-drawer-heading{display:none!important}
 }
