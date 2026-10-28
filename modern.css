@@ -464,8 +464,7 @@ html.modern-web .settings-section [for="source-url"],
 html.modern-web #source-url,
 html.modern-web .source-buttons,
 html.modern-web .settings-section:has(#runtime-info),
-html.modern-web #inline-fallback,
-html.modern-web .setting-row-inline:has(#inline-fallback){display:none!important}
+/* The quality downgrade toggle is now a visible consent control. */
 
 /* Only first 10 new entries fade in; no continuous animations or huge blur. */
 .reveal-item{animation:row-appear .22s ease-out both}
@@ -1226,4 +1225,140 @@ html.modern-web #comments-load-more[hidden]{display:none!important}
   html.modern-web #lyrics-close-btn{min-width:84px;padding:6px 10px!important;font-size:11px!important}
   html.modern-web .catalog-source{font-size:12px;padding:6px 10px;min-height:33px}
   html.modern-web .comments-pagination{font-size:10px}
+}
+
+/* v0.4.5: consistent music-list interaction and explicit quality policy. */
+html.modern-web .quality-fallback-choice{
+  display:flex!important;align-items:flex-start;gap:12px;
+  padding:13px 14px;margin:8px 0 0;background:#f3faf3;
+  border:1px solid #daeade;border-radius:12px;cursor:pointer;
+  color:#335744
+}
+html.modern-web .quality-fallback-choice input{
+  display:block!important;flex:0 0 18px;width:18px;height:18px;
+  accent-color:#2e936f;margin:2px 0 0;cursor:pointer
+}
+html.modern-web .quality-fallback-choice strong{display:block;font-size:13px;color:#355d44}
+html.modern-web .quality-fallback-choice small{
+  display:block;margin-top:5px;font-size:11px;line-height:1.6;color:#718b77
+}
+html.modern-web .quality-effect-hint{
+  margin:10px 0 0;font-size:11px;line-height:1.6;color:#698476
+}
+html.modern-web .quality-playing-summary{
+  background:#eaf6ed;border-left:3px solid #56ad83;
+  color:#326e4a;border-radius:5px;padding:10px 12px;
+  font-size:12px;line-height:1.6;margin:12px 0 0
+}
+html.modern-web #inline-replay-quality{min-height:36px}
+html.modern-web .ranking-play-hint{
+  color:#859d8b;font-size:11px;padding:10px 19px 0;margin:0
+}
+html.modern-web .chart-song-row{
+  display:grid!important;
+  grid-template-columns:30px minmax(0,1fr) auto;
+  align-items:center;gap:12px;min-height:60px;
+  padding:9px 13px;cursor:default
+}
+html.modern-web .chart-song-number{
+  color:#92a89a;font-size:12px;text-align:center;font-variant-numeric:tabular-nums
+}
+html.modern-web .chart-song-row:nth-child(-n+3) .chart-song-number{
+  color:#2d956b;font-weight:850
+}
+html.modern-web .chart-song-info{
+  display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+  gap:4px;min-width:0;width:100%;overflow:hidden;cursor:pointer;
+  padding:5px 8px;margin:-5px -8px;border-radius:8px
+}
+html.modern-web .chart-song-info:hover,
+html.modern-web .chart-song-info:focus-visible{background:#eaf6ed}
+html.modern-web .chart-song-info:focus-visible{
+  outline:2px solid #69b78b;outline-offset:2px
+}
+html.modern-web .chart-song-info b{
+  display:block;max-width:100%;min-width:0;overflow:hidden;
+  white-space:nowrap;text-overflow:ellipsis;
+  color:#2b513a;font-size:13px;font-weight:710
+}
+html.modern-web .chart-song-info span{
+  display:block;max-width:100%;overflow:hidden;white-space:nowrap;
+  text-overflow:ellipsis;color:#819785;font-size:11px
+}
+html.modern-web .chart-play-btn,
+html.modern-web #retry-rank-songs,
+html.modern-web #ranking-retry{
+  display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 auto;width:auto;min-width:80px;height:36px;min-height:36px;
+  padding:7px 14px;border:1px solid #b8ddc6;border-radius:9px;
+  background:#e3f4e8!important;color:#28815a!important;
+  font-size:12px;font-weight:760;box-shadow:none!important;cursor:pointer;
+  transition:background-color .15s ease,border-color .15s ease
+}
+html.modern-web .chart-play-btn:hover,
+html.modern-web #retry-rank-songs:hover,
+html.modern-web #ranking-retry:hover{
+  border-color:#72bd91;background:#d3eddd!important
+}
+html.modern-web .chart-play-btn:focus-visible{outline:2px solid #4da776;outline-offset:2px}
+@media(max-width:740px){
+  html.modern-web .view-container{padding:13px 10px 154px}
+  html.modern-web .ranking-source-switch{padding:8px;gap:6px}
+  html.modern-web .ranking-sidebar{
+    max-height:none;padding:8px 6px 6px;overflow:visible
+  }
+  html.modern-web .ranking-sidebar .subsection-heading{padding:2px 6px 7px}
+  html.modern-web .ranking-list{
+    overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;
+    padding:0 0 7px;scroll-snap-type:x proximity;
+  }
+  html.modern-web .ranking-item{scroll-snap-align:start}
+  html.modern-web #ranking-songs{padding:7px 6px}
+  html.modern-web .chart-song-row{
+    grid-template-columns:23px minmax(0,1fr) 70px;
+    gap:6px;padding:8px 9px;min-height:62px
+  }
+  html.modern-web .chart-song-info{min-width:0;margin:0;padding:4px 2px}
+  html.modern-web .chart-song-info b{font-size:13px}
+  html.modern-web .chart-song-info span{font-size:11px}
+  html.modern-web .chart-play-btn{width:70px;min-width:70px;height:36px;padding:5px 4px;font-size:11px}
+  html.modern-web .ranking-title{padding:11px 12px}
+  html.modern-web .ranking-play-hint{padding:8px 12px 0}
+  html.modern-web .settings-section{padding:15px 12px}
+  html.modern-web .quality-fallback-choice{padding:11px 12px}
+  html.modern-web .setting-row-inline select{width:100%;min-width:0;max-width:100%}
+}
+@media(max-width:420px){
+  html.modern-web .topbar{height:57px}
+  html.modern-web .brand-block{padding-left:34px}
+  .brand-block::before{width:29px;height:29px;font-size:18px}
+  html.modern-web .brand{font-size:14px}
+  html.modern-web .subtitle{font-size:8px}
+  html.modern-web .top-source-indicator{max-width:38vw;font-size:9px}
+  html.modern-web .nav-rail{
+    top:57px;padding:2px 4px
+  }
+  html.modern-web .main-nav{gap:1px}
+  html.modern-web .nav-item{
+    min-height:43px;height:43px;border-radius:8px;gap:1px;
+    padding:3px 1px;font-size:9px
+  }
+  html.modern-web .nav-symbol{height:19px;flex-basis:19px;font-size:15px}
+  html.modern-web .nav-item span:last-child{font-size:9px}
+  html.modern-web .persistent-top-stack{top:102px}
+  html.modern-web .view-header h1{font-size:24px}
+  html.modern-web .view-container{padding:11px 8px 144px}
+  html.modern-web .ranking-source-switch{margin-bottom:8px}
+  html.modern-web .ranking-title{font-size:15px}
+  html.modern-web .chart-song-row{padding:7px 8px}
+  html.modern-web .player-bar{height:124px;min-height:124px;max-height:124px}
+  html.modern-web .player-transport{height:40px;min-height:40px}
+}
+@media(max-width:345px){
+  html.modern-web .chart-song-row{grid-template-columns:20px minmax(0,1fr) 62px;gap:4px}
+  html.modern-web .chart-play-btn{width:62px;min-width:62px}
+  html.modern-web .ranking-play-hint{font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  html.modern-web .chart-play-btn{transition:none}
 }
