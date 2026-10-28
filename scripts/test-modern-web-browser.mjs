@@ -242,6 +242,30 @@ try {
   assert.equal(await page.locator('#my-favorite-panel').isVisible(),true);
   checks.push('mobile-library');
 
+  await page.locator('#player-cover-button').click();
+  assert.equal(await page.locator('#lyrics-overlay').isVisible(),true);
+  const fullMobile=await page.evaluate(()=>{
+    const overlay=document.getElementById('lyrics-overlay').getBoundingClientRect();
+    const seek=document.getElementById('detail-seek').getBoundingClientRect();
+    const current=document.querySelector('.lyrics-line.active')?.getBoundingClientRect();
+    const viewport=document.getElementById('lyrics-scroll').getBoundingClientRect();
+    return {screenW:overlay.width,screenH:overlay.height,w:innerWidth,h:innerHeight,
+      hasArt:!document.getElementById('lyrics-cover-image').hidden,
+      seekVisible:seek.width>50 && seek.left>=0 && seek.right<=innerWidth,
+      center:current?Math.abs(current.top+current.height/2-viewport.top-viewport.height/2):null
+    };
+  });
+  assert.ok(fullMobile.screenW>=fullMobile.w-1 && fullMobile.screenH>=fullMobile.h-1,
+    'Phone Now Playing must occupy entire viewport '+JSON.stringify(fullMobile));
+  assert.equal(fullMobile.hasArt,true,'Mobile screen must show real album art');
+  assert.equal(fullMobile.seekVisible,true,'Full-screen progress control must fit phone');
+  assert.ok(fullMobile.center==null||fullMobile.center<110,'Mobile current LRC line should remain centered');
+  await page.locator('#comments-tab').click();
+  assert.equal(await page.locator('#comments-view').isVisible(),true);
+  await page.locator('#lyrics-close-btn').click();
+  assert.equal(await page.locator('#lyrics-overlay').isVisible(),false);
+  checks.push('mobile-fullscreen');
+
   checks.push('mobile');
   console.log('PASS modern-web:',checks.join(', '),'Flower-first recovery, bounded playback and responsive library');
 }finally{await browser.close()}
