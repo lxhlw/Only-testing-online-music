@@ -93,7 +93,7 @@ try {
   await page.goto(url,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.LXSourceManager?.getActive()?.inited,{timeout:14000});
   assert.equal(await page.locator('.brand').textContent(),'LX Music Web');
-  assert.equal(await page.locator('#app-version').textContent(),'v0.4.6');
+  assert.equal(await page.locator('#app-version').textContent(),'v0.4.7');
   assert.equal(await page.locator('#top-source-label').textContent(),'当前音源：野花🌷');
   assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(x=>x.name)),['野花🌷']);
   assert.equal(await page.locator('#legacy-media-panel').count(),0);
@@ -353,6 +353,9 @@ try {
   assert.equal(await page.locator('#my-queue-panel').isVisible(),true);
   assert.equal(await page.locator('#my-history-panel').isVisible(),false);
   await page.locator('[data-my-tab="history"]').click();
+  await page.locator('#history-list .library-main').first().click();
+  await page.waitForFunction(()=>document.querySelector('#player-title')?.textContent.startsWith('收藏试听'),{timeout:5000});
+  checks.push('single-tap-library-history');
   checks.push('library-split');
   await page.locator('[data-view="search"]').click();
 
@@ -360,6 +363,15 @@ try {
   assert.deepEqual(old,[],'Legacy compatibility scripts must not load');
   assert.deepEqual(failures,[],'No page errors on desktop');
   checks.push('desktop');
+  await page.locator('#search-results .search-song-main').nth(1).click();
+  await page.waitForFunction(()=>document.getElementById('player-title')?.textContent==='滑动搜索歌曲 21',{timeout:5000});
+  assert.equal(await page.locator('#search-results .search-song-row').count(),45);
+  const searchTheme=await page.locator('#search-results .song-action-play').first().evaluate(el=>{
+    const x=getComputedStyle(el);return {radius:x.borderRadius,bg:x.backgroundColor};
+  });
+  assert.ok(parseFloat(searchTheme.radius)>=8 && searchTheme.bg!=='rgb(239, 239, 239)',
+    'Search play control must use common theme: '+JSON.stringify(searchTheme));
+  checks.push('single-tap-search-and-themed-play');
   await page.locator('[data-view="playlist"]').click();
   await page.waitForTimeout(100);
   assert.equal(await page.locator('#view-playlist').evaluate(el=>el.classList.contains('active')),true);
@@ -403,6 +415,42 @@ try {
   assert.ok(measure.page<=measure.viewport+2,'No sideways mobile scrolling');
   assert.equal(measure.nav,5,'Five bottom/top mobile navigation choices visible');
   assert.ok(measure.controls.width>=40,'Transport remains easily tappable');
+  await page.locator('[data-view="search"]').click();
+  const songMobile=await page.evaluate(()=>{
+    const row=document.querySelector('#search-results .search-song-row');
+    const rect=sel=>row?.querySelector(sel)?.getBoundingClientRect();
+    const number=rect('.song-row-index'),title=rect('.song-title'),
+      main=rect('.search-song-main'),actions=rect('.search-actions');
+    const more=row?.querySelector('.song-more>summary');
+    const play=row?.querySelector('.song-action-play');
+    return {width:document.documentElement.scrollWidth,vw:innerWidth,
+      rowHeight:row?.getBoundingClientRect().height,
+      numberTop:number?.top,titleTop:title?.top,titleWidth:title?.width,
+      mainRight:main?.right,actionsLeft:actions?.left,
+      playWidth:play?.getBoundingClientRect().width,
+      moreWidth:more?.getBoundingClientRect().width,
+      queueVisible:getComputedStyle(row.querySelector('.song-action-queue')).display!=='none'};
+  });
+  assert.ok(songMobile.width<=songMobile.vw+2,'Search mobile overflow: '+JSON.stringify(songMobile));
+  assert.ok(Math.abs(songMobile.numberTop-songMobile.titleTop)<22,
+    'Number and song title must be same row: '+JSON.stringify(songMobile));
+  assert.ok(songMobile.titleWidth>=115&&songMobile.mainRight<=songMobile.actionsLeft+3,
+    'Song name must have usable space beside actions: '+JSON.stringify(songMobile));
+  assert.ok(songMobile.rowHeight<=78&&!songMobile.queueVisible,
+    'Mobile song rows must be compact: '+JSON.stringify(songMobile));
+  await page.locator('#search-results .song-more summary').first().click();
+  assert.equal(await page.locator('#search-results .song-more').first().getAttribute('open'),'',
+    'Secondary actions should be in a discoverable overflow menu');
+  await page.locator('#search-results .song-more-menu .song-action-queue').first().click();
+  assert.equal(await page.locator('#player-title').textContent(),'滑动搜索歌曲 21',
+    'Queue action must not accidentally start another song');
+  checks.push('390px-search-row-density-and-safe-overflow-menu');
+  await page.locator('[data-view="mylist"]').click();
+  const clearTheme=await page.locator('#clear-history-btn').evaluate(el=>{
+    const x=getComputedStyle(el);return {radius:x.borderRadius,bg:x.backgroundColor};
+  });
+  assert.ok(parseFloat(clearTheme.radius)>=8&&clearTheme.bg!=='rgb(239, 239, 239)',
+    'Clear history must use common theme: '+JSON.stringify(clearTheme));
   await page.locator('[data-view="ranking"]').click();
   await page.locator('[data-ranking-source="tx"]').click();
   await page.waitForFunction(()=>document.querySelectorAll('#ranking-songs .chart-song-row').length>0,{timeout:5000});
