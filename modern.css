@@ -1387,3 +1387,19 @@ html.modern-web .chart-play-btn:focus-visible{outline:2px solid #4da776;outline-
    box-sizing:border-box
  }
 }
+
+/* Pin chart cells to explicit grid tracks. The legacy .search-row styles
+   include generated counters/old grid placement, which must not auto-place
+   title and play controls into unexpected tracks on small screens. */
+html.modern-web #ranking-songs>.chart-song-row>.chart-song-number{
+  grid-column:1!important;grid-row:1!important;min-width:0
+}
+html.modern-web #ranking-songs>.chart-song-row>.chart-song-info{
+  grid-column:2!important;grid-row:1!important;
+  width:100%!important;min-width:0!important;
+  max-width:100%!important;box-sizing:border-box
+}
+html.modern-web #ranking-songs>.chart-song-row>.chart-play-btn{
+  grid-column:3!important;grid-row:1!important;
+  justify-self:end!important;max-width:100%!important
+}
