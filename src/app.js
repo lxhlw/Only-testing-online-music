@@ -542,6 +542,10 @@
       var item = items[i];
       var row = document.createElement('div');
       row.className = 'library-row';
+      if (playbackState && musicKey(playbackState.music) === musicKey(item)) {
+        row.className += ' is-playing';
+        row.setAttribute('aria-current','true');
+      }
 
       var main = document.createElement('div');
       main.className = 'library-main';
@@ -599,6 +603,11 @@
     renderLibraryList(queueListEl, data.queue, 'queue');
     renderLibraryList(favoriteListEl, data.favorites, 'favorite');
     renderLibraryList(historyListEl, data.history, 'history');
+    var counts={history:data.history.length,favorite:data.favorites.length,queue:data.queue.length};
+    for (var section in counts) if (Object.prototype.hasOwnProperty.call(counts,section)) {
+      var label=document.getElementById('library-count-'+section);
+      if(label) label.textContent=String(counts[section]);
+    }
   }
 
   function onSourceInited(item) {
