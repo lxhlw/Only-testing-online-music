@@ -8,7 +8,7 @@
   <script>document.documentElement.classList.add("modern-web");</script>
   <title>LX Music — 轻盈护眼音乐空间</title>
   <link rel="stylesheet" href="styles.css?v=0.4.1">
-  <link rel="stylesheet" href="modern.css?v=0.4.1">
+  <link rel="stylesheet" href="modern.css?v=0.4.2">
 </head>
 <body>
   <div id="app">
@@ -16,7 +16,7 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.1</span></div>
+          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.2</span></div>
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">护眼淡绿模式</span>
@@ -117,13 +117,9 @@
               <span class="view-note">歌单分类 · 平台选择 · 歌单收藏</span>
             </div>
             <div id="playlist-filter-stack" class="playlist-filter-stack">
-          <div class="sub-toolbar">
-              <span>选择渠道</span>
-              <div class="platform-pills">
-                <button type="button" class="platform-pill active" data-playlist-platform="wy">网易云音乐</button>
-                
-                
-              </div>
+          <div class="sub-toolbar playlist-service-note">
+              <span>歌单来源</span>
+              <span class="playlist-service-label">网易云音乐 · 精选歌单</span>
             </div>
             <div class="category-row">
               <span>歌单分类</span>
@@ -138,7 +134,7 @@
 
             <section id="playlist-detail-panel" class="playlist-detail-panel hidden">
               <div class="playlist-detail-toolbar">
-                <button id="playlist-back-btn" type="button" class="secondary compact-button">返回歌单</button>
+                <button id="playlist-back-btn" type="button" class="secondary compact-button" aria-label="返回歌单分类">← 返回歌单分类</button>
                 <div class="playlist-detail-actions">
                   <button id="playlist-play-all-btn" type="button">播放全部</button>
                   <button id="playlist-favorite-btn" type="button" class="secondary">收藏歌单</button>
@@ -291,7 +287,7 @@
 
             <div class="settings-section">
               <h2>版本信息</h2>
-              <div class="version-detail"><strong id="version-current">v0.4.1</strong><span id="version-release-date">2026-10-28</span></div>
+              <div class="version-detail"><strong id="version-current">v0.4.2</strong><span id="version-release-date">2026-10-28</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
             </div>
@@ -308,6 +304,35 @@
         </div>
       </section>
     </main>
+
+    <section id="lyrics-overlay" class="lyrics-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="lyrics-heading" aria-hidden="true">
+      <button id="lyrics-backdrop" type="button" class="lyrics-backdrop" aria-label="关闭歌词"></button>
+      <div class="lyrics-sheet">
+        <header class="lyrics-sheet-header">
+          <div class="lyrics-sheet-heading">
+            <div class="panel-kicker">NOW PLAYING · LYRICS</div>
+            <h2 id="lyrics-heading">正在播放的歌词</h2>
+          </div>
+          <div class="lyrics-sheet-actions">
+            <button id="lyrics-refresh-btn" type="button" class="lyrics-refresh" title="重新获取歌词">刷新歌词</button>
+            <button id="lyrics-close-btn" type="button" class="lyrics-close" aria-label="关闭歌词">✕</button>
+          </div>
+        </header>
+        <div class="lyrics-song-head">
+          <div class="lyrics-art" aria-hidden="true">♫</div>
+          <div class="lyrics-song-meta">
+            <h3 id="lyrics-title">未选择歌曲</h3>
+            <div id="lyrics-status" class="lyrics-status" role="status">播放歌曲后显示歌词</div>
+          </div>
+        </div>
+        <div class="lyrics-scroll" id="lyrics-scroll" tabindex="0" aria-label="歌词内容，滚动查看">
+          <div id="lyrics-lines" class="lyrics-lines" aria-live="off">
+            <div class="lyrics-empty">请选择歌曲开始播放</div>
+          </div>
+        </div>
+        <footer class="lyrics-sheet-footer">歌词随音乐进度同步 · 仅展示当前歌曲可用内容</footer>
+      </div>
+    </section>
 
     <footer class="player-bar">
       <div class="player-song">
@@ -340,6 +365,7 @@
           <button id="next-track-btn" type="button" class="player-icon-btn" title="下一首" aria-label="下一首">
             <svg viewBox="0 0 24 24" width="23" height="23" aria-hidden="true"><path d="M19 5v14M6 5l10 7-10 7V5Z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>
           </button>
+          <button id="open-lyrics-btn" type="button" class="player-icon-btn player-lyrics-toggle" aria-label="打开歌词界面" aria-controls="lyrics-overlay" aria-expanded="false" title="查看同步歌词">词</button>
         </div>
         <div class="player-timeline" aria-label="播放进度调整">
           <span id="player-current-time" class="player-time" aria-live="off">00:00</span>
@@ -356,7 +382,7 @@
           <button id="player-volume-btn" type="button" class="player-icon-btn player-volume-btn" aria-label="静音" title="静音">♫</button>
           <input id="player-volume" type="range" min="0" max="100" step="1" value="80" aria-label="音量">
         </div>
-        <div id="player-lyric" class="player-lyric">歌词：—</div>
+        <button id="player-lyric" type="button" class="player-lyric" aria-label="打开歌词界面" title="点击查看完整歌词">歌词：—</button>
       </div>
       <div class="player-status">
         <span id="bottom-play-status">就绪</span>
@@ -374,9 +400,9 @@
   <script src="src/lx-runtime.js"></script>
   <script src="src/source-manager.js?v=0.4.1"></script>
   <script src="src/music-library.js?v=0.4.1"></script>
-  <script src="src/music-lyrics.js"></script>
+  <script src="src/music-lyrics.js?v=0.4.2"></script>
   <script src="src/player-controls.js"></script>
-  <script src="src/app.js?v=0.4.1"></script>
+  <script src="src/app.js?v=0.4.2"></script>
   <script>
   (function (global) {
     'use strict';
@@ -637,6 +663,8 @@
       // launches another featured-list search on slow legacy devices, which
       // can re-render cards during the touch/click transition.
       playlistDetailItem=item;
+      addClass(el('view-playlist'),'is-detail-open');
+      document.documentElement.classList.add('is-playlist-detail');
       lastPlaylistOpenAt=Date.now?Date.now():(new Date()).getTime();
       playlistSearchGeneration['playlist-featured']=(playlistSearchGeneration['playlist-featured']||0)+1;
       showView('playlist');
@@ -698,6 +726,8 @@
       if (!playlistDetailItem) return;
       playlistPageGeneration+=1;
       playlistDetailItem=null;
+      document.documentElement.classList.remove('is-playlist-detail');
+      removeClass(el('view-playlist'),'is-detail-open');
       playlistDetailSongs=[];
       addClass(el('playlist-detail-panel'),'hidden');
       removeClass(el('playlist-featured'),'hidden');
@@ -878,10 +908,13 @@
 
     function loadRankings(){
       var listHost=el('ranking-list');
-      if(!listHost)return;
+      if(!listHost||listHost.dataset.loaded==='1'||listHost.dataset.loading==='1')return;
+      listHost.dataset.loading='1';
       listHost.innerHTML='<div class="loading-note">正在读取榜单……</div>';
       requestJson('/api/netease-toplist',function(err,data){
-        if(err){listHost.innerHTML='<div class="empty-note">排行榜加载失败：'+escapeHtml(err.message||err)+'</div>';return;}
+        listHost.dataset.loading='0';
+        if(err){listHost.innerHTML='<div class="empty-note">排行榜加载失败：'+escapeHtml(err.message||err)+' <button type="button" id="ranking-retry">重试</button></div>';el('ranking-retry').onclick=function(){loadRankings();};return;}
+        listHost.dataset.loaded='1';
         var list=data&&data.list instanceof Array?data.list:[];
         listHost.innerHTML='';
         if(!list.length){listHost.innerHTML='<div class="empty-note">暂无榜单</div>';return;}
@@ -889,7 +922,14 @@
           var item=list[i]||{};
           var b=document.createElement('button');b.type='button';b.className='ranking-item'+(String(item.id)===String(rankingId)?' active':'');
           b.innerHTML=escapeHtml(item.name||'未命名榜单');
-          b.onclick=(function(id,name){return function(){rankingId=String(id);loadRankingSongs(id,name);loadRankings();};})(item.id,item.name);
+          b.onclick=(function(id,name,button){return function(){
+            if(rankingId===String(id)&&el('ranking-songs').children.length)return;
+            rankingId=String(id);
+            var buttons=all('#ranking-list .ranking-item');
+            for(var ri=0;ri<buttons.length;ri++)removeClass(buttons[ri],'active');
+            addClass(button,'active');
+            loadRankingSongs(id,name);
+          };})(item.id,item.name,b);
           listHost.appendChild(b);
         }
         if(!rankingId&&list[0]){rankingId=String(list[0].id);loadRankingSongs(list[0].id,list[0].name);}
@@ -1001,6 +1041,7 @@
     el('global-search-input').onkeydown=function(e){e=e||global.event;if(e&&e.keyCode===13)doGlobalSearch();};
     var cats=all('.category-pill');
     for(var c=0;c<cats.length;c+=1) cats[c].onclick=(function(btn){return function(){
+      if(playlistDetailItem)return;
       playlistCategory=btn.getAttribute('data-playlist-cat');
       var allCats=all('.category-pill');for(var q=0;q<allCats.length;q+=1)removeClass(allCats[q],'active');
       addClass(btn,'active'); if(currentView==='playlist'&&!playlistDetailItem)loadFeaturedPlaylists();
@@ -1067,6 +1108,6 @@
     };
   })(window);
   </script>
-  <script type="module" src="src/modern-ui.js?v=0.4.1"></script>
+  <script type="module" src="src/modern-ui.js?v=0.4.2"></script>
 </body>
 </html>
