@@ -294,6 +294,12 @@
         return function () {
           selectedChannel = channel;
           searchToken += 1;
+          songSearchSession=null;
+          if(songSearchObserver){songSearchObserver.disconnect();songSearchObserver=null;}
+          var scrollNote=document.getElementById('song-search-footer');
+          if(scrollNote)scrollNote.hidden=true;
+          var searchCount=document.getElementById('song-result-counter');
+          if(searchCount)searchCount.textContent='按当前渠道搜索并播放';
           global.__LXLastSearchResults = [];
           renderChannelSelectors();
           resultsEl.innerHTML = '';
@@ -308,24 +314,18 @@
     var available = channelInfo.qualitys instanceof Array ? channelInfo.qualitys : [];
     var plan = getQualityPlan(active, selectedChannel);
     if (qualitySummaryEl) {
-      if (!available.length) {
-        qualitySummaryEl.innerHTML = '<span class="muted">' +
-          (!active || !active.inited || !active.sources || !active.sources[selectedChannel]
-            ? '野花音源正在准备；搜索可以先使用。'
-            : '当前渠道未声明音质列表，运行时将使用默认音质。') + '</span>';
-      } else {
-        var settingsLabel = global.LXPlaySettings ?
-          global.LXPlaySettings.getLabel(getPlaySettings()) : '最高音质优先（失败自动降级）';
-        var highest = global.LXPlaySettings ?
-          global.LXPlaySettings.getPreferredQuality(available, { qualityMode: 'highest', autoFallback: true }) :
-          available[0];
-        var nextText = MODERN_WEB ? ' · 首选：'+escapeHtml(plan[0]||'未知')+' · 降级：'+escapeHtml(plan.length>1?plan.slice(1).join(' → '):'无') :
-          (plan.length > 1 ? ' · 降级顺序：' + escapeHtml(plan.join(' → ')) : '');
-        qualitySummaryEl.innerHTML =
-          '<span class="quality-summary-label">' + escapeHtml(settingsLabel) + '</span>' +
-          '<span class="quality-summary-detail">当前渠道最高：' + escapeHtml(highest || '—') +
-          ' · 可用：' + escapeHtml(available.join(', ')) + nextText + '</span>';
-      }
+      var qualitySettings=getPlaySettings();
+      var requestedName=qualitySettings.qualityMode==='fixed'
+        ?qualitySettings.fixedQuality:'自动';
+      var selected=plan[0]||'暂不可用';
+      var hasFallback=qualitySettings.autoFallback;
+      var text='音质 '+requestedName+' · '+(selected===requestedName?'按所选播放':'首选 '+selected)+
+        (hasFallback&&plan.length>1?' · 可降级':'');
+      if(!available.length)text='音质 '+requestedName+' · 音源准备中';
+      qualitySummaryEl.textContent=text;
+      qualitySummaryEl.title='当前渠道声明音质：'+(available.join('、')||'未提供')+
+        '；实际媒体规格以服务器响应为准';
+      qualitySummaryEl.setAttribute('aria-label',qualitySummaryEl.title);
     }
   }
 
@@ -2602,6 +2602,8 @@
       }
       session.page=nextPage;
       session.count+=unique.length;
+      var counter=document.getElementById('song-result-counter');
+      if(counter)counter.textContent='已加载 '+session.count+' 首';
       session.hasMore=list.length>=20&&nextPage<50&&session.count<1000;
       global.__LXLastSearchResults=global.__LXLastSearchResults.concat(unique);
       renderSearchResults(unique,true);
