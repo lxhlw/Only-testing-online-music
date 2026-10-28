@@ -1665,6 +1665,12 @@
     // A new click owns a new deadline; the previous track must not be able
     // to time out and overwrite its status.
     clearMiguPlaybackDeadline(playbackState);
+    // Invalidate any earlier media/resolver callbacks BEFORE validation.
+    // A new high-quality request can be unsupported: its error must not be
+    // overwritten by the previous song's late "128k playing" confirmation.
+    playbackToken += 1;
+    playbackState = null;
+    updateExternalPlayerUrl('');
     var audio = document.getElementById('audio');
     if (audio) {
       audio.pause();
@@ -1742,8 +1748,6 @@
       if (songArtist) songArtist.textContent = String(music && (music.singer || music.artist) || '—');
       syncNativeTransportIcon(false);
     }
-    playbackToken += 1;
-    updateExternalPlayerUrl('');
     var token = playbackToken;
     playbackState = {
       token: token,
