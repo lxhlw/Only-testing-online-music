@@ -155,3 +155,17 @@ html.is-resolving #player-title::after{content:" · 正在连接";font-size:10px
 }
 @media(max-width:360px){.search-actions button{font-size:11px;padding:4px 7px}.player-transport{gap:12px}.top-source-indicator{max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+/* Removed UX: source import experiments and the old developer diagnostic panel.
+   Keep DOM hooks for the existing settings controllers until the full script
+   migration is complete; these do not load or run any third-party source. */
+html.modern-web .source-setting-actions>:not(#restore-default-sources-btn),
+html.modern-web .settings-section [for="source-url"],
+html.modern-web #source-url,
+html.modern-web .source-buttons,
+html.modern-web .settings-section:has(#runtime-info),
+html.modern-web #inline-fallback{display:none!important}
+html.modern-web .source-setting-actions{margin:12px 0}
+html.modern-web .source-item .source-meta:nth-child(3){display:none}
+html.modern-web .status button{margin-left:12px;padding:6px 12px;border:1px solid rgba(112,239,189,.35);background:#23473d;color:var(--mint)}
+html.modern-web .setting-row-inline:has(#inline-fallback){display:none}
