@@ -23,7 +23,8 @@ const fixture = [
   '  return Promise.resolve({url:"https://media.example.test/song.wav?id=demo"});',
   ' });',
   ' api.send(api.EVENT_NAMES.inited,{status:true,sources:{',
-  '  wy:{name:"网易云音乐",type:"music",actions:["musicUrl"],qualitys:["128k","320k"]}',
+  '  wy:{name:"网易云音乐",type:"music",actions:["musicUrl"],qualitys:["128k","320k"]},',
+  '  tx:{name:"QQ音乐",type:"music",actions:["musicUrl"],qualitys:["128k","320k"]}',
   ' }});',
   '})();'
 ].join('\n');
