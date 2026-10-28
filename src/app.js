@@ -2604,7 +2604,9 @@
       session.count+=unique.length;
       var counter=document.getElementById('song-result-counter');
       if(counter)counter.textContent='已加载 '+session.count+' 首';
-      session.hasMore=list.length>=20&&nextPage<50&&session.count<1000;
+      // Stop if a provider replays a full duplicate page. Do not burn
+      // dozens of speculative requests for identical content.
+      session.hasMore=list.length>=20&&unique.length>0&&nextPage<50&&session.count<1000;
       global.__LXLastSearchResults=global.__LXLastSearchResults.concat(unique);
       renderSearchResults(unique,true);
       setStatus('搜索结果：已加载 '+session.count+' 首歌曲。','ready');
