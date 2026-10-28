@@ -2640,9 +2640,9 @@
       return button;
     }
 
-    for(var i=0;i<items.length;i++){
-      var item=items[i]||{};
-      var row=document.createElement('div');
+    for(let i=0;i<items.length;i++){
+      const item=items[i]||{};
+      const row=document.createElement('div');
       row.className='search-row search-song-row';
       var index=document.createElement('span');
       index.className='song-row-index';
@@ -2662,7 +2662,7 @@
       source.className='search-source';
       source.textContent=String(CHANNEL_NAMES[item.source]||item.source||'');
       var actions=document.createElement('div');actions.className='search-actions';
-      var play=function(){testMusic(item,true);};
+      const play=function(){testMusic(item,true);};
       main.onclick=play;
       main.onkeydown=function(event){
         if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();play();}
@@ -2694,7 +2694,7 @@
       var favoriteLabel=favored?'取消收藏':'收藏';
       actions.appendChild(actionButton('加入队列','song-action-queue','加入队列 '+String(item.name||''),addToQueue));
       actions.appendChild(actionButton(favoriteLabel,'song-action-favorite',favoriteLabel+' '+String(item.name||''),toggleFavorite));
-      var more=document.createElement('details');more.className='song-more';
+      const more=document.createElement('details');more.className='song-more';
       var summary=document.createElement('summary');
       summary.textContent='···';summary.title='更多操作';
       summary.setAttribute('aria-label','更多操作 '+String(item.name||''));
