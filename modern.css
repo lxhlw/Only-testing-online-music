@@ -285,7 +285,7 @@ html.modern-web #playlist-detail-songs>.playlist-song-row{
   border-radius:0;background:#fff;color:#355443;box-shadow:none
 }
 html.modern-web #playlist-detail-songs>.playlist-song-row:before{display:none}
-html.modern-web #playlist-detail-songs>.playlist-song-row>.song-main b{color:#2b4a36;font-size:13px;font-weight:680}
+html.modern-web #playlist-detail-songs>.playlist-song-row>.song-main b{color:#2b4a36;font-size:14px;font-weight:680}
 html.modern-web #playlist-detail-songs>.playlist-song-row>.playlist-song-artist,
 html.modern-web #playlist-detail-songs>.playlist-song-row>.playlist-song-album,
 html.modern-web #playlist-detail-songs>.playlist-song-row>.playlist-song-duration{color:#728b7a}
