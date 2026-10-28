@@ -189,7 +189,14 @@ async function test(viewport, legacy){
     console.log('Seek drag geometry and value '+viewport.width+'px:',JSON.stringify(await page.evaluate(()=>{
       const slider=document.getElementById('player-seek')
       const rect=slider.getBoundingClientRect()
-      return {value:slider.value,simulatedTime:window.__simulatedTime,rect:{x:rect.x,y:rect.y,width:rect.width,height:rect.height},currentTime:document.getElementById('player-current-time').textContent}
+      const boxes={}
+      for(const key of ['player-bar','player-song','player-center','player-transport','player-timeline','player-seek-wrap','player-seek']){
+        const el=document.querySelector('.'+key)||document.getElementById(key)
+        if(!el)continue
+        const b=el.getBoundingClientRect(),cs=getComputedStyle(el)
+        boxes[key]={x:b.x,y:b.y,w:b.width,h:b.height,d:cs.display,dir:cs.flexDirection,align:cs.alignItems,pos:cs.position,flex:cs.flex,width:cs.width}
+      }
+      return {value:slider.value,simulatedTime:window.__simulatedTime,rect:{x:rect.x,y:rect.y,width:rect.width,height:rect.height},currentTime:document.getElementById('player-current-time').textContent,boxes}
     })))
     await page.waitForFunction(()=>Math.abs(window.__simulatedTime-50)<12,null,{timeout:3000})
     console.log('PASS: custom seek range drag moves HTMLAudioElement currentTime')
