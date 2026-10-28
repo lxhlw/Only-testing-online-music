@@ -12,7 +12,7 @@ async function getJson(url,signal){
   if(!r.ok)throw Error('Upstream HTTP '+r.status);
   const text=await r.text();
   if(text.length>1700000)throw Error('Chart response too large');
-  return JSON.parse(text.replace(/^\\uFEFF/,''));
+  return JSON.parse(text.replace(/^\uFEFF/,''));
 }
 const compact=(s,n=100)=>String(s||'').slice(0,n);
 function song(track){
@@ -48,7 +48,7 @@ export async function onRequestGet({request}){
     const playlist=detail?.playlist||{};
     if(Number(detail?.code)!==200||!playlist.id)throw Error('No chart detail returned');
     const ids=(Array.isArray(playlist.trackIds)?playlist.trackIds:[]).slice(0,limit)
-      .map(x=>String(x?.id||'')).filter(x=>/^\\d+$/.test(x));
+      .map(x=>String(x?.id||'')).filter(x=>/^\d+$/.test(x));
     let songs=[];
     if(ids.length){
       const items=await getJson('https://music.163.com/api/song/detail?id='+ids[0]+'&ids='+encodeURIComponent('['+ids.join(',')+']'),controller.signal);
