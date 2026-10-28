@@ -69,6 +69,22 @@ try {
       body:JSON.stringify({source:'wy',id:'123456',kind:recent?'recent':'hot',
         total:120,offset,hasMore:recent&&offset<100,comments:list})});
   });
+  await page.route('**/api/qq-catalog?*',route=>{
+    const q=new URL(route.request().url()).searchParams;
+    const kind=q.get('kind'),id=q.get('id');
+    let data;
+    if(kind==='rank'){
+      data=id?{songs:[{id:'QQMid123',songmid:'QQMid123',name:'QQ热歌',singer:'歌手',source:'tx'}]}
+        :{list:[{id:'26',name:'QQ音乐热歌榜',source:'tx'}]};
+    }else if(id){
+      data={playlist:{id,name:'QQ测试歌单',source:'tx',trackCount:1},songs:[{
+        id:'QQMid123',songmid:'QQMid123',name:'QQ歌单歌曲',singer:'QQ歌手',source:'tx'
+      }],nextOffset:50,hasMore:false};
+    }else{
+      data={result:{playlists:[{id:'1234',name:'QQ测试歌单',source:'tx',trackCount:1}]}};
+    }
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
+  });
   await page.route('**/api/netease-lyrics?*',route=>route.fulfill({
     status:200,contentType:'application/json',
     body:JSON.stringify({lyric:'[00:00.00]第一行测试\\n[00:01.00]第二行测试'})
@@ -245,9 +261,21 @@ try {
   assert.equal(await page.locator('#view-playlist').evaluate(el=>el.classList.contains('active')),true);
   await page.locator('[data-view="ranking"]').click();
   assert.equal(await page.locator('[data-ranking-source="tx"]').isVisible(),true);
+  await page.locator('[data-ranking-source="tx"]').click();
+  await page.waitForFunction(()=>document.querySelectorAll('#ranking-list .ranking-item').length>0,{timeout:5000});
+  await page.locator('#ranking-list .ranking-item').first().click();
+  await page.waitForFunction(()=>document.querySelector('#ranking-songs')?.textContent.includes('QQ热歌'),{timeout:5000});
+  await page.locator('[data-ranking-source="wy"]').click();
   await page.locator('[data-view="playlist"]').click();
   assert.equal(await page.locator('#view-playlist [data-catalog-source="tx"]').isVisible(),true);
-  checks.push('platform-catalog-controls');
+  await page.locator('#view-playlist [data-catalog-source="tx"]').click();
+  await page.waitForFunction(()=>document.querySelectorAll('#playlist-featured .playlist-card').length>0,{timeout:5000});
+  await page.locator('#playlist-featured .playlist-open-button').first().click();
+  await page.waitForFunction(()=>document.querySelector('#playlist-detail-songs')?.textContent.includes('QQ歌单歌曲'),{timeout:5000});
+  assert.equal(await page.locator('#view-playlist').evaluate(el=>el.classList.contains('is-detail-open')),true);
+  await page.locator('#playlist-back-btn').click();
+  await page.locator('#view-playlist [data-catalog-source="wy"]').click();
+  checks.push('multi-platform-catalog-list-detail');
   checks.push('navigation');
   await page.setViewportSize({width:390,height:844});
   await page.waitForTimeout(100);
