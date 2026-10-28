@@ -572,6 +572,7 @@ html.modern-web #view-playlist.is-detail-open #playlist-detail-panel{
     grid-template-columns:26px minmax(0,1fr)!important;
     justify-content:stretch!important;align-items:center!important;
     gap:14px!important;width:100%!important;min-width:0!important;
+    max-width:none!important;flex:0 0 auto!important;
     padding:0 15px!important;box-sizing:border-box!important;
     text-align:left!important
   }
