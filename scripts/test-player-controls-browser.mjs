@@ -186,6 +186,11 @@ async function test(viewport, legacy){
     await page.mouse.down()
     await page.mouse.move(seekBox.x+seekBox.width*0.25,seekBox.y+seekBox.height/2,{steps:8})
     await page.mouse.up()
+    console.log('Seek drag geometry and value '+viewport.width+'px:',JSON.stringify(await page.evaluate(()=>{
+      const slider=document.getElementById('player-seek')
+      const rect=slider.getBoundingClientRect()
+      return {value:slider.value,simulatedTime:window.__simulatedTime,rect:{x:rect.x,y:rect.y,width:rect.width,height:rect.height},currentTime:document.getElementById('player-current-time').textContent}
+    })))
     await page.waitForFunction(()=>Math.abs(window.__simulatedTime-50)<12,null,{timeout:3000})
     console.log('PASS: custom seek range drag moves HTMLAudioElement currentTime')
   } else {
