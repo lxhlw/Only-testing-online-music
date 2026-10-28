@@ -202,7 +202,10 @@ try {
   await page.locator('#inline-save-settings').click();
   const beforeFixed=await page.evaluate(()=>window.__qualityTypes.length);
   await page.locator('#inline-replay-quality').click();
-  await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('未声明支持'),{timeout:4500});
+  await page.waitForTimeout(130);
+  const fixedStatus=await page.locator('#status').textContent();
+  assert.ok(fixedStatus.includes('未声明支持'),
+    'Strict FLAC32 must report unsupported explicitly (actual status: '+fixedStatus+')');
   assert.equal(await page.evaluate(()=>window.__qualityTypes.length),beforeFixed,
     'Unsupported fixed FLAC32 must never request 128k');
   await page.locator('#inline-quality').selectOption('320k');
