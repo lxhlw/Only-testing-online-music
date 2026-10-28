@@ -1,4 +1,4 @@
-/* LX Music Web — native-inspired mobile shell v0.4.9
+/* LX Music Web — native-inspired mobile shell v0.4.10
  * All selectors are scoped to mobile-shell-ready and touch breakpoints.
  * Desktop appearance, audio runtime, playlists and existing IDs are intact.
  * The reference is a design-language study, not a pixel-for-pixel copy.
@@ -526,4 +526,67 @@ html.modern-web #playlist-load-more-btn{min-height:38px}
 }
 @media(min-width:741px){
   .mobile-drawer-heading{display:none!important}
+}
+
+/* v0.4.10 — standalone source picker and single-screen playlist details.
+   Both overlays live at body level to escape sticky/animation contexts. */
+html.modern-web #view-playlist.is-detail-open #playlist-featured,
+html.modern-web #view-playlist.is-detail-open #playlist-featured-footer,
+html.modern-web #view-playlist.is-detail-open #playlist-filter-stack{
+  display:none!important;
+}
+html.modern-web #view-playlist.is-detail-open #playlist-detail-panel{
+  display:block!important;width:100%;max-width:100%;
+}
+@media(max-width:740px){
+  html.modern-web.mobile-shell-ready body>#channel-list.mobile-channel-popover{
+    position:fixed!important;z-index:1100!important;
+    display:flex!important;flex-wrap:wrap!important;
+    gap:8px!important;
+    top:var(--picker-top,160px)!important;
+    left:var(--picker-left,15px)!important;
+    width:var(--picker-width,300px)!important;
+    max-width:calc(100vw - 16px)!important;
+    height:auto!important;max-height:min(240px,45dvh)!important;
+    margin:0!important;padding:12px!important;
+    overflow-x:hidden!important;overflow-y:auto!important;
+    border:1px solid #d6e8dc!important;border-radius:13px!important;
+    background:#fff!important;color:#335c45!important;
+    box-shadow:0 12px 32px rgba(35,72,48,.16)!important;
+    box-sizing:border-box!important;
+    -webkit-overflow-scrolling:touch
+  }
+  html.modern-web.mobile-shell-ready body>#channel-list.mobile-channel-popover .channel-button{
+    display:inline-flex!important;align-items:center;justify-content:center;
+    min-height:40px!important;padding:8px 11px!important;
+    white-space:nowrap!important;font-size:12px!important;
+    border-radius:9px!important
+  }
+  html.modern-web.mobile-shell-ready .nav-rail .main-nav{
+    display:flex!important;flex-direction:column!important;
+    width:100%!important;min-width:0!important;
+    padding:0!important
+  }
+  html.modern-web.mobile-shell-ready .nav-rail .nav-item{
+    display:grid!important;
+    grid-template-columns:26px minmax(0,1fr)!important;
+    justify-content:stretch!important;align-items:center!important;
+    gap:14px!important;width:100%!important;min-width:0!important;
+    padding:0 15px!important;box-sizing:border-box!important;
+    text-align:left!important
+  }
+  html.modern-web.mobile-shell-ready .nav-rail .nav-item .nav-symbol{
+    grid-column:1;grid-row:1;justify-self:center;width:24px!important;
+    min-width:24px!important
+  }
+  html.modern-web.mobile-shell-ready .nav-rail .nav-item span:last-child{
+    grid-column:2;grid-row:1;display:block!important;
+    min-width:0!important;max-width:none!important;width:auto!important;
+    overflow:visible!important;white-space:nowrap!important;
+    word-break:keep-all!important;writing-mode:horizontal-tb!important;
+    font-size:14px!important;line-height:1.2!important
+  }
+  html.modern-web.mobile-shell-ready #view-playlist.is-detail-open .playlist-detail-panel{
+    margin-top:4px!important;border-radius:14px!important
+  }
 }
