@@ -12,7 +12,7 @@ async function getJson(path,query,signal){
  if(!r.ok)throw Error('QQ upstream HTTP '+r.status);
  let text=await r.text();
  if(text.length>1300000)throw Error('QQ music response too large');
- text=text.trim().replace(/^callback\\(/,'').replace(/\\);?$/,'');
+ text=text.trim().replace(/^callback\(/,'').replace(/\);?$/,'');
  return JSON.parse(text);
 }
 function normalizeTrack(src){
