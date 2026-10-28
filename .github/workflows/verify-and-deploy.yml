@@ -1,476 +1,95 @@
-name: Verify And Deploy
-
+name: Modern Web · Verify And Deploy
 on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'styles.css'
+      - 'modern.css'
+      - 'src/**'
+      - 'scripts/test-modern-web-browser.mjs'
+      - 'functions/**'
+      - '.github/workflows/verify-and-deploy.yml'
   push:
     branches: [main]
-    paths:
-      - "index.html"
-      - "audio-test.html"
-      - "settings.html"
-      - "legacy-test.html"
-      - "styles.css"
-      - "src/**"
-      - "functions/**"
-      - "scripts/**"
-      - "package.json"
-      - ".github/workflows/verify-and-deploy.yml"
-      - ".node-version"
-      - "vendor/**"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
-  group: verify-and-deploy-main
+  group: modern-web-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   verify:
-    name: Search + Playback Verification
+    name: Modern browser UX + audio + security
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: '.node-version'
-
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-
-      - name: Install pinned FFmpeg encoder
-        run: npm install --no-save --no-audit --no-fund @ffmpeg-installer/ffmpeg@1.1.0
-
-      - name: Generate genuine encoded MP3 and WAV diagnostics
-        run: node scripts/generate-android44-audio.mjs
-
-      - name: Prepare bundled legacy Babel
-        run: |
-          mkdir -p vendor
-          cp node_modules/@babel/standalone/babel.min.js vendor/babel.min.js
-          node scripts/test-bundled-babel.mjs
-
-      - name: Run project baseline contract checks
-        run: |
-          node scripts/test-version.mjs
-          node scripts/test-legacy-web.mjs
-          node scripts/test-diagnostic-report.mjs
-
-      - name: Check JavaScript syntax
-        run: |
-          node --check src/app.js
-          node --check scripts/test-resolver-outage-cooldown-browser.mjs
-          node --check scripts/test-android44-flower-only-browser.mjs
-          node --check scripts/test-android44-native-media-url-browser.mjs
-          node --check src/android-native-resolver.js
-          node --check scripts/test-android44-native-resolver-browser.mjs
-          node --check scripts/bundle-android44-webui.mjs
-          node --check scripts/test-android44-bundled-ui-browser.mjs
-          node --check src/android-native-xhr-fallback.js
-          node --check scripts/test-android44-tls-xhr-fallback-browser.mjs
-          node --check scripts/test-android44-bundled-fallback-browser.mjs
-          node --check scripts/test-native-companion-browser.mjs
-          node --check src/android-external-audio.js
-          node --check scripts/test-android-external-intent-browser.mjs
-          node --check src/lx-runtime.js
-          node --check src/music-library.js
-          node --check src/music-lyrics.js
-          node --check src/music-search.js
-          node --check src/play-settings.js
-          node --check src/player-controls.js
-          node --check scripts/test-player-controls-browser.mjs
-          node --check scripts/test-android44-real-audio-browser.mjs
-          node --check scripts/test-android44-encoded-media-browser.mjs
-          node --check scripts/generate-android44-audio.mjs
-          node --check src/promise-lite.js
-          node --check src/sha1.js
-          node --check src/source-manager.js
-          node --check src/source-transpiler.js
-          node --check scripts/test-android44-apk-babel-offline-browser.mjs
-
-      - name: Install Chromium
-        run: npx playwright install chromium
-
-      - name: Start local Pages server
-        run: |
-          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/wrangler.log 2>&1 &
-          for i in {1..45}; do
-            if curl --fail --silent http://127.0.0.1:8788/ > /dev/null; then
-              exit 0
-            fi
-            sleep 1
-          done
-          cat /tmp/wrangler.log
-          exit 1
-
-      - name: Run Migu proxy decryption regression test
-        run: node scripts/test-migu-proxy.mjs
-
-      - name: Run proxy security abuse and redirect regression
-        run: node scripts/test-proxy-security.mjs
-
-      - name: Verify Pages proxy rejects unsafe clients
-        env:
-          TEST_BASE_URL: http://127.0.0.1:8788
-        run: node scripts/test-proxy-production.mjs
-
-      - name: Run deterministic search and resolver tests
-        run: node scripts/test-music-search-native.mjs
-
-      - name: Run quality fallback test
-        run: node scripts/test-quality-fallback-browser.mjs
-
-      - name: Verify Migu 25-second deadline and stale callbacks
-        run: node scripts/test-migu-playback-deadline-browser.mjs
-
-      - name: Run settings test
-        run: node scripts/test-settings.mjs
-
-      - name: Verify genuine MP3/WAV decoding and playback progress
-        run: node scripts/test-android44-encoded-media-browser.mjs
-
-      - name: Verify Android native companion bridge
-        run: node scripts/test-native-companion-browser.mjs
-
-      - name: Verify APK-bundled XHR bootstrap for missing WebView script
-        run: node scripts/test-android44-bundled-fallback-browser.mjs
-
-      - name: Verify Android 4.4 XHR to native TLS fallback
-        run: node scripts/test-android44-tls-xhr-fallback-browser.mjs
-
-      - name: Verify APK-bundled UI controls and navigation
-        run: |
-          node scripts/bundle-android44-webui.mjs
-          node scripts/test-android44-bundled-ui-browser.mjs
-
-      - name: Verify offline Babel in APK transpiles and initializes LX source
-        run: node scripts/test-android44-apk-babel-offline-browser.mjs
-
-      - name: Verify native Android 4.4 song URL always uses same-origin proxy
-        run: node scripts/test-android44-native-media-url-browser.mjs
-
-      - name: Verify native APK Flower-only playback and safe proxy
-        run: node scripts/test-android44-flower-only-browser.mjs
-
-      - name: Verify known service outages do not exhaust tablet retry chain
-        run: node scripts/test-resolver-outage-cooldown-browser.mjs
-
-      - name: Verify Android4.4 native resolver GET POST status behavior
-        run: node scripts/test-android44-native-resolver-browser.mjs
-
-      - name: Verify manual Android external audio Intent handoff
-        run: node scripts/test-android-external-intent-browser.mjs
-
-      - name: Verify no-copy Android 4.4 diagnostic report UI
-        run: node scripts/test-diagnostic-report-browser.mjs
-
-      - name: Verify Android 4.4 native audio fallback and MP3 byte ranges
-        run: node scripts/test-android44-real-audio-browser.mjs
-
-      - name: Run curated first-visit Via default sources and search test
-        run: node scripts/test-default-sources-legacy-browser.mjs
-
-      - name: Verify draggable progress and four playback modes
-        run: node scripts/test-player-controls-browser.mjs
-      - name: Verify fixed navigation and playlist filters during scroll
-        run: node scripts/test-playlist-sticky-scroll-browser.mjs
-      - name: Run Via playlist detail stability test
-        run: node scripts/test-playlist-via-navigation-browser.mjs
-
-      - name: Confirm manual source install overrides pending defaults
-        run: node scripts/test-default-source-race-browser.mjs
-
-      - name: Run playlist browser test
-        run: node scripts/test-playlist-browser.mjs
-
-      - name: Run responsive layout browser test
-        run: node scripts/test-responsive-browser.mjs
-
-      - name: Run search results overflow regression
-        run: node scripts/test-search-layout-browser.mjs
-
-      - name: Verify active LX source selection UI
-        run: node scripts/test-active-source-ui-browser.mjs
-
-      - name: Run music library test
-        run: node scripts/test-music-library.mjs
-
-      - name: Run queue limit boundary test
-        run: node scripts/test-music-library-bounds.mjs
-
-      - name: Run active LX source persistence test
-        run: node scripts/test-source-selection.mjs
-
-      - name: Verify Migu musicInfo ID mapping and clear no-URL errors
-        run: node scripts/test-migu-track-ids.mjs
-
-      - name: Run lyrics test
-        run: node scripts/test-music-lyrics.mjs
-
-      - name: Run source/runtime regression tests
-        run: |
-          node scripts/test-source-transpiler.mjs
-          node scripts/check-legacy-test.mjs
-
-      - name: Run legacy import button test
-        run: node scripts/test-import-ui.mjs
-
-      - name: Run same-origin Babel proxy test
-        run: node scripts/test-babel-proxy.mjs
-
-      - name: Run legacy transpiler routing test
-        run: node scripts/test-legacy-transpiler.mjs
-
-      - name: Run HUIBQ ES5 adapter test
-        run: node scripts/test-huibq-legacy.mjs
-
-      - name: Run Huibq import and WY search browser test
-        run: node scripts/test-huibq-browser.mjs
-
-      - name: Show Pages server log on failure
-        if: failure()
-        run: cat /tmp/wrangler.log || true
-
-  deploy:
-    name: Deploy Verified Build
-    needs: verify
-    if: needs.verify.result == 'success'
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
-    outputs:
-      deployment_url: ${{ steps.deploy.outputs.deployment_url }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: '.node-version'
-
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-
-      - name: Install pinned FFmpeg encoder for production artifacts
-        run: npm install --no-save --no-audit --no-fund @ffmpeg-installer/ffmpeg@1.1.0
-
-      - name: Generate production MP3 and WAV diagnostic files
-        run: |
-          node scripts/generate-android44-audio.mjs
-          test -s diagnostics/android44-tone-v3.mp3
-          test -s diagnostics/android44-tone-v3.wav
-
-      - name: Prepare bundled legacy Babel
-        run: |
-          mkdir -p vendor
-          cp node_modules/@babel/standalone/babel.min.js vendor/babel.min.js
-          node scripts/test-bundled-babel.mjs
-
-      - name: Include generated media assets in Pages upload
-        run: |
-          test -s diagnostics/android44-tone-v3.mp3
-          test -s diagnostics/android44-tone-v3.wav
-          # Wrangler scans Git-based asset lists; ensure files created after
-          # checkout are discoverable by its deployment asset collector.
-          git add -f diagnostics/android44-tone-v3.mp3 diagnostics/android44-tone-v3.wav
-          git ls-files diagnostics
-          stat -c '%n %s bytes' diagnostics/android44-tone-v3.mp3 diagnostics/android44-tone-v3.wav
-
-      - name: Configure optional private diagnostic report storage
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node scripts/setup-diagnostic-kv.mjs
-
-      - name: Deploy to Cloudflare Pages
-        id: deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          npx wrangler pages project create only-testing-online-music --production-branch main || true
-          npx wrangler pages deploy . --project-name only-testing-online-music --commit-hash "$GITHUB_SHA" --commit-message "Verify And Deploy $GITHUB_SHA" | tee /tmp/deploy.log
-          DEPLOYMENT_URL="https://only-testing-online-music.pages.dev"
-          echo "deployment_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
-          echo "Verified production URL: $DEPLOYMENT_URL"
-
-      - name: Wait for deployment to serve
-        env:
-          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment_url }}
-        run: |
-          for i in {1..30}; do
-            if curl --fail --silent --show-error "$DEPLOYMENT_URL/" > /dev/null; then
-              exit 0
-            fi
-            sleep 2
-          done
-          exit 1
-
-      - name: Verify deployed Babel bundle
-        env:
-          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-        run: node scripts/test-babel-production.mjs
-
-      - name: Verify deployed proxy rejects cross-origin and unsafe targets
-        env:
-          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-        run: node scripts/test-proxy-production.mjs
-
-      - name: Install Chromium for production playlist test
-        run: npx playwright install chromium
-
-      - name: Verify deployed responsive layout
-        env:
-          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-        run: node scripts/test-responsive-browser.mjs
-
-      - name: Verify deployed search actions are on screen
-        env:
-          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-        run: node scripts/test-search-layout-browser.mjs
-
-      - name: Verify deployed active LX source selection UI
-        env:
-          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-        run: node scripts/test-active-source-ui-browser.mjs
-
-      - name: Verify deployed Migu failure deadline
-        env:
-          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-        run: node scripts/test-migu-playback-deadline-browser.mjs
-
-      - name: Verify deployed Via first-visit defaults and 成都 search
-        env:
-          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-        run: node scripts/test-default-sources-legacy-browser.mjs
-
-      - name: Verify deployed genuine MP3, PCM WAV and Web Audio diagnostics
-        env:
-          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-        run: node scripts/test-android44-encoded-media-browser.mjs
-
-      - name: Verify deployed Android native companion bridge
-        env:
-          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-        run: node scripts/test-native-companion-browser.mjs
-
-      - name: Verify deployed APK-bundled XHR bootstrap and media bytes
-        env:
-          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-        run: node scripts/test-android44-bundled-fallback-browser.mjs
-
-      - name: Verify deployed Android XHR native TLS fallback
-        env:
-          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-        run: node scripts/test-android44-tls-xhr-fallback-browser.mjs
-
-      - name: Verify deployed manual Android native-player audio handoff
-        env:
-          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-        run: node scripts/test-android-external-intent-browser.mjs
-
-      - name: Verify deployed no-copy report card
-        env:
-          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-        run: node scripts/test-diagnostic-report-browser.mjs
-
-      - name: Verify deployed Android 4.4 MP3 and manual native playback
-        env:
-          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-        run: node scripts/test-android44-real-audio-browser.mjs
-
-      - name: Verify deployed player progress and playback modes
-        env:
-          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-        run: node scripts/test-player-controls-browser.mjs
-      - name: Verify deployed sticky playlist navigation
-        env:
-          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-        run: node scripts/test-playlist-sticky-scroll-browser.mjs
-      - name: Verify deployed playlist detail
-        env:
-          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-          TEST_PLAYLIST_KEYWORD: '周杰伦'
-        run: node scripts/test-playlist-browser.mjs
-
-      - name: Measure live Huibq Migu click-to-failure (informational)
-        continue-on-error: true
-        timeout-minutes: 3
-        env:
-          TEST_BASE_URL: ${{ steps.deploy.outputs.deployment_url }}
-          MIGU_PROBE_TIMEOUT_MS: 36000
-          MIGU_REQUIRE_PLAYBACK: 'false'
-          MIGU_REQUIRE_25S_BOUND: 'true'
-        run: node scripts/test-huibq-migu-live.mjs
-  live-smoke:
-    name: Live Flower Four-Channel Smoke Test
-    needs: deploy
-    if: needs.deploy.result == 'success'
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-
+      - name: Modern JS parse checks
+        run: |
+          node --check src/app.js
+          node --check src/source-manager.js
+          node --check src/source-transpiler-modern.js
+          node --check src/modern-ui.js
+          node --check scripts/test-modern-web-browser.mjs
+      - name: Security and local music library regression
+        run: |
+          node scripts/test-proxy-security.mjs
+          node scripts/test-music-library.mjs
       - name: Install Chromium
         run: npx playwright install chromium
+      - name: Start Cloudflare Pages emulator and run modern web browser regression
+        run: |
+          set -euo pipefail
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 >/tmp/lx-modern-pages.log 2>&1 &
+          READY=0
+          for i in {1..50}; do
+            if curl -fsS http://127.0.0.1:8788/ >/dev/null; then READY=1; break; fi
+            sleep 1
+          done
+          if [ "$READY" != "1" ]; then cat /tmp/lx-modern-pages.log; exit 1; fi
+          node scripts/test-modern-web-browser.mjs
 
-      - name: Run live Flower search + playback matrix
-        env:
-          TEST_BASE_URL: ${{ needs.deploy.outputs.deployment_url }}
-          LX_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js
-          TEST_KEYWORD: 成都
-          TEST_CHANNELS: kw,kg,tx,wy
-          REQUIRE_PLAUSIBLE_PLAYBACK: 'true'
-          INIT_TIMEOUT_MS: 30000
-          SEARCH_TIMEOUT_MS: 60000
-          PLAYBACK_TIMEOUT_MS: 30000
-        run: node scripts/test-flower-browser.mjs
-
-  live-migu-smoke:
-    name: Live Flower Migu Smoke Test
-    needs: deploy
-    if: needs.deploy.result == 'success'
+  deploy:
+    name: Publish verified modern site
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: verify
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
+    timeout-minutes: 12
+    environment:
+      name: production
+      url: https://only-testing-online-music.pages.dev
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version-file: '.node-version'
-
-      - name: Install dependencies
+          node-version: 22
+      - name: Install Cloudflare deploy dependencies
         run: npm install --no-audit --no-fund
-
-      - name: Install Chromium
-        run: npx playwright install chromium
-
-      - name: Run live Flower Migu search + playback
+      - name: Deploy to Cloudflare Pages
         env:
-          TEST_BASE_URL: ${{ needs.deploy.outputs.deployment_url }}
-          # Use the same direct Flower source already proven in four-channel smoke.
-          # Avoid an unrelated ghproxy.net HTTP 0 causing false import failures.
-          LX_SOURCE_URL: https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js
-          TEST_KEYWORD: 成都
-          TEST_CHANNELS: mg
-          REQUIRE_PLAUSIBLE_PLAYBACK: 'true'
-          INIT_TIMEOUT_MS: 30000
-          SEARCH_TIMEOUT_MS: 60000
-          PLAYBACK_TIMEOUT_MS: 30000
-        run: node scripts/test-flower-browser.mjs
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx wrangler pages deploy . --project-name only-testing-online-music --commit-hash "$GITHUB_SHA"
+      - name: Verify production entrypoint and modern assets
+        run: |
+          set -euo pipefail
+          for i in {1..12}; do
+            if curl -fsSL 'https://only-testing-online-music.pages.dev/?v=0.3.0' | grep -q 'modern.css'; then
+              break
+            fi
+            sleep 5
+          done
+          curl -fsSL https://only-testing-online-music.pages.dev/modern.css | grep -q 'LX Music Modern'
+          curl -fsSL https://only-testing-online-music.pages.dev/src/modern-ui.js | grep -q 'mediaSession'
