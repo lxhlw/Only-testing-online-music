@@ -67,15 +67,16 @@ try {
   await openDetail()
   await page.waitForFunction(() => document.querySelectorAll('#playlist-detail-songs .playlist-song-row').length === 50)
   assert.equal(await page.locator('#playlist-detail-songs .playlist-song-row').count(), 50)
-  assert.equal(await page.locator('#playlist-load-more-btn').isVisible(), true)
-  await page.locator('#playlist-load-more-btn').click()
+  assert.equal(await page.locator('#playlist-load-more-btn').isVisible(), false,
+    'Automatic pagination should not require a button')
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
   await page.waitForFunction(() => document.querySelectorAll('#playlist-detail-songs .playlist-song-row').length === 51)
   assert.equal(await page.locator('#playlist-load-more-btn').isVisible(), false)
   const titles = await page.locator('#playlist-detail-songs .playlist-song-row .song-main b').allTextContents()
   assert.equal(new Set(titles).size, 51)
   assert.equal(titles[50], 'Track 51')
   assert.deepEqual(requestedOffsets.slice(0, 2), ['0', '50'])
-  console.log('PASS: first 50 songs, Load More, remaining one song, no duplicates')
+  console.log('PASS: first 50 songs, scroll auto-load, final song, no duplicates')
 
   await page.locator('#playlist-back-btn').click()
   scenario = 'empty'
@@ -97,7 +98,7 @@ try {
   failSecondPageOnce = true
   await openDetail()
   await page.waitForFunction(() => document.querySelectorAll('#playlist-detail-songs .playlist-song-row').length === 50)
-  await page.locator('#playlist-load-more-btn').click()
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
   await page.waitForFunction(() => /加载失败/.test(document.querySelector('#playlist-detail-status')?.textContent || ''))
   assert.equal(await page.locator('#playlist-load-more-btn').isVisible(), true)
   await page.locator('#playlist-load-more-btn').click()

@@ -13,6 +13,7 @@ on:
       - "src/music-library.js"
       - "scripts/test-music-library.mjs"
       - "scripts/test-playlist-playall-browser.mjs"
+      - "scripts/test-playlist-infinite-browser.mjs"
       - "functions/api/netease-playlists.js"
       - "scripts/test-playlist-browser.mjs"
       - "scripts/test-netease-playlists-api.mjs"
@@ -47,6 +48,7 @@ jobs:
           node --check functions/api/netease-playlists.js
           node --check scripts/test-netease-playlists-api.mjs
           node --check scripts/test-playlist-pagination-browser.mjs
+          node --check scripts/test-playlist-infinite-browser.mjs
           node --check scripts/test-playlist-browser.mjs
           node --check scripts/test-playlist-playall-browser.mjs
           node --check scripts/test-modern-playlist-scroll-browser.mjs

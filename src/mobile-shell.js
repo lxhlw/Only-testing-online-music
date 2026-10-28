@@ -1,4 +1,4 @@
-// LX Music Web v0.4.8 — mobile-only interaction shell.
+// LX Music Web v0.4.9 — mobile-only interaction shell.
 // The business logic stays in app.js. This module only moves navigation
 // into an accessible drawer and keeps channel choices behind one disclosure.
 const root=document.documentElement;
@@ -10,6 +10,21 @@ const channels=document.getElementById('channel-list');
 const mobile=matchMedia('(max-width:740px)');
 
 if(navRail&&nav&&header&&toolbar&&channels){
+  // A fixed drawer inside the main layout can be clipped by the layout's
+  // stacking/scroll context. Portal the existing nav to <body> on phones.
+  // The comment anchor restores the *same nodes* on desktop, so no duplicate
+  // navigation handlers or persistent scroll offset are introduced.
+  const navDock=document.createComment('mobile-navigation-dock');
+  navRail.parentNode.insertBefore(navDock,navRail);
+  const placeDrawer=()=>{
+    if(mobile.matches){
+      if(navRail.parentNode!==document.body)document.body.appendChild(navRail);
+    }else if(navRail.parentNode!==navDock.parentNode){
+      navDock.parentNode.insertBefore(navRail,navDock.nextSibling);
+    }
+  };
+  placeDrawer();
+
   const menu=document.createElement('button');
   menu.type='button';menu.className='mobile-menu-button';
   menu.setAttribute('aria-label','打开主导航');
@@ -17,6 +32,17 @@ if(navRail&&nav&&header&&toolbar&&channels){
   menu.setAttribute('aria-expanded','false');
   menu.textContent='☰';
   navRail.id='mobile-navigation';
+
+  const drawerHeading=document.createElement('div');
+  drawerHeading.className='mobile-drawer-heading';
+  const drawerName=document.createElement('strong');
+  drawerName.textContent='LX Music';
+  const drawerClose=document.createElement('button');
+  drawerClose.type='button';drawerClose.className='mobile-drawer-close';
+  drawerClose.setAttribute('aria-label','关闭主导航');
+  drawerClose.textContent='×';
+  drawerHeading.append(drawerName,drawerClose);
+  navRail.prepend(drawerHeading);
 
   const title=document.createElement('span');
   title.className='mobile-page-title';
@@ -70,6 +96,7 @@ if(navRail&&nav&&header&&toolbar&&channels){
   };
   menu.addEventListener('click',()=>setDrawer(!drawerOpen));
   shade.addEventListener('click',()=>setDrawer(false,true));
+  drawerClose.addEventListener('click',()=>setDrawer(false,true));
   nav.addEventListener('click',ev=>{
     if(ev.target.closest('.nav-item'))setDrawer(false);
   });
@@ -108,6 +135,7 @@ if(navRail&&nav&&header&&toolbar&&channels){
   });
   mobile.addEventListener('change',()=>{
     setDrawer(false);
+    placeDrawer();
     setPicker(false);
     navRail.inert=mobile.matches;
     refreshActive();
