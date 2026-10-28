@@ -51,6 +51,18 @@ try {
   await page.route('https://media.example.test/**',route=>route.fulfill({
     status:200,contentType:'audio/wav',body:makeWav()
   }));
+  await page.route('**/api/netease-song-meta?*',route=>route.fulfill({
+    status:200,contentType:'application/json',
+    body:JSON.stringify({id:'123456',source:'wy',image:'https://p1.music.126.net/test-cover.png',albumName:'测试专辑',singer:'测试歌手'})
+  }));
+  await page.route('https://p1.music.126.net/**',route=>route.fulfill({
+    status:200,contentType:'image/png',
+    body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a8X0AAAAASUVORK5CYII=','base64')
+  }));
+  await page.route('**/api/netease-comments?*',route=>route.fulfill({
+    status:200,contentType:'application/json',
+    body:JSON.stringify({source:'wy',id:'123456',kind:'hot',total:120,comments:[{id:'a',user:'网易云听友',content:'真喜欢这首歌的旋律',likedCount:18}]})
+  }));
   await page.route('**/api/netease-lyrics?*',route=>route.fulfill({
     status:200,contentType:'application/json',
     body:JSON.stringify({lyric:'[00:00.00]第一行测试\\n[00:01.00]第二行测试'})
@@ -58,7 +70,7 @@ try {
   await page.goto(url,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.LXSourceManager?.getActive()?.inited,{timeout:14000});
   assert.equal(await page.locator('.brand').textContent(),'LX Music Web');
-  assert.equal(await page.locator('#app-version').textContent(),'v0.4.2');
+  assert.equal(await page.locator('#app-version').textContent(),'v0.4.3');
   assert.equal(await page.locator('#top-source-label').textContent(),'当前音源：野花🌷');
   assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(x=>x.name)),['野花🌷']);
   assert.equal(await page.locator('#legacy-media-panel').count(),0);
@@ -138,13 +150,37 @@ try {
   });
   await page.waitForFunction(()=>
     document.querySelectorAll('#lyrics-lines .lyrics-line').length===2,{timeout:10000});
-  await page.locator('#open-lyrics-btn').click();
-  assert.equal(await page.locator('#lyrics-overlay').isVisible(),true,'Lyrics panel must open');
-  assert.equal(await page.locator('#lyrics-title').textContent(),'歌词同步测试 · 测试歌手');
+  await page.waitForFunction(()=>document.getElementById('player-cover-image')?.naturalWidth>0,{timeout:5500});
+  assert.equal(await page.locator('#open-lyrics-btn').count(),0,'No redundant lyrics button');
+  await page.locator('#player-cover-button').click();
+  assert.equal(await page.locator('#lyrics-overlay').isVisible(),true,'Clicking album art opens Now Playing');
+  assert.equal(await page.locator('#lyrics-title').textContent(),'歌词同步测试');
+  assert.equal(await page.locator('#now-playing-album').textContent(),'专辑：测试专辑');
+  const immersion=await page.evaluate(()=>{
+    const box=document.querySelector('.lyrics-overlay').getBoundingClientRect();
+    return {w:box.width,h:box.height,vw:innerWidth,vh:innerHeight};
+  });
+  assert.ok(immersion.w>=immersion.vw-1&&immersion.h>=immersion.vh-1,
+    'Now Playing must fill entire viewport: '+JSON.stringify(immersion));
   await page.waitForFunction(()=>!!document.querySelector('#lyrics-lines .lyrics-line.active'),{timeout:5500});
+  const center=await page.evaluate(()=>{
+    const scroll=document.getElementById('lyrics-scroll').getBoundingClientRect();
+    const line=document.querySelector('#lyrics-lines .lyrics-line.active').getBoundingClientRect();
+    return Math.abs((line.top+line.height/2)-(scroll.top+scroll.height/2));
+  });
+  assert.ok(center<120,'Active lyric must be vertically centered: '+center);
+  assert.equal(await page.locator('#detail-toggle-btn').isVisible(),true);
+  assert.equal(await page.locator('#detail-seek').isVisible(),true);
+  await page.locator('#comments-tab').click();
+  await page.waitForFunction(()=>document.querySelectorAll('.now-comment-card').length===1,{timeout:5500});
+  assert.equal(await page.locator('.now-comment-card p').first().textContent(),'真喜欢这首歌的旋律');
+  assert.ok((await page.locator('#comments-official-link').getAttribute('href')).endsWith('id=123456'));
+  await page.locator('.now-playing-cover-box').click();
+  assert.equal(await page.locator('#lyrics-overlay').isVisible(),true,'Clicking left side never dismisses full-screen player');
+  await page.locator('#lyrics-tab').click();
   await page.keyboard.press('Escape');
-  assert.equal(await page.locator('#lyrics-overlay').isVisible(),false,'Escape closes lyrics');
-  checks.push('synchronized-lyrics');
+  assert.equal(await page.locator('#lyrics-overlay').isVisible(),false,'Escape closes full screen');
+  checks.push('immersive-fullscreen-art-comments-lyrics');
 
 
   // Exercise the library as a real desktop split-view with 50 songs.
