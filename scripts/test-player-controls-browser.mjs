@@ -265,5 +265,5 @@ async function test(viewport, legacy){
 try {
  await test({width:1280,height:840},false)
  await test({width:1792,height:850},false)
- await test({width:390,height:844},true)
+ await test({width:390,height:844},false)
 }finally{await browser.close()}
