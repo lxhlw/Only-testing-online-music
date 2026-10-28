@@ -156,65 +156,8 @@ document.querySelectorAll('[data-suggest-query]').forEach(button=>{
 });
 
 
-/* Accessible, event-driven lyrics sheet. It works regardless of current page.
-   No frame loop: only reposition when the active LRC line changes. */
-const lyricsOverlay=$('lyrics-overlay');
-const lyricsScroll=$('lyrics-scroll');
-const lyricsToggle=$('open-lyrics-btn');
-const closeLyricsButton=$('lyrics-close-btn');
-const lyricTriggers=[lyricsToggle,lyric].filter(Boolean);
-let lastLyricsTrigger=null;
-let userLyricsScrollUntil=0;
-const lyricsIsOpen=()=>Boolean(lyricsOverlay&&!lyricsOverlay.classList.contains('hidden'));
-const openLyrics=trigger=>{
-  if(!lyricsOverlay)return;
-  lastLyricsTrigger=trigger||lyricsToggle;
-  lyricsOverlay.classList.remove('hidden');
-  lyricsOverlay.setAttribute('aria-hidden','false');
-  document.documentElement.classList.add('lyrics-open');
-  lyricsToggle?.setAttribute('aria-expanded','true');
-  closeLyricsButton?.focus();
-  const activeLine=lyricsOverlay.querySelector('.lyrics-line.active');
-  activeLine?.scrollIntoView({block:'center',behavior:'instant'});
-};
-const closeLyrics=()=>{
-  if(!lyricsIsOpen())return;
-  lyricsOverlay.classList.add('hidden');
-  lyricsOverlay.setAttribute('aria-hidden','true');
-  document.documentElement.classList.remove('lyrics-open');
-  lyricsToggle?.setAttribute('aria-expanded','false');
-  lastLyricsTrigger?.focus();
-};
-for(const trigger of lyricTriggers)
-  trigger.addEventListener('click',()=>lyricsIsOpen()?closeLyrics():openLyrics(trigger));
-$('lyrics-backdrop')?.addEventListener('click',closeLyrics);
-closeLyricsButton?.addEventListener('click',closeLyrics);
-lyricsOverlay?.addEventListener('keydown',event=>{
-  if(event.key==='Escape'){event.preventDefault();closeLyrics();return;}
-  if(event.key!=='Tab')return;
-  const controls=[...lyricsOverlay.querySelectorAll('button:not([disabled]),[tabindex="0"]')];
-  if(!controls.length)return;
-  const i=controls.indexOf(document.activeElement);
-  if(event.shiftKey&&(i===0||i<0)){event.preventDefault();controls[controls.length-1].focus();}
-  else if(!event.shiftKey&&i===controls.length-1){event.preventDefault();controls[0].focus();}
-});
-document.addEventListener('keydown',event=>{
-  if(event.key==='Escape'&&lyricsIsOpen()){event.preventDefault();closeLyrics();}
-});
-lyricsScroll?.addEventListener('wheel',()=>{userLyricsScrollUntil=Date.now()+5000;},{passive:true});
-lyricsScroll?.addEventListener('touchmove',()=>{userLyricsScrollUntil=Date.now()+5000;},{passive:true});
-let previousActiveLine=null;
-const followLyrics=()=>{
-  if(!lyricsIsOpen()||Date.now()<userLyricsScrollUntil)return;
-  const active=lyricsOverlay.querySelector('.lyrics-line.active');
-  if(!active||active===previousActiveLine)return;
-  previousActiveLine=active;
-  active.scrollIntoView({block:'center',behavior:'smooth'});
-};
-if(lyrics&&lyricsOverlay)
-  new MutationObserver(()=>schedule(followLyrics)).observe(lyrics,{
-    subtree:true,childList:true,attributes:true,attributeFilter:['class']
-  });
+/* The immersive screen is owned by now-playing-experience.js.
+   Avoid attaching a second modal/backdrop handler here. */
 
 syncStatus();
 updateNowPlaying();
