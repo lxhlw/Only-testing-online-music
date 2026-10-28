@@ -79,7 +79,7 @@ try{
       assert.equal(await page.locator('#playlist-filter-stack').isVisible(),true,
         'Returning to discovery must restore filters')
       assert.equal(await page.locator('#view-playlist .category-pill.active').isVisible(),true)
-      assert.equal(await page.locator('.playlist-service-label').isVisible(),true,
+      assert.equal(await page.locator('[data-catalog-source="wy"]').isVisible(),true,
         'Single available playlist platform is a label, not a fake toggle')
       assert.deepEqual(failures,[])
       console.log('PASS: modern playlist sticky navigation '+viewport.width+'px')
