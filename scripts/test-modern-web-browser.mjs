@@ -93,7 +93,7 @@ try {
   await page.goto(url,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.LXSourceManager?.getActive()?.inited,{timeout:14000});
   assert.equal(await page.locator('.brand').textContent(),'LX Music Web');
-  assert.equal(await page.locator('#app-version').textContent(),'v0.4.7');
+  assert.equal(await page.locator('#app-version').textContent(),'v0.4.8');
   assert.equal(await page.locator('#top-source-label').textContent(),'当前音源：野花🌷');
   assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(x=>x.name)),['野花🌷']);
   assert.equal(await page.locator('#legacy-media-panel').count(),0);
@@ -405,17 +405,33 @@ try {
   checks.push('multi-platform-catalog-list-detail');
   checks.push('navigation');
   await page.setViewportSize({width:390,height:844});
-  await page.waitForTimeout(100);
-  const measure=await page.evaluate(()=>({
-    page:document.documentElement.scrollWidth,
-    viewport:window.innerWidth,
-    nav:getComputedStyle(document.querySelector('.main-nav')).gridTemplateColumns.split(' ').length,
-    controls:document.getElementById('player-toggle-btn').getBoundingClientRect()
-  }));
-  assert.ok(measure.page<=measure.viewport+2,'No sideways mobile scrolling');
-  assert.equal(measure.nav,5,'Five bottom/top mobile navigation choices visible');
-  assert.ok(measure.controls.width>=40,'Transport remains easily tappable');
-  await page.locator('[data-view="search"]').click();
+  await page.waitForFunction(()=>document.documentElement.classList.contains('mobile-shell-ready'));
+  const goMobile=async(view)=>{
+    await page.locator('.mobile-menu-button').click();
+    assert.equal(await page.locator('.mobile-menu-shade').isVisible(),true,'Drawer should cover content');
+    await page.locator('.nav-item[data-view="'+view+'"]').click();
+    assert.equal(await page.locator('.mobile-menu-shade').isVisible(),false,'Drawer must close on navigation');
+  };
+  const shell=await page.evaluate(()=>{
+    const box=sel=>document.querySelector(sel)?.getBoundingClientRect();
+    return {page:document.documentElement.scrollWidth,viewport:innerWidth,
+      header:box('.topbar')?.height,player:box('.player-bar')?.height,
+      playerPlay:box('#player-toggle-btn')?.width,drawerInert:document.querySelector('.nav-rail').inert,
+      navLinks:document.querySelectorAll('.nav-item').length};
+  });
+  assert.ok(shell.page<=shell.viewport+2,'No sideways mobile scrolling: '+JSON.stringify(shell));
+  assert.ok(shell.header<=57 && shell.player<=82,
+    'Mobile header and mini-player must release content space: '+JSON.stringify(shell));
+  assert.equal(shell.navLinks,5,'Full navigation preserved behind drawer');
+  assert.equal(shell.drawerInert,true,'Closed mobile drawer must not be focusable');
+  assert.ok(shell.playerPlay>=38,'Mini player has a tappable play target');
+  await goMobile('search');
+  await page.locator('.mobile-channel-toggle').click();
+  assert.equal(await page.locator('#channel-list').isVisible(),true,
+    'Source selection is available on demand');
+  await page.locator('.mobile-channel-toggle').click();
+  assert.equal(await page.locator('#channel-list').isVisible(),false);
+  checks.push('native-inspired-mobile-drawer-and-source-picker');
   const songMobile=await page.evaluate(()=>{
     const row=document.querySelector('#search-results .search-song-row');
     const rect=sel=>row?.querySelector(sel)?.getBoundingClientRect();
@@ -436,8 +452,16 @@ try {
     'Number and song title must be same row: '+JSON.stringify(songMobile));
   assert.ok(songMobile.titleWidth>=115&&songMobile.mainRight<=songMobile.actionsLeft+3,
     'Song name must have usable space beside actions: '+JSON.stringify(songMobile));
-  assert.ok(songMobile.rowHeight<=78&&!songMobile.queueVisible,
-    'Mobile song rows must be compact: '+JSON.stringify(songMobile));
+  assert.ok(songMobile.rowHeight<=72&&!songMobile.queueVisible,
+    'Mobile song rows must be spacious flat list items: '+JSON.stringify(songMobile));
+  assert.ok(songMobile.playWidth===0||!songMobile.playWidth,
+    'Redundant per-row play button must be hidden on phone');
+  const listTheme=await page.locator('#search-results .search-song-row').first().evaluate(el=>{
+    const x=getComputedStyle(el);
+    return {radius:x.borderRadius,borderBottom:x.borderBottomWidth,background:x.backgroundColor};
+  });
+  assert.ok(parseFloat(listTheme.radius)<=1 && parseFloat(listTheme.borderBottom)>=1,
+    'Native-inspired tracks should be flat separated rows: '+JSON.stringify(listTheme));
   await page.locator('#search-results .song-more summary').first().click();
   assert.equal(await page.locator('#search-results .song-more').first().getAttribute('open'),'',
     'Secondary actions should be in a discoverable overflow menu');
@@ -446,13 +470,13 @@ try {
   assert.equal(await page.locator('#player-title').textContent(),beforeMenuQueue,
     'Queue action must not accidentally start another song');
   checks.push('390px-search-row-density-and-safe-overflow-menu');
-  await page.locator('[data-view="mylist"]').click();
+  await goMobile('mylist');
   const clearTheme=await page.locator('#clear-history-btn').evaluate(el=>{
     const x=getComputedStyle(el);return {radius:x.borderRadius,bg:x.backgroundColor};
   });
   assert.ok(parseFloat(clearTheme.radius)>=8&&clearTheme.bg!=='rgb(239, 239, 239)',
     'Clear history must use common theme: '+JSON.stringify(clearTheme));
-  await page.locator('[data-view="ranking"]').click();
+  await goMobile('ranking');
   await page.locator('[data-ranking-source="tx"]').click();
   await page.waitForFunction(()=>document.querySelectorAll('#ranking-songs .chart-song-row').length>0,{timeout:5000});
   const compact=await page.evaluate(()=>{
@@ -485,7 +509,28 @@ try {
     '320px chart layout must remain readable without horizontal overflow');
   await page.setViewportSize({width:390,height:844});
   checks.push('ranking-390-and-320-responsive');
-  await page.locator('[data-view="mylist"]').click();
+  // Album-art-first playlists: mobile grid has three columns with no
+  // per-card CTA bar. Tapping the cover itself opens the detail.
+  await goMobile('playlist');
+  await page.waitForFunction(()=>document.querySelectorAll('#playlist-featured .playlist-card').length>0,{timeout:5500});
+  const albumGrid=await page.evaluate(()=>{
+    const grid=document.querySelector('#playlist-featured');
+    const card=grid?.querySelector('.playlist-card');
+    const cover=card?.querySelector('.playlist-cover');
+    return {cols:getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+      cardBorder:getComputedStyle(card).borderTopWidth,
+      cardRadius:getComputedStyle(card).borderTopLeftRadius,
+      coverWidth:cover?.getBoundingClientRect().width};
+  });
+  assert.equal(albumGrid.cols,3,'Three cover-led cards per row: '+JSON.stringify(albumGrid));
+  assert.ok(parseFloat(albumGrid.cardBorder)===0&&albumGrid.coverWidth>65,
+    'Playlists should prioritize art over card chrome: '+JSON.stringify(albumGrid));
+  await page.locator('#playlist-featured .playlist-cover').first().click();
+  assert.equal(await page.locator('#playlist-detail-panel').isVisible(),true,
+    'Tapping the album cover opens the playlist directly');
+  await page.locator('#playlist-back-btn').click();
+  checks.push('three-column-album-grid-and-single-tap-cover');
+  await goMobile('mylist');
   const mobileLibrary=await page.evaluate(()=>({
     layout:getComputedStyle(document.querySelector('.music-library-workspace')).flexDirection,
     page:document.documentElement.scrollWidth,width:innerWidth,
@@ -526,6 +571,25 @@ try {
   await page.locator('#lyrics-close-btn').click();
   assert.equal(await page.locator('#lyrics-overlay').isVisible(),false);
   checks.push('mobile-fullscreen');
+  for(const w of [320,424]){
+    await page.setViewportSize({width:w,height:800});
+    const geometry=await page.evaluate(()=>({
+      width:document.documentElement.scrollWidth,viewport:innerWidth,
+      header:document.querySelector('.topbar').getBoundingClientRect().height,
+      mini:document.querySelector('.player-bar').getBoundingClientRect().height,
+      menu:document.querySelector('.mobile-menu-button').getBoundingClientRect().width
+    }));
+    assert.ok(geometry.width<=geometry.viewport+2,
+      'No mobile sideways scroll at '+w+'px: '+JSON.stringify(geometry));
+    assert.ok(geometry.header<=57&&geometry.mini<=82&&geometry.menu>=40,
+      'No oversized permanent chrome at '+w+'px: '+JSON.stringify(geometry));
+  }
+  await page.setViewportSize({width:390,height:844});
+  await page.locator('.mobile-menu-button').click();
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('.mobile-menu-shade').isVisible(),false,
+    'Escape must close off-canvas navigation');
+  checks.push('320-390-424px-no-overflow-and-drawer-keyboard');
 
   checks.push('mobile');
   console.log('PASS modern-web:',checks.join(', '),'Flower-first recovery, bounded playback and responsive library');

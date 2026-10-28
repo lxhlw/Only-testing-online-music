@@ -38,6 +38,7 @@ jobs:
           node --check src/source-manager.js
           node --check src/source-transpiler-modern.js
           node --check src/modern-ui.js
+          node --check src/mobile-shell.js
           node --check src/now-playing-experience.js
           node --check functions/api/netease-song-meta.js
           node --check functions/api/netease-comments.js
@@ -98,7 +99,7 @@ jobs:
           set -euo pipefail
           READY=0
           for i in {1..12}; do
-            if curl -fsSL 'https://only-testing-online-music.pages.dev/?v=0.4.7' -o /tmp/lx-modern-index.html && grep -Fq 'modern.css?v=0.4.7' /tmp/lx-modern-index.html; then
+            if curl -fsSL 'https://only-testing-online-music.pages.dev/?v=0.4.8' -o /tmp/lx-modern-index.html && grep -Fq 'modern.css?v=0.4.8' /tmp/lx-modern-index.html; then
               READY=1
               break
             fi
@@ -108,5 +109,9 @@ jobs:
           curl -fsSL https://only-testing-online-music.pages.dev/modern.css -o /tmp/lx-modern.css
           grep -Fq 'LX Music Modern' /tmp/lx-modern.css
           grep -Fq 'Eye-care mint design' /tmp/lx-modern.css
+          curl -fsSL https://only-testing-online-music.pages.dev/src/mobile-shell.css -o /tmp/lx-mobile-css
+          grep -Fq 'native-inspired mobile shell' /tmp/lx-mobile-css
+          curl -fsSL https://only-testing-online-music.pages.dev/src/mobile-shell.js -o /tmp/lx-mobile-js
+          grep -Fq 'mobile-shell-ready' /tmp/lx-mobile-js
           curl -fsSL https://only-testing-online-music.pages.dev/src/modern-ui.js -o /tmp/lx-modern-ui.js
           grep -Fq 'mediaSession' /tmp/lx-modern-ui.js
