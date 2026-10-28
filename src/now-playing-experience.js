@@ -83,7 +83,7 @@ async function resolveCover(current,key){
     applyMetadata(data);
   }catch(e){if(e.name!=='AbortError')console.info('Song artwork not available',current.id)}
 }
-let commentMode='hot',commentOffset=0,commentLoaded=0,commentMore=false;
+let commentMode='hot',commentOffset=0,commentLoaded=0,commentMore=false,commentLoading=false;
 const commentMoreButton=$('comments-load-more'),pageNote=$('comments-page-note');
 function updateCommentMode(){
   for(const mode of ['hot','recent']){
@@ -100,7 +100,7 @@ function hideComments(status='点击「歌曲评论」查看公开评论'){
   $('comments-link-wrap').hidden=true;
   if(pageNote)pageNote.textContent='';
   if(commentMoreButton)commentMoreButton.hidden=true;
-  commentOffset=0;commentLoaded=0;commentMore=false;
+  commentOffset=0;commentLoaded=0;commentMore=false;commentLoading=false;
 }
 function songId(){return track?.source==='wy'&&/^\d{1,20}$/.test(track.id||'')?track.id:''}
 function renderComments(payload,append=false){
@@ -131,10 +131,12 @@ function renderComments(payload,append=false){
   commentLoaded=commentList.children.length;
   commentMore=commentMode==='recent'&&Boolean(payload.hasMore)&&newlyAdded>0;
   commentOffset=Number(payload.offset)||0;
-  if(commentMoreButton){commentMoreButton.hidden=!commentMore;commentMoreButton.disabled=false;commentMoreButton.textContent='加载更多最新评论'}
+  if(commentMoreButton)commentMoreButton.hidden=true;
   if(pageNote)pageNote.textContent=commentMode==='hot'
-    ?'已显示 '+commentLoaded+' 条热门评论'
-    :'已加载 '+commentLoaded+' 条'+(amount?' · 平台共 '+amount.toLocaleString('zh-CN')+' 条':'');
+    ?'热门评论 · 已显示 '+commentLoaded+' 条 · 平台未提供更多热门页'
+    :commentMore
+      ?'已加载 '+commentLoaded+' 条'+(amount?' / '+amount.toLocaleString('zh-CN'):'')+' · 向下滚动继续加载'
+      :'已全部加载 · 共 '+commentLoaded+' 条';
   const id=songId();
   if(id){
     $('comments-official-link').href='https://music.163.com/#/song?id='+encodeURIComponent(id);
@@ -143,6 +145,7 @@ function renderComments(payload,append=false){
 }
 async function loadComments(force=false,append=false){
   const id=songId();
+  if(append&&commentLoading)return;
   commentAbort?.abort();
   if(!id){
     hideComments(track?.source==='wy'?'当前歌曲没有有效网易云 ID，无法匹配评论':
@@ -153,8 +156,13 @@ async function loadComments(force=false,append=false){
   if(append&&!commentMore)return;
   const key=track?.source+':'+id+':'+commentMode+':'+offset;
   if(!append)hideComments('正在获取'+(commentMode==='hot'?'热门':'最新')+'评论…');
-  else{commentMoreButton.disabled=true;commentMoreButton.textContent='正在加载…'}
-  if(!force&&commentCache.has(key)){renderComments(commentCache.get(key),append);return}
+  commentLoading=true;
+  if(append&&pageNote)pageNote.textContent='正在加载下一页评论…';
+  if(!force&&commentCache.has(key)){
+    renderComments(commentCache.get(key),append);
+    commentLoading=false;
+    return;
+  }
   const current=sequence,mode=commentMode,controller=new AbortController();commentAbort=controller;
   try{
     const r=await fetch('/api/netease-comments?source=wy&id='+encodeURIComponent(id)+
@@ -167,13 +175,15 @@ async function loadComments(force=false,append=false){
   }catch(e){
     if(e.name==='AbortError'||current!==sequence||mode!==commentMode)return;
     if(append){
-      commentStatus.textContent='加载下一页失败，可重试';
-      commentMoreButton.disabled=false;commentMoreButton.textContent='重试加载更多';
+      if(pageNote)pageNote.textContent='加载失败 · 稍后继续向下滑动重试';
+      commentStatus.textContent='评论下一页暂时不可用';
     }else{
       hideComments('平台暂未返回'+(mode==='hot'?'热门':'最新')+'评论，可以刷新或前往原平台查看');
       $('comments-official-link').href='https://music.163.com/#/song?id='+encodeURIComponent(id);
       $('comments-link-wrap').hidden=false;
     }
+  }finally{
+    if(current===sequence&&mode===commentMode)commentLoading=false;
   }
 }
 function setTab(tab){
@@ -281,7 +291,13 @@ $('comments-recent-btn')?.addEventListener('click',()=>{
   if(commentMode==='recent')return;
   commentMode='recent';updateCommentMode();loadComments();
 });
-commentMoreButton?.addEventListener('click',()=>loadComments(false,true));
+// The comments list itself scrolls; observe its scroll position rather than
+// requiring a small "load more" button at the bottom of a phone screen.
+commentList?.addEventListener('scroll',()=>{
+  if(!isOpen()||activeTab!=='comments'||commentLoading||!commentMore)return;
+  if(commentList.scrollTop+commentList.clientHeight>=commentList.scrollHeight-170)
+    loadComments(false,true);
+},{passive:true});
 updateCommentMode();
 $('detail-prev-btn')?.addEventListener('click',()=>$('prev-track-btn')?.click());
 $('detail-next-btn')?.addEventListener('click',()=>$('next-track-btn')?.click());

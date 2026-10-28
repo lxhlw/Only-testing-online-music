@@ -93,7 +93,7 @@ try {
   await page.goto(url,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.LXSourceManager?.getActive()?.inited,{timeout:14000});
   assert.equal(await page.locator('.brand').textContent(),'LX Music Web');
-  assert.equal(await page.locator('#app-version').textContent(),'v0.4.5');
+  assert.equal(await page.locator('#app-version').textContent(),'v0.4.6');
   assert.equal(await page.locator('#top-source-label').textContent(),'当前音源：野花🌷');
   assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(x=>x.name)),['野花🌷']);
   assert.equal(await page.locator('#legacy-media-panel').count(),0);
@@ -136,6 +136,31 @@ try {
   assert.equal(await page.locator('.search-suggestions button').count(),5);
   const style=await page.locator('body').evaluate(el=>getComputedStyle(el).backgroundColor);
   assert.equal(style,'rgb(244, 248, 242)');
+  // Paginated search should load the next 20 at the viewport edge and
+  // explicitly finish after the final partial page; no duplicate results.
+  await page.evaluate(()=>{
+    window.__searchPages=[];
+    window.__savedSearch=window.LXMusicSearch.search;
+    window.LXMusicSearch.search=(source,term,page,limit,done)=>{
+      window.__searchPages.push(page);
+      const len=page<3?20:5;
+      done(null,{list:Array.from({length:len},(_,i)=>({
+        id:'scroll-'+page+'-'+i,name:'滑动搜索歌曲 '+(page*20+i),
+        singer:'搜索歌手',source:source
+      }))});
+    };
+    document.getElementById('global-search-input').value='滑动搜索';
+    document.getElementById('global-search-btn').click();
+  });
+  await page.waitForFunction(()=>document.querySelectorAll('#search-results .search-row').length===20,{timeout:3500});
+  await page.locator('#song-search-footer').scrollIntoViewIfNeeded();
+  await page.waitForFunction(()=>document.querySelectorAll('#search-results .search-row').length>=40,{timeout:5500});
+  await page.locator('#song-search-footer').scrollIntoViewIfNeeded();
+  await page.waitForFunction(()=>document.querySelectorAll('#search-results .search-row').length===45,{timeout:5500});
+  assert.equal(await page.locator('#song-search-footer').textContent(),'已全部加载 · 共 45 首');
+  assert.deepEqual(await page.evaluate(()=>window.__searchPages),[1,2,3]);
+  await page.evaluate(()=>{window.LXMusicSearch.search=window.__savedSearch;});
+  checks.push('song-search-scroll-20-20-5-no-manual-button');
   await page.evaluate(()=>{
     window.LXMusicSearch.resolveMusicUrl=()=>{throw new Error('legacy waterfall invoked')};
     window.LXMusicSearch.resolveMusicUrlFast=()=>{throw new Error('legacy provider race invoked')};
@@ -224,6 +249,26 @@ try {
   await page.locator('#inline-reset-settings').click();
   assert.equal(await page.locator('#inline-fallback').isChecked(),true);
   checks.push('fixed-quality-honored-no-hidden-downgrade');
+
+  // Users explicitly accepting a 128k downgrade must be able to play
+  // despite the upstream declaring no FLAC32. Previous code stopped early.
+  await page.locator('#inline-quality').selectOption('flac32bit');
+  await page.locator('#inline-fallback').check();
+  await page.locator('#inline-save-settings').click();
+  await page.evaluate(()=>{
+    window.__qualityTypes=[];
+    window.LXSourceManager.requestAction=(source,action,params,done)=>{
+      window.__qualityTypes.push(params.type);
+      done(null,{url:'https://media.example.test/song.wav?id=allowed128'});
+    };
+  });
+  await page.locator('#inline-replay-quality').click();
+  await page.waitForFunction(()=>window.__qualityTypes.includes('128k'),{timeout:5000});
+  assert.deepEqual(await page.evaluate(()=>window.__qualityTypes),['128k'],
+    'Opt-in downgrade must bypass unsupported FLAC32 and resolve 128k');
+  await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('由 flac32bit 降级'),{timeout:7500});
+  await page.locator('#inline-reset-settings').click();
+  checks.push('explicit-unsupported-flac-downgrades-to-working-128k');
   await page.locator('[data-view="search"]').click();
   await page.evaluate(()=>{
     window.LXSourceManager.requestAction=(source,action,params,done)=>
@@ -263,8 +308,12 @@ try {
   await page.locator('#comments-recent-btn').click();
   await page.waitForFunction(()=>document.querySelectorAll('.now-comment-card').length===20,{timeout:5500});
   assert.equal(await page.locator('.now-comment-card p').first().textContent(),'真实新评论 0');
-  assert.equal(await page.locator('#comments-load-more').isVisible(),true);
-  await page.locator('#comments-load-more').click();
+  assert.equal(await page.locator('#comments-load-more').isVisible(),false,
+    'Comment pagination must work without a manual button');
+  await page.locator('#comments-list').evaluate(el=>{
+    el.scrollTop=el.scrollHeight;
+    el.dispatchEvent(new Event('scroll'));
+  });
   await page.waitForFunction(()=>document.querySelectorAll('.now-comment-card').length===40,{timeout:5500});
   assert.equal(await page.locator('.now-comment-card p').last().textContent(),'真实新评论 39');
   await page.locator('#comments-hot-btn').click();

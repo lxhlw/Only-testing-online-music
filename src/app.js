@@ -22,6 +22,8 @@
   var MODERN_WEB = true;
   var MODERN_FLOWER_TIMEOUT_MS = 12000;
   var searchToken = 0;
+  var songSearchSession = null;
+  var songSearchObserver = null;
   var legacyFullResolveNext = false;
   var MIN_UNKNOWN_MEDIA_DURATION_SECONDS = 15;
   var MIN_CONFIRMED_PLAYBACK_PROGRESS_SECONDS = 0.25;
@@ -217,7 +219,17 @@
         var fixedKey=String(settings.fixedQuality||'').toLowerCase();
         if(settings.qualityMode==='fixed'&&!available.some(function(q){
           return String(q||'').toLowerCase()===fixedKey;
-        }))return [];
+        })){
+          // "Allow downgrade" must work even if Flower never declares the
+          // requested format. Skip that impossible request and use the
+          // declared MP3 fallback, with explicit provenance in playback.
+          if(settings.autoFallback){
+            for(var fa=0;fa<available.length;fa++){
+              if(String(available[fa]).toLowerCase()==='128k')return [available[fa]];
+            }
+          }
+          return [];
+        }
         // For manually selected quality, only one optional low-quality
         // fallback is allowed; do not traverse a slow ladder.
         var requested=global.LXPlaySettings.buildPlan(available,settings);
@@ -282,6 +294,12 @@
         return function () {
           selectedChannel = channel;
           searchToken += 1;
+          songSearchSession=null;
+          if(songSearchObserver){songSearchObserver.disconnect();songSearchObserver=null;}
+          var scrollNote=document.getElementById('song-search-footer');
+          if(scrollNote)scrollNote.hidden=true;
+          var searchCount=document.getElementById('song-result-counter');
+          if(searchCount)searchCount.textContent='按当前渠道搜索并播放';
           global.__LXLastSearchResults = [];
           renderChannelSelectors();
           resultsEl.innerHTML = '';
@@ -296,24 +314,18 @@
     var available = channelInfo.qualitys instanceof Array ? channelInfo.qualitys : [];
     var plan = getQualityPlan(active, selectedChannel);
     if (qualitySummaryEl) {
-      if (!available.length) {
-        qualitySummaryEl.innerHTML = '<span class="muted">' +
-          (!active || !active.inited || !active.sources || !active.sources[selectedChannel]
-            ? '野花音源正在准备；搜索可以先使用。'
-            : '当前渠道未声明音质列表，运行时将使用默认音质。') + '</span>';
-      } else {
-        var settingsLabel = global.LXPlaySettings ?
-          global.LXPlaySettings.getLabel(getPlaySettings()) : '最高音质优先（失败自动降级）';
-        var highest = global.LXPlaySettings ?
-          global.LXPlaySettings.getPreferredQuality(available, { qualityMode: 'highest', autoFallback: true }) :
-          available[0];
-        var nextText = MODERN_WEB ? ' · 首选：'+escapeHtml(plan[0]||'未知')+' · 降级：'+escapeHtml(plan.length>1?plan.slice(1).join(' → '):'无') :
-          (plan.length > 1 ? ' · 降级顺序：' + escapeHtml(plan.join(' → ')) : '');
-        qualitySummaryEl.innerHTML =
-          '<span class="quality-summary-label">' + escapeHtml(settingsLabel) + '</span>' +
-          '<span class="quality-summary-detail">当前渠道最高：' + escapeHtml(highest || '—') +
-          ' · 可用：' + escapeHtml(available.join(', ')) + nextText + '</span>';
-      }
+      var qualitySettings=getPlaySettings();
+      var requestedName=qualitySettings.qualityMode==='fixed'
+        ?qualitySettings.fixedQuality:'自动';
+      var selected=plan[0]||'暂不可用';
+      var hasFallback=qualitySettings.autoFallback;
+      var text='音质 '+requestedName+' · '+(selected===requestedName?'按所选播放':'首选 '+selected)+
+        (hasFallback&&plan.length>1?' · 可降级':'');
+      if(!available.length)text='音质 '+requestedName+' · 音源准备中';
+      qualitySummaryEl.textContent=text;
+      qualitySummaryEl.title='当前渠道声明音质：'+(available.join('、')||'未提供')+
+        '；实际媒体规格以服务器响应为准';
+      qualitySummaryEl.setAttribute('aria-label',qualitySummaryEl.title);
     }
   }
 
@@ -1558,7 +1570,13 @@
                 getPlaySettings().fixedQuality:'128k'];
             }
             playbackState.plan=freshPlan;
-            playbackState.initialQuality=freshPlan[0];
+            var userQuality=getPlaySettings(),declaredNow=ready.sources[source].qualitys||[];
+            var downgradedFromFixed=userQuality.qualityMode==='fixed'&&
+              Array.isArray(declaredNow)&&declaredNow.length>0&&
+              String(freshPlan[0]).toLowerCase()!==String(userQuality.fixedQuality).toLowerCase();
+            playbackState.initialQuality=downgradedFromFixed?userQuality.fixedQuality:freshPlan[0];
+            if(downgradedFromFixed)
+              playbackState.qualityFallbackReason='音源未声明支持 '+userQuality.fixedQuality+'，允许降到128k';
             requestQuality(music,source,musicInfo,freshPlan,0,token);
             return;
           }
@@ -1713,6 +1731,14 @@
     }
 
     var plan = getQualityPlan(active, source);
+    var qualityChoice=getPlaySettings();
+    var advertisedQuality=active&&active.sources&&active.sources[source]&&
+      active.sources[source].qualitys||[];
+    var missingFixed=MODERN_WEB&&qualityChoice.qualityMode==='fixed'&&
+      Array.isArray(advertisedQuality)&&advertisedQuality.length>0&&
+      !advertisedQuality.some(function(q){
+        return String(q||'').toLowerCase()===String(qualityChoice.fixedQuality||'').toLowerCase();
+      });
     if (MODERN_WEB && !plan.length && active && active.inited &&
         active.sources && active.sources[source] &&
         Array.isArray(active.sources[source].qualitys) &&
@@ -1760,8 +1786,10 @@
       plan: plan,
       index: 0,
       quality: plan[0],
-      initialQuality: plan[0],
-      qualityFallbackReason: '',
+      initialQuality: missingFixed ? qualityChoice.fixedQuality : plan[0],
+      qualityFallbackReason: missingFixed&&qualityChoice.autoFallback&&plan.length
+        ? '音源未声明支持 '+qualityChoice.fixedQuality+'，已按允许降级设置选择128k'
+        : '',
       url: '',
       waitingForAudio: false,
       playing: false,
@@ -1781,6 +1809,10 @@
     legacyFullResolveNext = false;
 
     armMiguPlaybackDeadline(playbackState);
+    if(missingFixed&&qualityChoice.autoFallback&&plan.length){
+      setStatus('野花渠道不支持 '+escapeHtml(qualityChoice.fixedQuality)+
+        '，已获你的允许，降到 '+escapeHtml(plan[0])+' 进行播放解析。','warn');
+    }
     requestQuality(music, source, buildMusicInfo(music, source), plan, 0, token);
   }
 
@@ -2519,32 +2551,84 @@
 
   function searchAndRender(keyword) {
     if (!selectedChannel) return setStatus('请先选择播放渠道。', 'fail');
+    var channel=selectedChannel,token=++searchToken;
+    if(songSearchObserver){songSearchObserver.disconnect();songSearchObserver=null;}
+    songSearchSession={
+      keyword:keyword,channel:channel,token:token,page:0,
+      loading:false,hasMore:true,seen:Object.create(null),count:0
+    };
+    resultsEl.innerHTML='';
+    global.__LXLastSearchResults=[];
+    loadNextSongSearchPage();
+  }
 
-    var channel = selectedChannel;
-    var token = ++searchToken;
+  function updateSongSearchFooter(message,finished) {
+    var footer=document.getElementById('song-search-footer');
+    if(!footer)return;
+    footer.textContent=message;
+    footer.hidden=false;
+    footer.setAttribute('aria-busy',String(!finished));
+    if(finished)footer.dataset.finished='1';else footer.dataset.finished='0';
+  }
 
-    setStatus('正在按 ' + escapeHtml(CHANNEL_NAMES[channel] || channel.toUpperCase()) + ' 搜索「' + escapeHtml(keyword) + '」……');
-    resultsEl.innerHTML = '';
-    global.__LXLastSearchResults = [];
-
-    global.LXMusicSearch.search(channel, keyword, 1, 20, function (err, result) {
-      if (token !== searchToken || channel !== selectedChannel) return;
-
-      if (err) {
-        setStatus('搜索失败：' + escapeHtml(err.message || err) + '。可点击“重新搜索”重试。', 'fail');
-        resultsEl.innerHTML = '<div class="empty-note">网络或音源暂时不可用。<button type="button" id="retry-song-search">重新搜索</button></div>';
-        var retry = document.getElementById('retry-song-search');
-        if (retry) retry.onclick = function () { searchAndRender(keyword); };
+  function loadNextSongSearchPage() {
+    var session=songSearchSession;
+    if(!session||session.loading||!session.hasMore||
+       session.token!==searchToken||session.channel!==selectedChannel)return;
+    session.loading=true;
+    var nextPage=session.page+1;
+    updateSongSearchFooter(nextPage===1?'正在搜索歌曲…':'正在加载更多歌曲…',false);
+    global.LXMusicSearch.search(session.channel,session.keyword,nextPage,20,function(err,result) {
+      if(songSearchSession!==session||session.token!==searchToken||selectedChannel!==session.channel)return;
+      session.loading=false;
+      if(err){
+        if(nextPage===1){
+          setStatus('搜索失败：'+escapeHtml(err.message||err)+'。可重新搜索。','fail');
+          resultsEl.innerHTML='<div class="empty-note">网络或音源暂时不可用。<button type="button" id="retry-song-search">重新搜索</button></div>';
+          var retry=document.getElementById('retry-song-search');
+          if(retry)retry.onclick=function(){searchAndRender(session.keyword);};
+        }
+        updateSongSearchFooter('加载失败 · 向下滑动可重试',false);
         return;
       }
-      setStatus('搜索完成：' + result.list.length + ' 条结果。', 'ready');
-      global.__LXLastSearchResults = result.list.slice();
-      renderSearchResults(result.list);
+      var list=Array.isArray(result&&result.list)?result.list:[];
+      var unique=[];
+      for(var i=0;i<list.length;i++){
+        var item=list[i];
+        var key=String(item.source||session.channel)+':'+String(item.id||item.songmid||item.name||'')+
+          ':'+String(item.singer||'');
+        if(session.seen[key])continue;
+        session.seen[key]=1;unique.push(item);
+      }
+      session.page=nextPage;
+      session.count+=unique.length;
+      var counter=document.getElementById('song-result-counter');
+      if(counter)counter.textContent='已加载 '+session.count+' 首';
+      // Stop if a provider replays a full duplicate page. Do not burn
+      // dozens of speculative requests for identical content.
+      session.hasMore=list.length>=20&&unique.length>0&&nextPage<50&&session.count<1000;
+      global.__LXLastSearchResults=global.__LXLastSearchResults.concat(unique);
+      renderSearchResults(unique,true);
+      setStatus('搜索结果：已加载 '+session.count+' 首歌曲。','ready');
+      updateSongSearchFooter(session.hasMore?'继续向下滑动，加载更多歌曲':'已全部加载 · 共 '+session.count+' 首',!session.hasMore);
+      // If the list does not fill the viewport, request another page
+      // without waiting for a scroll event (bounded by page count).
+      if(songSearchObserver) songSearchObserver.disconnect();
+      var footer=document.getElementById('song-search-footer');
+      if(footer&&session.hasMore&&typeof IntersectionObserver==='function'){
+        songSearchObserver=new IntersectionObserver(function(entries){
+          if(entries.some(function(x){return x.isIntersecting;})){
+            if(songSearchObserver) songSearchObserver.disconnect();
+            loadNextSongSearchPage();
+          }
+        },{root:null,rootMargin:'0px 0px 180px 0px',threshold:0});
+        songSearchObserver.observe(footer);
+      }
     });
   }
 
-  function renderSearchResults(items) {
-    resultsEl.innerHTML = '';
+  function renderSearchResults(items,append) {
+    if(!append)resultsEl.innerHTML = '';
     var fragment = document.createDocumentFragment();
     for (var i = 0; i < items.length; i += 1) {
       var item = items[i];
