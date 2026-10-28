@@ -25,8 +25,18 @@ try{
     })
     try{
       await page.goto(base+'/',{waitUntil:'domcontentloaded'})
+      if(viewport.width<=740){
+        await page.waitForFunction(()=>document.documentElement.classList.contains('mobile-shell-ready'))
+        await page.locator('.mobile-menu-button').click()
+      }
       await page.locator('.nav-item[data-view="playlist"]').click()
-      await page.locator('#playlist-featured .playlist-open-button').first().click()
+      if(viewport.width<=740){
+        assert.equal(await page.locator('.mobile-menu-shade').isVisible(),false,
+          'Mobile drawer closes after choosing a page')
+        await page.locator('#playlist-featured .playlist-cover').first().click()
+      }else{
+        await page.locator('#playlist-featured .playlist-open-button').first().click()
+      }
       await page.waitForFunction(()=>
         document.querySelectorAll('#playlist-detail-songs .playlist-song-row').length===50)
       const geometry=()=>page.evaluate(()=>{
@@ -65,7 +75,14 @@ try{
       }
       assert.ok(after.scroll>300,'Long playlist must be scrollable')
       assert.ok(after.pageWidth<=after.width+2,'Long playlist must not scroll sideways')
-      assert.ok(after.nav.top>=0,'Navigation must remain onscreen')
+      if(viewport.width<=740){
+        assert.ok(after.nav.top>=0 && before.nav.top>=0,
+          'Mobile drawer stays anchored offscreen until explicitly opened')
+        assert.equal(await page.locator('.mobile-menu-shade').isVisible(),false,
+          'Drawer must not obscure scrolling playlist content')
+      }else{
+        assert.ok(after.nav.top>=0,'Desktop navigation stays onscreen')
+      }
       assert.ok(after.stack.top>=after.topbar.bottom-3,'Search must not hide behind header')
       assert.ok(after.filter.bottom<=after.player.top-10,
         'Playlist filters must not overlap the floating player')
