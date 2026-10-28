@@ -8,7 +8,7 @@
   <script>document.documentElement.classList.add("modern-web");</script>
   <title>LX Music — 轻盈护眼音乐空间</title>
   <link rel="stylesheet" href="styles.css?v=0.4.1">
-  <link rel="stylesheet" href="modern.css?v=0.4.3">
+  <link rel="stylesheet" href="modern.css?v=0.4.4">
 </head>
 <body>
   <div id="app">
@@ -16,7 +16,7 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.3</span></div>
+          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.4</span></div>
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">护眼淡绿模式</span>
@@ -251,7 +251,7 @@
               <div class="setting-row-inline">
                 <div><strong>播放音质</strong><p>野花优先；连接失败或响应较慢时，自动尝试同平台备用链接，不增加其他音源脚本。</p></div>
                 <select id="inline-quality">
-                  <option value="highest">优先快速播放（128k）</option>
+                  <option value="highest">自动选择最佳音质（优先 MP3）</option>
                   <option value="128k">128k</option>
                   <option value="192k">192k</option>
                   <option value="256k">256k</option>
@@ -287,7 +287,7 @@
 
             <div class="settings-section">
               <h2>版本信息</h2>
-              <div class="version-detail"><strong id="version-current">v0.4.3</strong><span id="version-release-date">2026-10-28</span></div>
+              <div class="version-detail"><strong id="version-current">v0.4.4</strong><span id="version-release-date">2026-10-28</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
             </div>
@@ -314,7 +314,7 @@
           </div>
           <div class="lyrics-sheet-actions">
             <button id="lyrics-refresh-btn" type="button" class="lyrics-refresh" title="重新获取歌词">刷新歌词</button>
-            <button id="lyrics-close-btn" type="button" class="lyrics-close" aria-label="返回音乐库">返回 <span aria-hidden="true">✕</span></button>
+            <button id="lyrics-close-btn" type="button" class="lyrics-close" aria-label="退出全屏播放界面"><span aria-hidden="true">‹</span> 返回音乐</button>
           </div>
         </header>
         <div class="now-playing-body">
@@ -345,8 +345,16 @@
             </section>
             <section id="comments-view" class="now-playing-tab-content hidden" role="tabpanel" aria-labelledby="comments-tab" hidden>
               <div class="comments-title-row"><div><h3>听友评论</h3><p id="comments-source-note">仅展示当前歌曲对应平台的公开评论</p></div><button type="button" id="comments-refresh-btn" aria-label="重新加载评论">刷新</button></div>
+              <div class="comment-sort-bar" role="group" aria-label="评论排序">
+                <button id="comments-hot-btn" type="button" class="comment-sort active" aria-pressed="true">热门评论</button>
+                <button id="comments-recent-btn" type="button" class="comment-sort" aria-pressed="false">最新评论</button>
+              </div>
               <div id="comments-status" class="comments-status" role="status">选择歌曲后查看评论</div>
               <div id="comments-list" class="comments-list" aria-live="polite"></div>
+              <div class="comments-pagination">
+                <span id="comments-page-note" aria-live="polite"></span>
+                <button id="comments-load-more" type="button" class="secondary" hidden>加载更多评论</button>
+              </div>
               <div id="comments-link-wrap" class="comments-link-wrap" hidden><a id="comments-official-link" href="#" target="_blank" rel="noopener noreferrer">在网易云音乐查看这首歌的评论</a></div>
             </section>
           </div>
@@ -436,7 +444,7 @@
   <script src="src/music-library.js?v=0.4.1"></script>
   <script src="src/music-lyrics.js?v=0.4.2"></script>
   <script src="src/player-controls.js"></script>
-  <script src="src/app.js?v=0.4.3"></script>
+  <script src="src/app.js?v=0.4.4"></script>
   <script>
   (function (global) {
     'use strict';
@@ -1143,6 +1151,6 @@
   })(window);
   </script>
   <script type="module" src="src/modern-ui.js?v=0.4.3"></script>
-  <script type="module" src="src/now-playing-experience.js?v=0.4.3"></script>
+  <script type="module" src="src/now-playing-experience.js?v=0.4.4"></script>
 </body>
 </html>
