@@ -8,7 +8,7 @@
   <script>document.documentElement.classList.add("modern-web");</script>
   <title>LX Music — 轻盈护眼音乐空间</title>
   <link rel="stylesheet" href="styles.css?v=0.4.1">
-  <link rel="stylesheet" href="modern.css?v=0.4.5">
+  <link rel="stylesheet" href="modern.css?v=0.4.6">
 </head>
 <body>
   <div id="app">
@@ -16,7 +16,7 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.5</span></div>
+          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.6</span></div>
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">护眼淡绿模式</span>
@@ -74,6 +74,7 @@
               </div>
               <div class="results-head"><strong>歌曲</strong><span class="muted">按当前渠道搜索并播放</span></div>
               <div id="search-results" class="results-list" aria-live="polite"></div>
+              <div id="song-search-footer" class="infinite-scroll-status" role="status" aria-live="polite" hidden></div>
               <div class="search-inspiration" aria-label="推荐搜索">
                 <div class="search-inspiration-icon" aria-hidden="true">♫</div>
                 <h2>今天想听什么？</h2>
@@ -300,7 +301,7 @@
 
             <div class="settings-section">
               <h2>版本信息</h2>
-              <div class="version-detail"><strong id="version-current">v0.4.5</strong><span id="version-release-date">2026-10-28</span></div>
+              <div class="version-detail"><strong id="version-current">v0.4.6</strong><span id="version-release-date">2026-10-28</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
             </div>
@@ -366,7 +367,7 @@
               <div id="comments-list" class="comments-list" aria-live="polite"></div>
               <div class="comments-pagination">
                 <span id="comments-page-note" aria-live="polite"></span>
-                <button id="comments-load-more" type="button" class="secondary" hidden>加载更多评论</button>
+                <button id="comments-load-more" type="button" class="secondary" hidden aria-hidden="true" tabindex="-1">加载更多评论</button>
               </div>
               <div id="comments-link-wrap" class="comments-link-wrap" hidden><a id="comments-official-link" href="#" target="_blank" rel="noopener noreferrer">在网易云音乐查看这首歌的评论</a></div>
             </section>
@@ -457,7 +458,7 @@
   <script src="src/music-library.js?v=0.4.1"></script>
   <script src="src/music-lyrics.js?v=0.4.2"></script>
   <script src="src/player-controls.js"></script>
-  <script src="src/app.js?v=0.4.5"></script>
+  <script src="src/app.js?v=0.4.6"></script>
   <script>
   (function (global) {
     'use strict';
@@ -1251,6 +1252,6 @@
   })(window);
   </script>
   <script type="module" src="src/modern-ui.js?v=0.4.3"></script>
-  <script type="module" src="src/now-playing-experience.js?v=0.4.5"></script>
+  <script type="module" src="src/now-playing-experience.js?v=0.4.6"></script>
 </body>
 </html>
