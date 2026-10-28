@@ -224,8 +224,6 @@ function closeScreen(){
 }
 coverButton?.addEventListener('click',()=>isOpen()?closeScreen():openScreen());
 $('lyrics-close-btn')?.addEventListener('click',closeScreen);
-$('lyrics-refresh-btn')?.addEventListener('click',()=>$('lyrics-refresh-btn')&&
-  window.OnlyTestingMusicApp?.refreshLyrics?.());
 for(const button of overlay.querySelectorAll('[data-detail-tab]')){
   button.addEventListener('click',()=>setTab(button.dataset.detailTab));
   button.addEventListener('keydown',event=>{
