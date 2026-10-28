@@ -358,9 +358,18 @@ try {
     const row=document.querySelector('#ranking-songs .chart-song-row');
     const info=row?.querySelector('.chart-song-info')?.getBoundingClientRect();
     const play=row?.querySelector('.chart-play-btn')?.getBoundingClientRect();
+    const box=selector=>{
+      const el=document.querySelector(selector),r=el?.getBoundingClientRect();
+      return r?{left:Math.round(r.left),width:Math.round(r.width),display:getComputedStyle(el).display}:null;
+    };
     return {page:document.documentElement.scrollWidth,viewport:innerWidth,
       infoWidth:info?.width,playLeft:play?.left,infoRight:info?.right,
-      playRight:play?.right};
+      playRight:play?.right,
+      rankingLayout:box('#view-ranking .ranking-layout'),
+      rankingContent:box('#view-ranking .ranking-content'),
+      rankingSongs:box('#ranking-songs'),
+      row:box('#ranking-songs .chart-song-row'),
+      main:box('.main-stage')};
   });
   assert.ok(compact.page<=compact.viewport+2,'Ranking must not overflow phone: '+JSON.stringify(compact));
   assert.ok(compact.infoWidth>100&&compact.infoRight<=compact.playLeft+8,
