@@ -908,3 +908,250 @@ html.modern-web .lyrics-sheet-footer{
   html.modern-web .lyrics-sheet{animation:none}
   html.modern-web .lyrics-line{transition:none}
 }
+
+/* v0.4.3 Fullscreen listening — a real music experience, not a side drawer.
+   Gentle mint palette; zero looping motion or heavy GPU filters. */
+html.modern-web .player-art{
+  display:grid;place-items:center;position:relative;overflow:hidden;
+  border:0;padding:0;cursor:pointer;flex-shrink:0;
+}
+html.modern-web .player-art:focus-visible{outline:3px solid #2b936f;outline-offset:3px}
+html.modern-web .player-art img{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  border-radius:inherit;background:#d9ebdf
+}
+html.modern-web .player-art img[hidden],html.modern-web .now-playing-cover-box img[hidden]{display:none}
+html.modern-web .player-art.has-album-art .player-cover-fallback,
+html.modern-web .now-playing-cover-box.has-album-art .now-playing-cover-fallback{display:none}
+html.modern-web .player-art:hover{box-shadow:0 0 0 3px #c8e6d4}
+html.modern-web #open-lyrics-btn{display:none!important}
+html.modern-web .lyrics-overlay{
+  position:fixed;inset:0;z-index:250;display:block;
+  width:100vw;height:100vh;height:100dvh;
+  margin:0;padding:0;overflow:hidden;background:#f7fbf5
+}
+html.modern-web .lyrics-overlay.hidden{display:none!important}
+html.modern-web .lyrics-sheet.now-playing-screen{
+  display:flex;flex-direction:column;position:relative;
+  width:100vw;max-width:none;height:100vh;height:100dvh;
+  max-height:none;min-height:0;margin:0;border:0;border-radius:0;
+  overflow:hidden;box-shadow:none;animation:none;
+  background:linear-gradient(135deg,#fcfefb 0%,#f0f7ef 100%)
+}
+html.modern-web .now-playing-screen .lyrics-sheet-header{
+  flex:0 0 73px;min-height:73px;padding:13px clamp(22px,3vw,54px);
+  border-bottom:1px solid #e1ece0;background:rgba(254,255,250,.92)
+}
+html.modern-web .now-playing-header-brand{display:flex;align-items:center;gap:12px}
+html.modern-web .now-playing-brand-mark{
+  display:grid;place-items:center;width:43px;height:43px;
+  border-radius:13px;background:#e4f2e7;color:#2d8e67;font-size:24px
+}
+html.modern-web .now-playing-screen .lyrics-sheet-heading h2{font-size:19px;margin:2px 0 0}
+html.modern-web .now-playing-screen .lyrics-sheet-actions button{
+  min-height:38px;padding:8px 15px;border-radius:10px
+}
+html.modern-web .now-playing-body{
+  display:grid;grid-template-columns:minmax(250px,35%) minmax(0,65%);
+  flex:1 1 auto;min-height:0;overflow:hidden
+}
+html.modern-web .now-playing-album-column{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:28px;min-width:0;min-height:0;padding:30px clamp(18px,3vw,50px);
+  border-right:1px solid #e3eee1;
+  background:linear-gradient(155deg,#eef7ed 0%,#f5faf3 66%,#e7f4ea 100%);
+  overflow:auto
+}
+html.modern-web .now-playing-cover-box{
+  position:relative;display:grid;place-items:center;flex:0 0 auto;
+  width:min(100%,350px,38vh);aspect-ratio:1/1;
+  max-height:350px;border-radius:17px;
+  background:linear-gradient(140deg,#d9ece0,#b7dcc7);
+  box-shadow:0 15px 34px rgba(26,80,44,.13);overflow:hidden
+}
+html.modern-web .now-playing-cover-box img{
+  display:block;position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;background:#dcefe2
+}
+html.modern-web .now-playing-cover-fallback{
+  color:#67ac85;font-size:88px;text-align:center
+}
+html.modern-web .now-playing-screen .lyrics-song-meta{
+  width:min(100%,355px);min-width:0;text-align:center;
+  padding:0 0 4px
+}
+html.modern-web .now-playing-screen #lyrics-title{
+  font-size:clamp(19px,2vw,26px);font-weight:820;color:#27543a;
+  line-height:1.45;overflow-wrap:anywhere
+}
+html.modern-web #now-playing-artist{margin-top:7px;font-size:15px;color:#3f7c58;font-weight:660}
+html.modern-web #now-playing-album,
+html.modern-web #now-playing-platform{
+  font-size:12px;color:#849889;margin-top:7px
+}
+html.modern-web .now-playing-screen .lyrics-status{
+  font-size:11px;margin-top:14px;color:#7e9b85;line-height:1.55
+}
+html.modern-web .now-playing-detail-column{
+  display:flex;flex-direction:column;min-width:0;min-height:0;
+  overflow:hidden;padding:0 clamp(20px,3.5vw,70px)
+}
+html.modern-web .now-playing-tabs{
+  display:flex;justify-content:center;flex:0 0 auto;gap:7px;
+  height:74px;align-items:center;border-bottom:1px solid #e2ece2
+}
+html.modern-web .now-playing-tab{
+  min-width:115px;min-height:39px;padding:8px 18px;
+  border-radius:11px;border:1px solid transparent;
+  background:transparent;color:#809687;font-size:14px;font-weight:670
+}
+html.modern-web .now-playing-tab.active{
+  background:#e2f3e6;border-color:#c7e7d1;color:#247d58
+}
+html.modern-web .now-playing-tab:hover{background:#edf7ed;color:#357e5d}
+html.modern-web .now-playing-tab-content{
+  display:flex;flex:1 1 auto;min-height:0;min-width:0;
+  flex-direction:column;overflow:hidden
+}
+html.modern-web .now-playing-tab-content.hidden,
+html.modern-web .now-playing-tab-content[hidden]{display:none!important}
+html.modern-web .now-playing-screen .lyrics-scroll{
+  flex:1 1 auto;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;
+  overscroll-behavior:contain;scrollbar-gutter:stable;
+  padding:0 12px;background:transparent;scroll-behavior:auto
+}
+html.modern-web .now-playing-screen .lyrics-lines{
+  display:flex;flex-direction:column;justify-content:flex-start;
+  min-height:100%;padding:clamp(100px,32vh,330px) 0;
+  gap:3px
+}
+html.modern-web .now-playing-screen .lyrics-line{
+  flex:0 0 auto;display:block;min-height:46px;
+  margin:0;padding:9px 12px;border-radius:10px;
+  background:transparent;color:#8ea496;
+  text-align:center;font-size:clamp(16px,1.5vw,22px);
+  font-weight:480;line-height:1.6;
+  transition:color .17s ease,background-color .17s ease
+}
+html.modern-web .now-playing-screen .lyrics-line.active{
+  background:#e3f4e6;color:#237e58;
+  font-size:clamp(19px,1.7vw,24px);font-weight:780
+}
+html.modern-web .now-playing-screen .lyrics-empty{
+  flex:1;min-height:100px;padding:20px;font-size:15px
+}
+html.modern-web #comments-view{overflow:hidden}
+html.modern-web .comments-title-row{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:23px 6px 16px;border-bottom:1px solid #e4ede3
+}
+html.modern-web .comments-title-row h3{color:#28513b;margin:0;font-size:20px}
+html.modern-web .comments-title-row p{color:#819587;font-size:12px;margin:5px 0 0}
+html.modern-web .comments-title-row button{
+  border:1px solid #d4e7d8;border-radius:8px;background:#fff;
+  color:#33835d;padding:7px 15px;font-size:12px
+}
+html.modern-web .comments-status{
+  padding:14px 7px;color:#809788;font-size:12px
+}
+html.modern-web .comments-list{
+  flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;
+  min-height:0;padding:0 7px 18px;scrollbar-gutter:stable
+}
+html.modern-web .now-comment-card{
+  padding:18px 11px;border-bottom:1px solid #e4eee3
+}
+html.modern-web .now-comment-head{
+  display:flex;justify-content:space-between;gap:10px;align-items:center;
+  font-size:12px;color:#718d7b
+}
+html.modern-web .now-comment-head strong{color:#427958;font-weight:730}
+html.modern-web .now-comment-card p{
+  color:#3c5946;white-space:pre-wrap;overflow-wrap:anywhere;
+  font-size:14px;line-height:1.75;margin:8px 0 0
+}
+html.modern-web .comments-link-wrap{
+  flex:0 0 auto;text-align:right;padding:13px 7px;
+  border-top:1px solid #e0ece0;font-size:12px
+}
+html.modern-web .comments-link-wrap[hidden]{display:none}
+html.modern-web .now-playing-transport{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:5px;flex:0 0 108px;min-height:108px;padding:11px 22px;
+  background:#f9fcf7;border-top:1px solid #dce9de
+}
+html.modern-web .now-playing-transport-buttons{
+  display:flex;justify-content:center;align-items:center;gap:31px
+}
+html.modern-web .now-playing-transport-buttons button{
+  width:39px;height:39px;min-height:39px;
+  display:grid;place-items:center;padding:0;border:0;
+  border-radius:50%;background:transparent;color:#55886a
+}
+html.modern-web .now-playing-transport-buttons button:hover{background:#e6f4e8;color:#267956}
+html.modern-web .now-playing-transport-buttons .detail-main-toggle{
+  width:49px;height:49px;min-height:49px;
+  background:#2e946b;color:#fff;
+  box-shadow:0 5px 14px rgba(36,112,66,.15)
+}
+html.modern-web .now-playing-transport-buttons .detail-main-toggle:hover{
+  background:#287a59;color:#fff
+}
+html.modern-web .detail-main-toggle [hidden]{display:none!important}
+html.modern-web .now-playing-timeline{
+  display:flex;align-items:center;gap:12px;width:min(690px,100%);
+  color:#698b74;font-size:11px;font-variant-numeric:tabular-nums
+}
+html.modern-web .now-playing-timeline span{flex:0 0 40px;white-space:nowrap;text-align:center}
+html.modern-web .now-playing-timeline input{
+  flex:1 1 auto;min-width:0;height:7px;accent-color:#2e936b;cursor:pointer
+}
+html.modern-web .now-playing-timeline input:disabled{cursor:default;opacity:.52}
+@media(max-width:740px){
+  html.modern-web .now-playing-screen .lyrics-sheet-header{flex-basis:59px;min-height:59px;padding:9px 13px}
+  html.modern-web .now-playing-brand-mark{width:35px;height:35px;font-size:20px}
+  html.modern-web .now-playing-screen .lyrics-sheet-heading h2{font-size:15px}
+  html.modern-web .now-playing-screen .lyrics-sheet-actions button{padding:7px 10px;font-size:11px;min-height:34px}
+  html.modern-web .now-playing-body{display:flex;flex-direction:column}
+  html.modern-web .now-playing-album-column{
+    display:flex;flex:0 0 auto;min-height:90px;max-height:130px;
+    flex-direction:row;justify-content:flex-start;align-items:center;
+    gap:13px;padding:12px 17px;border-right:0;border-bottom:1px solid #e1eee1;
+    overflow:hidden
+  }
+  html.modern-web .now-playing-cover-box{
+    width:76px;height:76px;max-height:76px;flex:0 0 76px;
+    border-radius:11px;box-shadow:0 4px 12px rgba(39,87,53,.08)
+  }
+  html.modern-web .now-playing-cover-fallback{font-size:35px}
+  html.modern-web .now-playing-screen .lyrics-song-meta{text-align:left;min-width:0;max-width:100%}
+  html.modern-web .now-playing-screen #lyrics-title{
+    font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+  }
+  html.modern-web #now-playing-artist{font-size:12px;margin-top:2px}
+  html.modern-web #now-playing-album{display:none}
+  html.modern-web #now-playing-platform{font-size:10px;margin-top:2px}
+  html.modern-web .now-playing-screen .lyrics-status{display:none}
+  html.modern-web .now-playing-detail-column{flex:1 1 auto;padding:0 12px}
+  html.modern-web .now-playing-tabs{height:50px}
+  html.modern-web .now-playing-tab{min-height:34px;font-size:12px;min-width:105px}
+  html.modern-web .now-playing-screen .lyrics-scroll{padding:0 3px}
+  html.modern-web .now-playing-screen .lyrics-lines{padding:clamp(85px,23vh,210px) 0}
+  html.modern-web .now-playing-screen .lyrics-line{font-size:15px;line-height:1.6;padding:8px 6px}
+  html.modern-web .now-playing-screen .lyrics-line.active{font-size:17px}
+  html.modern-web .comments-title-row{padding:11px 4px}
+  html.modern-web .comments-title-row h3{font-size:16px}
+  html.modern-web .now-playing-transport{flex-basis:92px;min-height:92px;gap:2px;padding:5px 11px}
+  html.modern-web .now-playing-transport-buttons{gap:23px}
+  html.modern-web .now-playing-transport-buttons .detail-main-toggle{width:43px;height:43px;min-height:43px}
+  html.modern-web .now-playing-timeline{gap:6px}
+  html.modern-web .now-playing-timeline span{flex-basis:34px;font-size:10px}
+}
+@media(max-width:380px){
+  html.modern-web .now-playing-screen .lyrics-sheet-actions #lyrics-refresh-btn{display:none}
+  html.modern-web .now-playing-album-column{padding:8px 12px}
+  html.modern-web .now-playing-cover-box{flex-basis:60px;width:60px;height:60px}
+}
+@media(prefers-reduced-motion:reduce){
+ html.modern-web .now-playing-screen .lyrics-line{transition:none}
+}
