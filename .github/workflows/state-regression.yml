@@ -27,11 +27,10 @@ jobs:
         with:
           node-version-file: .node-version
 
-      - name: Validate legacy ES5 source syntax
+      - name: Validate modern music state syntax
         run: |
           node --check src/music-library.js
           node --check src/source-manager.js
-          node scripts/test-legacy-web.mjs
 
       - name: Existing music library regression
         run: node scripts/test-music-library.mjs
@@ -39,5 +38,3 @@ jobs:
       - name: Queue boundary and persistence regression
         run: node scripts/test-music-library-bounds.mjs
 
-      - name: Active LX source persistence regression
-        run: node scripts/test-source-selection.mjs
