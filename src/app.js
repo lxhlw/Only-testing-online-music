@@ -1632,6 +1632,21 @@
     // The lyrics panel is independent of the route: stale lyrics must never
     // remain visible when the listener selects another track.
     clearLyrics();
+    // The immersive screen receives the selected song immediately, even
+    // while a third-party media URL is still resolving. Avoid polling app state.
+    try {
+      var nowPlayingTrack={
+        id:String(music && (music.id || music.songId || music.songmid) || ''),
+        name:String(music && music.name || ''),
+        singer:String(music && (music.singer || music.artist) || ''),
+        albumName:String(music && music.albumName || ''),
+        image:String(music && (music.image || music.pic || music.img ||
+          (music.raw && (music.raw.al && music.raw.al.picUrl || music.raw.album && music.raw.album.picUrl))) || ''),
+        source:String(source || music && music.source || '')
+      };
+      global.__LXNowPlayingTrack=nowPlayingTrack;
+      global.dispatchEvent(new CustomEvent('lx:trackchange',{detail:nowPlayingTrack}));
+    }catch(e){}
     // Keep the visible playlist selection synchronized with the current
     // player when a row, Next, Previous or audio-ended starts a new track.
     if (global.OnlyTestingPlaylistUI &&
