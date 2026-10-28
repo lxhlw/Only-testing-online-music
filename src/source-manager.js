@@ -159,7 +159,7 @@
           // limit below the 75s app watchdog; explicit source timeouts win.
           var explicitTimeout = Number(opts.timeout || 0);
           if (explicitTimeout > 0) xhr.timeout = explicitTimeout;
-          else if (FLOWER_ONLY_NATIVE) xhr.timeout = 70000;
+          else if (FLOWER_ONLY_NATIVE) xhr.timeout = 11000;
         }
 
         if (opts.headers) {
