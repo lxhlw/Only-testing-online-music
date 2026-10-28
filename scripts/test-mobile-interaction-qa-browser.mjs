@@ -36,7 +36,12 @@ try{
     const navRows=await page.locator('.nav-item').evaluateAll(nodes=>nodes.map(n=>{
       const t=n.querySelector('span:last-child'),rect=t.getBoundingClientRect()
       return {label:t.textContent.trim(),width:rect.width,height:rect.height,
-        nowrap:getComputedStyle(t).whiteSpace}
+        nowrap:getComputedStyle(t).whiteSpace,
+        parentWidth:n.getBoundingClientRect().width,
+        navWidth:n.parentElement.getBoundingClientRect().width,
+        railWidth:n.closest('.nav-rail').getBoundingClientRect().width,
+        display:getComputedStyle(n).display,
+        columns:getComputedStyle(n).gridTemplateColumns}
     }))
     assert.ok(navRows.every(r=>r.width>=55&&r.height<=30&&r.nowrap==='nowrap'),
       'All drawer labels must occupy one full row: '+JSON.stringify(navRows))
