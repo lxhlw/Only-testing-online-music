@@ -49,7 +49,7 @@ jobs:
           node --check scripts/test-playlist-pagination-browser.mjs
           node --check scripts/test-playlist-browser.mjs
           node --check scripts/test-playlist-playall-browser.mjs
-          node --check scripts/test-playlist-sticky-scroll-browser.mjs
+          node --check scripts/test-modern-playlist-scroll-browser.mjs
           node --check src/player-controls.js
           node --check scripts/test-player-controls-browser.mjs
 
@@ -82,8 +82,8 @@ jobs:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-responsive-browser.mjs
 
-      - name: Verify sticky playlist navigation
-        run: node scripts/test-playlist-sticky-scroll-browser.mjs
+      - name: Verify modern playlist navigation remains visible while scrolling
+        run: node scripts/test-modern-playlist-scroll-browser.mjs
 
 
       - name: Verify custom audio transport, draggable seek and playback modes
