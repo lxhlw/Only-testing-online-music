@@ -8,8 +8,8 @@
   <script>document.documentElement.classList.add("modern-web");</script>
   <title>LX Music — 轻盈护眼音乐空间</title>
   <link rel="stylesheet" href="styles.css?v=0.4.1">
-  <link rel="stylesheet" href="modern.css?v=0.4.8">
-  <link rel="stylesheet" href="src/mobile-shell.css?v=0.4.8">
+  <link rel="stylesheet" href="modern.css?v=0.4.9">
+  <link rel="stylesheet" href="src/mobile-shell.css?v=0.4.9">
 </head>
 <body>
   <div id="app">
@@ -17,7 +17,7 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.8</span></div>
+          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.9</span></div>
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">护眼淡绿模式</span>
@@ -109,6 +109,7 @@
               </div>
               <div class="results-head"><strong>歌单</strong><span class="muted">点击“打开歌单”查看歌曲</span></div>
               <div id="playlist-results" class="playlist-grid"></div>
+              <div id="playlist-results-footer" class="playlist-scroll-footer" role="status" aria-live="polite" hidden></div>
             </div>
           </section>
 
@@ -135,6 +136,7 @@
             </div>
           </div>
             <div id="playlist-featured" class="playlist-grid"></div>
+            <div id="playlist-featured-footer" class="playlist-scroll-footer" role="status" aria-live="polite" hidden></div>
 
             <section id="playlist-detail-panel" class="playlist-detail-panel hidden">
               <div class="playlist-detail-toolbar">
@@ -167,7 +169,8 @@
                 <span class="playlist-th-actions">操作</span>
               </div>
               <div id="playlist-detail-songs" class="results-list"></div>
-              <button id="playlist-load-more-btn" type="button" class="secondary hidden">加载更多歌曲</button>
+              <button id="playlist-load-more-btn" type="button" class="secondary hidden">重新加载</button>
+              <div id="playlist-detail-footer" class="playlist-scroll-footer" role="status" aria-live="polite" hidden></div>
             </section>
           </section>
 
@@ -302,7 +305,7 @@
 
             <div class="settings-section">
               <h2>版本信息</h2>
-              <div class="version-detail"><strong id="version-current">v0.4.8</strong><span id="version-release-date">2026-10-28</span></div>
+              <div class="version-detail"><strong id="version-current">v0.4.9</strong><span id="version-release-date">2026-10-28</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
             </div>
@@ -459,7 +462,7 @@
   <script src="src/music-library.js?v=0.4.1"></script>
   <script src="src/music-lyrics.js?v=0.4.2"></script>
   <script src="src/player-controls.js"></script>
-  <script src="src/app.js?v=0.4.8"></script>
+  <script src="src/app.js?v=0.4.9"></script>
   <script>
   (function (global) {
     'use strict';
@@ -477,6 +480,10 @@
     var playlistPageGeneration = 0;
     var playlistNextOffset = 0;
     var playlistHasMore = false;
+    var playlistPageLoading = false;
+    var playlistDetailObserver = null;
+    var playlistCatalogObservers = {};
+    var playlistCatalogSessions = {};
     var playlistSearchGeneration = {};
     var lastPlaylistOpenAt = 0;
     var selectedPlaylistMusicKey = '';
@@ -742,6 +749,9 @@
       playlistPageGeneration+=1;
       playlistNextOffset=0;
       playlistHasMore=false;
+      playlistPageLoading=false;
+      if(playlistDetailObserver){playlistDetailObserver.disconnect();playlistDetailObserver=null;}
+      var detailFooter=el('playlist-detail-footer');if(detailFooter)detailFooter.hidden=true;
       addClass(el('playlist-load-more-btn'),'hidden');
       addClass(el('playlist-featured'),'hidden');
       addClass(el('playlist-detail-panel'),'hidden');
@@ -760,19 +770,49 @@
       loadPlaylistPage(item, false);
     }
 
+    function updatePlaylistDetailFooter(error){
+      var footer=el('playlist-detail-footer');
+      if(!footer)return;
+      if(playlistDetailObserver){playlistDetailObserver.disconnect();playlistDetailObserver=null;}
+      if(!playlistDetailItem){footer.hidden=true;return;}
+      footer.hidden=false;
+      if(error){
+        footer.textContent='加载失败，可点击下方重试';
+        return;
+      }
+      footer.textContent=playlistPageLoading?'正在加载歌曲…':
+        (playlistHasMore?'继续向下滑动，自动加载更多歌曲':'已全部加载 · 共 '+playlistDetailSongs.length+' 首');
+      if(!playlistPageLoading&&playlistHasMore&&typeof IntersectionObserver==='function'){
+        var token=playlistPageGeneration;
+        playlistDetailObserver=new IntersectionObserver(function(entries){
+          if(token!==playlistPageGeneration||!playlistDetailItem)return;
+          if(entries.some(function(entry){return entry.isIntersecting;})){
+            playlistDetailObserver.disconnect();playlistDetailObserver=null;
+            loadPlaylistPage(playlistDetailItem,true);
+          }
+        },{root:null,rootMargin:'0px 0px 220px 0px',threshold:0});
+        playlistDetailObserver.observe(footer);
+      }
+    }
+
     function loadPlaylistPage(item, append){
       if(!item || !playlistDetailItem || String(item.id)!==String(playlistDetailItem.id))return;
+      if(playlistPageLoading || (append&&!playlistHasMore))return;
+      playlistPageLoading=true;
       var generation=playlistPageGeneration;
       var offset=append?playlistNextOffset:0;
       var more=el('playlist-load-more-btn');
       addClass(more,'hidden');
+      updatePlaylistDetailFooter(false);
       el('playlist-detail-status').innerHTML=append?'正在加载更多歌曲……':'正在读取歌单歌曲……';
       requestJson(catalogEndpoint(item,offset,50),function(err,data){
         if(generation!==playlistPageGeneration || !playlistDetailItem || String(playlistDetailItem.id)!==String(item.id))return;
+        playlistPageLoading=false;
         if(err){
           el('playlist-detail-status').innerHTML='加载失败：'+escapeHtml(err.message||err);
           if(!append)el('playlist-detail-songs').innerHTML='<div class="empty-note">无法读取歌单歌曲</div>';
-          if(append){more.innerHTML='重试加载更多';removeClass(more,'hidden');}
+          more.innerHTML='重试加载';removeClass(more,'hidden');
+          updatePlaylistDetailFooter(true);
           return;
         }
         var playlist=data&&data.playlist?data.playlist:item;
@@ -780,14 +820,17 @@
         playlistDetailSongs=append?playlistDetailSongs.concat(pageSongs):pageSongs;
         playlistNextOffset=Number(data&&data.nextOffset);
         if(!isFinite(playlistNextOffset)||playlistNextOffset<=offset)playlistNextOffset=offset+50;
-        playlistHasMore=Boolean(data&&data.hasMore);
+        playlistHasMore=Boolean(data&&data.hasMore)&&pageSongs.length>0;
         el('playlist-detail-name').innerHTML=escapeHtml(playlist.name||item.name||'未命名歌单');
         el('playlist-detail-creator').innerHTML='创建者：'+escapeHtml(playlist.creator||item.creator||'—');
         el('playlist-detail-count').innerHTML=escapeHtml((playlist.trackCount||playlistDetailSongs.length)+' 首歌曲');
         el('playlist-detail-description').innerHTML=escapeHtml(playlist.description||item.description||'暂无简介');
         el('playlist-detail-status').innerHTML='已加载 '+playlistDetailSongs.length+' 首歌曲';
         renderPlaylistSongs(playlistDetailSongs);
-        if(playlistHasMore){more.innerHTML='加载更多歌曲';removeClass(more,'hidden');}
+        if(playlistHasMore&&typeof IntersectionObserver!=='function'){
+          more.innerHTML='加载更多歌曲';removeClass(more,'hidden');
+        }
+        updatePlaylistDetailFooter(false);
       },25000);
 
     }
@@ -795,6 +838,9 @@
     function closePlaylistDetail(){
       if (!playlistDetailItem) return;
       playlistPageGeneration+=1;
+      playlistPageLoading=false;
+      if(playlistDetailObserver){playlistDetailObserver.disconnect();playlistDetailObserver=null;}
+      var detailFooter=el('playlist-detail-footer');if(detailFooter)detailFooter.hidden=true;
       playlistDetailItem=null;
       document.documentElement.classList.remove('is-playlist-detail');
       removeClass(el('view-playlist'),'is-detail-open');
@@ -846,8 +892,9 @@
               playlistHasMore=hasMore;
               el('playlist-detail-status').innerHTML='已加载 '+playlistDetailSongs.length+' 首歌曲';
               if(changed)renderPlaylistSongs(playlistDetailSongs);
-              if(hasMore)removeClass(el('playlist-load-more-btn'),'hidden');
+              if(hasMore&&typeof IntersectionObserver!=='function')removeClass(el('playlist-load-more-btn'),'hidden');
               else addClass(el('playlist-load-more-btn'),'hidden');
+              updatePlaylistDetailFooter(false);
             }
             done(null,{songs:pageSongs,hasMore:hasMore});
           },25000);
@@ -968,20 +1015,97 @@
       if(searchCats)searchCats.style.display=playlistPlatform==='tx'?'none':'';
     }
     function searchPlaylists(keyword,hostId){
-      var host=el(hostId); if(!host)return;
+      var host=el(hostId);if(!host)return;
+      var oldObserver=playlistCatalogObservers[hostId];
+      if(oldObserver){oldObserver.disconnect();delete playlistCatalogObservers[hostId];}
       var generation=(playlistSearchGeneration[hostId]||0)+1;
       playlistSearchGeneration[hostId]=generation;
+      var footer=el(hostId+'-footer');
+      var session={generation:generation,keyword:keyword||'',hostId:hostId,
+        platform:playlistPlatform,offset:0,count:0,seen:{},loading:false,hasMore:true};
+      playlistCatalogSessions[hostId]=session;
       host.innerHTML='<div class="loading-note">正在搜索歌单……</div>';
-      var q='?s='+encodeURIComponent(keyword||'')+'&offset=0&limit=20';
-      var route=playlistPlatform==='tx'?'/api/qq-catalog?kind=playlist':'/api/netease-playlists';
-      requestJson(route+q,function(err,data){
-        if(playlistSearchGeneration[hostId]!==generation)return;
-        if(err){host.innerHTML='<div class="empty-note">歌单搜索失败：'+escapeHtml(err.message||err)+'</div>';return;}
-        var list=normalizePlaylistItems(data);
-        if(!list.length){host.innerHTML='<div class="empty-note">没有找到歌单</div>';return;}
-        host.innerHTML='';
-        for(var i=0;i<list.length;i+=1) host.appendChild(createPlaylistCard(list[i]));
-      });
+      if(footer){footer.hidden=false;footer.textContent='正在加载歌单…';footer.onclick=null;}
+      function valid(){return playlistCatalogSessions[hostId]===session&&
+        playlistSearchGeneration[hostId]===generation&&session.platform===playlistPlatform;}
+      function canObserve(){
+        if(hostId==='playlist-featured')return currentView==='playlist'&&!playlistDetailItem;
+        return currentView==='search'&&searchKind==='playlist';
+      }
+      function arm(){
+        if(playlistCatalogObservers[hostId]){
+          playlistCatalogObservers[hostId].disconnect();
+          delete playlistCatalogObservers[hostId];
+        }
+        if(!footer||!valid())return;
+        footer.hidden=false;
+        footer.onclick=null;
+        footer.classList.remove('is-error');
+        footer.textContent=session.hasMore?'继续向下滑动，自动加载更多歌单':
+          '已全部加载 · 共 '+session.count+' 个歌单';
+        if(!session.loading&&session.hasMore&&typeof IntersectionObserver==='function'){
+          var observer=new IntersectionObserver(function(entries){
+            if(!valid()||!canObserve())return;
+            if(entries.some(function(entry){return entry.isIntersecting;})){
+              observer.disconnect();
+              if(playlistCatalogObservers[hostId]===observer)delete playlistCatalogObservers[hostId];
+              loadPage();
+            }
+          },{root:null,rootMargin:'0px 0px 260px 0px',threshold:0});
+          playlistCatalogObservers[hostId]=observer;
+          observer.observe(footer);
+        }else if(session.hasMore){
+          footer.textContent='点击加载更多歌单';
+          footer.onclick=loadPage;
+        }
+      }
+      function loadPage(){
+        if(!valid()||session.loading||!session.hasMore||!canObserve())return;
+        session.loading=true;
+        if(playlistCatalogObservers[hostId]){
+          playlistCatalogObservers[hostId].disconnect();
+          delete playlistCatalogObservers[hostId];
+        }
+        if(footer){footer.textContent=session.offset?'正在加载更多歌单…':'正在加载歌单…';footer.onclick=null;}
+        var offset=session.offset,limit=20;
+        var route=session.platform==='tx'?'/api/qq-catalog?kind=playlist':'/api/netease-playlists';
+        var q='&s='+encodeURIComponent(session.keyword)+'&offset='+offset+'&limit='+limit;
+        if(session.platform!=='tx')q='?s='+encodeURIComponent(session.keyword)+'&offset='+offset+'&limit='+limit;
+        requestJson(route+q,function(err,data){
+          if(!valid())return;
+          session.loading=false;
+          if(err){
+            if(offset===0)host.innerHTML='<div class="empty-note">歌单搜索失败：'+escapeHtml(err.message||err)+'</div>';
+            if(footer){
+              footer.classList.add('is-error');footer.hidden=false;
+              footer.textContent='加载失败，点击重试';
+              footer.onclick=loadPage;
+            }
+            return;
+          }
+          var list=normalizePlaylistItems(data);
+          var newItems=[];
+          for(var i=0;i<list.length;i++){
+            var item=list[i];
+            var key=String(item.source||session.platform)+':'+String(item.id||'');
+            if(!item.id||session.seen[key])continue;
+            session.seen[key]=true;newItems.push(item);
+          }
+          if(offset===0)host.innerHTML='';
+          var fragment=document.createDocumentFragment();
+          for(var j=0;j<newItems.length;j++)fragment.appendChild(createPlaylistCard(newItems[j]));
+          host.appendChild(fragment);
+          session.offset=offset+limit;
+          session.count+=newItems.length;
+          var rawTotal=Number(data&&data.result&&data.result.playlistCount||
+            data&&data.playlistCount||data&&data.total||0);
+          session.hasMore=list.length>=limit&&newItems.length>0&&
+            session.offset<600&&(rawTotal<=0||session.offset<rawTotal);
+          if(!session.count)host.innerHTML='<div class="empty-note">没有找到歌单</div>';
+          arm();
+        },18000);
+      }
+      loadPage();
     }
 
     function loadFeaturedPlaylists(){
@@ -1260,7 +1384,7 @@
   })(window);
   </script>
   <script type="module" src="src/modern-ui.js?v=0.4.3"></script>
-  <script type="module" src="src/now-playing-experience.js?v=0.4.8"></script>
-  <script type="module" src="src/mobile-shell.js?v=0.4.8"></script>
+  <script type="module" src="src/now-playing-experience.js?v=0.4.9"></script>
+  <script type="module" src="src/mobile-shell.js?v=0.4.9"></script>
 </body>
 </html>
