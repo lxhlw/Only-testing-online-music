@@ -2,9 +2,13 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-  <title>Only Testing Online Music</title>
-  <link rel="stylesheet" href="styles.css?v=0.2.36&amp;android-native-20261026">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080e16">
+  <meta name="description" content="LX Music — 轻盈流畅的现代网页音乐播放器。">
+  <script>document.documentElement.classList.add("modern-web");</script>
+  <title>LX Music — 沉浸式在线音乐</title>
+  <link rel="stylesheet" href="styles.css?v=0.3.0">
+  <link rel="stylesheet" href="modern.css?v=0.3.0">
 </head>
 <body>
   <div id="app">
@@ -12,10 +16,10 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">Legacy Web Player · <span id="app-version">v0.2.36</span></div>
+          <div class="subtitle">FLUID WEB EXPERIENCE · <span id="app-version">v0.3.0</span></div>
         </div>
         <div class="topbar-actions">
-          <span class="topbar-chip">Only Testing Online Music</span>
+          <span class="topbar-chip">PURE WEB · 轻盈畅听</span>
           <span id="top-source-label" class="topbar-chip top-source-indicator" title="当前音源：未选择">当前音源：未选择</span>
         </div>
       </div>
@@ -23,7 +27,7 @@
 
     <main class="lx-layout">
       <aside class="nav-rail" aria-label="主导航">
-        <div class="nav-brand">MUSIC</div>
+        <div class="nav-brand">DISCOVER / 探索</div>
         <nav class="main-nav">
           <a class="nav-item active" href="#search" data-view="search" onclick="return window.OnlyTestingNavigate ? window.OnlyTestingNavigate('search', event) : true;"><span class="nav-symbol">⌕</span><span>搜索</span></a>
           <a class="nav-item" href="#playlist" data-view="playlist" onclick="return window.OnlyTestingNavigate ? window.OnlyTestingNavigate('playlist', event) : true;"><span class="nav-symbol">▤</span><span>歌单</span></a>
@@ -38,12 +42,12 @@
         <div class="global-search-bar">
           <div class="global-search">
             <span class="search-icon">⌕</span>
-            <input id="global-search-input" type="text" value="成都" autocapitalize="off" autocomplete="off" spellcheck="false">
+            <input id="global-search-input" type="search" value="" placeholder="搜索歌名、歌手，发现下一首好歌…" autocapitalize="off" autocomplete="off" spellcheck="false" aria-label="搜索音乐">
             <button id="global-search-btn" type="button">搜索</button>
           </div>
           <div id="global-search-context" class="search-context">搜索歌曲</div>
         </div>
-        <div id="status" class="status global-status">等待导入音源或开始搜索。</div>
+        <div id="status" class="status global-status" role="status" aria-live="polite">轻点一首歌，开启沉浸式音乐之旅。</div>
         </div>
 
         <div class="view-container">
@@ -201,15 +205,15 @@
           <section id="view-settings" class="view-panel">
             <div class="view-header">
               <div><div class="panel-kicker">SETTINGS</div><h1>设置</h1></div>
-              <span class="view-note">整体播放与音源设置</span>
+              <span class="view-note">以流畅性为优先的播放体验</span>
             </div>
 
             <div class="settings-section">
               <h2>播放设置</h2>
               <div class="setting-row-inline">
-                <div><strong>优先音质</strong><p>默认选择当前音源支持的最高音质。</p></div>
+                <div><strong>播放音质</strong><p>默认使用更轻的 MP3，减少首播等待；也可以手动指定。</p></div>
                 <select id="inline-quality">
-                  <option value="highest">最高音质</option>
+                  <option value="highest">优先快速播放（128k）</option>
                   <option value="128k">128k</option>
                   <option value="192k">192k</option>
                   <option value="256k">256k</option>
@@ -220,7 +224,7 @@
                 </select>
               </div>
               <div class="setting-row-inline">
-                <div><strong>播放失败自动降级</strong><p>高音质播放失败时自动尝试更低音质。</p></div>
+                <div><strong>备用音质</strong><p>极速网页模式每次只请求一种音质，不自动切换其他解析服务。</p></div>
                 <input id="inline-fallback" type="checkbox">
               </div>
               <div class="setting-actions">
@@ -231,7 +235,7 @@
             </div>
 
             <div class="settings-section">
-              <div class="section-header"><h2>音源管理</h2><span id="source-count" class="badge">0</span></div>
+              <div class="section-header"><h2>野花音源 · 唯一播放源</h2><span id="source-count" class="badge">0</span></div>
               <label for="source-url">LX 音源 URL</label>
               <input id="source-url" type="text" autocapitalize="off" autocomplete="off" spellcheck="false"
                 value="https://ghproxy.net/raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js">
@@ -239,7 +243,7 @@
                 <button id="install-btn" type="button">导入音源</button>
                 <button id="verified-install-btn" type="button" class="secondary">一键导入 Huibq（真实音源）</button>
                 <button id="sixyin-install-btn" type="button" class="secondary">一键导入六音</button>
-                <button id="restore-default-sources-btn" type="button" class="secondary">恢复默认音源（Flower + Huibq）</button>
+                <button id="restore-default-sources-btn" type="button" class="secondary">重新加载野花音源</button>
                 <button id="clear-btn" type="button" class="ghost-button">清空</button>
               </div>
               <div id="active-source-summary" class="active-source-summary" role="status" aria-live="polite"><span class="active-source-summary-label">当前使用音源</span><strong class="active-source-summary-name">尚未选择音源</strong></div>
@@ -247,12 +251,10 @@
             </div>
 
             <div class="settings-section">
-              <h2>版本与兼容</h2>
-              <div class="version-detail"><strong id="version-current">v0.2.36</strong><span id="version-release-date">2026-10-06</span></div>
+              <h2>版本信息</h2>
+              <div class="version-detail"><strong id="version-current">v0.3.0</strong><span id="version-release-date">2026-10-28</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
-              <a class="button-link settings-link" href="./legacy-test.html">Android 4.4 / Via 兼容自检</a>
-              <a class="button-link settings-link" href="./audio-test.html">真实平板 MP3 播放自检</a>
             </div>
 
             <div class="settings-section">
@@ -308,15 +310,7 @@
           </div>
           <span id="player-duration" class="player-time" aria-live="off">00:00</span>
         </div>
-        <audio id="audio" controls preload="none" class="native-audio-transport"></audio>
-        <div id="legacy-media-panel" class="legacy-media-panel hidden">
-          <span class="legacy-media-hint">Android 4.4：请点上方原生音频 ▶ 键</span>
-          <button id="legacy-proxy-btn" type="button" class="secondary">项目代理线路</button>
-          <button id="legacy-direct-btn" type="button" class="secondary">直连线路</button>
-          <a id="legacy-external-player" class="legacy-media-test" aria-disabled="true">尝试系统播放器（等歌曲地址）</a>
-          <span class="legacy-media-hint">系统播放器入口为独立实验功能；不保证 Via 能唤起应用，也不保证外部应用能读取 HTTPS 音频。</span>
-          <a href="./audio-test.html?v=9#external-player-card" class="legacy-media-test">系统播放器测试</a>
-        </div>
+        <audio id="audio" preload="none" class="native-audio-transport"></audio>
       </div>
       <div class="player-extras">
         <div class="player-volume-wrap" title="音量调节">
