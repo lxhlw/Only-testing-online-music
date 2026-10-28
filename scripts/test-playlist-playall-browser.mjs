@@ -71,7 +71,33 @@ try {
   await page.locator('#playlist-featured .playlist-open-button').first().click()
   await page.waitForFunction(() =>
     document.querySelectorAll('#playlist-detail-songs .playlist-song-row').length === 50)
-  await page.locator('#playlist-play-all-btn').click()
+  // A tall sticky mobile header leaves a deliberate narrow content corridor.
+  // Playwright's default center-of-viewport scroll places this button behind
+  // the sticky filters. Scroll to the genuinely unobstructed area and click
+  // through a real pointer interaction (not element.click() or force:true).
+  const clickInVisibleCorridor = async locator => {
+    const position = await locator.evaluate(el => {
+      const rect = el.getBoundingClientRect()
+      const sticky = ['.topbar','.nav-rail','#persistent-top-stack','#playlist-filter-stack']
+      const yTop = Math.max(0, ...sticky.map(sel => {
+        const node = document.querySelector(sel)
+        return node ? node.getBoundingClientRect().bottom : 0
+      })) + 10
+      const player = document.querySelector('.player-bar')
+      const yBottom = (player ? player.getBoundingClientRect().top : innerHeight) - 10
+      const destination = (yTop + yBottom) / 2
+      window.scrollBy({ top: rect.top + rect.height/2 - destination, behavior: 'instant' })
+      return { yTop, yBottom }
+    })
+    await page.waitForTimeout(100)
+    const bounds = await locator.boundingBox()
+    assert.ok(bounds && bounds.y + bounds.height/2 > position.yTop &&
+      bounds.y + bounds.height/2 < position.yBottom,
+      'Playlist action must be scrollable into the clear space between sticky filters and player: '+
+      JSON.stringify({bounds,position}))
+    await locator.click({ timeout: 10000 })
+  }
+  await clickInVisibleCorridor(page.locator('#playlist-play-all-btn'))
   const first = await page.evaluate(() => ({
     ids: window.LXMusicLibrary.snapshot().queue.map(track => track.id),
     title: document.getElementById('player-title').textContent
