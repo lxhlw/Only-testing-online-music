@@ -128,7 +128,7 @@ export async function onRequest(context){
   var body=new URLSearchParams();
   body.set('s',keyword||'热门');
   body.set('type','1000');
-  body.set('offset','0');
+  body.set('offset',String(offset));
   body.set('limit',String(limit));
   body.set('total','true');
   var controller=new AbortController();
