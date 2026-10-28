@@ -13,7 +13,19 @@ async function testViewport(browser, viewport, label) {
   page.on('pageerror', error => errors.push(String(error)))
   try {
     await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded', timeout: 30000 })
-    await page.locator('.nav-item[data-view="playlist"]').click()
+    const navigate=async view=>{
+      if(viewport.width<=740){
+        await page.waitForFunction(()=>document.documentElement.classList.contains('mobile-shell-ready'))
+        await page.locator('.mobile-menu-button').click()
+        assert.equal(await page.locator('.mobile-menu-shade').isVisible(),true,
+          label+': drawer opens on phone')
+      }
+      await page.locator('.nav-item[data-view="'+view+'"]').click()
+      if(viewport.width<=740)
+        assert.equal(await page.locator('.mobile-menu-shade').isVisible(),false,
+          label+': drawer closes after selection')
+    }
+    await navigate('playlist')
     await page.waitForTimeout(500)
     const state = await page.evaluate(() => {
       const panel = document.getElementById('view-playlist')
@@ -40,7 +52,8 @@ async function testViewport(browser, viewport, label) {
     assert.equal(state.hash, '#playlist', label + ': playlist navigation must persist in the URL hash')
     assert.ok(state.scrollWidth <= state.viewportWidth + 2, label + ': page must not overflow horizontally')
     if (viewport.width <= 680) {
-      assert.ok(state.mainTop >= state.navBottom - 2, label + ': mobile main content must be below the top navigation')
+      assert.ok(state.mainTop >= state.topbarBottom - 2 && state.mainTop <= state.topbarBottom + 10,
+        label + ': mobile main content starts below the single compact header, not below an always-visible tab bar')
     } else {
       assert.ok(
         state.mainTop >= state.topbarBottom - 2 && state.mainTop <= state.topbarBottom + 16,
@@ -48,10 +61,10 @@ async function testViewport(browser, viewport, label) {
       )
     }
 
-    await page.locator('.nav-item[data-view="search"]').click()
+    await navigate('search')
     await page.waitForTimeout(150)
     assert.equal(await page.locator('#view-search').evaluate(el => String(el.className || '').split(/\s+/).indexOf('active') >= 0), true, label + ': search navigation must switch views')
-    await page.locator('.nav-item[data-view="playlist"]').click()
+    await navigate('playlist')
     await page.waitForTimeout(250)
     assert.equal(await page.locator('#view-playlist').evaluate(el => String(el.className || '').split(/\s+/).indexOf('active') >= 0), true, label + ': repeated playlist navigation must remain stable')
     assert.equal(await page.evaluate(() => location.hash), '#playlist', label + ': repeated playlist navigation must keep playlist state')
