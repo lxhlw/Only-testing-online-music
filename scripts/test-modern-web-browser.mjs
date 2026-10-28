@@ -175,6 +175,26 @@ try {
   assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(s=>s.name)),['野花🌷']);
   checks.push('Flower-failure-recovery');
   await page.evaluate(()=>{
+    window.__qualityTypes=[];
+    window.LXSourceManager.requestAction=(source,action,params,done)=>{
+      window.__qualityTypes.push(params.type);
+      if(params.type==='128k')return done(null,{url:'https://media.example.test/song.wav?id=128'});
+      return done(new Error('高音质暂不可用'));
+    };
+    window.LXMusicSearch.resolveMusicUrlFast=(source,info,quality,done)=>done(new Error('高音质不可用'));
+    window.OnlyTestingMusicApp.playMusic({
+      id:'fallback-quality',songmid:'fallback-quality',name:'音质降级测试',singer:'测试歌手',source:'wy',interval:8
+    });
+  });
+  await page.waitForFunction(()=>window.__qualityTypes.includes('128k')&&window.__audioPlayCalls>=3,{timeout:6000});
+  assert.deepEqual(await page.evaluate(()=>window.__qualityTypes.slice(0,2)),['320k','128k'],
+    'Automatic must try 320k first, then a single low-bitrate fallback');
+  checks.push('bounded-quality-fallback');
+  await page.evaluate(()=>{
+    window.LXSourceManager.requestAction=(source,action,params,done)=>
+      done(null,{url:'https://media.example.test/song.wav?id=good'});
+  });
+  await page.evaluate(()=>{
     window.OnlyTestingMusicApp.playMusic({
       id:'123456',songmid:'123456',name:'歌词同步测试',singer:'测试歌手',source:'wy',interval:8
     });
