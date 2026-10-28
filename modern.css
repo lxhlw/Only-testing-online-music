@@ -1367,3 +1367,23 @@ html.modern-web .chart-play-btn:focus-visible{outline:2px solid #4da776;outline-
 @media(prefers-reduced-motion:reduce){
   html.modern-web .chart-play-btn{transition:none}
 }
+
+/* Explicit full-width ranking cascade at compact widths. Older inherited
+   flex/min-content rules must not shrink the content pane to its button. */
+@media(max-width:740px){
+ html.modern-web #view-ranking .ranking-layout{
+   display:block!important;width:100%!important;min-width:0!important;max-width:100%!important
+ }
+ html.modern-web #view-ranking .ranking-content{
+   display:block!important;flex:none!important;
+   width:100%!important;min-width:0!important;max-width:100%!important
+ }
+ html.modern-web #view-ranking #ranking-songs{
+   display:block!important;width:100%!important;min-width:0!important;
+   max-width:100%!important;box-sizing:border-box
+ }
+ html.modern-web #view-ranking #ranking-songs>.chart-song-row{
+   width:100%!important;max-width:100%!important;min-width:0!important;
+   box-sizing:border-box
+ }
+}
