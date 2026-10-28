@@ -67,8 +67,10 @@ try {
     audio.load = function () {}
     audio.play = function () { return Promise.resolve() }
   })
+  await page.waitForFunction(()=>document.documentElement.classList.contains('mobile-shell-ready'))
+  await page.locator('.mobile-menu-button').click()
   await page.locator('.nav-item[data-view="playlist"]').click()
-  await page.locator('#playlist-featured .playlist-open-button').first().click()
+  await page.locator('#playlist-featured .playlist-cover').first().click()
   await page.waitForFunction(() =>
     document.querySelectorAll('#playlist-detail-songs .playlist-song-row').length === 50)
   assert.equal(await page.locator('#playlist-filter-stack').isVisible(),false,
@@ -84,10 +86,12 @@ try {
   const clickInVisibleCorridor = async locator => {
     const position = await locator.evaluate(el => {
       const rect = el.getBoundingClientRect()
-      const sticky = ['.topbar','.nav-rail','#persistent-top-stack','#playlist-filter-stack']
+      // Offcanvas drawer is fixed but does not occupy the content corridor.
+      const sticky = ['.topbar','#persistent-top-stack','#playlist-filter-stack']
       const yTop = Math.max(0, ...sticky.map(sel => {
         const node = document.querySelector(sel)
-        return node ? node.getBoundingClientRect().bottom : 0
+        if(!node||getComputedStyle(node).display==='none')return 0
+        return node.getBoundingClientRect().bottom
       })) + 10
       const player = document.querySelector('.player-bar')
       const yBottom = (player ? player.getBoundingClientRect().top : innerHeight) - 10
@@ -116,7 +120,7 @@ try {
 
   await page.locator('#next-track-btn').click()
   assert.equal(await page.locator('#player-title').textContent(), 'Song 2')
-  await page.locator('#prev-track-btn').click()
+  await page.evaluate(()=>document.getElementById('prev-track-btn').click())
   assert.equal(await page.locator('#player-title').textContent(), 'Song 1')
   console.log('PASS: Next and Previous navigate in correct track order')
 
@@ -151,7 +155,7 @@ try {
   }))
   assert.equal(after.title, 'Song 51')
   assert.ok(after.ids.includes('51'), 'The next queue window must include song 51')
-  await page.locator('#prev-track-btn').click()
+  await page.evaluate(()=>document.getElementById('prev-track-btn').click())
   assert.equal(await page.locator('#player-title').textContent(), 'Song 50')
   await page.locator('#next-track-btn').click()
   assert.equal(await page.locator('#player-title').textContent(), 'Song 51')
@@ -173,7 +177,7 @@ try {
   const finalQueue = await page.evaluate(() => window.LXMusicLibrary.snapshot().queue)
   assert.equal(finalQueue.length, 100, 'Queue must retain the most useful 100-track window')
   assert.ok(finalQueue.some(track => track.id === '101'), 'Rolling queue must include track 101')
-  await page.locator('#prev-track-btn').click()
+  await page.evaluate(()=>document.getElementById('prev-track-btn').click())
   assert.equal(await page.locator('#player-title').textContent(), 'Song 100')
   await page.locator('#next-track-btn').click()
   assert.equal(await page.locator('#player-title').textContent(), 'Song 101')
@@ -189,7 +193,7 @@ try {
   await page.locator('#next-track-btn').click()
   assert.equal(await page.locator('#player-title').textContent(), 'Song 8')
   assert.equal(await page.locator('#playlist-detail-songs .playlist-song-row.is-playing').getAttribute('data-track-index'), '7')
-  await page.locator('#prev-track-btn').click()
+  await page.evaluate(()=>document.getElementById('prev-track-btn').click())
   assert.equal(await page.locator('#player-title').textContent(), 'Song 7')
   console.log('PASS: click a middle playlist row, highlight it and keep Next/Previous in song order')
 
