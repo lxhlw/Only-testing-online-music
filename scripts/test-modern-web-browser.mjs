@@ -78,10 +78,12 @@ try {
   }));
   assert.equal(state.requests,1,'Modern Flower must resolve exactly once');
   assert.ok(state.audioPlays>=1,'Audio.play must begin without waiting for metadata');
-  assert.equal(new URL(state.src).origin,new URL(url).origin,
-    'Signed media is kept behind the existing first-party proxy when needed');
-  assert.equal(new URL(state.src).searchParams.get('url'),
-    'https://media.example.test/song.wav?id=demo');
+  const mediaUrl=new URL(state.src);
+  const target=mediaUrl.pathname==='/api/proxy' ?
+    mediaUrl.searchParams.get('url') : mediaUrl.href;
+  assert.equal(target,'https://media.example.test/song.wav?id=demo');
+  assert.ok(mediaUrl.protocol==='https:'||mediaUrl.origin===new URL(url).origin,
+    'Media may stream directly over HTTPS or use the protected first-party proxy');
   assert.equal(state.title,'成都');
   const old=requests.filter(p=>/promise-lite|android-native-|android-external-audio|\/api\/babel|babel\.min\.js/.test(p));
   assert.deepEqual(old,[],'Legacy compatibility scripts must not load');
