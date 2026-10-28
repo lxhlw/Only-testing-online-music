@@ -1,4 +1,4 @@
-// LX Music Web v0.4.9 — mobile-only interaction shell.
+// LX Music Web v0.4.10 — mobile-only interaction shell.
 // The business logic stays in app.js. This module only moves navigation
 // into an accessible drawer and keeps channel choices behind one disclosure.
 const root=document.documentElement;
@@ -64,6 +64,8 @@ if(navRail&&nav&&header&&toolbar&&channels){
   sourceButton.setAttribute('aria-expanded','false');
   sourceButton.textContent='搜索平台 ▾';
   toolbar.insertBefore(sourceButton,channels);
+  const channelsDock=document.createComment('mobile-channel-dock');
+  toolbar.insertBefore(channelsDock,channels);
 
   let drawerOpen=false;
   let pickerOpen=false;
@@ -93,12 +95,32 @@ if(navRail&&nav&&header&&toolbar&&channels){
     pickerOpen=Boolean(opened&&mobile.matches);
     toolbar.classList.toggle('channel-picker-open',pickerOpen);
     sourceButton.setAttribute('aria-expanded',String(pickerOpen));
+    if(pickerOpen){
+      // Popover is portaled above the sticky search/player layers, never
+      // clipped by the song-list grid or a scroll/animation stacking context.
+      if(channels.parentElement!==document.body)document.body.appendChild(channels);
+      channels.classList.add('mobile-channel-popover');
+      const rect=sourceButton.getBoundingClientRect();
+      const roomBelow=innerHeight-rect.bottom;
+      const openHeight=176;
+      const top=roomBelow<openHeight&&rect.top>openHeight?
+        Math.max(8,rect.top-openHeight-7):Math.min(innerHeight-50,rect.bottom+7);
+      channels.style.setProperty('--picker-top',Math.round(top)+'px');
+      channels.style.setProperty('--picker-left',Math.max(8,Math.round(rect.left))+'px');
+      channels.style.setProperty('--picker-width',Math.min(innerWidth-16,Math.max(210,rect.width+148))+'px');
+    }else{
+      channels.classList.remove('mobile-channel-popover');
+      channels.style.removeProperty('--picker-top');
+      channels.style.removeProperty('--picker-left');
+      channels.style.removeProperty('--picker-width');
+      if(channels.parentNode!==toolbar)toolbar.insertBefore(channels,channelsDock.nextSibling);
+    }
   };
   menu.addEventListener('click',()=>setDrawer(!drawerOpen));
   shade.addEventListener('click',()=>setDrawer(false,true));
   drawerClose.addEventListener('click',()=>setDrawer(false,true));
   nav.addEventListener('click',ev=>{
-    if(ev.target.closest('.nav-item'))setDrawer(false);
+    if(ev.target.closest('.nav-item')){setDrawer(false);setPicker(false);}
   });
   sourceButton.addEventListener('click',()=>setPicker(!pickerOpen));
   channels.addEventListener('click',ev=>{
@@ -108,7 +130,7 @@ if(navRail&&nav&&header&&toolbar&&channels){
     }
   });
   document.addEventListener('click',ev=>{
-    if(pickerOpen&&!toolbar.contains(ev.target))setPicker(false);
+    if(pickerOpen&&!toolbar.contains(ev.target)&&!channels.contains(ev.target))setPicker(false);
   });
   document.addEventListener('keydown',ev=>{
     if(ev.key==='Escape'){
@@ -133,6 +155,7 @@ if(navRail&&nav&&header&&toolbar&&channels){
     attributes:true,subtree:true,childList:true,characterData:true,
     attributeFilter:['class']
   });
+  window.addEventListener('scroll',()=>{if(pickerOpen)setPicker(false);},{passive:true});
   mobile.addEventListener('change',()=>{
     setDrawer(false);
     placeDrawer();
