@@ -1305,7 +1305,8 @@
     var flowerProgressTimer = null;
     var fastRaceTimer = null;
     var fastRaceStarted = false;
-    var fastEnabled = false && NATIVE_COMPANION && !playbackState.forceFullResolve &&
+    var flowerFailed = '';
+    var fastEnabled = MODERN_WEB && !playbackState.forceFullResolve &&
       !!(active && String(active.url || '').indexOf('pdone/lx-music-source/main/flower/latest.js') >= 0 &&
       active.inited && active.runtime &&
       active.sources && active.sources[source] &&
@@ -1353,8 +1354,8 @@
       if (!isCurrentAttempt() || !finishAttempt()) return;
 
       if (NATIVE_COMPANION || MODERN_WEB) {
-        setStatus('野花暂时无法提供播放地址：' + escapeHtml(reason || '解析失败') +
-          '。没有调用其他解析服务。', 'fail');
+        setStatus('当前歌曲暂未取得播放地址：' + escapeHtml(reason || '解析失败') +
+          (MODERN_WEB ? '。野花与同平台备用解析均未成功。' : '。'), 'fail');
         if (MODERN_WEB) {
           var retry = document.createElement('button');
           retry.type = 'button';
@@ -1424,7 +1425,7 @@
     function startFastRace() {
       if (!fastEnabled || fastRaceStarted || settled || !isCurrentAttempt()) return;
       fastRaceStarted = true;
-      setStatus('Flower 正在解析；已同时启用快速同平台备用解析……', 'warn');
+      setStatus('野花解析中，正在并行检查同平台可用地址……', 'warn');
       // Keep waiting for Flower's real musicUrl in parallel. Whichever valid
       // same-platform link arrives first wins. Late callbacks are ignored.
       global.LXMusicSearch.resolveMusicUrlFast(source, musicInfo, quality,
@@ -1438,9 +1439,10 @@
               settings, providerLabel(result.provider), result.provider);
             return;
           }
-          // The original Flower request may still succeed after the faster
-          // provider race exhausted its bounded upstream window.
-          setStatus('快速备用解析未成功，仍在等待当前 Flower 音源……', 'warn');
+          // If Flower has already failed, stop immediately; otherwise
+          // its own pending request can still deliver a valid URL.
+          if (flowerFailed) runFallback(flowerFailed);
+          else setStatus('备用解析暂不可用，仍在等待野花音源……', 'warn');
         });
     }
 
@@ -1491,68 +1493,24 @@
       return;
     }
 
-    if (fastEnabled) {
-      // On the legacy native APK, begin the safe same-platform alternatives
-      // while Flower is pending, not after several sequential failures.
-      fastRaceTimer = global.setTimeout(startFastRace, 2000);
-      sourceTimer = global.setTimeout(function() {
+    if (MODERN_WEB) {
+      // Give Flower a 1.6s head start. In parallel, race same-platform
+      // resolver endpoints only; never install another LX source script.
+      if (fastEnabled) fastRaceTimer = global.setTimeout(startFastRace, 1600);
+      sourceTimer = global.setTimeout(function(){
         if (!isCurrentAttempt() || settled) return;
-        finishAttempt();
-        setStatus('快速解析 21 秒内未得到地址，已停止无效等待。', 'warn');
-        var slowButton = document.createElement('button');
-        slowButton.type = 'button';
-        slowButton.className = 'secondary';
-        slowButton.textContent = '继续完整解析（可能较慢）';
-        slowButton.onclick = function () {
-          if (token !== playbackToken) return;
-          legacyFullResolveNext = true;
-          testMusic(music, false);
-        };
-        statusEl.appendChild(slowButton);
-      }, 21000);
+        runFallback(flowerFailed || '12 秒内未取得可播放地址');
+      }, MODERN_FLOWER_TIMEOUT_MS);
+    } else if (NATIVE_COMPANION) {
+      sourceTimer = global.setTimeout(function(){
+        if (!isCurrentAttempt() || settled) return;
+        runFallback('野花解析超时');
+      }, FLOWER_NATIVE_RESOLVE_TIMEOUT_MS);
     } else {
-      if (NATIVE_COMPANION || MODERN_WEB) {
-        var resolveStarted = Date.now ? Date.now() : new Date().getTime();
-        var initialRequests = active && active.runtime &&
-          active.runtime.__debugRequests ? active.runtime.__debugRequests.length : 0;
-        // An upstream Flower request can take substantially longer than 18s.
-        // Inform the user instead of discarding a still-live request. Never
-        // initiate a Huibq/GD/TuneHub request while this one is pending.
-        var progressFlower = function() {
-          if (!isCurrentAttempt() || settled) return;
-          var now = Date.now ? Date.now() : new Date().getTime();
-          var waitedSeconds = Math.max(0, Math.round((now - resolveStarted) / 1000));
-          var activeNow = global.LXSourceManager.getActive();
-          var requests = activeNow && activeNow.runtime &&
-            activeNow.runtime.__debugRequests;
-          var requestCount = Math.max(0, (requests && requests.length ? requests.length : 0) - initialRequests);
-          setStatus('野花正在等待歌曲地址（已等 ' + waitedSeconds +
-            ' 秒，已发起 ' + requestCount +
-            ' 次音源网络请求）。不会切换其他音源，最多等待 ' +
-            Math.round(FLOWER_NATIVE_RESOLVE_TIMEOUT_MS / 1000) +
-            ' 秒。', 'warn');
-          flowerProgressTimer = global.setTimeout(progressFlower, 12000);
-        };
-        flowerProgressTimer = MODERN_WEB ? null : global.setTimeout(progressFlower, 18000);
-        sourceTimer = global.setTimeout(function() {
-          if (!isCurrentAttempt() || settled) return;
-          var activeNow = global.LXSourceManager.getActive();
-          var count = activeNow && activeNow.runtime &&
-            activeNow.runtime.__debugRequests ?
-            Math.max(0, activeNow.runtime.__debugRequests.length - initialRequests) : 0;
-          runFallback('野花网络请求超过 ' +
-            Math.round((MODERN_WEB ? MODERN_FLOWER_TIMEOUT_MS : FLOWER_NATIVE_RESOLVE_TIMEOUT_MS) / 1000) +
-            ' 秒仍未返回（本次请求 ' + count + ' 次）');
-        }, MODERN_WEB ? MODERN_FLOWER_TIMEOUT_MS : FLOWER_NATIVE_RESOLVE_TIMEOUT_MS);
-      } else {
-        sourceTimer = global.setTimeout(function () {
-          if (!isCurrentAttempt() || settled) return;
-          runFallback(
-            '原始音源解析超过 ' + Math.round(SOURCE_RESOLVE_TIMEOUT_MS / 1000)
-            + ' 秒，正在切换备用解析器……'
-          );
-        }, SOURCE_RESOLVE_TIMEOUT_MS);
-      }
+      sourceTimer = global.setTimeout(function(){
+        if (!isCurrentAttempt() || settled) return;
+        runFallback('音源请求超过 '+Math.round(SOURCE_RESOLVE_TIMEOUT_MS/1000)+' 秒');
+      }, SOURCE_RESOLVE_TIMEOUT_MS);
     }
 
     global.LXSourceManager.requestAction(
@@ -1566,10 +1524,9 @@
         if (!isCurrentAttempt() || settled) return;
 
         if (err) {
+          flowerFailed='野花解析失败：'+String(err && (err.message || err) || '网络错误').slice(0,160);
           if (fastEnabled) { startFastRace(); return; }
-          return runFallback(NATIVE_COMPANION ?
-            '野花返回解析错误：' + (err && (err.message || err) || '网络错误') :
-            '原始音源解析失败，正在切换备用解析器……');
+          return runFallback(flowerFailed);
         }
 
         var url = typeof result === 'string'
@@ -1578,8 +1535,9 @@
         if (url != null) url = String(url).replace(/^\\s+|\\s+$/g, '');
 
         if (!url || !/^https?:/i.test(url)) {
+          flowerFailed='野花没有返回有效的播放地址';
           if (fastEnabled) { startFastRace(); return; }
-          return runFallback('原始音源返回的播放地址无效，正在切换备用解析器……');
+          return runFallback(flowerFailed);
         }
 
         if (
@@ -1587,8 +1545,9 @@
           typeof global.LXMusicSearch.isPlayableUrlForSource === 'function' &&
           !global.LXMusicSearch.isPlayableUrlForSource(source, url)
         ) {
+          flowerFailed='野花返回了不属于当前渠道的链接';
           if (fastEnabled) { startFastRace(); return; }
-          return runFallback('原始音源返回了其他渠道的播放地址，正在使用当前渠道解析器……');
+          return runFallback(flowerFailed);
         }
 
         if (!finishAttempt()) return;
