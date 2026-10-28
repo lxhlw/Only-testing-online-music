@@ -176,7 +176,7 @@ try {
   console.log('PASS: track 100 to 101 with bounded queue, Back and real last-track guard')
   // Any song row is directly clickable. Selecting one midway must start
   // from that position, show an active-row state and retain song order.
-  await page.locator('#playlist-detail-songs .playlist-song-row').nth(6).click()
+  await clickInVisibleCorridor(page.locator('#playlist-detail-songs .playlist-song-row').nth(6))
   assert.equal(await page.locator('#player-title').textContent(), 'Song 7')
   assert.equal(await page.locator('#playlist-detail-songs .playlist-song-row.is-playing').count(), 1)
   assert.equal(await page.locator('#playlist-detail-songs .playlist-song-row.is-playing').getAttribute('data-track-index'), '6')
@@ -188,14 +188,14 @@ try {
   console.log('PASS: click a middle playlist row, highlight it and keep Next/Previous in song order')
 
   const seventh = page.locator('#playlist-detail-songs .playlist-song-row').nth(6)
-  await seventh.locator('.playlist-add-queue').click()
+  await clickInVisibleCorridor(seventh.locator('.playlist-add-queue'))
   assert.equal(await page.locator('#player-title').textContent(), 'Song 7', 'Queue-only button must not launch playback')
-  await seventh.locator('.playlist-fav-song').click()
+  await clickInVisibleCorridor(seventh.locator('.playlist-fav-song'))
   assert.equal(await page.locator('#player-title').textContent(), 'Song 7', 'Favorite button must not launch playback')
   await page.locator('#playlist-detail-songs .playlist-song-row').nth(9).focus()
   await page.keyboard.press('Enter')
   assert.equal(await page.locator('#player-title').textContent(), 'Song 10')
-  await page.locator('#playlist-detail-songs .playlist-song-row').nth(3).locator('.playlist-song-play').click()
+  await clickInVisibleCorridor(page.locator('#playlist-detail-songs .playlist-song-row').nth(3).locator('.playlist-song-play'))
   assert.equal(await page.locator('#player-title').textContent(), 'Song 4')
   console.log('PASS: keyboard and explicit Play button select arbitrary tracks without duplicate click playback')
 
