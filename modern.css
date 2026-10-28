@@ -201,3 +201,9 @@ html.modern-web #view-playlist>.playlist-filter-stack>.sub-toolbar{
   html.modern-web .player-bar{bottom:0}
   html.modern-web .topbar{position:sticky}
 }
+
+/* The original topbar was fixed with compensating page padding. Modern mode
+   uses a sticky header in the natural document flow: no overlay on tablets. */
+html.modern-web .topbar{
+  position:sticky;left:auto;right:auto;top:0;width:100%;
+}
