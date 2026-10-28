@@ -58,8 +58,9 @@ if(audio){
 }
 if(input&&searchBtn){
   input.addEventListener('keydown',ev=>{
-    if(ev.key==='Escape'){input.blur();return}
-    if(ev.key==='Enter'){ev.preventDefault();searchBtn.click()}
+    // The existing app navigation already handles Enter once. Do not
+    // duplicate its request and waste two API calls per search.
+    if(ev.key==='Escape'){input.blur()}
   });
 }
 document.addEventListener('keydown',ev=>{
