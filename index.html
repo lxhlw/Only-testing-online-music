@@ -1067,31 +1067,7 @@
       var active= document.querySelector('.lyrics-line.active');
       el('player-lyric').innerHTML=active?'歌词：'+active.innerHTML:'歌词：—';
     };
-    var previousStatusText='',previousLyricText='',previousSourceName='';
-    setInterval(function(){
-      if (document.hidden || document.webkitHidden) return;
-      var title=el('player-title'),artist=el('player-artist');
-      if(title&&el('rail-title')){}
-      var status=el('status');
-      var statusText=status?stripHtml(status.innerHTML).slice(0,32)||'就绪':'';
-      if(statusText!==previousStatusText&&el('bottom-play-status')){
-        previousStatusText=statusText;el('bottom-play-status').textContent=statusText;
-      }
-      var lyric=document.querySelector('.lyrics-line.active');
-      var lyricText=lyric?'歌词：'+lyric.textContent:'歌词：—';
-      if(lyricText!==previousLyricText){
-        previousLyricText=lyricText;el('player-lyric').textContent=lyricText;
-      }
-      var activeSource=global.LXSourceManager&&global.LXSourceManager.getActive?global.LXSourceManager.getActive():null;
-      var currentSourceName=activeSource&&activeSource.name?String(activeSource.name):'未选择';
-      var topSourceLabel=el('top-source-label');
-      if(topSourceLabel&&currentSourceName!==previousSourceName){
-        previousSourceName=currentSourceName;
-        topSourceLabel.textContent='当前音源：'+currentSourceName;
-        topSourceLabel.title='当前音源：'+currentSourceName;
-      }
-    },1200);
-
+    // Status, lyrics and playback UI now update via events / observers in modern-ui.js.
     function stripHtml(v){var d=document.createElement('div');d.innerHTML=v;return d.textContent||d.innerText||'';}
 
     loadInlineSettings();
