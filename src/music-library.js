@@ -3,7 +3,7 @@
 
   var STORAGE_KEY = 'only-testing-online-music.library';
   var MAX_QUEUE = 100;
-  var MAX_HISTORY = 50;
+  var MAX_HISTORY = 300; // Modern browsers: preserve a deeper listening history.
   var MAX_FAVORITES = 200;
 
   function loadState() {
