@@ -92,13 +92,12 @@
             <div id="search-playlist-view" class="secondary-view hidden">
               <div class="sub-toolbar">
                 <span>歌单渠道</span>
-                <div class="platform-pills">
-                  <button type="button" class="platform-pill active" data-playlist-platform="wy">网易云音乐</button>
-                  
-                  
+                <div class="catalog-source-tabs" role="group" aria-label="搜索歌单的平台">
+                  <button type="button" class="catalog-source active" data-catalog-source="wy" aria-pressed="true">网易云音乐</button>
+                  <button type="button" class="catalog-source" data-catalog-source="tx" aria-pressed="false">QQ音乐</button>
                 </div>
               </div>
-              <div class="category-row">
+              <div class="category-row" id="search-playlist-category-row">
                 <span>分类</span>
                 <button type="button" class="category-pill active" data-playlist-cat="all">全部</button>
                 <button type="button" class="category-pill" data-playlist-cat="华语">华语</button>
@@ -671,7 +670,7 @@
       else img.innerHTML='♫';
       box.appendChild(img);
       var name=document.createElement('div'); name.className='playlist-name'; name.innerHTML=escapeHtml(item.name||'未命名歌单'); box.appendChild(name);
-      var meta=document.createElement('div'); meta.className='playlist-meta'; meta.innerHTML=escapeHtml((item.trackCount||0)+' 首歌曲 · '+(item.creator||'未知创建者')); box.appendChild(meta);
+      var meta=document.createElement('div'); meta.className='playlist-meta'; meta.innerHTML=escapeHtml((item.source==='tx'?'QQ音乐':'网易云音乐')+' · '+(item.trackCount||0)+' 首歌曲 · '+(item.creator||'未知创建者')); box.appendChild(meta);
       var actions=document.createElement('div'); actions.className='playlist-card-actions';
 
       var open=document.createElement('button'); open.type='button'; open.className='playlist-open-button'; open.innerHTML='打开歌单';
@@ -943,8 +942,9 @@
         if(yes)addClass(nodes[n],'active');else removeClass(nodes[n],'active');
         nodes[n].setAttribute('aria-pressed',String(yes));
       }
-      var cats=el('playlist-category-row');
+      var cats=el('playlist-category-row'),searchCats=el('search-playlist-category-row');
       if(cats)cats.style.display=playlistPlatform==='tx'?'none':'';
+      if(searchCats)searchCats.style.display=playlistPlatform==='tx'?'none':'';
     }
     function searchPlaylists(keyword,hostId){
       var host=el(hostId); if(!host)return;
@@ -1125,6 +1125,7 @@
       playlistPlatform=btn.getAttribute('data-catalog-source')||'wy';
       refreshCatalogTabs();
       if(currentView==='playlist')loadFeaturedPlaylists();
+      else if(currentView==='search'&&searchKind==='playlist')searchPlaylists('','playlist-results');
     };})(catalogTabs[k]);
     var rankingTabs=all('[data-ranking-source]');
     for(var rk=0;rk<rankingTabs.length;rk++)rankingTabs[rk].onclick=(function(btn){return function(){
