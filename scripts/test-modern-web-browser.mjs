@@ -246,7 +246,7 @@ try {
   await page.locator('[data-view="ranking"]').click();
   assert.equal(await page.locator('[data-ranking-source="tx"]').isVisible(),true);
   await page.locator('[data-view="playlist"]').click();
-  assert.equal(await page.locator('[data-catalog-source="tx"]').isVisible(),true);
+  assert.equal(await page.locator('#view-playlist [data-catalog-source="tx"]').isVisible(),true);
   checks.push('platform-catalog-controls');
   checks.push('navigation');
   await page.setViewportSize({width:390,height:844});
