@@ -329,8 +329,7 @@
     };
 
     if (lyricsTitleEl) {
-      lyricsTitleEl.innerHTML = escapeHtml(music.name || '未知歌曲') +
-        ' <span class="muted">· ' + escapeHtml(music.singer || '未知歌手') + '</span>';
+      lyricsTitleEl.textContent = String(music.name || '未知歌曲');
     }
 
     if (!normalized.lyric) {
@@ -372,7 +371,7 @@
     var track=state.music;
     var valid=function(){return !!(state.token===playbackToken &&
       playbackState && musicKey(playbackState.music)===musicKey(track));};
-    if (lyricsTitleEl) lyricsTitleEl.textContent=String(track.name||'未知歌曲')+' · '+String(track.singer||'未知歌手');
+    if (lyricsTitleEl) lyricsTitleEl.textContent=String(track.name||'未知歌曲');
     if (lyricsLinesEl) lyricsLinesEl.innerHTML='<div class="lyrics-empty">正在获取歌词…</div>';
     lyricsActiveIndex=-1;
     setLyricsStatus('正在获取歌词…');
