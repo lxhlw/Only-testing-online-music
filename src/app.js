@@ -609,9 +609,9 @@
     target.innerHTML = '';
     var fragment=document.createDocumentFragment();
 
-    for (var i = 0; i < items.length; i += 1) {
-      var item = items[i];
-      var row = document.createElement('div');
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      const row = document.createElement('div');
       row.className = 'library-row';
       if (playbackState && musicKey(playbackState.music) === musicKey(item)) {
         row.className += ' is-playing';
@@ -662,6 +662,21 @@
         ));
       }
 
+      main.setAttribute('role','button');
+      main.tabIndex=0;
+      main.setAttribute('aria-label','播放 '+String(item.name||'未知歌曲'));
+      main.title='点击播放歌曲';
+      row.onclick=function(event){
+        if(event.target.closest('button,a,summary,details'))return;
+        playLibraryMusic(item);
+      };
+      main.onkeydown=function(event){
+        if(event.key==='Enter'||event.key===' '){
+          event.preventDefault();event.stopPropagation();
+          playLibraryMusic(item);
+        }
+      };
+      row.classList.add('tap-to-play');
       row.appendChild(main);
       row.appendChild(actions);
       fragment.appendChild(row);
@@ -2628,52 +2643,85 @@
   }
 
   function renderSearchResults(items,append) {
-    if(!append)resultsEl.innerHTML = '';
-    var fragment = document.createDocumentFragment();
-    for (var i = 0; i < items.length; i += 1) {
-      var item = items[i];
-      var row = document.createElement('div');
-      row.className = 'search-row';
-      row.innerHTML = '<b>' + escapeHtml(item.name) + '</b> <span>' + escapeHtml(item.singer) + '</span>' +
-        '<small class="search-source">' + escapeHtml(CHANNEL_NAMES[item.source] || item.source || '') + '</small>';
-      var actions = document.createElement('div');
-      actions.className = 'search-actions';
+    if(!append)resultsEl.replaceChildren();
+    var fragment=document.createDocumentFragment();
+    var startIndex=resultsEl.querySelectorAll('.search-song-row').length;
 
-      var playButton = document.createElement('button');
-      playButton.type = 'button';
-      playButton.innerHTML = '解析并播放';
-      playButton.onclick = (function (music) {
-        return function () { testMusic(music, true); };
-      })(item);
-      actions.appendChild(playButton);
+    function actionButton(text,cls,aria,handler) {
+      var button=document.createElement('button');
+      button.type='button';button.className=cls;button.textContent=text;
+      button.setAttribute('aria-label',aria);
+      button.onclick=function(event){event.stopPropagation();handler(button);};
+      return button;
+    }
 
-      var queueButton = document.createElement('button');
-      queueButton.type = 'button';
-      queueButton.className = 'secondary';
-      queueButton.innerHTML = '加入队列';
-      queueButton.onclick = (function (music) {
-        return function () {
-          if (global.LXMusicLibrary) global.LXMusicLibrary.addQueue(music);
-          renderLibrary();
-          setStatus('已加入播放队列：' + escapeHtml(music.name), 'ready');
-        };
-      })(item);
-      actions.appendChild(queueButton);
-
-      var favoriteButton = document.createElement('button');
-      favoriteButton.type = 'button';
-      favoriteButton.className = 'secondary';
-      favoriteButton.innerHTML = global.LXMusicLibrary && global.LXMusicLibrary.isFavorite(item) ? '取消收藏' : '收藏';
-      favoriteButton.onclick = (function (music) {
-        return function () {
-          if (global.LXMusicLibrary) global.LXMusicLibrary.toggleFavorite(music);
-          renderLibrary();
-          renderSearchResults(global.__LXLastSearchResults || []);
-        };
-      })(item);
-      actions.appendChild(favoriteButton);
-
-      row.appendChild(actions);
+    for(let i=0;i<items.length;i++){
+      const item=items[i]||{};
+      const row=document.createElement('div');
+      row.className='search-row search-song-row';
+      var index=document.createElement('span');
+      index.className='song-row-index';
+      index.textContent=String(startIndex+i+1);
+      var main=document.createElement('div');
+      main.className='search-song-main';
+      main.tabIndex=0;
+      main.setAttribute('role','button');
+      main.setAttribute('aria-label','播放 '+String(item.name||'未知歌曲'));
+      main.title='点击播放歌曲';
+      var name=document.createElement('b');name.className='song-title';
+      name.textContent=String(item.name||'未知歌曲');
+      var artist=document.createElement('span');artist.className='song-artist';
+      artist.textContent=String(item.singer||'未知歌手');
+      main.append(name,artist);
+      var source=document.createElement('small');
+      source.className='search-source';
+      source.textContent=String(CHANNEL_NAMES[item.source]||item.source||'');
+      var actions=document.createElement('div');actions.className='search-actions';
+      const play=function(){testMusic(item,true);};
+      main.onclick=play;
+      main.onkeydown=function(event){
+        if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();play();}
+      };
+      row.onclick=function(event){
+        if(event.target.closest('button,summary,details,.search-song-main,a'))return;
+        // The whitespace inside a music row is part of the play target.
+        play();
+      };
+      row.classList.add('tap-to-play');
+      actions.appendChild(actionButton('▶','song-action-play','播放 '+String(item.name||''),play));
+      function addToQueue(){
+        if(global.LXMusicLibrary)global.LXMusicLibrary.addQueue(item);
+        renderLibrary();
+        setStatus('已加入播放队列：'+escapeHtml(item.name),'ready');
+      }
+      function toggleFavorite(){
+        if(global.LXMusicLibrary)global.LXMusicLibrary.toggleFavorite(item);
+        renderLibrary();
+        var favored=global.LXMusicLibrary&&global.LXMusicLibrary.isFavorite(item);
+        var newText=favored?'取消收藏':'收藏';
+        var buttons=row.querySelectorAll('.song-action-favorite');
+        for(var j=0;j<buttons.length;j++){
+          buttons[j].textContent=newText;
+          buttons[j].setAttribute('aria-label',newText+' '+String(item.name||''));
+        }
+      }
+      var favored=global.LXMusicLibrary&&global.LXMusicLibrary.isFavorite(item);
+      var favoriteLabel=favored?'取消收藏':'收藏';
+      actions.appendChild(actionButton('加入队列','song-action-queue','加入队列 '+String(item.name||''),addToQueue));
+      actions.appendChild(actionButton(favoriteLabel,'song-action-favorite',favoriteLabel+' '+String(item.name||''),toggleFavorite));
+      const more=document.createElement('details');more.className='song-more';
+      var summary=document.createElement('summary');
+      summary.textContent='···';summary.title='更多操作';
+      summary.setAttribute('aria-label','更多操作 '+String(item.name||''));
+      var menu=document.createElement('div');menu.className='song-more-menu';
+      menu.appendChild(actionButton('加入队列','song-action-queue','加入队列 '+String(item.name||''),function(){
+        addToQueue();more.open=false;
+      }));
+      menu.appendChild(actionButton(favoriteLabel,'song-action-favorite',favoriteLabel+' '+String(item.name||''),function(){
+        toggleFavorite();more.open=false;
+      }));
+      more.append(summary,menu);actions.appendChild(more);
+      row.append(index,main,source,actions);
       fragment.appendChild(row);
     }
     resultsEl.appendChild(fragment);

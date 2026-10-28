@@ -1585,3 +1585,253 @@ html.modern-web .comments-pagination{
   }
   html.modern-web .sub-toolbar>span:first-child{font-size:10px}
 }
+
+/* v0.4.7: consistent accessible controls and significantly calmer mobile
+   song-list density. This overrides the legacy three-row search layout. */
+html.modern-web #search-results>.search-song-row{
+  display:grid!important;
+  grid-template-columns:28px minmax(0,1fr) auto auto;
+  align-items:center;gap:12px;
+  width:100%;min-width:0;min-height:60px;
+  margin:0 0 5px;padding:7px 12px;box-sizing:border-box;
+  background:#fff;border:1px solid #e0ece2;border-radius:11px;
+  transition:background-color .12s ease,border-color .12s ease
+}
+html.modern-web #search-results>.search-song-row::before{
+  display:none!important;content:none!important
+}
+html.modern-web #search-results>.search-song-row:hover{
+  background:#f5faf4;border-color:#b8dac1
+}
+html.modern-web #search-results>.search-song-row .song-row-index{
+  grid-column:1;grid-row:1;min-width:0;white-space:nowrap;
+  color:#9bad9e;font-variant-numeric:tabular-nums;
+  text-align:center;font-size:12px;font-weight:650
+}
+html.modern-web #search-results>.search-song-row .search-song-main{
+  grid-column:2;grid-row:1;min-width:0;max-width:100%;width:100%;
+  cursor:pointer;display:flex;flex-direction:column;justify-content:center;
+  gap:4px;border-radius:7px;padding:4px 5px;margin:-4px -5px;
+  box-sizing:content-box
+}
+html.modern-web #search-results>.search-song-row .search-song-main:hover{
+  background:#e9f6eb
+}
+html.modern-web #search-results>.search-song-row .search-song-main:focus-visible{
+  outline:2px solid #57aa7e;outline-offset:3px
+}
+html.modern-web #search-results>.search-song-row .song-title{
+  color:#2d5039;font-size:13px;font-weight:730;
+  display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:100%;line-height:1.45
+}
+html.modern-web #search-results>.search-song-row .song-artist{
+  color:#829c8a;font-size:11px;
+  display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:100%;line-height:1.35
+}
+html.modern-web #search-results>.search-song-row>.search-source{
+  grid-column:3;grid-row:1;justify-self:end;
+  margin:0;white-space:nowrap;font-size:10px
+}
+html.modern-web #search-results>.search-song-row>.search-actions{
+  grid-column:4;grid-row:1;min-width:0;max-width:100%;width:auto;
+  display:flex;align-items:center;justify-content:flex-end;gap:7px;margin:0
+}
+html.modern-web #search-results>.search-song-row .search-actions>button{
+  flex:0 0 auto;min-width:58px;min-height:34px;height:34px;
+  padding:6px 10px;white-space:nowrap;border:1px solid #cee4d4;
+  border-radius:9px;background:#fff!important;color:#3a7957!important;
+  box-shadow:none!important;font-size:12px;font-weight:680
+}
+html.modern-web #search-results>.search-song-row .search-actions>.song-action-play{
+  min-width:53px;border-color:#b8dec6;background:#e6f4e8!important;
+  color:#288056!important
+}
+html.modern-web #search-results>.search-song-row .search-actions>button:hover{
+  background:#ecf7ed!important;border-color:#8dcaa0
+}
+html.modern-web #search-results>.search-song-row .song-more{display:none}
+html.modern-web #search-results>.search-song-row :is(button,summary):focus-visible{
+  outline:2px solid #52a978;outline-offset:3px
+}
+html.modern-web :is(#playlist-load-more-btn,
+  #clear-history-btn,#clear-favorites-btn,#clear-queue-btn,
+  #playlist-back-btn,#playlist-favorite-btn,
+  #playlist-play-all-btn,#retry-song-search){
+  -webkit-appearance:none!important;appearance:none!important;
+  display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid #bcdcc6!important;border-radius:10px!important;
+  background:#e7f5eb!important;color:#2b7d53!important;
+  padding:8px 14px;min-height:36px;line-height:1.25;
+  font-size:12px;font-weight:650;line-height:1.25;font-family:inherit;
+  box-shadow:none!important;
+  cursor:pointer;transition:background-color .12s ease,border-color .12s ease
+}
+html.modern-web #playlist-load-more-btn{
+  display:flex!important;width:max-content;
+  margin:17px auto 20px;min-width:145px;
+  background:#e5f4e8!important;border-color:#bbddc4!important;
+  color:#2d8058!important
+}
+html.modern-web #playlist-load-more-btn.hidden{display:none!important}
+html.modern-web :is(#playlist-load-more-btn,
+  #clear-history-btn,#clear-favorites-btn,#clear-queue-btn,
+  #playlist-back-btn,#playlist-favorite-btn,#playlist-play-all-btn):hover{
+  background:#d7efdf!important;border-color:#80c39a!important
+}
+html.modern-web :is(#playlist-load-more-btn,
+  #clear-history-btn,#clear-favorites-btn,#clear-queue-btn):focus-visible{
+  outline:2px solid #55ac80;outline-offset:2px
+}
+/* Match old playlist actions with ranking/music library action tokens. */
+html.modern-web #playlist-detail-songs .playlist-song-actions button{
+  -webkit-appearance:none;appearance:none;
+  display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid #cbe6d3!important;border-radius:9px!important;
+  background:#f4faf5!important;color:#34815e!important;
+  box-shadow:none!important;font-weight:650;
+  min-width:34px;min-height:34px
+}
+html.modern-web #playlist-detail-songs .playlist-song-actions .playlist-song-play{
+  color:#2b8159!important;background:#e4f4e8!important;
+}
+html.modern-web #view-mylist .list-toolbar button{
+  -webkit-appearance:none!important;appearance:none!important;
+  background:#e8f5eb!important;
+  border-color:#c8e4d1!important;
+  border-radius:9px!important;color:#31805c!important;
+  box-shadow:none!important
+}
+@media(max-width:740px){
+  /* Reduce permanent chrome: player always exposes playback status, so the
+     extra sticky success banner needn't take another row of mobile space. */
+  html.modern-web .global-status.ready{display:none!important}
+  html.modern-web #search-results>.search-song-row{
+    grid-template-columns:22px minmax(0,1fr) auto;
+    grid-template-rows:1fr;
+    column-gap:8px;min-height:62px;padding:7px 10px;margin-bottom:5px
+  }
+  html.modern-web #search-results>.search-song-row .song-row-index{
+    grid-column:1;grid-row:1;font-size:11px
+  }
+  html.modern-web #search-results>.search-song-row .search-song-main{
+    grid-column:2;grid-row:1;min-width:0;align-self:center;
+    padding:4px 2px;margin:0;box-sizing:border-box
+  }
+  html.modern-web #search-results>.search-song-row .song-title{font-size:13px}
+  html.modern-web #search-results>.search-song-row .song-artist{font-size:11px}
+  html.modern-web #search-results>.search-song-row>.search-source{display:none!important}
+  html.modern-web #search-results>.search-song-row>.search-actions{
+    grid-column:3;grid-row:1;display:flex;align-items:center;gap:6px;
+    width:auto;max-width:none;margin:0;padding:0
+  }
+  html.modern-web #search-results>.search-song-row .search-actions>.song-action-play{
+    display:inline-flex!important;align-items:center;justify-content:center;
+    width:40px;min-width:40px;min-height:40px;height:40px;
+    border-radius:11px;padding:0;font-size:15px
+  }
+  html.modern-web #search-results>.search-song-row .search-actions>.song-action-queue,
+  html.modern-web #search-results>.search-song-row .search-actions>.song-action-favorite{
+    display:none!important
+  }
+  html.modern-web #search-results>.search-song-row .song-more{
+    display:block;flex:0 0 40px;position:relative;width:40px;height:40px;
+    z-index:3
+  }
+  html.modern-web #search-results>.search-song-row .song-more[open]{z-index:50}
+  html.modern-web #search-results>.search-song-row .song-more>summary{
+    display:grid;place-items:center;width:40px;height:40px;
+    list-style:none;border:1px solid #d1e6d7;border-radius:11px;
+    background:#fff;color:#4c8664;font-size:18px;font-weight:800;
+    cursor:pointer;line-height:1
+  }
+  html.modern-web #search-results>.search-song-row .song-more>summary::-webkit-details-marker{display:none}
+  html.modern-web #search-results>.search-song-row .song-more-menu{
+    position:absolute;z-index:51;right:0;top:45px;min-width:139px;
+    display:flex;flex-direction:column;gap:5px;padding:8px;
+    border-radius:12px;border:1px solid #cfe4d5;background:#fff;
+    box-shadow:0 12px 28px rgba(29,75,45,.13)
+  }
+  html.modern-web #search-results>.search-song-row .song-more-menu button{
+    display:block!important;width:100%;text-align:center;
+    min-height:35px;padding:7px 9px;border:0!important;
+    background:#f0f8f0!important;color:#387c58!important;border-radius:8px
+  }
+  html.modern-web #search-results>.search-song-row .song-more-menu button:hover{
+    background:#dff0e4!important
+  }
+  html.modern-web #view-playlist.is-detail-open>.view-header{display:none}
+  html.modern-web #playlist-detail-songs{padding:0 7px 9px}
+  html.modern-web #playlist-detail-songs>.playlist-song-row{
+    min-height:60px;padding:8px 4px
+  }
+  html.modern-web #playlist-detail-songs>.playlist-song-row>.song-main b{font-size:13px}
+  html.modern-web #view-mylist .list-toolbar{min-height:51px;padding:10px 2px}
+  html.modern-web #view-mylist .list-toolbar strong{font-size:15px}
+  html.modern-web #playlist-load-more-btn{min-height:40px}
+}
+@media(max-width:430px){
+  html.modern-web .view-container{padding:11px 9px 145px}
+  html.modern-web #search-results>.search-song-row{
+    grid-template-columns:21px minmax(0,1fr) 84px;
+    min-height:62px;column-gap:5px;padding:7px 8px
+  }
+  html.modern-web #search-results>.search-song-row .search-actions{
+    grid-column:3;gap:4px
+  }
+  html.modern-web #search-results>.search-song-row .search-actions>.song-action-play{
+    width:40px;min-width:40px
+  }
+  html.modern-web #search-results>.search-song-row .song-more{width:40px;flex-basis:40px}
+  html.modern-web #search-results>.search-song-row .song-row-index{font-size:11px}
+  html.modern-web .view-header{margin-bottom:11px}
+  html.modern-web .results-head{padding:6px 2px 9px}
+  html.modern-web .sub-toolbar{padding:9px 10px;gap:6px}
+  html.modern-web .global-search-bar{padding-top:6px;padding-bottom:6px}
+  html.modern-web .search-inspiration{min-height:240px}
+}
+@media(max-width:360px){
+  html.modern-web #search-results>.search-song-row{
+    grid-template-columns:18px minmax(0,1fr) 76px;column-gap:4px;padding:6px
+  }
+  html.modern-web #search-results>.search-song-row .search-actions>.song-action-play,
+  html.modern-web #search-results>.search-song-row .song-more,
+  html.modern-web #search-results>.search-song-row .song-more>summary{
+    width:36px;min-width:36px;height:38px;min-height:38px
+  }
+}
+
+/* Shared list-tap affordance for recent plays, favourites, and queue.
+   Playback still triggers only from the row body, never from its actions. */
+html.modern-web .library-row.tap-to-play .library-main{
+  cursor:pointer;min-width:0;border-radius:7px
+}
+html.modern-web .library-row.tap-to-play .library-main:hover{background:#eef8f0}
+html.modern-web .library-row.tap-to-play .library-main:focus-visible{
+  outline:2px solid #58ae7e;outline-offset:3px
+}
+@media(max-width:740px){
+  html.modern-web #view-mylist .library-row.tap-to-play{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:9px;min-height:60px;padding:9px 4px;
+  }
+  html.modern-web #view-mylist .library-row .library-main{
+    flex:1 1 auto;min-width:0;padding-right:4px
+  }
+  html.modern-web #view-mylist .library-row .library-title{
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+  }
+  html.modern-web #view-mylist .library-row .library-actions{
+    flex:0 0 auto;display:flex;align-items:center
+  }
+  html.modern-web #view-mylist .library-row .library-actions button{
+    min-height:35px;padding:6px 9px;border-radius:9px
+  }
+  html.modern-web #playlist-detail-songs>.playlist-song-row{
+    cursor:pointer
+  }
+  html.modern-web #playlist-detail-songs>.playlist-song-row:focus-visible{
+    outline:2px solid #58ae7e;outline-offset:-2px
+  }
+}
