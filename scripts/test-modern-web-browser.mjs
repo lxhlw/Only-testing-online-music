@@ -571,6 +571,25 @@ try {
   await page.locator('#lyrics-close-btn').click();
   assert.equal(await page.locator('#lyrics-overlay').isVisible(),false);
   checks.push('mobile-fullscreen');
+  for(const w of [320,424]){
+    await page.setViewportSize({width:w,height:800});
+    const geometry=await page.evaluate(()=>({
+      width:document.documentElement.scrollWidth,viewport:innerWidth,
+      header:document.querySelector('.topbar').getBoundingClientRect().height,
+      mini:document.querySelector('.player-bar').getBoundingClientRect().height,
+      menu:document.querySelector('.mobile-menu-button').getBoundingClientRect().width
+    }));
+    assert.ok(geometry.width<=geometry.viewport+2,
+      'No mobile sideways scroll at '+w+'px: '+JSON.stringify(geometry));
+    assert.ok(geometry.header<=57&&geometry.mini<=82&&geometry.menu>=40,
+      'No oversized permanent chrome at '+w+'px: '+JSON.stringify(geometry));
+  }
+  await page.setViewportSize({width:390,height:844});
+  await page.locator('.mobile-menu-button').click();
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('.mobile-menu-shade').isVisible(),false,
+    'Escape must close off-canvas navigation');
+  checks.push('320-390-424px-no-overflow-and-drawer-keyboard');
 
   checks.push('mobile');
   console.log('PASS modern-web:',checks.join(', '),'Flower-first recovery, bounded playback and responsive library');
