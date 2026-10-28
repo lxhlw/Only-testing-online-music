@@ -64,7 +64,7 @@ try {
     const css=selector=>getComputedStyle(document.querySelector(selector));
     const contrast=(a,b)=>{
       const toLinear=n=>{n/=255;return n<=.04045?n/12.92:((n+.055)/1.055)**2.4};
-      const luminance=s=>{const rgb=(s.match(/\\d+(?:\\.\\d+)?/g)||[]).slice(0,3).map(Number);return rgb.length===3?.2126*toLinear(rgb[0])+.7152*toLinear(rgb[1])+.0722*toLinear(rgb[2]):0};
+      const luminance=s=>{const rgb=(s.match(/[0-9]+(?:[.][0-9]+)?/g)||[]).slice(0,3).map(Number);return rgb.length===3?.2126*toLinear(rgb[0])+.7152*toLinear(rgb[1])+.0722*toLinear(rgb[2]):0};
       const x=luminance(a),y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);
     };
     return {
