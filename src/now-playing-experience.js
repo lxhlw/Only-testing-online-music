@@ -83,60 +83,97 @@ async function resolveCover(current,key){
     applyMetadata(data);
   }catch(e){if(e.name!=='AbortError')console.info('Song artwork not available',current.id)}
 }
-function hideComments(status='点击「歌曲评论」查看当前平台的公开评论'){
-  if(commentList)commentList.replaceChildren();
+let commentMode='hot',commentOffset=0,commentLoaded=0,commentMore=false;
+const commentMoreButton=$('comments-load-more'),pageNote=$('comments-page-note');
+function updateCommentMode(){
+  for(const mode of ['hot','recent']){
+    const node=$('comments-'+mode+'-btn');
+    const active=commentMode===mode;
+    node?.classList.toggle('active',active);
+    node?.setAttribute('aria-pressed',String(active));
+  }
+}
+function hideComments(status='点击「歌曲评论」查看公开评论'){
+  commentList?.replaceChildren();
   if(commentStatus)commentStatus.textContent=status;
   $('comments-count').textContent='';
   $('comments-link-wrap').hidden=true;
+  if(pageNote)pageNote.textContent='';
+  if(commentMoreButton)commentMoreButton.hidden=true;
+  commentOffset=0;commentLoaded=0;commentMore=false;
 }
-function songId(){return track?.source==='wy'&&/^\d{1,20}$/.test(track.id||'')?track.id:''}
-function renderComments(payload){
-  commentList.replaceChildren();
+function songId(){return track?.source==='wy'&&/^\\d{1,20}$/.test(track.id||'')?track.id:''}
+function renderComments(payload,append=false){
+  if(!append)commentList.replaceChildren();
   const list=Array.isArray(payload?.comments)?payload.comments:[];
   const amount=Number(payload?.total)||0;
   $('comments-count').textContent=amount?'· '+amount.toLocaleString('zh-CN'):'';
-  commentStatus.textContent=list.length?
-    ((payload.kind==='hot'?'来自网易云音乐的热门评论':'来自网易云音乐的公开评论')+
-    (amount?' · 共 '+amount.toLocaleString('zh-CN')+' 条':''))
-    :'该平台暂未返回公开评论';
+  commentStatus.textContent=commentMode==='hot'
+    ?'网易云音乐精选热门评论（平台可能仅返回部分热门评论）'
+    :'网易云音乐最新评论 · 按平台返回顺序分页';
+  if(!list.length&&!append)commentStatus.textContent='当前分类暂未返回评论';
+  const seen=new Set(Array.from(commentList.querySelectorAll('[data-comment-id]'),
+    node=>node.dataset.commentId));
+  let newlyAdded=0;
   for(const item of list){
+    const id=String(item.id||'');
+    if(id&&seen.has(id))continue;
+    if(id)seen.add(id);
     const card=document.createElement('article');card.className='now-comment-card';
+    if(id)card.dataset.commentId=id;
     const head=document.createElement('div');head.className='now-comment-head';
     const name=document.createElement('strong');name.textContent=String(item.user||'网易云听友');
     const liked=document.createElement('span');liked.textContent=(Number(item.likedCount)||0)>0?'♥ '+Number(item.likedCount).toLocaleString('zh-CN'):'';
     head.append(name,liked);
     const body=document.createElement('p');body.textContent=String(item.content||'');
-    card.append(head,body);commentList.append(card);
+    card.append(head,body);commentList.append(card);newlyAdded++;
   }
+  commentLoaded=commentList.children.length;
+  commentMore=commentMode==='recent'&&Boolean(payload.hasMore)&&newlyAdded>0;
+  commentOffset=Number(payload.offset)||0;
+  if(commentMoreButton){commentMoreButton.hidden=!commentMore;commentMoreButton.disabled=false;commentMoreButton.textContent='加载更多最新评论'}
+  if(pageNote)pageNote.textContent=commentMode==='hot'
+    ?'已显示 '+commentLoaded+' 条热门评论'
+    :'已加载 '+commentLoaded+' 条'+(amount?' · 平台共 '+amount.toLocaleString('zh-CN')+' 条':'');
   const id=songId();
   if(id){
     $('comments-official-link').href='https://music.163.com/#/song?id='+encodeURIComponent(id);
     $('comments-link-wrap').hidden=false;
   }
 }
-async function loadComments(force=false){
-  const id=songId(),key=track?.source+':'+id;
+async function loadComments(force=false,append=false){
+  const id=songId();
   commentAbort?.abort();
   if(!id){
-    hideComments(track?.source==='wy'?'当前歌曲没有有效的网易云 ID，无法匹配评论':
-      '暂未接入'+(sourceNames[track?.source]||'当前平台')+'的官方评论服务，不能混用其他平台评论');
+    hideComments(track?.source==='wy'?'当前歌曲没有有效网易云 ID，无法匹配评论':
+      '暂未接入'+(sourceNames[track?.source]||'当前平台')+'的评论服务，不能混用其他平台评论');
     return;
   }
-  if(!force&&commentCache.has(key)){renderComments(commentCache.get(key));return;}
-  hideComments('正在获取网易云音乐公开评论…');
-  const current=sequence,controller=new AbortController();commentAbort=controller;
+  const offset=append&&commentMore?commentOffset+20:0;
+  if(append&&!commentMore)return;
+  const key=track?.source+':'+id+':'+commentMode+':'+offset;
+  if(!append)hideComments('正在获取'+(commentMode==='hot'?'热门':'最新')+'评论…');
+  else{commentMoreButton.disabled=true;commentMoreButton.textContent='正在加载…'}
+  if(!force&&commentCache.has(key)){renderComments(commentCache.get(key),append);return}
+  const current=sequence,mode=commentMode,controller=new AbortController();commentAbort=controller;
   try{
-    const r=await fetch('/api/netease-comments?source=wy&id='+encodeURIComponent(id),{signal:controller.signal});
-    if(!r.ok)throw new Error('Upstream comments unavailable');
+    const r=await fetch('/api/netease-comments?source=wy&id='+encodeURIComponent(id)+
+      '&mode='+mode+'&offset='+offset,{signal:controller.signal});
+    if(!r.ok)throw new Error('Comments service unavailable');
     const data=await r.json();
-    if(current!==sequence||!isOpen()||activeTab!=='comments')return;
+    if(current!==sequence||!isOpen()||activeTab!=='comments'||commentMode!==mode)return;
     commentCache.set(key,data);
-    renderComments(data);
+    renderComments(data,append);
   }catch(e){
-    if(e.name==='AbortError'||current!==sequence)return;
-    hideComments('网易云音乐暂未开放这首歌的评论数据，请稍后刷新或前往平台查看');
-    $('comments-official-link').href='https://music.163.com/#/song?id='+encodeURIComponent(id);
-    $('comments-link-wrap').hidden=false;
+    if(e.name==='AbortError'||current!==sequence||mode!==commentMode)return;
+    if(append){
+      commentStatus.textContent='加载下一页失败，可重试';
+      commentMoreButton.disabled=false;commentMoreButton.textContent='重试加载更多';
+    }else{
+      hideComments('平台暂未返回'+(mode==='hot'?'热门':'最新')+'评论，可以刷新或前往原平台查看');
+      $('comments-official-link').href='https://music.163.com/#/song?id='+encodeURIComponent(id);
+      $('comments-link-wrap').hidden=false;
+    }
   }
 }
 function setTab(tab){
@@ -167,6 +204,7 @@ function setTrack(next){
   applyMetadata(track);
   setCover(track.image);
   if(!track.image)resolveCover(track,key);
+  commentMode='hot';updateCommentMode();
   hideComments();
   if(isOpen()&&activeTab==='comments')loadComments();
   lastActiveLyric=null;
@@ -235,6 +273,16 @@ for(const button of overlay.querySelectorAll('[data-detail-tab]')){
   });
 }
 $('comments-refresh-btn')?.addEventListener('click',()=>loadComments(true));
+$('comments-hot-btn')?.addEventListener('click',()=>{
+  if(commentMode==='hot')return;
+  commentMode='hot';updateCommentMode();loadComments();
+});
+$('comments-recent-btn')?.addEventListener('click',()=>{
+  if(commentMode==='recent')return;
+  commentMode='recent';updateCommentMode();loadComments();
+});
+commentMoreButton?.addEventListener('click',()=>loadComments(false,true));
+updateCommentMode();
 $('detail-prev-btn')?.addEventListener('click',()=>$('prev-track-btn')?.click());
 $('detail-next-btn')?.addEventListener('click',()=>$('next-track-btn')?.click());
 $('detail-toggle-btn')?.addEventListener('click',()=>$('player-toggle-btn')?.click());
