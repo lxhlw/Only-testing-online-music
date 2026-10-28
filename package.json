@@ -1,8 +1,8 @@
 {
   "name": "only-testing-online-music",
   "private": true,
-  "version": "0.2.36",
-  "description": "Online music testing for older devices",
+  "version": "0.3.0",
+  "description": "Modern, responsive web-first music player",
   "type": "module",
   "scripts": {
     "test:sixyin:browser": "node scripts/test-sixyin-browser.mjs",
