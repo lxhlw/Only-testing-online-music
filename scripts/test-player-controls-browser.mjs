@@ -182,6 +182,8 @@ async function test(viewport, legacy){
   if (!legacy) {
     const seekBox=await page.locator('#player-seek').boundingBox()
     assert.ok(seekBox && seekBox.width>80)
+    assert.ok(seekBox.x>=0 && seekBox.x+seekBox.width<=viewport.width+1,
+      'The whole progress slider must fit inside '+viewport.width+'px viewport: '+JSON.stringify(seekBox))
     await page.mouse.move(seekBox.x+seekBox.width*0.75,seekBox.y+seekBox.height/2)
     await page.mouse.down()
     await page.mouse.move(seekBox.x+seekBox.width*0.25,seekBox.y+seekBox.height/2,{steps:8})
@@ -263,6 +265,10 @@ async function test(viewport, legacy){
   if (legacy) assert.ok(dimensions.bar.width>170,'Android 4.4 native audio controls must be wide enough')
   else assert.ok(dimensions.seek.width>80,'Custom timeline must be draggable')
   assert.ok(dimensions.next.right<=dimensions.viewport+1,'Transport cannot overflow mobile viewport')
+  assert.ok(dimensions.transport.left>=0 && dimensions.transport.right<=dimensions.viewport+1,
+    'Play toggle must be fully onscreen')
+  assert.ok(dimensions.seek.left>=0 && dimensions.seek.right<=dimensions.viewport+1,
+    'Progress slider must be fully onscreen')
   assert.ok(dimensions.mode.left>=0,'Mode button cannot overflow')
   await page.locator('#player-mode-btn').click()
   assert.equal(await page.locator('#player-mode-menu').isVisible(),true)
