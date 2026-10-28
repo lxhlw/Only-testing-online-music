@@ -700,11 +700,18 @@
       };
       actions.appendChild(open);
 
-      var fav=document.createElement('button'); fav.type='button'; fav.className='secondary'; fav.innerHTML=playlistIsFavorite(item.id,item.source||'wy')?'取消收藏':'收藏';
+      var fav=document.createElement('button'); fav.type='button'; fav.className='secondary';
+      var isSaved=playlistIsFavorite(item.id,item.source||'wy');
+      fav.classList.toggle('is-favorite',isSaved);
+      fav.innerHTML=isSaved?'取消收藏':'收藏';
+      fav.setAttribute('aria-label',isSaved?'取消收藏歌单':'收藏歌单');
       fav.onclick=function(ev){
         if(ev&&ev.stopPropagation)ev.stopPropagation();
         togglePlaylistFavorite(item);
-        fav.innerHTML=playlistIsFavorite(item.id,item.source||'wy')?'取消收藏':'收藏';
+        var nowSaved=playlistIsFavorite(item.id,item.source||'wy');
+        fav.classList.toggle('is-favorite',nowSaved);
+        fav.innerHTML=nowSaved?'取消收藏':'收藏';
+        fav.setAttribute('aria-label',nowSaved?'取消收藏歌单':'收藏歌单');
       };
       actions.appendChild(fav);
       box.appendChild(actions);
