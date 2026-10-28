@@ -211,3 +211,9 @@ html.modern-web .topbar{
 /* Modern scroll containers own their own player clearance. The former #app
    padding lived below the sticky rail's boundary and pulled it off screen. */
 html.modern-web #app{padding-bottom:0}
+
+/* Mobile legacy overflow:hidden creates a scroll container on body, preventing
+   sticky header/nav from tracking the document scroll. clip doesn't. */
+@media(max-width:740px){
+  html.modern-web,html.modern-web body{overflow-x:clip;overflow-y:visible}
+}
