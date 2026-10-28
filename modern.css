@@ -1495,7 +1495,7 @@ html.modern-web .comments-pagination{
   padding:8px 12px;justify-content:center;min-height:33px
 }
 @media(max-width:740px){
-  html.modern-web .nav-rail{overflow-x:clip!important}
+  html.modern-web .nav-rail{overflow-x:hidden!important}
   html.modern-web .main-nav{min-width:0;overflow:visible}
   html.modern-web .nav-item{min-width:0}
   html.modern-web .channel-list{
