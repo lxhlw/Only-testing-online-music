@@ -537,6 +537,7 @@
   function renderLibraryList(target, items, mode) {
     if (!target) return;
     target.innerHTML = '';
+    var fragment=document.createDocumentFragment();
 
     for (var i = 0; i < items.length; i += 1) {
       var item = items[i];
@@ -593,8 +594,9 @@
 
       row.appendChild(main);
       row.appendChild(actions);
-      target.appendChild(row);
+      fragment.appendChild(row);
     }
+    target.appendChild(fragment);
   }
 
   function renderLibrary() {
