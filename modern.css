@@ -599,3 +599,60 @@ html.modern-web .setting-row-inline:has(#inline-fallback){display:none!important
     transition-duration:.01ms!important;scroll-behavior:auto!important
   }
 }
+
+/* The search input belongs on search and playlist, not in Settings/Charts. */
+html.modern-web[data-active-view="ranking"] .global-search-bar,
+html.modern-web[data-active-view="mylist"] .global-search-bar,
+html.modern-web[data-active-view="settings"] .global-search-bar{display:none}
+
+/* Discovery hero fills the previous enormous empty white canvas, while
+   disappearing as soon as real results render. */
+html.modern-web #search-results:empty::after{display:none}
+html.modern-web .search-inspiration{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:320px;max-width:880px;margin:17px auto 0;padding:38px 22px;
+  border:1px dashed #d1e6d3;border-radius:20px;
+  background:linear-gradient(145deg,#f9fdf7,#eaf5e9);
+  text-align:center;color:#315c45
+}
+html.modern-web #search-song-view:has(#search-results:not(:empty)) .search-inspiration{display:none}
+html.modern-web .search-inspiration-icon{
+  display:grid;place-items:center;width:68px;height:68px;border-radius:20px;
+  background:#d6edde;color:#368d65;font-size:34px;margin:0 0 14px
+}
+html.modern-web .search-inspiration h2{color:#28543d;font-size:22px;font-weight:770;margin:0 0 6px}
+html.modern-web .search-inspiration p{color:#6f8978;font-size:13px;margin:0 0 23px}
+html.modern-web .search-suggestions{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px}
+html.modern-web .search-suggestions button{
+  padding:8px 18px;min-height:36px;border:1px solid #bedeca;border-radius:99px;
+  color:#307956;background:#fff;font-size:13px;font-weight:620
+}
+html.modern-web .search-suggestions button:hover{border-color:#7fc29b;background:#e9f6e9}
+html.modern-web .search-inspiration-foot{
+  color:#8ba08f;font-size:11px;margin-top:24px;letter-spacing:.2px
+}
+@media(max-width:740px){
+  html.modern-web .search-inspiration{min-height:285px;padding:26px 14px;margin-top:6px}
+  html.modern-web .search-inspiration h2{font-size:20px}
+  html.modern-web .search-suggestions button{padding:7px 13px}
+}
+/* Mobile playlist songs remain two-row touch targets (not cramped six-column
+   desktop tables), even though this stylesheet defines desktop flex rows. */
+@media(max-width:680px){
+  html.modern-web #playlist-detail-songs>.playlist-song-row{
+    display:flex;flex-wrap:wrap;align-items:center;gap:0;
+    min-height:68px;padding:9px 3px
+  }
+  html.modern-web #playlist-detail-songs>.playlist-song-row>.playlist-song-index{
+    display:block;flex:0 0 28px;width:28px
+  }
+  html.modern-web #playlist-detail-songs>.playlist-song-row>.song-main{
+    display:block;flex:1 1 0;min-width:0;padding-right:5px
+  }
+  html.modern-web #playlist-detail-songs>.playlist-song-row>.playlist-song-artist,
+  html.modern-web #playlist-detail-songs>.playlist-song-row>.playlist-song-album,
+  html.modern-web #playlist-detail-songs>.playlist-song-row>.playlist-song-duration{display:none}
+  html.modern-web #playlist-detail-songs>.playlist-song-row>.playlist-song-actions{
+    display:flex;flex:0 0 auto;width:auto;max-width:100%;margin:0
+  }
+}
