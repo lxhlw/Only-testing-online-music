@@ -486,7 +486,9 @@ async function fetchFlowerResolverFast(target, request) {
   }
   const ctrl = new AbortController();
   const originalPath = target.pathname + target.search;
-  const shortPath = target.pathname.replace(/^\\/flower\\/v1\\//,'/')+target.search;
+  const shortPath = (target.pathname.startsWith('/flower/v1/')
+    ? target.pathname.slice('/flower/v1'.length)
+    : target.pathname) + target.search;
   const endpoints = [
     'http://ts.tempmusic.tk'+shortPath,
     'http://tm.tempmusic.tk'+shortPath,
