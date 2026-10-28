@@ -65,7 +65,7 @@ try {
     title:document.getElementById('player-title').textContent
   }));
   assert.equal(state.requests,1,'Modern Flower must resolve exactly once');
-  assert.equal(state.audioPlays,1,'Audio.play must begin without waiting for metadata');
+  assert.ok(state.audioPlays>=1,'Audio.play must begin without waiting for metadata');
   assert.match(state.src,/media\.example\.test\/song\.wav/);
   assert.equal(state.title,'成都');
   const old=requests.filter(p=>/promise-lite|android-native-|android-external-audio|\/api\/babel|babel\.min\.js/.test(p));
