@@ -192,12 +192,18 @@
     var available = activeSource.sources[channel].qualitys || [];
     if (global.LXPlaySettings) {
       var settings = getPlaySettings();
-      // Modern web: prioritize initial sound over huge lossless files.
+      // Modern browser: automatic means the best *lossy/MP3-size* quality
+      // explicitly declared by this Flower channel, not a hard-coded 128k.
+      // Lossless remains a manual selection because it may start more slowly.
       if (MODERN_WEB && settings.qualityMode === 'highest') {
-        for (var modernQ=0;modernQ<available.length;modernQ++)
-          if (String(available[modernQ]).toLowerCase()==='128k') return [available[modernQ]];
+        var preferredMp3=['320k','256k','192k','128k'];
+        for(var mp=0;mp<preferredMp3.length;mp++)
+          for(var aq=0;aq<available.length;aq++)
+            if(String(available[aq]).toLowerCase()===preferredMp3[mp])
+              return [available[aq]];
       }
       if (MODERN_WEB) {
+        // Manual FLAC/Hi-Res choices must not be silently changed to 128k.
         var requested=global.LXPlaySettings.buildPlan(available,settings);
         return requested.length?[requested[0]]:[];
       }
@@ -280,7 +286,7 @@
         var highest = global.LXPlaySettings ?
           global.LXPlaySettings.getPreferredQuality(available, { qualityMode: 'highest', autoFallback: true }) :
           available[0];
-        var nextText = MODERN_WEB ? ' · 极速模式：一次解析' :
+        var nextText = MODERN_WEB ? ' · 当前请求：'+escapeHtml(plan[0]||'未知')+' · 单次解析' :
           (plan.length > 1 ? ' · 降级顺序：' + escapeHtml(plan.join(' → ')) : '');
         qualitySummaryEl.innerHTML =
           '<span class="quality-summary-label">' + escapeHtml(settingsLabel) + '</span>' +
@@ -1107,7 +1113,7 @@
     document.getElementById('player-artist').innerHTML = escapeHtml(music.singer);
     setStatus(
       (CHANNEL_NAMES[source] || source.toUpperCase()) +
-      ' 已返回 ' + escapeHtml(quality) + ' 播放地址' +
+      ' 已返回请求音质 ' + escapeHtml(quality) + ' 的播放地址' +
       (viaLabel ? '（' + escapeHtml(viaLabel) + '）' : '') +
       (LEGACY_NATIVE_MEDIA ? '，请点下方原生音频控件的 ▶ 播放键。' : '，正在验证媒体信息。'),
       LEGACY_NATIVE_MEDIA ? 'warn' : 'ready'
@@ -1739,7 +1745,7 @@
     }
     setStatus(
       (CHANNEL_NAMES[state.source] || state.source.toUpperCase()) +
-      ' 正在播放 · ' + escapeHtml(state.quality),
+      ' 正在播放 · 请求音质 ' + escapeHtml(state.quality)+'（实际码率由媒体服务决定）',
       'ready'
     );
     loadLyricsForState(state);
