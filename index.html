@@ -356,11 +356,13 @@
             <button type="button" id="detail-prev-btn" aria-label="上一首" title="上一首"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5v14M18 5 8 12l10 7V5Z" fill="currentColor"/></svg></button>
             <button type="button" id="detail-toggle-btn" class="detail-main-toggle" aria-label="播放" title="播放"><svg class="detail-play-icon" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 4 13 8-13 8Z" fill="currentColor"/></svg><svg class="detail-pause-icon" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true" hidden><rect x="7" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/></svg></button>
             <button type="button" id="detail-next-btn" aria-label="下一首" title="下一首"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5v14M6 5l10 7-10 7V5Z" fill="currentColor"/></svg></button>
+            <button type="button" id="detail-mode-btn" aria-label="切换播放模式" title="切换播放模式">循环</button>
           </div>
           <div class="now-playing-timeline">
             <span id="detail-current-time">0:00</span>
             <input id="detail-seek" type="range" min="0" max="1000" value="0" step="1" disabled aria-label="调整播放进度">
             <span id="detail-duration">0:00</span>
+            <label class="now-playing-volume" title="音量"><span aria-hidden="true">♫</span><input id="detail-volume" type="range" min="0" max="100" value="80" aria-label="全屏音量"></label>
           </div>
         </footer>
       </div>
