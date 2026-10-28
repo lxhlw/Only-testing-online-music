@@ -770,3 +770,141 @@ html.modern-web #view-mylist #playlist-favorite-list{padding:13px 0}
   html.modern-web #view-mylist .library-actions{gap:5px}
   html.modern-web #view-mylist .library-actions button{font-size:11px;padding:5px 8px}
 }
+
+
+/* v0.4.2 Interaction audit: playlist discovery controls are unavailable
+   inside a specific playlist. Make the state distinction unambiguous. */
+html.modern-web #view-playlist.is-detail-open #playlist-filter-stack{display:none!important}
+html.modern-web[data-active-view="playlist"].is-playlist-detail .global-search-bar{display:none!important}
+html.modern-web #view-playlist.is-detail-open>.view-header{margin-bottom:14px}
+html.modern-web #view-playlist.is-detail-open>.view-header h1{font-size:22px}
+html.modern-web #view-playlist.is-detail-open>.view-header .view-note{display:none}
+html.modern-web .playlist-service-note{
+  display:flex;align-items:center;gap:12px;min-height:52px;background:#f6faf5
+}
+html.modern-web .playlist-service-label{
+  color:#387e5b;background:#e3f3e6;padding:6px 13px;
+  border:1px solid #c5e5d0;border-radius:8px;font-size:12px
+}
+html.modern-web .ranking-content .empty-note button{
+  margin-left:8px;padding:5px 12px;border:1px solid #addac0;border-radius:8px;
+  color:#287953;background:#e8f6ed
+}
+html.modern-web #playlist-detail-panel{scroll-margin-top:145px}
+html.modern-web #playlist-back-btn{border:1px solid #cbded1;background:#fff;color:#3b7957}
+html.modern-web #playlist-back-btn:hover{background:#e8f4e9}
+
+/* Dedicated lyrics experience: light, readable, never blocks audio playback. */
+html.modern-web .player-lyrics-toggle{
+  margin-left:9px;font-size:15px;font-weight:780;
+  color:#25835e!important;border:1px solid #cfe7d8!important;
+  background:#e8f5e8!important;border-radius:11px!important;
+  width:36px;min-width:36px;height:36px;min-height:36px
+}
+html.modern-web .player-lyrics-toggle:hover{
+  color:#fff!important;background:#32966e!important
+}
+html.modern-web .player-lyric{
+  padding:2px 5px;min-width:0;max-width:190px;
+  border:0;background:transparent;color:#668874;
+  text-align:left;font-size:11px;cursor:pointer;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+html.modern-web .player-lyric:hover{color:#238158;text-decoration:underline}
+html.lyrics-open body{overflow:hidden}
+html.modern-web .lyrics-overlay{
+  position:fixed;inset:0;z-index:250;display:flex;justify-content:flex-end;
+  color:#254332
+}
+html.modern-web .lyrics-overlay.hidden{display:none!important}
+html.modern-web .lyrics-backdrop{
+  position:absolute;inset:0;width:100%;height:100%;
+  background:rgba(20,44,31,.42);border:0;border-radius:0;padding:0;
+  cursor:default
+}
+html.modern-web .lyrics-sheet{
+  position:relative;display:flex;flex-direction:column;
+  width:min(535px,100vw);height:100%;height:100dvh;
+  border-left:1px solid #cfe4d2;
+  background:linear-gradient(160deg,#fcfffa 0%,#f1f8ee 100%);
+  box-shadow:-15px 0 45px rgba(20,53,33,.12);
+  overflow:hidden;
+  animation:lyrics-arrive .2s ease-out both
+}
+@keyframes lyrics-arrive{from{transform:translateX(14px);opacity:.8}to{transform:translateX(0);opacity:1}}
+html.modern-web .lyrics-sheet-header{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:21px 23px 17px;border-bottom:1px solid #e0eee0
+}
+html.modern-web .lyrics-sheet-heading h2{
+  margin:4px 0 0;color:#274b36;font-size:20px;font-weight:770
+}
+html.modern-web .lyrics-sheet-actions{display:flex;align-items:center;gap:7px}
+html.modern-web .lyrics-sheet-actions button{
+  padding:8px 12px;border:1px solid #d7e8dc;
+  border-radius:10px;background:#fff;color:#4a7a5d;font-size:12px
+}
+html.modern-web #lyrics-close-btn{
+  display:grid;place-items:center;width:38px;height:38px;padding:0;
+  font-size:18px;color:#5c7869
+}
+html.modern-web .lyrics-sheet-actions button:hover{background:#e9f7eb;border-color:#aad6bb}
+html.modern-web .lyrics-song-head{
+  display:flex;align-items:center;gap:14px;padding:24px 29px 17px;
+  border-bottom:1px solid #e6f1e7
+}
+html.modern-web .lyrics-art{
+  display:grid;place-items:center;flex:0 0 58px;width:58px;height:58px;
+  border-radius:17px;background:linear-gradient(145deg,#91d3a8,#349773);
+  color:#fff;font-size:28px;box-shadow:0 6px 14px rgba(57,131,87,.1)
+}
+html.modern-web .lyrics-song-meta{min-width:0}
+html.modern-web #lyrics-title{
+  margin:0;color:#294c39;font-size:17px;font-weight:740;
+  overflow-wrap:anywhere;line-height:1.45
+}
+html.modern-web .lyrics-song-meta .muted{font-size:13px}
+html.modern-web .lyrics-status{color:#728f7b;font-size:12px;margin-top:7px}
+html.modern-web .lyrics-status.warn{color:#94662c}
+html.modern-web .lyrics-status.fail{color:#a95450}
+html.modern-web .lyrics-scroll{
+  min-height:0;flex:1 1 auto;overflow:auto;
+  scrollbar-gutter:stable;overscroll-behavior:contain;
+  padding:35px 31px 70px
+}
+html.modern-web .lyrics-lines{min-height:100%;display:flex;flex-direction:column;justify-content:flex-start}
+html.modern-web .lyrics-line{
+  padding:10px 10px;min-height:43px;border-radius:10px;
+  font-size:17px;line-height:1.7;color:#789582;
+  letter-spacing:.1px;transition:color .16s ease,background-color .16s ease
+}
+html.modern-web .lyrics-line.active{
+  background:#e1f2e4;color:#23805a;
+  font-size:20px;font-weight:760
+}
+html.modern-web .lyrics-empty{
+  display:grid;place-items:center;min-height:195px;
+  padding:22px;text-align:center;color:#839c89;font-size:14px;line-height:1.8
+}
+html.modern-web .lyrics-sheet-footer{
+  padding:15px 20px;border-top:1px solid #e0ece2;
+  background:#f4faf2;text-align:center;font-size:11px;color:#8ca391
+}
+@media(max-width:740px){
+  html.modern-web .lyrics-sheet{width:100%;border:0}
+  html.modern-web .lyrics-sheet-header{padding:15px 16px 12px}
+  html.modern-web .lyrics-song-head{padding:16px 17px 13px}
+  html.modern-web .lyrics-scroll{padding:20px 16px 46px}
+  html.modern-web .lyrics-line{font-size:16px}
+  html.modern-web .lyrics-line.active{font-size:18px}
+  html.modern-web .player-lyrics-toggle{
+    margin-left:2px;height:34px;min-height:34px;
+    width:34px;min-width:34px
+  }
+  html.modern-web .player-transport{gap:clamp(8px,3vw,15px)}
+  html.modern-web #view-playlist.is-detail-open>.view-header h1{font-size:19px}
+}
+@media(prefers-reduced-motion:reduce){
+  html.modern-web .lyrics-sheet{animation:none}
+  html.modern-web .lyrics-line{transition:none}
+}
