@@ -102,7 +102,7 @@ function hideComments(status='点击「歌曲评论」查看公开评论'){
   if(commentMoreButton)commentMoreButton.hidden=true;
   commentOffset=0;commentLoaded=0;commentMore=false;
 }
-function songId(){return track?.source==='wy'&&/^\\d{1,20}$/.test(track.id||'')?track.id:''}
+function songId(){return track?.source==='wy'&&/^\d{1,20}$/.test(track.id||'')?track.id:''}
 function renderComments(payload,append=false){
   if(!append)commentList.replaceChildren();
   const list=Array.isArray(payload?.comments)?payload.comments:[];
