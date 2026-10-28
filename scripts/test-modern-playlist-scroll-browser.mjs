@@ -53,6 +53,16 @@ try{
       await page.waitForTimeout(320)
       const after=await geometry()
       console.log('Playlist geometry '+viewport.width+'px:',JSON.stringify({before,after}))
+      if(after.pageWidth>after.width+2){
+        const overflowing=await page.evaluate(()=>{
+          const width=document.documentElement.clientWidth
+          return Array.from(document.querySelectorAll('body *')).map(el=>{
+            const rect=el.getBoundingClientRect()
+            return {tag:el.tagName.toLowerCase(),id:el.id,cls:String(el.className||'').slice(0,80),left:Math.round(rect.left),right:Math.round(rect.right),width:Math.round(rect.width)}
+          }).filter(el=>el.right>width+2).sort((a,b)=>b.right-a.right).slice(0,12)
+        })
+        console.log('Horizontal overflow candidates:',JSON.stringify(overflowing))
+      }
       assert.ok(after.scroll>300,'Long playlist must be scrollable')
       assert.ok(after.pageWidth<=after.width+2,'Long playlist must not scroll sideways')
       assert.ok(after.nav.top>=0,'Navigation must remain onscreen')
