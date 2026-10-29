@@ -24,9 +24,21 @@ export function describeNeedleTransport(rawHeaders){
 export async function probeCanonicalFlowerWithDesktopNeedle(raw,meta,sourceHeaders){
   const request=inspectFlowerRequest(raw,meta?.songmid,meta?.quality,meta?.source||'wy');
   if(!request.ok)return {status:null,valid:false,kind:'REJECTED_NONCANONICAL'};
+  const source=meta?.source||'wy';
   const headers=flowerRequestHeaders(sourceHeaders);
-  // Only a complete exact source-generated signature may be compared.
-  if(!/^[0-9a-f]{48}$/i.test(String(headers.tag||'')))
+  // Signature is opaque and can vary by platform/track. The 48-hex WY
+  // signature observed previously must not be assumed for Kugou. Only the
+  // exact current script-generated tag may be relayed, and ONLY to the
+  // verified canonical Flower IP/path. No third-party mirrors or redirects.
+  if(source==='kg'){
+    const originalTag=sourceHeaders?.tag??sourceHeaders?.Tag??sourceHeaders?.TAG;
+    if(typeof originalTag==='string' &&
+       /^[0-9a-f]{32,128}$/i.test(originalTag) &&
+       originalTag.length%2===0){
+      headers.tag=originalTag;
+    }
+  }
+  if(!headers.tag)
     return {status:null,valid:false,kind:'MISSING_VALID_TAG'};
   return new Promise(resolve=>{
     let settled=false;

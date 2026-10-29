@@ -25,6 +25,9 @@ assert.equal((await probeCanonicalFlowerWithDesktopNeedle(
   {source:'kg',songmid:'ABCDEF0123456789ABCDEF0123456789',quality:'128k'},
   {tag})).kind,'REJECTED_NONCANONICAL');
 
+// A 32-hex tag from a real Kugou source is opaque, not intrinsically invalid.
+// Test with a live source request instead of inventing a signature for a
+// real network hit; this loopback verifies only the Needle wire behavior.
 // Loopback test runs only in GitHub Actions. It verifies the real pinned
 // Needle stack actually transmits source headers and does not follow a
 // redirect to any second host, without hitting the real Flower server.

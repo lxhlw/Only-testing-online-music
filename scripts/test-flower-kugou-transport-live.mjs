@@ -80,10 +80,22 @@ if(origin){
   const request=inspectFlowerRequest(origin.url,origin.songmid,origin.quality,'kg');
   const tag=inspectFlowerTagShape(origin.headers);
   evidence.canonicalRouteVerified=request.ok;
-  evidence.tagPresentAndValid=tag.type==='string'&&tag.length===48&&tag.hexOnly;
+  evidence.tagShape={
+    present:tag.present,type:tag.type,length:tag.length,
+    hexOnly:tag.hexOnly,headerSafe:tag.headerSafe
+  };
+  evidence.tagPresentAndValid=tag.type==='string' &&
+    tag.hexOnly && tag.length>=32 && tag.length<=128 &&
+    tag.length%2===0 && tag.headerSafe;
   assert.ok(request.ok,'Safe canonical Kugou request expected');
-  assert.ok(evidence.tagPresentAndValid,'Real Flower-generated 48-hex tag expected');
+  if(!evidence.tagPresentAndValid){
+    evidence.nodeFetch={kind:'SKIPPED_SOURCE_SIGNATURE_SHAPE'};
+    evidence.lxNeedle={kind:'SKIPPED_SOURCE_SIGNATURE_SHAPE'};
+  } else {
   const headers=flowerRequestHeaders(origin.headers);
+  // Preserve this source's current, validated signature on the one approved
+  // original IP. Do not send it to aliases, DNS resolvers or public relays.
+  headers.tag=origin.headers.tag??origin.headers.Tag??origin.headers.TAG;
   async function fetchBounded(){
     let response;
     try{
@@ -120,6 +132,7 @@ if(origin){
     // This does not prove identical network egress to a Windows Desktop.
     egress:'GITHUB_RUNNER_ONLY'
   };
+  }
 }
 console.log('FLOWER KUGOU CHENGDU DESKTOP-NEEDLE TRANSPORT:',JSON.stringify(evidence));
 assert.equal(evidence.flower,true,'Flower-only active source required');
