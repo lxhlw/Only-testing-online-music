@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {chromium} from 'playwright';
 import {inspectFlowerRequest,inspectFlowerPayload,flowerRequestHeaders,inspectFlowerTagShape} from './flower-protocol-parity.mjs';
+import {probeCanonicalFlowerWithDesktopNeedle,LX_DESKTOP_NEEDLE_REF} from './flower-needle-parity.mjs';
 
 // Non-blocking production diagnostic: unlike mocked playback tests, this
 // calls the actual Flower source script via the deployed Cloudflare proxy.
@@ -117,6 +118,22 @@ try {
         }
         evidence.githubRunnerOrigin=inspectFlowerPayload(status,data);
       }catch{evidence.githubRunnerOrigin={kind:'CONNECT_OR_TIMEOUT',valid:false};}
+      // Two independent Node clients on the *same* GitHub runner, same
+      // signed source headers and canonical Flower route. Needle is pinned
+      // to the exact GitHub fork revision used by LX Desktop.
+      evidence.githubRunnerNeedle={
+        client:'lx-desktop-needle-fork',
+        ...await probeCanonicalFlowerWithDesktopNeedle(raw,{
+          songmid:privateOrigin.songmid,quality:privateOrigin.quality
+        },privateOrigin.headers)
+      };
+      evidence.clientComparison={
+        pinnedNeedleRevision:LX_DESKTOP_NEEDLE_REF,
+        fetchAndNeedleSameStatus:evidence.githubRunnerOrigin.status!=null &&
+          evidence.githubRunnerOrigin.status===evidence.githubRunnerNeedle.status,
+        fetchAndNeedleSameResultKind:evidence.githubRunnerOrigin.kind===
+          evidence.githubRunnerNeedle.kind
+      };
     }else evidence.githubRunnerOrigin={kind:'SKIPPED_UNSAFE_OR_MISMATCHED'};
   }
 

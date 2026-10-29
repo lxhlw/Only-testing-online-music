@@ -23,7 +23,8 @@
     "playwright": "1.63.0",
     "wrangler": "4.147.0",
     "@babel/standalone": "7.29.9",
-    "core-js-bundle": "3.39.0"
+    "core-js-bundle": "3.39.0",
+    "needle": "github:lyswhut/needle#93299ac841b7e9a9f82ca7279b88aaaeda404060"
   },
   "packageManager": "npm@10.9.9"
 }
