@@ -95,7 +95,7 @@ try {
         hasVersion:!!headers.ver,
         hasSourceVersion:!!headers['source-ver'],
         hasSignedTag:typeof rawTag==='string' && rawTag.length>0,
-        signedTagValidMD5:typeof rawTag==='string' && /^[a-f0-9]{32}$/i.test(rawTag),
+        signatureIs64Hex:typeof rawTag==='string' && /^[a-f0-9]{64}$/i.test(rawTag),
         directReplayIncludedTag:!!headers.tag
       };
       try{
