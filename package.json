@@ -1,7 +1,7 @@
 {
   "name": "only-testing-online-music",
   "private": true,
-  "version": "0.4.11",
+  "version": "0.4.12",
   "description": "Modern, responsive web-first music player",
   "type": "module",
   "scripts": {

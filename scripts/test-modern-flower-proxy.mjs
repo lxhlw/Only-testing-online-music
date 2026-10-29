@@ -11,11 +11,20 @@ const module=await import('data:text/javascript;base64,'+Buffer.from(code).toStr
 const realFetch=globalThis.fetch;
 const target=new URL('http://97.64.37.235/flower/v1/url/wy/demo/128k');
 const request=new Request('https://only-testing-online-music.pages.dev/api/proxy?url='+
-  encodeURIComponent(target.href),{headers:{Origin:'https://only-testing-online-music.pages.dev'}});
+  encodeURIComponent(target.href),{headers:{
+    Origin:'https://only-testing-online-music.pages.dev',
+    'X-LX-Headers':JSON.stringify({
+      'User-Agent':'lx-music/desktop',
+      ver:'2.0.0',
+      'source-ver':'1'
+    })
+  }});
 let calls=[];
 globalThis.fetch=async (url,options)=>{
-  calls.push(String(url));
-  if(String(url).startsWith('http://tm.tempmusic.tk/url/')){
+  calls.push({url:String(url),headers:Object.fromEntries(new Headers(options?.headers).entries())});
+  if(String(url).startsWith('http://tm.tempmusic.tk/url/') &&
+     new Headers(options?.headers).get('source-ver')==='1' &&
+     new Headers(options?.headers).get('ver')==='2.0.0'){
     await new Promise(r=>setTimeout(r,65));
     return new Response(JSON.stringify({
       code:0,data:'https://media.example.test/allowed-song.mp3'
@@ -31,13 +40,17 @@ try{
   assert.ok(elapsed<700,'Parallel Flower host must win without waiting for other hosts or socket');
   const data=await ok.json();
   assert.equal(data.data,'https://media.example.test/allowed-song.mp3');
-  assert.ok(calls.some(v=>v.startsWith('http://ts.tempmusic.tk/url/')));
-  assert.ok(calls.some(v=>v.startsWith('http://tm.tempmusic.tk/url/')));
+  assert.ok(calls.some(v=>v.url.startsWith('http://ts.tempmusic.tk/url/')));
+  assert.ok(calls.some(v=>v.url.startsWith('http://tm.tempmusic.tk/url/')));
+  assert.ok(calls.filter(v=>v.url.includes('tempmusic.tk')).every(v=>
+    v.headers.ver==='2.0.0' && v.headers['source-ver']==='1' &&
+    v.headers['user-agent']==='lx-music/desktop'),
+    'Flower aliases must receive the source script request headers');
   assert.ok(calls.length<=4);
   console.log('PASS: Flower fast host race wins in '+Math.round(elapsed)+'ms');
   calls=[];
   globalThis.fetch=async (url,options)=>{
-    calls.push(String(url));
+    calls.push({url:String(url),headers:Object.fromEntries(new Headers(options?.headers).entries())});
     return new Response('bad gateway',{status:502});
   };
   const failed=await module.fetchFlowerResolverFast(target,request);

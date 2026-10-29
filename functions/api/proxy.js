@@ -489,6 +489,15 @@ async function fetchFlowerResolverFast(target, request) {
   const shortPath = (target.pathname.startsWith('/flower/v1/')
     ? target.pathname.slice('/flower/v1'.length)
     : target.pathname) + target.search;
+  // Preserve the signed/versioned headers supplied by the actual Flower LX
+  // script. Previous fast-host calls sent only Accept, unlike Desktop's
+  // needle client and unlike our canonical socket fallback.
+  const sourceHeaders=pickForwardHeaders(request);
+  const flowerHeaders=new Headers({Accept:'application/json, text/plain, */*'});
+  for(const key of ['User-Agent','ver','source-ver']){
+    const val=sourceHeaders.get(key);
+    if(val)flowerHeaders.set(key,val);
+  }
   const endpoints = [
     'http://ts.tempmusic.tk'+shortPath,
     'http://tm.tempmusic.tk'+shortPath,
@@ -500,7 +509,7 @@ async function fetchFlowerResolverFast(target, request) {
       method:operation,
       redirect:'manual',
       signal:ctrl.signal,
-      headers:{Accept:'application/json, text/plain, */*'}
+      headers:flowerHeaders
     });
     if(upstream.status<200 || upstream.status>=300)
       throw new Error('Flower host HTTP '+upstream.status);

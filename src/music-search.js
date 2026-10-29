@@ -853,7 +853,10 @@
         singer: singerNames.join('、'),
         albumName: album.name,
         albumId: album.id,
-        interval: Number(item.dt || 0) > 0 ? Math.floor(Number(item.dt) / 60000) : item.dt,
+        // LX Desktop formats dt (milliseconds) as play time. The web
+        // player accepts seconds; treating 445000ms as 7 minutes *integer*
+        // caused a 7-second expected duration for a 7:25 song.
+        interval: Number(item.dt || 0) > 0 ? Math.round(Number(item.dt) / 1000) : 0,
         image: album.picUrl || '',
         types: formatNeteaseTypes(item),
         raw: item
@@ -889,15 +892,20 @@
       for (var i = 0; i < songs.length; i += 1) {
         var song = songs[i] || {};
         if (song.id == null || !song.name) continue;
-
+        // Cloudsearch returns both old (artists/album/duration) and new
+        // (ar/al/dt) shapes. Do not erase usable artist, album, or length.
+        var artists=Array.isArray(song.artists)&&song.artists.length
+          ? song.artists:(Array.isArray(song.ar)?song.ar:[]);
+        var album=song.album && typeof song.album==='object' && Object.keys(song.album).length
+          ? song.album:(song.al || {});
         resources.push({
           baseInfo: {
             simpleSongData: {
               id: song.id,
               name: song.name,
-              dt: song.duration || 0,
-              ar: Array.isArray(song.artists) ? song.artists : [],
-              al: song.album || {},
+              dt: song.duration || song.dt || 0,
+              ar: artists,
+              al: album,
               privilege: song.privilege || {}
             }
           }

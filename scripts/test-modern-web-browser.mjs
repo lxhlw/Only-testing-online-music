@@ -110,8 +110,29 @@ try {
   }));
   await page.goto(url,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.LXSourceManager?.getActive()?.inited,{timeout:14000});
+  // NetEase cloudsearch can return ar/al/dt rather than artists/album/duration.
+  // Check both correct Flower songmid AND expected seconds, not just titles.
+  await page.route('**/api/netease-search?*',route=>route.fulfill({
+    status:200,contentType:'application/json',
+    body:JSON.stringify({result:{songCount:1,songs:[{
+      id:450001,name:'郭源潮',dt:445000,
+      ar:[{name:'宋冬野'}],al:{name:'郭源潮',id:13}
+    }]}})
+  }));
+  const cloudShape=await page.evaluate(()=>new Promise(resolve=>{
+    window.LXMusicSearch.search('wy','宋冬野',1,20,(err,data)=>resolve({
+      error:err?.message||'',first:data?.list?.[0]
+    }));
+  }));
+  assert.equal(cloudShape.error,'');
+  assert.equal(cloudShape.first?.songmid,'450001');
+  assert.equal(cloudShape.first?.singer,'宋冬野');
+  assert.equal(cloudShape.first?.albumName,'郭源潮');
+  assert.equal(cloudShape.first?.interval,445);
+  await page.unroute('**/api/netease-search?*');
+  checks.push('netease-id-artist-album-duration-parity');
   assert.equal(await page.locator('.brand').textContent(),'LX Music Web');
-  assert.equal(await page.locator('#app-version').textContent(),'v0.4.11');
+  assert.equal(await page.locator('#app-version').textContent(),'v0.4.12');
   assert.equal(await page.locator('#top-source-label').textContent(),'当前音源：野花🌷');
   assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(x=>x.name)),['野花🌷']);
   assert.equal(await page.locator('#legacy-media-panel').count(),0);
