@@ -406,6 +406,13 @@
       songmid: String((item.songmid || item.mid || item.id || item.hash || '') || ''),
       mediaMid: String((item.mediaMid || item.media_mid || '') || ''),
       albumId: String((item.albumId || item.album_id || '') || ''),
+      // Retain desktop-compatible metadata through both normalization passes.
+      albumAudioId: String((item.albumAudioId || item.album_audio_id || '') || ''),
+      _interval: item._interval != null ? Number(item._interval) : null,
+      _types: item._types && typeof item._types === 'object' &&
+        !Array.isArray(item._types) ? item._types : null,
+      typeUrl: item.typeUrl && typeof item.typeUrl === 'object' &&
+        !Array.isArray(item.typeUrl) ? item.typeUrl : {},
       lowerQualityContentId: String((item.lowerQualityContentId || item.lower_quality_content_id || '') || ''),
       image: String((item.pic || item.image || item.img || '') || ''),
       lyricId: String((item.lyric_id || item.lyricId || '') || ''),
@@ -1522,6 +1529,26 @@
       if (!hash || !audioId || seen[key]) return;
       seen[key] = true;
 
+      // Match LX Desktop's independent hash for each AVAILABLE quality.
+      var types = [];
+      var qualityMap = {};
+      function addQuality(type, fileHash, fileSize) {
+        var h = String(fileHash || '').replace(/^\s+|\s+$/g, '').toUpperCase();
+        var n = Number(fileSize);
+        if (!h || !isFinite(n) || n <= 0) return;
+        var size = (n / (1024 * 1024)).toFixed(2) + 'M';
+        types.push({ type: type, size: size, hash: h });
+        qualityMap[type] = { size: size, hash: h };
+      }
+      addQuality('128k', item.FileHash || item.hash || item['128hash'],
+        item.FileSize != null ? item.FileSize : item.filesize);
+      addQuality('320k', item.HQFileHash || item['320hash'],
+        item.HQFileSize != null ? item.HQFileSize : item['320filesize']);
+      addQuality('flac', item.SQFileHash || item.sqhash,
+        item.SQFileSize != null ? item.SQFileSize : item.sqfilesize);
+      addQuality('flac24bit', item.ResFileHash || item.resfilehash,
+        item.ResFileSize != null ? item.ResFileSize : item.resfilesize);
+      var seconds = item.Duration != null ? item.Duration : item.duration;
       list.push(normalizeSong({
         id: audioId,
         songmid: audioId,
@@ -1530,9 +1557,14 @@
         artist: formatKugouArtist(item.Singers || item.singers || item.singername || item.artist),
         album: String(item.AlbumName || item.album_name || item.albumName || item.album || ''),
         albumId: String(item.AlbumID || item.album_id || item.albumId || ''),
-        interval: formatKugouInterval(item.Duration != null ? item.Duration : item.duration),
+        albumAudioId: String(item.MixSongID || item.mixsongid ||
+          item.album_audio_id || item.albumAudioId || ''),
+        interval: formatKugouInterval(seconds),
+        _interval: seconds,
         source: 'kugou',
-        types: []
+        types: types,
+        _types: qualityMap,
+        typeUrl: {}
       }, 'kg'));
     }
 

@@ -370,6 +370,58 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
 }
 
 {
+  // The native Kugou search response and the original Desktop metadata shape.
+  // Both normalization passes must retain quality-specific hashes.
+  const hash128='A'.repeat(32), hash320='B'.repeat(32),
+    hashFlac='C'.repeat(32), hashHigh='D'.repeat(32);
+  const h=createHarness({kg:{actions:['musicUrl']}},()=>{},{
+    search:{status:200,body:JSON.stringify({
+      error_code:0,data:{total:1,lists:[{
+        Audioid:778899,OriSongName:'成都',AlbumName:'无法长大',
+        AlbumID:1234,MixSongID:9876,Duration:329,
+        Singers:[{name:'赵雷'}],
+        FileHash:hash128,FileSize:4194304,
+        HQFileHash:hash320,HQFileSize:10485760,
+        SQFileHash:hashFlac,SQFileSize:31457280,
+        ResFileHash:hashHigh,ResFileSize:62914560,Grp:[]
+      }]}
+    })}
+  });
+  const result=await new Promise((resolve,reject)=>
+    h.sandbox.LXMusicSearch.search('kg','成都',1,20,(err,value)=>
+      err?reject(err):resolve(value)));
+  assert.equal(result.searchProvider,'kugou-native');
+  assert.equal(result.list.length,1);
+  const track=result.list[0];
+  assert.equal(track.source,'kg');
+  assert.equal(track.songmid,'778899');
+  assert.equal(track.hash,hash128);
+  assert.equal(track.albumId,'1234');
+  assert.equal(track.albumAudioId,'9876');
+  assert.equal(track._interval,329);
+  assert.equal(track.interval,'05:29');
+  assert.deepEqual(Array.from(track.types,x=>x.type),
+    ['128k','320k','flac','flac24bit']);
+  assert.deepEqual(Array.from(track.types,x=>x.hash),
+    [hash128,hash320,hashFlac,hashHigh]);
+  assert.equal(track._types['128k'].hash,hash128);
+  assert.equal(track._types['320k'].hash,hash320);
+  assert.equal(track._types.flac.hash,hashFlac);
+  assert.equal(track._types.flac24bit.hash,hashHigh);
+  assert.equal(track._types['320k'].size,'10.00M');
+  const buildMusicInfo=new Function(
+    extractAppFunction(appSource,'buildMusicInfo')+';return buildMusicInfo;'
+  )();
+  const passed=buildMusicInfo(track,'kg');
+  assert.equal(passed.songmid,'778899');
+  assert.equal(passed.hash,hash128);
+  assert.equal(passed.albumAudioId,'9876');
+  assert.equal(passed._types['320k'].hash,hash320);
+  assert.equal(passed._types.flac.hash,hashFlac);
+  console.log('PASS Desktop Kugou per-quality hash and album metadata parity');
+}
+
+{
   const h2 = createHarness(
     {
       kg: { actions: ['musicUrl'] }

@@ -81,6 +81,7 @@ jobs:
           node scripts/test-lx-runtime-flower-md5.mjs
           node scripts/test-flower-needle-parity.mjs
           node scripts/test-flower-raw-http1-parity-unit.mjs
+          node scripts/test-music-search-native.mjs
           node scripts/test-flower-egress-parity-unit.mjs
           node scripts/test-flower-cross-platform-unit.mjs
           node scripts/test-flower-correlated-validation-unit.mjs
@@ -140,7 +141,7 @@ jobs:
           set -euo pipefail
           READY=0
           for i in {1..12}; do
-            if curl -fsSL 'https://only-testing-online-music.pages.dev/?v=0.4.18' -o /tmp/lx-modern-index.html && grep -Fq 'modern.css?v=0.4.18' /tmp/lx-modern-index.html; then
+            if curl -fsSL 'https://only-testing-online-music.pages.dev/?v=0.4.19' -o /tmp/lx-modern-index.html && grep -Fq 'modern.css?v=0.4.19' /tmp/lx-modern-index.html; then
               READY=1
               break
             fi
