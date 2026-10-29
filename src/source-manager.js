@@ -136,17 +136,41 @@
         callback.call(runtime, null, {
           statusCode: xhr.status,
           statusMessage: xhr.statusText || '',
-          headers: {},
-          bytes: body ? String(body).length : 0,
+          // Match LX Desktop's Needle response contract: HTTP responses
+          // (including 404/500) carry status + body with err=null. Only
+          // transport failures should set err; otherwise custom LX scripts
+          // cannot inspect HTTP status or apply their own retry logic.
+          headers: readResponseHeaders(),
+          bytes: body ? (typeof TextEncoder==='function'
+            ? new TextEncoder().encode(String(body)).length
+            : String(body).length) : 0,
           raw: body || '',
           body: parsed
         }, parsed);
       }
 
+      function readResponseHeaders(){
+        var headers={};
+        try {
+          var raw=xhr.getAllResponseHeaders()||'';
+          var lines=raw.split(/\r?\n/);
+          for(var i=0;i<lines.length;i++){
+            var idx=lines[i].indexOf(':');
+            if(idx<=0)continue;
+            headers[lines[i].slice(0,idx).trim().toLowerCase()]=
+              lines[i].slice(idx+1).trim();
+          }
+        }catch(e){}
+        return headers;
+      }
+
       xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) return;
-        if ((xhr.status >= 200 && xhr.status < 300) || xhr.status === 0) finish(null, xhr.responseText);
-        else finish(new Error('HTTP ' + xhr.status + (xhr.responseText ? ': ' + String(xhr.responseText).slice(0, 1200) : '')), null);
+        if (xhr.status > 0) {
+          // Needle returns err=null for a valid HTTP 404/502 response.
+          // A real network failure is handled by onerror/ontimeout below.
+          finish(null, xhr.responseText);
+        } else finish(new Error('Network request failed'), null);
       };
       xhr.onerror = function() { finish(new Error('Network request failed'), null); };
       xhr.ontimeout = function() { finish(new Error('Request timeout'), null); };

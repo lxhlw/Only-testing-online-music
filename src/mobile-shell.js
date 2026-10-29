@@ -1,4 +1,4 @@
-// LX Music Web v0.4.16 — mobile-only interaction shell.
+// LX Music Web v0.4.17 — mobile-only interaction shell.
 // The business logic stays in app.js. This module only moves navigation
 // into an accessible drawer and keeps channel choices behind one disclosure.
 const root=document.documentElement;
