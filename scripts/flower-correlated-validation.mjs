@@ -11,6 +11,10 @@ export function classifyAttempt(row) {
   if(!row.qualityDeclared)return 'QUALITY_UNDECLARED';
   if(!row.searchFound)return row.searchState||'TRACK_NOT_FOUND';
   if(!row.flowerRequested||!row.routeMatchesSource)return 'FLOWER_REQUEST_MISSING_OR_WRONG_ROUTE';
+  if(row.source==='kg'&&row.trackHashShape==='KG_HASH_MISSING')
+    return 'KG_SEARCH_HASH_MISSING';
+  if(row.source==='kg'&&row.requestIdMatchesTrackKey===false)
+    return 'KG_FLOWER_TRACK_HASH_MISMATCH';
   if(!row.urlReturned)return row.resolverState||'NO_MEDIA_URL';
   if(!row.approvedMediaHost)return 'UNTRUSTED_MEDIA_HOST';
   if(row.rangeHttpStatus!==200&&row.rangeHttpStatus!==206)

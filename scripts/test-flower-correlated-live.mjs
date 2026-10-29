@@ -9,17 +9,53 @@ import {PLATFORMS,classifyAttempt,summarizeAttempts}
 const base=process.env.TEST_BASE_URL||'https://only-testing-online-music.pages.dev';
 const browser=await chromium.launch({headless:true,
   args:['--autoplay-policy=no-user-gesture-required']});
+// Baseline remains unchanged. A separate opt-in live case replays the user's
+// confirmed LX Desktop comparison: Flower → Kugou → 赵雷《成都》.
+const caseName=process.env.FLOWER_DIAGNOSTIC_CASE||'baseline';
+if(!['baseline','kugou-chengdu'].includes(caseName))
+  throw new Error('Unknown Flower diagnostic case');
+const caseSpec=caseName==='kugou-chengdu'
+  ? {platforms:['kg'],keyword:'成都',title:'成都',artist:'赵雷'}
+  : {platforms:PLATFORMS,keyword:'宋冬野',title:'郭源潮',artist:'宋冬野'};
 const rounds=2,results=[];
 try{
   for(let round=1;round<=rounds;round++){
     const page=await browser.newPage({viewport:{width:1280,height:800}});
+    const upstreamProbes=[];
+    // Observe only sanitized failure categories; do not intercept, alter,
+    // replay or log signed requests, song IDs, tags, URLs or media bytes.
+    page.on('response',async response=>{
+      try{
+        const u=new URL(response.url());
+        if(u.pathname!=='/api/proxy')return;
+        const original=new URL(u.searchParams.get('url')||'');
+        if(original.protocol!=='http:'||original.hostname!=='97.64.37.235'||
+          !original.pathname.startsWith('/flower/v1/url/'))return;
+        const channel=original.pathname.split('/')[4]||'';
+        let data={};
+        try{data=await response.json();}catch{}
+        const categories=new Set(['ts-short','tm-short','ts-full','tm-full',
+          'sslip-short','nip-short','sslip-full','nip-full','canonical-socket']);
+        const codes=/^(?:HTTP_[0-9]{3}|FLOWER_SOCKET_[A-Z0-9_]+|INVALID_PAYLOAD|BLOCKED_TARGET|TIMEOUT|NETWORK_ERROR)$/;
+        const routes=Array.isArray(data.attempts)?data.attempts:[];
+        upstreamProbes.push({
+          source:channel,
+          status:response.status(),
+          diagnostic:/^FLOWER_[A-Z0-9_]+$/.test(String(data.diagnostic||''))
+            ? data.diagnostic:null,
+          routes:routes.filter(x=>categories.has(x?.route)&&
+            codes.test(String(x?.code||''))).slice(0,9)
+            .map(x=>({route:x.route,code:x.code}))
+        });
+      }catch{}
+    });
     try{
       await page.goto(base,{waitUntil:'domcontentloaded',timeout:25000});
       await page.waitForFunction(()=>{
         const active=window.LXSourceManager?.getActive?.();
         return !!active?.inited;
       },null,{timeout:20000});
-      const rows=await page.evaluate(async ({platforms,round})=>{
+      const rows=await page.evaluate(async ({platforms,round,keyword,title,artist})=>{
         const manager=window.LXSourceManager;
         const active=manager.getActive();
         const flowerActive=!!active?.inited &&
@@ -88,7 +124,8 @@ try{
         const rows=[];
         for(const source of platforms){
           const row={source,round,flowerActive,qualityDeclared:false,
-            searchFound:false,searchState:'NOT_RUN',
+            searchFound:false,searchState:'NOT_RUN',searchProvider:'UNKNOWN',
+            trackHashShape:'NOT_APPLICABLE',requestIdMatchesTrackKey:null,
             flowerRequested:false,routeMatchesSource:false,
             resolverState:'NOT_RUN',urlReturned:false,resolverMs:null,
             approvedMediaHost:false,rangeHttpStatus:null,rangeBytes:0,
@@ -102,14 +139,24 @@ try{
             decl.qualitys.includes('128k');
           if(!row.qualityDeclared)continue;
           const search=await deadline(cb=>
-            window.LXMusicSearch.search(source,'宋冬野',1,25,cb),12000);
+            window.LXMusicSearch.search(source,keyword,1,25,cb),12000);
           if(search.timedOut){row.searchState='SEARCH_TIMEOUT';continue;}
           if(search.error){row.searchState='SEARCH_ERROR';continue;}
           const matches=Array.isArray(search.data?.list)?search.data.list:[];
-          const music=matches.find(x=>String(x?.name||'').trim()==='郭源潮'&&
-            String(x?.singer||'').includes('宋冬野')&&x.source===source);
+          const music=matches.find(x=>String(x?.name||'').trim()===title&&
+            String(x?.singer||'').includes(artist)&&x.source===source);
           if(!music){row.searchState='TRACK_NOT_FOUND';continue;}
           row.searchFound=true;row.searchState='MATCHED';
+          const provider=String(search.data?.searchProvider||'');
+          row.searchProvider=['kugou-native','kugou-mobile-native',
+            'netease-native','qqmusic-native','kuwo-native',
+            'migu-native','gdstudio-native'].includes(provider)
+            ? provider:'OTHER';
+          if(source==='kg'){
+            const hash=String(music.hash||'');
+            row.trackHashShape=/^[0-9a-f]{32}$/i.test(hash)
+              ? 'KG_HASH_32_HEX' : hash ? 'KG_HASH_OTHER' : 'KG_HASH_MISSING';
+          }
           const requestStart=active.runtime?.__debugRequests?.length||0;
           const resolveStarted=performance.now();
           const reply=await deadline(cb=>
@@ -129,6 +176,11 @@ try{
           row.flowerRequested=!!hit;
           row.routeMatchesSource=!!hit&&
             new URL(hit.url).pathname.startsWith('/flower/v1/url/'+source+'/');
+          if(source==='kg'&&hit){
+            const segments=new URL(hit.url).pathname.split('/').filter(Boolean);
+            row.requestIdMatchesTrackKey=segments.length===6&&
+              segments[4].toUpperCase()===String(music.hash||'').toUpperCase();
+          }
           if(reply.timedOut){row.resolverState='RESOLVE_TIMEOUT';continue;}
           if(reply.error){row.resolverState='RESOLVE_ERROR';continue;}
           const raw=reply.data;
@@ -214,7 +266,15 @@ try{
           }
         }
         return rows;
-      },{platforms:PLATFORMS,round});
+      },{platforms:caseSpec.platforms,round,
+        keyword:caseSpec.keyword,title:caseSpec.title,artist:caseSpec.artist});
+      // Playwright response bodies resolve asynchronously after XHR load.
+      await page.waitForTimeout(200);
+      if(caseName==='kugou-chengdu'){
+        console.log('FLOWER KUGOU CHENGDU SAFE UPSTREAM:',JSON.stringify({
+          round,probes:upstreamProbes.filter(x=>x.source==='kg')
+        }));
+      }
       for(const row of rows){
         row.outcome=classifyAttempt(row);
         results.push(row);
@@ -223,9 +283,11 @@ try{
     }finally{await page.close();}
   }
   console.log('FLOWER CORRELATED TWO-ROUND SUMMARY:',JSON.stringify({
-    flowerOnly:true,expectedTrack:'宋冬野 / 郭源潮',
-    expectedDurationSeconds:446,attempts:results.length,
-    summary:summarizeAttempts(results),
+    flowerOnly:true,caseName,
+    expectedTrack:caseSpec.artist+' / '+caseSpec.title,
+    expectedDurationSeconds:caseName==='baseline'?446:null,
+    attempts:results.length,
+    summary:summarizeAttempts(results).filter(x=>caseSpec.platforms.includes(x.source)),
     anyTrueAudio:results.some(row=>classifyAttempt(row)==='DECODED_LONG_FORM_AUDIO')
   }));
 }finally{await browser.close();}

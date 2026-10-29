@@ -15,6 +15,12 @@ assert.equal(classifyAttempt({...verified,routeMatchesSource:false}),'FLOWER_REQ
 assert.equal(classifyAttempt({...verified,started:false}),'MEDIA_NOT_PLAYING');
 assert.equal(classifyAttempt({...verified,seekConfirmed:false}),'MIDTRACK_PLAYBACK_NOT_VERIFIED');
 assert.equal(classifyAttempt({...verified,source:'unknown'}),'INVALID_PLATFORM');
+assert.equal(classifyAttempt({...verified,source:'kg',trackHashShape:'KG_HASH_32_HEX',
+  requestIdMatchesTrackKey:false}),'KG_FLOWER_TRACK_HASH_MISMATCH');
+assert.equal(classifyAttempt({...verified,source:'kg',trackHashShape:'KG_HASH_MISSING',
+  requestIdMatchesTrackKey:null}),'KG_SEARCH_HASH_MISSING');
+assert.equal(classifyAttempt({...verified,source:'kg',trackHashShape:'KG_HASH_32_HEX',
+  requestIdMatchesTrackKey:true}),'DECODED_LONG_FORM_AUDIO');
 const rows=[verified,{...verified,source:'mg',rangeHttpStatus:403,
   rangeFailure:'HTTP_403'},{...verified,source:'kw',
   urlReturned:false,resolverState:'FLOWER_RESOLVE_ERROR'}];

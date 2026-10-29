@@ -190,6 +190,13 @@ jobs:
         env:
           TEST_BASE_URL: https://only-testing-online-music.pages.dev
         run: node scripts/test-flower-correlated-live.mjs
+      - name: Real Flower Kugou Chengdu hash and upstream failure diagnosis (informational)
+        continue-on-error: true
+        timeout-minutes: 4
+        env:
+          TEST_BASE_URL: https://only-testing-online-music.pages.dev
+          FLOWER_DIAGNOSTIC_CASE: kugou-chengdu
+        run: node scripts/test-flower-correlated-live.mjs
       - name: Real Flower KW/MG audio bytes and seek acceptance (informational)
         continue-on-error: true
         timeout-minutes: 4
