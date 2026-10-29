@@ -132,7 +132,7 @@ try {
   await page.unroute('**/api/netease-search?*');
   checks.push('netease-id-artist-album-duration-parity');
   assert.equal(await page.locator('.brand').textContent(),'LX Music Web');
-  assert.equal(await page.locator('#app-version').textContent(),'v0.4.15');
+  assert.equal(await page.locator('#app-version').textContent(),'v0.4.16');
   assert.equal(await page.locator('#top-source-label').textContent(),'当前音源：野花🌷');
   assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(x=>x.name)),['野花🌷']);
   assert.equal(await page.locator('#legacy-media-panel').count(),0);

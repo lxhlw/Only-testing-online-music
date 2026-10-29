@@ -114,6 +114,71 @@ try {
       }catch{evidence.githubRunnerOrigin={kind:'CONNECT_OR_TIMEOUT',valid:false};}
     }else evidence.githubRunnerOrigin={kind:'SKIPPED_UNSAFE_OR_MISMATCHED'};
   }
+
+  // Separate the user's desktop SQ/HQ observation from the old 128k-only
+  // test. Ask the REAL imported Flower script for only two other declared
+  // qualities. Do not synthesize URLs: each route must come from lx.request.
+  const qualityMatrix=[];
+  if(result.phase==='resolve' && !result.success && evidence.request?.ok){
+    const generated=await page.evaluate(async()=>{
+      const source=window.LXSourceManager?.getActive();
+      const declared=source?.sources?.wy?.qualitys||[];
+      const searched=await new Promise(resolve=>window.LXMusicSearch.search(
+        'wy','宋冬野',1,20,(err,data)=>resolve(err?[]:data?.list||[])
+      ));
+      const song=searched.find(s=>s.name==='郭源潮'&&s.singer?.includes('宋冬野'));
+      if(!song)return [{quality:'320k',kind:'SEARCH_CHANGED'}];
+      const musicInfo={...song,...song.raw,source:'wy',songmid:song.songmid};
+      const results=[];
+      for(const quality of ['320k','flac']){
+        if(!declared.includes(quality)){
+          results.push({quality,kind:'NOT_DECLARED'});continue;
+        }
+        const prior=source.runtime?.__debugRequests?.length||0;
+        let resolved=false;
+        try{
+          const value=await Promise.race([
+            new Promise((resolve,reject)=>window.LXSourceManager.requestAction(
+              'wy','musicUrl',{type:quality,musicInfo},(err,data)=>
+                err?reject(err):resolve(data)
+            )),
+            new Promise((_,reject)=>setTimeout(()=>reject(Error('PROBE_DEADLINE')),14000))
+          ]);
+          const media=typeof value==='string'?value:value?.url||value?.result;
+          resolved=/^https?:\/\//.test(String(media||''));
+        }catch{}
+        const calls=(source.runtime?.__debugRequests||[]).slice(prior);
+        const request=[...calls].reverse().find(item=>{
+          try{return new URL(item.url).hostname==='97.64.37.235';}
+          catch{return false;}
+        });
+        results.push({quality,kind:request?'GENERATED':'NO_CANONICAL_REQUEST',
+          url:request?.url||'',headers:request?.headers||{},
+          songmid:song.songmid,resolverReturned:resolved});
+      }
+      return results;
+    });
+    for(const item of generated){
+      if(item.kind!=='GENERATED'){
+        qualityMatrix.push({quality:item.quality,kind:item.kind});continue;
+      }
+      const target=inspectFlowerRequest(item.url,item.songmid,item.quality);
+      const row={quality:item.quality,request:target,resolverReturned:item.resolverReturned};
+      if(target.ok){
+        try{
+          const remote=await fetch(item.url,{
+            method:'GET',headers:flowerRequestHeaders(item.headers),
+            redirect:'manual',signal:AbortSignal.timeout(8000)
+          });
+          // Inspect a bounded response, never download or reveal media URLs.
+          const data=(await remote.text()).slice(0,8192);
+          row.githubRunnerOrigin=inspectFlowerPayload(remote.status,data);
+        }catch{row.githubRunnerOrigin={valid:false,kind:'CONNECT_OR_TIMEOUT'};}
+      }else row.githubRunnerOrigin={valid:false,kind:'SKIPPED_UNSAFE_OR_MISMATCHED'};
+      qualityMatrix.push(row);
+    }
+  }
+  evidence.qualityMatrix=qualityMatrix;
   console.log('FLOWER LIVE PRODUCTION DIAGNOSTIC:',JSON.stringify({
     ...safeResult,proxyFailures:upstream,protocolComparison:evidence
   }));
