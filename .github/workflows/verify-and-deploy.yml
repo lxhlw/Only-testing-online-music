@@ -59,6 +59,8 @@ jobs:
           node --check scripts/test-mobile-interaction-qa-browser.mjs
           node --check scripts/test-modern-flower-proxy.mjs
           node --check scripts/test-flower-cross-platform-live.mjs
+          node --check scripts/test-flower-correlated-live.mjs
+          node --check scripts/flower-correlated-validation.mjs
           node --check scripts/test-flower-audio-live.mjs
           node --check scripts/test-flower-kuwo-ui-live.mjs
           node --check scripts/test-flower-ui-stability-live.mjs
@@ -76,6 +78,7 @@ jobs:
           node scripts/test-lx-runtime-flower-md5.mjs
           node scripts/test-flower-needle-parity.mjs
           node scripts/test-flower-cross-platform-unit.mjs
+          node scripts/test-flower-correlated-validation-unit.mjs
           node scripts/test-flower-media-validation-unit.mjs
           node scripts/test-flower-tcp-socket.mjs
           node scripts/test-music-library.mjs
@@ -181,6 +184,12 @@ jobs:
         env:
           TEST_BASE_URL: https://only-testing-online-music.pages.dev
         run: node scripts/test-flower-cross-platform-live.mjs
+      - name: Real Flower same-request five-platform two-round resolver and audio diagnostic
+        continue-on-error: true
+        timeout-minutes: 8
+        env:
+          TEST_BASE_URL: https://only-testing-online-music.pages.dev
+        run: node scripts/test-flower-correlated-live.mjs
       - name: Real Flower KW/MG audio bytes and seek acceptance (informational)
         continue-on-error: true
         timeout-minutes: 4
