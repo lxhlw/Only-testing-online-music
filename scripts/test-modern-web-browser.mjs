@@ -70,6 +70,24 @@ try {
       body:JSON.stringify({source:'wy',id:'123456',kind:recent?'recent':'hot',
         total:120,offset,hasMore:recent&&offset<100,comments:list})});
   });
+  // Keep layout and navigation assertions independent of live third-party
+  // catalog availability. Real Pages HTTP upstream probes run separately.
+  await page.route('**/api/netease-playlists?*',route=>{
+    const q=new URL(route.request().url()).searchParams;
+    const id=q.get('id'), offset=Number(q.get('offset')||0);
+    const cards=Array.from({length:12},(_,i)=>({
+      id:String(8500+i),name:'网页歌单 '+(i+1),
+      creator:'浏览器测试',source:'wy',coverImgUrl:'',trackCount:3
+    }));
+    const payload=id?{
+      playlist:{id,name:'网页歌单详情',creator:'浏览器测试',source:'wy',trackCount:3},
+      songs:[{id:'981',name:'第一首测试歌曲',singer:'测试歌手',source:'wy'},
+        {id:'982',name:'第二首测试歌曲',singer:'测试歌手',source:'wy'},
+        {id:'983',name:'第三首测试歌曲',singer:'测试歌手',source:'wy'}].slice(offset,offset+50),
+      nextOffset:3,hasMore:false
+    }:{result:{playlists:cards.slice(offset,offset+20),playlistCount:cards.length}};
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(payload)});
+  });
   await page.route('**/api/qq-catalog?*',route=>{
     const q=new URL(route.request().url()).searchParams;
     const kind=q.get('kind'),id=q.get('id');
