@@ -50,11 +50,14 @@ try{
           }}}}
         }));
       }
-      if(query.param.query==='周杰伦')return new Response(JSON.stringify({code:0,
+      // A valid QQ search response may have no top-level service code.
+      if(query.param.query==='周杰伦')return new Response(JSON.stringify({
         'music.search.SearchCgiService':{code:0,data:{body:{playlist:{
           totalnum:1,list:[{dissid:9988,dissname:'周杰伦精选',song_count:12,creator:{name:'听友'}}]
         }}}}
       }));
+      if(query.param.query==='服务错误')return new Response(JSON.stringify({code:0,
+        'music.search.SearchCgiService':{code:1203,data:{body:{songlist:{list:[]}}}}}));
       if(query.param.query==='无结果')return new Response(JSON.stringify({code:0,
         'music.search.SearchCgiService':{code:0,data:{body:{playlist:{totalnum:0,list:[]}}}}
       }));
@@ -91,6 +94,9 @@ try{
   const qOther=await qq({request:req('/api/qq-catalog?kind=playlist&s=%E5%91%A8%E6%9D%B0%E4%BC%A6&offset=0&limit=20')});
   assert.equal(qOther.status,200,'Other Chinese keywords must also work');
   assert.equal((await qOther.json()).result.playlists[0].name,'周杰伦精选');
+  const qBadCode=await qq({request:req('/api/qq-catalog?kind=playlist&s=%E6%9C%8D%E5%8A%A1%E9%94%99%E8%AF%AF')});
+  assert.equal(qBadCode.status,502,'Explicit QQ service errors must not be mistaken for empty search');
+  assert.equal((await qBadCode.json()).diagnostic,'SEARCH_MODULE_CODE');
   const qNoResults=await qq({request:req('/api/qq-catalog?kind=playlist&s=%E6%97%A0%E7%BB%93%E6%9E%9C&offset=0&limit=20')});
   assert.equal(qNoResults.status,200,'An empty result is not an upstream failure');
   assert.deepEqual((await qNoResults.json()).result.playlists,[]);

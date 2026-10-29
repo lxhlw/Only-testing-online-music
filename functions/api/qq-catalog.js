@@ -32,7 +32,10 @@ async function searchPlaylists(term,offset,limit,signal){
  if(raw.length>1300000)throw Error('QQ search response too large');
  const data=JSON.parse(raw);
  const answer=data?.['music.search.SearchCgiService']||data?.req_1||{};
- if(data?.code!==0||answer?.code!==0)throw Error('QQ search service unavailable');
+ // Some valid QQ envelopes omit the outer or module-level code.
+ // Only an explicitly non-zero code is an upstream failure.
+ if(data?.code!=null&&Number(data.code)!==0)throw Error('QQ search service unavailable: top code');
+ if(answer?.code!=null&&Number(answer.code)!==0)throw Error('QQ search service unavailable: module code');
  const body=answer?.data?.body||{};
  const block=body.songlist||body.playlist||{};
  if(!Array.isArray(block.list))throw Error('QQ playlist search response unavailable');
@@ -116,6 +119,18 @@ export async function onRequestGet({request}){
      creator:safe(detail.nick||detail.creator?.nick,70),
      coverImgUrl:safe(detail.logo,300),trackCount:total
    },songs,total,nextOffset:offset+limit,hasMore:offset+limit<total&&offset+limit<tracks.length});
- }catch(e){return response({error:'QQ Music unavailable',message:e?.name==='AbortError'?'QQ音乐请求超时':'QQ音乐暂未返回此内容，请重试或切换平台'},502)}
+ }catch(e){
+   const msg=String(e?.message||'');
+   const diagnostic=e?.name==='AbortError'?'TIMEOUT':
+     msg.includes('top code')?'SEARCH_TOP_CODE':
+     msg.includes('module code')?'SEARCH_MODULE_CODE':
+     msg.includes('search response unavailable')?'SEARCH_RESPONSE_SCHEMA':
+     msg.includes('search HTTP')?'SEARCH_UPSTREAM_HTTP':
+     msg.includes('response too large')?'SEARCH_RESPONSE_TOO_LARGE':
+     e?.name==='SyntaxError'?'SEARCH_RESPONSE_JSON':'UPSTREAM_UNAVAILABLE';
+   return response({error:'QQ Music unavailable',
+     message:e?.name==='AbortError'?'QQ音乐请求超时':'QQ音乐暂未返回此内容，请重试或切换平台',
+     diagnostic},502);
+ }
  finally{clearTimeout(timer)}
 }
