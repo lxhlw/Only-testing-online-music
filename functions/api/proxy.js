@@ -81,17 +81,20 @@ async function fetchFlowerResolverViaSocket(target, request) {
     writer = socket.writable.getWriter();
 
     var forwarded = pickForwardHeaders(request);
+    // Reproduce the actual LX Desktop Needle HTTP request defaults:
+    // a single Accept: */* (unless the source explicitly supplied one),
+    // and no Accept-Encoding header unless the source supplied one.
+    // Earlier versions sent two Accept fields and forced identity encoding.
     var requestHeaders = [
       'Host: ' + target.hostname,
       'Connection: close',
-      'Accept: application/json, text/plain, */*',
-      'Accept-Encoding: identity'
+      'Accept: ' + (forwarded.get('Accept') || '*/*')
     ];
 
     forwarded.forEach(function (value, key) {
       var lower = String(key || '').toLowerCase();
-      if (lower === 'host' || lower === 'content-length' || lower === 'connection' ||
-          lower === 'accept-encoding') return;
+      if (lower === 'host' || lower === 'content-length' ||
+          lower === 'connection' || lower === 'accept') return;
       requestHeaders.push(String(key) + ': ' + String(value));
     });
 

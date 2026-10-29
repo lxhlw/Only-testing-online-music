@@ -43,6 +43,10 @@ try{
   assert.equal(captures[0].headers['source-ver'],'1');
   assert.equal(captures[0].headers.ver,'2.0.0');
   assert.equal(captures[0].headers['user-agent'],'lx-music-test');
+  assert.equal(captures[0].headers.accept,'*/*',
+    'Pinned LX Needle defaults to Accept: */*');
+  assert.equal(captures[0].headers['accept-encoding'],undefined,
+    'Pinned LX Needle does not request compression unless explicitly configured');
   const fingerprint=describeNeedleTransport(captures[0].headers);
   assert.equal(fingerprint.hasSignedTag,true);
   assert.equal(fingerprint.hasUserAgent,true);
