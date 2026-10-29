@@ -61,6 +61,7 @@ jobs:
           node --check scripts/test-flower-cross-platform-live.mjs
           node --check scripts/test-flower-correlated-live.mjs
           node --check scripts/test-flower-kugou-transport-live.mjs
+          node --check scripts/flower-raw-http1-parity.mjs
           node --check scripts/flower-correlated-validation.mjs
           node --check scripts/test-flower-audio-live.mjs
           node --check scripts/test-flower-kuwo-ui-live.mjs
@@ -78,6 +79,7 @@ jobs:
           node scripts/test-flower-protocol-parity-unit.mjs
           node scripts/test-lx-runtime-flower-md5.mjs
           node scripts/test-flower-needle-parity.mjs
+          node scripts/test-flower-raw-http1-parity-unit.mjs
           node scripts/test-flower-cross-platform-unit.mjs
           node scripts/test-flower-correlated-validation-unit.mjs
           node scripts/test-flower-media-validation-unit.mjs

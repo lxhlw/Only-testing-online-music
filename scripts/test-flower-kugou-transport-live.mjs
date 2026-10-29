@@ -4,10 +4,12 @@ import {inspectFlowerRequest,inspectFlowerPayload,flowerRequestHeaders,inspectFl
   from './flower-protocol-parity.mjs';
 import {probeCanonicalFlowerWithDesktopNeedle,LX_DESKTOP_NEEDLE_REF}
   from './flower-needle-parity.mjs';
+import {probeFlowerCloudflareWireOnGithub} from './flower-raw-http1-parity.mjs';
 
 // Real Flower-only Kugou Chengdu transport comparison, not a playback PASS.
-// Replays the EXACT original unsigned URL and current 48-hex script-signed
-// request headers. GH Runner fetch / pinned LX Needle use the same request;
+// Replays the exact canonical URL and its current script-generated signed
+// request headers. GitHub fetch, pinned LX Needle and Worker-like raw HTTP
+// use the same per-attempt source request;
 // Cloudflare response belongs to the preceding browser-side request.
 // No signed URL, song hash, raw headers, media tokens, body or errors in logs.
 const base=process.env.TEST_BASE_URL||'https://only-testing-online-music.pages.dev';
@@ -75,7 +77,8 @@ try {
 const {origin,...safe}=captured||{};
 const evidence={source:'Flower',track:'赵雷 / 成都',
   comparison:'same-signed-request-on-github-runner', ...safe,
-  nodeFetch:{kind:'SKIPPED'},lxNeedle:{kind:'SKIPPED'}};
+  nodeFetch:{kind:'SKIPPED'},lxNeedle:{kind:'SKIPPED'},
+  githubWorkerWire:{kind:'SKIPPED'}};
 if(origin){
   const request=inspectFlowerRequest(origin.url,origin.songmid,origin.quality,'kg');
   const tag=inspectFlowerTagShape(origin.headers);
@@ -91,6 +94,7 @@ if(origin){
   if(!evidence.tagPresentAndValid){
     evidence.nodeFetch={kind:'SKIPPED_SOURCE_SIGNATURE_SHAPE'};
     evidence.lxNeedle={kind:'SKIPPED_SOURCE_SIGNATURE_SHAPE'};
+    evidence.githubWorkerWire={kind:'SKIPPED_SOURCE_SIGNATURE_SHAPE'};
   } else {
   const headers=flowerRequestHeaders(origin.headers);
   // Preserve this source's current, validated signature on the one approved
@@ -117,17 +121,20 @@ if(origin){
       return inspectFlowerPayload(status,body);
     }catch{return {status:null,valid:false,kind:'CONNECT_OR_TIMEOUT'};}
   }
-  const [f,n]=await Promise.all([
+  const meta={source:'kg',songmid:origin.songmid,quality:'128k'};
+  const [f,n,w]=await Promise.all([
     fetchBounded(),
-    probeCanonicalFlowerWithDesktopNeedle(origin.url,{
-      source:'kg',songmid:origin.songmid,quality:'128k'
-    },origin.headers)
+    probeCanonicalFlowerWithDesktopNeedle(origin.url,meta,origin.headers),
+    probeFlowerCloudflareWireOnGithub(origin.url,meta,origin.headers)
   ]);
   evidence.nodeFetch=f;
   evidence.lxNeedle={status:n.status,valid:n.valid,kind:n.kind};
+  evidence.githubWorkerWire=w;
   evidence.transportComparison={
     sameStatus:f.status!=null&&f.status===n.status,
     sameKind:f.kind===n.kind,
+    workerWireMatchesNeedle:w.status!=null&&w.status===n.status,
+    workerWireMatchesFetch:w.status!=null&&w.status===f.status,
     pinnedLXNeedleRevision:LX_DESKTOP_NEEDLE_REF,
     // This does not prove identical network egress to a Windows Desktop.
     egress:'GITHUB_RUNNER_ONLY'
