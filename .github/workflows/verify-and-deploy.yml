@@ -59,6 +59,8 @@ jobs:
           node --check scripts/test-mobile-interaction-qa-browser.mjs
           node --check scripts/test-modern-flower-proxy.mjs
           node --check scripts/test-flower-cross-platform-live.mjs
+          node --check scripts/test-flower-audio-live.mjs
+          node --check scripts/flower-media-validation.mjs
           node --check scripts/flower-needle-parity.mjs
           node --check scripts/test-flower-needle-parity.mjs
           node --check scripts/flower-cross-platform-diagnostic.mjs
@@ -72,6 +74,7 @@ jobs:
           node scripts/test-lx-runtime-flower-md5.mjs
           node scripts/test-flower-needle-parity.mjs
           node scripts/test-flower-cross-platform-unit.mjs
+          node scripts/test-flower-media-validation-unit.mjs
           node scripts/test-flower-tcp-socket.mjs
           node scripts/test-music-library.mjs
           node scripts/test-music-lyrics.mjs
@@ -176,6 +179,12 @@ jobs:
         env:
           TEST_BASE_URL: https://only-testing-online-music.pages.dev
         run: node scripts/test-flower-cross-platform-live.mjs
+      - name: Real Flower KW/MG audio bytes and seek acceptance (informational)
+        continue-on-error: true
+        timeout-minutes: 4
+        env:
+          TEST_BASE_URL: https://only-testing-online-music.pages.dev
+        run: node scripts/test-flower-audio-live.mjs
       - name: Live QQ playlist keyword smoke (upstream diagnostic)
         continue-on-error: true
         run: |
