@@ -47,12 +47,13 @@ export function flowerRequestHeaders(input) {
     if(typeof value==='string'&&value.length<=200&&/^[\x20-\x7e]+$/.test(value))
       result[key]=value;
   }
-  // Original LX Desktop crypto.md5() returns a 32-char hex string, then
-  // buffer.bufToString(md5Text,'hex') encodes those ASCII bytes once more.
-  // Its real Flower signature is 64 hex chars, NOT 32.
-  // Only replay to the canonical approved origin, never arbitrary aliases.
+  // The production Flower source's real tag was measured as a 48-character
+  // hexadecimal string. This shape is authoritative; do not infer its
+  // generation algorithm from the runtime's independent MD5 utility.
+  // The caller MUST first inspectFlowerRequest() for the canonical IP/path.
+  // Never replay the tag to third-party DNS aliases or another provider.
   const tag=input && (input.tag??input.Tag??input.TAG);
-  if(typeof tag==='string' && /^[0-9a-f]{64}$/i.test(tag))
+  if(typeof tag==='string' && /^[0-9a-f]{48}$/i.test(tag))
     result.tag=tag;
   return result;
 }

@@ -18,7 +18,7 @@ const target=new URL('http://97.64.37.235/flower/v1/url/wy/test-song/128k');
 const request=new Request(origin+'/api/proxy?url='+encodeURIComponent(target.href),{
   headers:{Origin:origin,'X-LX-Headers':JSON.stringify({
     'User-Agent':'lx-music/desktop',ver:'2.0.0','source-ver':'1',
-    tag:'6162636465663031323334353637383961626364656630313233343536373839'
+    tag:'abcdef0123456789abcdef0123456789abcdef0123456789'
   })}
 });
 let writes=[],earlyCloseCount=0,closeCount=0;
@@ -33,7 +33,7 @@ function simulatedHttpSocket(responseText,options={}){
       assert.match(req,/Host: 97\.64\.37\.235/i);
       assert.match(req,/source-ver: 1/i);
       assert.match(req,/ver: 2\.0\.0/i);
-      assert.match(req,/tag: 6162636465663031323334353637383961626364656630313233343536373839/i);
+      assert.match(req,/tag: abcdef0123456789abcdef0123456789abcdef0123456789/i);
       if(options.noResponse){finish();return;}
       queueMicrotask(()=>{
         if(!closed)controller.enqueue(new TextEncoder().encode(responseText));

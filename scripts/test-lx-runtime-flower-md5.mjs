@@ -3,7 +3,8 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {runInNewContext} from 'node:vm';
 
-// Independent reference vectors for the Web LX runtime's signature MD5.
+// Independent reference vectors for the LX runtime's MD5 and buffer helpers.
+ // This DOES NOT prove Flower's live tag is an MD5 of a particular input.
 const src=readFileSync(new URL('../src/lx-runtime.js',import.meta.url),'utf8');
 const scope={window:{},Uint8Array,ArrayBuffer,TextEncoder,TextDecoder};
 runInNewContext(src,scope,{timeout:3000});
@@ -17,7 +18,7 @@ for(const value of ['', 'abc', 'message digest','宋冬野','477251491',
     'Flower signing MD5 does not match Node reference');
   assert.equal(runtime.utils.buffer.bufToString(originalMd5,'hex'),
     Buffer.from(originalMd5,'binary').toString('hex'),
-    'Flower tag must use original LX Desktop second-stage ASCII-to-hex encoding');
+    'LX runtime bufToString helper must match Node ASCII-to-hex encoding');
   assert.match(runtime.utils.buffer.bufToString(originalMd5,'hex'),/^[0-9a-f]{64}$/);
 }
 console.log('PASS LX runtime MD5 matches Node for ASCII, CJK, IDs and paths');
