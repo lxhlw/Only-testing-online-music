@@ -64,7 +64,7 @@ try{
      const result={source,kind:'NOT_CHECKED',approvedMediaHost:false,
        durationSeconds:null,started:false,playProgressSeconds:0,
        seekConfirmed:false,afterSeekProgressSeconds:0,prefixBytes:[],
-       rangeStatus:null,rangeBytes:0};
+       rangeStatus:null,rangeBytes:0,rangeFailure:'NOT_CHECKED',rangeMs:0};
      rows.push(result);
      const qualitys=sourceState.sources?.[source]?.qualitys||[];
      if(!qualitys.includes('128k')){result.kind='QUALITY_UNDECLARED';continue;}
@@ -96,6 +96,7 @@ try{
      // the production player's SSRF rules. Cancel response as soon as
      // enough bytes were read; metadata and URL are never logged.
      const controller=new AbortController();
+     const rangeStart=performance.now();
      const timer=setTimeout(()=>controller.abort(),9000);
      try{
        const resp=await fetch(location.origin+'/api/proxy?url='+
@@ -103,6 +104,7 @@ try{
            headers:{Range:'bytes=0-65535'},signal:controller.signal
          });
        result.rangeStatus=resp.status;
+       result.rangeFailure=resp.ok?'RESPONSE_OK':'HTTP_'+String(resp.status);
        if(resp.ok&&resp.body){
          const reader=resp.body.getReader();
          const prefix=[];
@@ -121,8 +123,15 @@ try{
          }finally{try{await reader.cancel();}catch{}}
          result.rangeBytes=count;
          result.prefixBytes=prefix;
-       }
-     }catch{}finally{clearTimeout(timer);controller.abort();}
+         result.rangeFailure=count>0?'SAMPLE_RECEIVED':'BODY_EMPTY';
+       }else if(resp.ok)result.rangeFailure='NO_RESPONSE_BODY';
+     }catch(error){
+       result.rangeFailure=controller.signal.aborted?'RANGE_ABORTED_OR_TIMEOUT':
+         'RANGE_NETWORK_FAILURE';
+     }finally{
+       result.rangeMs=Math.round(performance.now()-rangeStart);
+       clearTimeout(timer);controller.abort();
+     }
 
      // Direct HTTPS media uses the same browser path as the actual player;
      // HTTP media is routed through the site's existing HTTPS proxy.
