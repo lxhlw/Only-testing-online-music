@@ -5,6 +5,10 @@ const target='http://97.64.37.235/flower/v1/url/wy/12345/128k?tag=private';
 assert.equal(inspectFlowerRequest(target,'12345','128k').ok,true);
 assert.equal(inspectFlowerRequest(target,'other','128k').reason,'SONG_ID_MISMATCH');
 assert.equal(inspectFlowerRequest(target,'12345','320k').reason,'QUALITY_MISMATCH');
+for(const quality of ['320k','flac']){
+  assert.equal(inspectFlowerRequest(target.replace('/128k','/'+quality),'12345',quality).ok,true);
+}
+assert.equal(inspectFlowerRequest(target.replace('/128k','/unsupported'),'12345','unsupported').reason,'INVALID_QUALITY');
 assert.equal(inspectFlowerRequest(target.replace('97.64.37.235','127.0.0.1'),'12345','128k').ok,false);
 assert.equal(inspectFlowerRequest('http://example.com/flower/v1/url/wy/12345/128k','12345','128k').ok,false);
 assert.equal(inspectFlowerRequest('http://97.64.37.235/admin/wy/12345/128k','12345','128k').ok,false);
