@@ -61,6 +61,8 @@ async function fetchFlowerResolverViaSocket(target, request) {
   var socket = null;
   var writer = null;
   var timeoutId = null;
+  var socketStage = 'CONNECT';
+  var socketDiagnostic = '';
 
   try {
     var method = String(request.method || 'GET').toUpperCase();
@@ -72,7 +74,10 @@ async function fetchFlowerResolverViaSocket(target, request) {
       hostname: target.hostname,
       port: Number(target.port || 80)
     });
-
+    // A connect() socket can be created before the TCP handshake finishes.
+    // Identify connection failures separately from HTTP parse failures.
+    await socket.opened;
+    socketStage = 'WRITE';
     writer = socket.writable.getWriter();
 
     var forwarded = pickForwardHeaders(request);
@@ -96,9 +101,14 @@ async function fetchFlowerResolverViaSocket(target, request) {
       method + ' ' + path + ' HTTP/1.1\r\n' +
       requestHeaders.join('\r\n') + '\r\n\r\n'
     ));
-    await writer.close();
+    // HTTP/1.1 has complete headers already. Closing the write half before
+    // reading can prematurely terminate some servers or socket adapters.
+    // Release our writer lock instead; socket.close() in finally closes both
+    // directions after the response has been consumed.
+    writer.releaseLock();
     writer = null;
 
+    socketStage = 'READ';
     var responsePromise = readSocketBytes(socket);
     var timeoutPromise = new Promise(function (_, reject) {
       timeoutId = setTimeout(function () {
@@ -112,15 +122,23 @@ async function fetchFlowerResolverViaSocket(target, request) {
       timeoutId = null;
     }
 
+    socketStage = 'PARSE';
     var text = new TextDecoder('utf-8').decode(bytes);
     var headerEnd = text.indexOf('\r\n\r\n');
-    if (headerEnd < 0) throw new Error('Flower socket response missing HTTP headers');
+    if (headerEnd < 0) {
+      socketDiagnostic = 'FLOWER_SOCKET_MISSING_HTTP';
+      throw new Error('Flower socket response missing HTTP headers');
+    }
 
     var head = text.slice(0, headerEnd);
     var body = text.slice(headerEnd + 4);
     var lines = head.split('\r\n');
     var statusMatch = lines[0].match(/^HTTP\/\d(?:\.\d)?\s+(\d{3})\b/i);
     var status = statusMatch ? Number(statusMatch[1]) : 0;
+    if (!statusMatch) {
+      socketDiagnostic = 'FLOWER_SOCKET_INVALID_STATUS';
+      throw new Error('Flower socket returned invalid HTTP status line');
+    }
 
     var responseHeaders = {};
     for (var hi = 1; hi < lines.length; hi += 1) {
@@ -153,10 +171,11 @@ async function fetchFlowerResolverViaSocket(target, request) {
       });
     }
 
-    throw new Error(
-      'Flower socket HTTP ' + String(status || 'unknown') +
-      (body ? ': ' + String(body).slice(0, 180) : '')
-    );
+    socketDiagnostic = status < 200 || status >= 300
+      ? 'FLOWER_SOCKET_HTTP_' + String(status)
+      : 'FLOWER_SOCKET_NO_PAYLOAD';
+    // Never return raw upstream bodies: they can contain URLs or server info.
+    throw new Error('Flower socket did not return an accepted music URL');
   } catch (e) {
     if (timeoutId) {
       clearTimeout(timeoutId);
@@ -169,9 +188,13 @@ async function fetchFlowerResolverViaSocket(target, request) {
     }
 
     var message = e && e.message ? e.message : 'Unknown Flower socket error';
+    var diagnostic = socketDiagnostic ||
+      (/timed out|timeout/i.test(message) ? 'FLOWER_SOCKET_TIMEOUT'
+        : 'FLOWER_SOCKET_' + socketStage);
     return new Response(JSON.stringify({
       error: 'Flower socket resolver failed',
-      message: message
+      diagnostic: diagnostic,
+      message: 'Flower TCP ' + socketStage.toLowerCase() + ' stage unavailable'
     }), {
       status: 502,
       headers: Object.assign({'Content-Type': 'application/json; charset=utf-8'}, corsHeaders(request))
@@ -514,6 +537,8 @@ async function fetchFlowerResolverFast(target, request) {
   const outcomes=[];
   function classify(error){
     const text=String(error&&error.message||error||'');
+    if(/^FLOWER_SOCKET_(?:CONNECT|WRITE|READ|PARSE|TIMEOUT|MISSING_HTTP|INVALID_STATUS|NO_PAYLOAD|HTTP_[0-9]{3})$/.test(text))
+      return text;
     const http=text.match(/(?:Flower host HTTP|Flower socket HTTP)\s*(\d{3})/);
     if(http)return 'HTTP_'+http[1];
     if(/resolver payload|no usable|socket response missing/i.test(text))return 'INVALID_PAYLOAD';
@@ -548,7 +573,8 @@ async function fetchFlowerResolverFast(target, request) {
     if(response.status<200||response.status>=300){
       let body={};
       try{body=await response.json();}catch(e){}
-      throw new Error(String(body?.message||'Flower canonical socket unavailable'));
+      throw new Error(/^FLOWER_SOCKET_[A-Z0-9_]+$/.test(String(body?.diagnostic||''))
+        ? body.diagnostic : 'FLOWER_SOCKET_UNKNOWN');
     }
     return response;
   }).catch(error=>{

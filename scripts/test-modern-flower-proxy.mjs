@@ -75,7 +75,7 @@ try{
   assert.equal(failed.headers.get('Access-Control-Allow-Origin'),
     'https://only-testing-online-music.pages.dev');
   assert.equal(err.attempts.length,9,'Must record each allowed Flower route without leaking secrets');
-  assert.ok(err.attempts.every(x=>/^(HTTP_502|NETWORK_ERROR)$/.test(x.code)),
+  assert.ok(err.attempts.every(x=>/^(HTTP_502|NETWORK_ERROR|FLOWER_SOCKET_CONNECT)$/.test(x.code)),
     'Failures must use safe reason categories: '+JSON.stringify(err.attempts));
   assert.ok(calls.length<=8,'A failure must not enter the old serial/public-relay waterfall');
   console.log('PASS: Flower unavailable ends quickly with safe same-origin 502 and no unrelated providers');
