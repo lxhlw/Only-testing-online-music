@@ -94,7 +94,7 @@ try {
         hasVersion:!!headers.ver,
         hasSourceVersion:!!headers['source-ver'],
         hasSignedTag:tagShape.present,
-        signatureIs64Hex:tagShape.type==='string' && tagShape.length===64 && tagShape.hexOnly,
+        signatureIs48Hex:tagShape.type==='string' && tagShape.length===48 && tagShape.hexOnly,
         directReplayIncludedTag:!!headers.tag,
         tagShape
       };
