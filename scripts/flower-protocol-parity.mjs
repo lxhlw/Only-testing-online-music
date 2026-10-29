@@ -56,3 +56,27 @@ export function flowerRequestHeaders(input) {
     result.tag=tag;
   return result;
 }
+
+// Report only non-reversible metadata about the *actual* script-produced
+// signature. A tag can be a string, binary value or other LX-runtime object.
+// Never stringify the value itself in a report or emit prefixes/suffixes.
+export function inspectFlowerTagShape(headers) {
+  const raw=headers?.tag??headers?.Tag??headers?.TAG;
+  const present=raw!==undefined&&raw!==null;
+  const type=present?typeof raw:'missing';
+  const text=type==='string'?raw:null;
+  return {
+    present,
+    type,
+    isArray:Array.isArray(raw),
+    isUint8Array:typeof Uint8Array!=='undefined'&&raw instanceof Uint8Array,
+    length:text===null?null:text.length,
+    asciiOnly:text===null?null:/^[\x00-\x7f]*$/.test(text),
+    printableAscii:text===null?null:/^[\x20-\x7e]*$/.test(text),
+    hexOnly:text===null?null:/^[0-9a-f]+$/i.test(text),
+    base64Shape:text===null?null:/^[A-Za-z0-9+/]+={0,2}$/.test(text),
+    whitespacePresent:text===null?null:/\s/.test(text),
+    headerSafe:text===null?false: text.length>=1 &&
+      text.length<=512 && /^[\x20-\x7e]+$/.test(text)
+  };
+}
