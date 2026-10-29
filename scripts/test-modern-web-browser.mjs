@@ -110,6 +110,52 @@ try {
   }));
   await page.goto(url,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.LXSourceManager?.getActive()?.inited,{timeout:14000});
+  // LX Desktop uses Needle: a completed HTTP response at 404 or 502
+  // must be delivered as (err=null, {statusCode,body}, parsedBody),
+  // allowing custom scripts to inspect status and decide whether to retry.
+  // A true socket/network failure still invokes the error callback.
+  const originalTarget='http://97.64.37.235/flower/v1/url/wy/123456/128k';
+  const proxiedPattern='**/api/proxy?url=*';
+  const directRequest=()=>page.evaluate(async target=>new Promise(resolve=>{
+    const handler=window.LXSourceManager.getActive().runtime.request;
+    handler(target,{method:'GET',headers:{'source-ver':'1'}},(err,response,body)=>{
+      resolve({
+        error:err?String(err.message||err):null,
+        status:response?.statusCode??null,
+        textStatus:response?.statusMessage??null,
+        body,raw:response?.raw??null,
+        contentType:response?.headers?.['content-type']||null,
+        bytes:response?.bytes??null
+      });
+    });
+  }),originalTarget);
+  await page.route(proxiedPattern,route=>route.fulfill({
+    status:404,contentType:'application/json',
+    headers:{'x-lx-test':'signed-404'},
+    body:JSON.stringify({code:404,message:'upstream missing'})
+  }));
+  const notFound=await directRequest();
+  assert.equal(notFound.error,null,'LX callback must not turn HTTP 404 into transport error');
+  assert.equal(notFound.status,404);
+  assert.deepEqual(notFound.body,{code:404,message:'upstream missing'});
+  assert.equal(notFound.contentType,'application/json');
+  assert.ok(notFound.bytes>0);
+  await page.unroute(proxiedPattern);
+  await page.route(proxiedPattern,route=>route.fulfill({
+    status:502,contentType:'application/json',
+    body:JSON.stringify({diagnostic:'FLOWER_UPSTREAM_UNAVAILABLE'})
+  }));
+  const badGateway=await directRequest();
+  assert.equal(badGateway.error,null,'HTTP 502 is still a completed HTTP response to LX');
+  assert.equal(badGateway.status,502);
+  assert.equal(badGateway.body.diagnostic,'FLOWER_UPSTREAM_UNAVAILABLE');
+  await page.unroute(proxiedPattern);
+  await page.route(proxiedPattern,route=>route.abort('failed'));
+  const connectionFailed=await directRequest();
+  assert.equal(connectionFailed.status,null,'Network failures must not fabricate HTTP response');
+  assert.ok(connectionFailed.error,'Network failures must reject the request callback');
+  await page.unroute(proxiedPattern);
+  checks.push('desktop-needle-http-status-callback-parity');
   // NetEase cloudsearch can return ar/al/dt rather than artists/album/duration.
   // Check both correct Flower songmid AND expected seconds, not just titles.
   await page.route('**/api/netease-search?*',route=>route.fulfill({
@@ -132,7 +178,7 @@ try {
   await page.unroute('**/api/netease-search?*');
   checks.push('netease-id-artist-album-duration-parity');
   assert.equal(await page.locator('.brand').textContent(),'LX Music Web');
-  assert.equal(await page.locator('#app-version').textContent(),'v0.4.16');
+  assert.equal(await page.locator('#app-version').textContent(),'v0.4.17');
   assert.equal(await page.locator('#top-source-label').textContent(),'当前音源：野花🌷');
   assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(x=>x.name)),['野花🌷']);
   assert.equal(await page.locator('#legacy-media-panel').count(),0);

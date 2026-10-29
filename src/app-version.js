@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
   global.OnlyTestingMusicVersion = {
-    version: '0.4.16',
+    version: '0.4.17',
     releaseDate: '2026-10-29',
     name: 'Only Testing Online Music'
   };
