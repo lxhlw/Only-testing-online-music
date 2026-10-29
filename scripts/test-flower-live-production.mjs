@@ -36,9 +36,17 @@ try {
       return {phase:'resolve',success:/^https?:\/\//.test(String(url||'')),
         title:song.name,artist:song.singer,seconds:song.interval,
         idType:typeof song.songmid,source:'Flower',qualityRequested:'128k'};
-    }catch(err){return {phase:'resolve',success:false,
-      reason:String(err?.message||err).slice(0,220),
-      title:song.name,artist:song.singer,seconds:song.interval}};
+    }catch(err){
+      // Parse only the safe proxy diagnostics; signed request URLs are never
+      // printed by this production smoke.
+      let details={};
+      const message=String(err?.message||err);
+      try{details=JSON.parse(message.slice(message.indexOf('{')))}catch(e){}
+      return {phase:'resolve',success:false,
+        diagnostic:details.diagnostic||'UNKNOWN',
+        attempts:Array.isArray(details.attempts)?details.attempts:[],
+        title:song.name,artist:song.singer,seconds:song.interval};
+    }
   });
   if(result.reason)result.reason=result.reason.replace(/https?:\/\/[^\s"]+/g,'[redacted]');
   console.log('FLOWER LIVE PRODUCTION DIAGNOSTIC:',JSON.stringify({
