@@ -54,9 +54,38 @@ globalThis.__testFlowerConnect=()=>simulatedHttpSocket(http);
 let response=await fetchFlowerResolverViaSocket(target,request);
 assert.equal(response.status,200);
 assert.equal((await response.json()).data,'https://media.example.test/flower-song.mp3');
+const firstHeaders=writes[0].split('\r\n');
+assert.deepEqual(firstHeaders.filter(x=>/^Accept:/i.test(x)),['Accept: */*'],
+  'Only one Needle-compatible default Accept header is allowed');
+assert.equal(firstHeaders.filter(x=>/^Accept-Encoding:/i.test(x)).length,0,
+  'Needle default compressed=false sends no Accept-Encoding header');
+assert.equal(firstHeaders.filter(x=>/^Host:/i.test(x)).length,1);
+assert.equal(firstHeaders.filter(x=>/^tag:/i.test(x)).length,1);
 assert.equal(earlyCloseCount,0,'Must not prematurely close writable before reading HTTP response');
 assert.equal(closeCount,1,'Connection must be fully closed after response');
 console.log('PASS: real Flower HTTP/1.1 socket request retains write half until response');
+
+const withSourceAccept=new Request(origin+'/api/proxy?url='+encodeURIComponent(target.href),{
+  headers:{Origin:origin,Accept:'text/html',
+    'X-LX-Headers':JSON.stringify({
+      'User-Agent':'lx-music/desktop',ver:'2.0.0','source-ver':'1',
+      tag:'abcdef0123456789abcdef0123456789abcdef0123456789',
+      Accept:'application/vnd.flower+json',
+      'Accept-Encoding':'gzip'
+    })
+  }
+});
+globalThis.__testFlowerConnect=()=>simulatedHttpSocket(http);
+response=await fetchFlowerResolverViaSocket(target,withSourceAccept);
+assert.equal(response.status,200);
+const overrideHeaders=writes[writes.length-1].split('\r\n');
+assert.deepEqual(overrideHeaders.filter(x=>/^Accept:/i.test(x)),
+  ['Accept: application/vnd.flower+json'],
+  'Script Accept must supersede browser Accept without duplicate fields');
+assert.deepEqual(overrideHeaders.filter(x=>/^Accept-Encoding:/i.test(x)),
+  ['accept-encoding: gzip'],
+  'Only an explicit source Accept-Encoding may be forwarded');
+console.log('PASS: exact Needle-compatible Accept/encoding headers and source precedence');
 
 const chunks=['{"code":0,"data":"https://media.example.test/song.mp3"}'];
 const chunkBody=chunks.map(x=>Buffer.byteLength(x).toString(16)+'\r\n'+x+'\r\n').join('')+'0\r\n\r\n';
