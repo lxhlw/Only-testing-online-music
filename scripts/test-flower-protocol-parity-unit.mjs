@@ -15,8 +15,12 @@ assert.equal(inspectFlowerRequest('http://97.64.37.235/admin/wy/12345/128k','123
 assert.deepEqual(inspectFlowerPayload(404,'Not Found'),{valid:false,status:404,kind:'NON_JSON'});
 assert.equal(inspectFlowerPayload(200,JSON.stringify({code:0,data:'https://example.com/audio.mp3?token=private'})).valid,true);
 assert.equal(inspectFlowerPayload(200,JSON.stringify({code:404,data:'invalid'})).kind,'NONZERO_CODE');
+const signedTag='abcdef0123456789abcdef0123456789';
 assert.deepEqual(flowerRequestHeaders({Authorization:'secret',Cookie:'private',ver:'2.0.0',
-  'source-ver':'1','User-Agent':'lx-music/desktop'}),{
-    'User-Agent':'lx-music/desktop',ver:'2.0.0','source-ver':'1'
+  'source-ver':'1','User-Agent':'lx-music/desktop',tag:signedTag}),{
+    'User-Agent':'lx-music/desktop',ver:'2.0.0','source-ver':'1',tag:signedTag
   });
+for(const tag of ['x', '../../secret', 'BAD\r\nCookie:secret']){
+  assert.equal(Object.hasOwn(flowerRequestHeaders({tag}),'tag'),false);
+}
 console.log('PASS: canonical Flower route, songmid/quality parity and sanitized response classification');

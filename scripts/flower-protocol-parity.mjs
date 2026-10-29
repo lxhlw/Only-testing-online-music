@@ -47,5 +47,10 @@ export function flowerRequestHeaders(input) {
     if(typeof value==='string'&&value.length<=200&&/^[\x20-\x7e]+$/.test(value))
       result[key]=value;
   }
+  // Preserve Flower's real MD5 signature only for the already validated,
+  // canonical Flower IP. The caller must first check inspectFlowerRequest().
+  const tag=input && (input.tag??input.Tag??input.TAG);
+  if(typeof tag==='string' && /^[0-9a-f]{32}$/i.test(tag))
+    result.tag=tag;
   return result;
 }

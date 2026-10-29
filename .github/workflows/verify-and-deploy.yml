@@ -64,6 +64,7 @@ jobs:
           node scripts/test-proxy-security.mjs
           node scripts/test-modern-flower-proxy.mjs
           node scripts/test-flower-protocol-parity-unit.mjs
+          node scripts/test-lx-runtime-flower-md5.mjs
           node scripts/test-flower-cross-platform-unit.mjs
           node scripts/test-flower-tcp-socket.mjs
           node scripts/test-music-library.mjs
