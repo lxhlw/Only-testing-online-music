@@ -167,3 +167,15 @@ jobs:
           }
           console.log('Live QQ keyword search responded with',result.result.playlists.length,'playlists');
           NODE
+      - name: Live NetEase playlist catalog smoke (upstream diagnostic)
+        continue-on-error: true
+        run: |
+          node --input-type=module - <<'NODE'
+          const target='https://only-testing-online-music.pages.dev/api/netease-playlists?limit=20&offset=0';
+          const response=await fetch(target,{signal:AbortSignal.timeout(16000)});
+          const result=await response.json();
+          if(!response.ok || !Array.isArray(result?.result?.playlists)){
+            throw new Error('Live NetEase playlist catalog unavailable: HTTP '+response.status+' '+JSON.stringify(result).slice(0,250));
+          }
+          console.log('Live NetEase playlist catalog responded with',result.result.playlists.length,'playlists');
+          NODE
