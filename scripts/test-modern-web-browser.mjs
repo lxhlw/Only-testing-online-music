@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
+import {readFileSync} from 'node:fs';
+const expectedVersion=JSON.parse(readFileSync('version.json','utf8')).version;
 
 const url = process.env.TEST_BASE_URL || 'http://127.0.0.1:8788';
 const browser = await chromium.launch({headless:true,args:['--autoplay-policy=no-user-gesture-required']});
@@ -178,7 +180,7 @@ try {
   await page.unroute('**/api/netease-search?*');
   checks.push('netease-id-artist-album-duration-parity');
   assert.equal(await page.locator('.brand').textContent(),'LX Music Web');
-  assert.equal(await page.locator('#app-version').textContent(),'v0.4.18');
+  assert.equal(await page.locator('#app-version').textContent(),'v'+expectedVersion);
   assert.equal(await page.locator('#top-source-label').textContent(),'当前音源：野花🌷');
   assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(x=>x.name)),['野花🌷']);
   assert.equal(await page.locator('#legacy-media-panel').count(),0);
