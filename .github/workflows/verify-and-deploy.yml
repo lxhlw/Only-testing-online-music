@@ -7,6 +7,13 @@ on:
       - 'modern.css'
       - 'src/**'
       - 'scripts/test-modern-web-browser.mjs'
+      - 'scripts/test-version.mjs'
+      - 'scripts/test-chart-catalog.mjs'
+      - 'scripts/test-playlist-infinite-browser.mjs'
+      - 'scripts/test-mobile-interaction-qa-browser.mjs'
+      - 'package.json'
+      - 'version.json'
+      - 'settings.html'
       - 'functions/**'
       - '.github/workflows/verify-and-deploy.yml'
   push:
@@ -48,6 +55,8 @@ jobs:
           node --check scripts/test-playlist-infinite-browser.mjs
           node --check scripts/test-mobile-interaction-qa-browser.mjs
           node --check scripts/test-modern-flower-proxy.mjs
+      - name: Version metadata and cache-busting regression
+        run: node scripts/test-version.mjs
       - name: Security and local music library regression
         run: |
           node scripts/test-proxy-security.mjs

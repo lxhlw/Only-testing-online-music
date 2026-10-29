@@ -28,6 +28,7 @@ try{
   assert.deepEqual(tracks.map(x=>x.name),['第一首','第二首'],'Chart must reorder batch song details by trackIds');
   assert.equal(tracks[0].source,'wy');
   calls=[];
+  const qqSearchRequests=[];
   globalThis.fetch=async (u,options={})=>{
     const url=new URL(String(u));calls.push(url);
     assert.ok(['c.y.qq.com','u.y.qq.com'].includes(url.hostname),
@@ -36,15 +37,31 @@ try{
       assert.equal(url.pathname,'/cgi-bin/musicu.fcg');
       assert.equal(options.method,'POST');
       const query=JSON.parse(options.body)['music.search.SearchCgiService'];
+      assert.equal(query.module,'music.search.SearchCgiService');
+      assert.equal(query.method,'DoSearchForQQMusicDesktop');
       assert.equal(query.param.search_type,3);
-      assert.equal(query.param.query,'民谣');
-      assert.equal(query.param.page_num,2,'QQ keyword pagination must request next page');
-      return new Response(JSON.stringify({code:0,
-        'music.search.SearchCgiService':{code:0,data:{body:{songlist:{
-          totalnum:45,list:[{dissid:87654,dissname:'民谣精选',song_count:28,
-          creator:{name:'听友'},imgurl:'https://example.com/cover.png'}]
+      qqSearchRequests.push({term:query.param.query,page:query.param.page_num,limit:query.param.num_per_page});
+      if(query.param.query==='民谣'){
+        assert.equal(query.param.page_num,2,'QQ keyword pagination must request next page');
+        return new Response(JSON.stringify({code:0,
+          'music.search.SearchCgiService':{code:0,data:{body:{playlist:{
+            totalnum:45,list:[{dissid:87654,dissname:'民谣精选',song_count:28,
+            creator:{name:'听友'},imgurl:'https://example.com/cover.png'}]
+          }}}}
+        }));
+      }
+      if(query.param.query==='周杰伦')return new Response(JSON.stringify({code:0,
+        'music.search.SearchCgiService':{code:0,data:{body:{playlist:{
+          totalnum:1,list:[{dissid:9988,dissname:'周杰伦精选',song_count:12,creator:{name:'听友'}}]
         }}}}
       }));
+      if(query.param.query==='无结果')return new Response(JSON.stringify({code:0,
+        'music.search.SearchCgiService':{code:0,data:{body:{playlist:{totalnum:0,list:[]}}}}
+      }));
+      if(query.param.query==='超时测试'){
+        const error=new Error('simulated upstream timeout');error.name='AbortError';throw error;
+      }
+      throw Error('Unexpected QQ search term: '+query.param.query);
     }
     if(url.pathname.includes('fcg_myqq_toplist.fcg'))return new Response(JSON.stringify({data:{topList:[{id:26,topTitle:'QQ热歌榜'}]}}));
     if(url.pathname.includes('fcg_v8_toplist_cp.fcg'))return new Response(JSON.stringify({songlist:[{data:{songmid:'QQMid',songname:'QQ歌曲',singer:[{name:'艺人'}],album:{name:'专辑'}}}]}));
@@ -58,14 +75,31 @@ try{
   assert.deepEqual((await qChart.json()).songs.map(x=>x.source),['tx']);
   const qPlaylist=await qq({request:req('/api/qq-catalog?kind=playlist')});
   assert.equal((await qPlaylist.json()).result.playlists[0].id,'1234');
+  const beforeWhitespace=qqSearchRequests.length;
+  const qWhitespace=await qq({request:req('/api/qq-catalog?kind=playlist&s=%20%20')});
+  assert.equal((await qWhitespace.json()).result.playlists[0].id,'1234',
+    'Whitespace-only keyword should behave like an empty keyword');
+  assert.equal(qqSearchRequests.length,beforeWhitespace,'Whitespace-only query must not call search');
   const qDetail=await qq({request:req('/api/qq-catalog?kind=playlist&id=1234')});
   assert.equal((await qDetail.json()).songs[0].source,'tx');
   const qSearch=await qq({request:req('/api/qq-catalog?kind=playlist&s=%E6%B0%91%E8%B0%A3&offset=20&limit=20')});
-  assert.equal(qSearch.status,200,'Real QQ keyword search must not return 422');
+  assert.equal(qSearch.status,200,'QQ keyword search must not return 422');
   const qSearchBody=await qSearch.json();
   assert.equal(qSearchBody.result.playlists[0].name,'民谣精选');
   assert.equal(qSearchBody.result.playlists[0].source,'tx');
   assert.equal(qSearchBody.result.playlistCount,45);
+  const qOther=await qq({request:req('/api/qq-catalog?kind=playlist&s=%E5%91%A8%E6%9D%B0%E4%BC%A6&offset=0&limit=20')});
+  assert.equal(qOther.status,200,'Other Chinese keywords must also work');
+  assert.equal((await qOther.json()).result.playlists[0].name,'周杰伦精选');
+  const qNoResults=await qq({request:req('/api/qq-catalog?kind=playlist&s=%E6%97%A0%E7%BB%93%E6%9E%9C&offset=0&limit=20')});
+  assert.equal(qNoResults.status,200,'An empty result is not an upstream failure');
+  assert.deepEqual((await qNoResults.json()).result.playlists,[]);
+  const qRepeat=await qq({request:req('/api/qq-catalog?kind=playlist&s=%E6%B0%91%E8%B0%A3&offset=20&limit=20')});
+  assert.equal(qRepeat.status,200,'Repeated identical searches must remain safe');
+  assert.equal(qqSearchRequests.filter(x=>x.term==='民谣'&&x.page===2).length,2);
+  const qTimeout=await qq({request:req('/api/qq-catalog?kind=playlist&s=%E8%B6%85%E6%97%B6%E6%B5%8B%E8%AF%95')});
+  assert.equal(qTimeout.status,502);
+  assert.match((await qTimeout.json()).message,/请求超时/);
   assert.ok(calls.some(x=>x.hostname==='u.y.qq.com'),'Search requires the fixed, official QQ search host');
 }finally{globalThis.fetch=saved}
 console.log('PASS: NetEase chart full trackIds order, QQ catalog normalization, fixed hosts and validation');

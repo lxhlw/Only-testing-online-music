@@ -13,7 +13,7 @@ const tracks=Array.from({length:105},(_,i)=>({
 }))
 const requestLog=[]
 try{
-  for(const width of [1280,390]){
+  for(const width of [1280,768,424,390,360,320]){
     const page=await browser.newPage({viewport:{width,height:820}})
     const errors=[]
     page.on('pageerror',e=>errors.push(String(e)))
@@ -38,6 +38,15 @@ try{
     })
     try{
       await page.goto(base+'/',{waitUntil:'domcontentloaded'})
+      const initialGeometry=await page.evaluate(()=>({
+        viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,
+        bodyWidth:document.body.scrollWidth,
+        activeViews:[...document.querySelectorAll('.view-panel')].filter(n=>n.classList.contains('active')).length
+      }))
+      assert.ok(initialGeometry.documentWidth<=width+1&&initialGeometry.bodyWidth<=width+1,
+        'No horizontal overflow at '+width+'px: '+JSON.stringify(initialGeometry))
+      assert.equal(initialGeometry.activeViews,1,
+        'Only one main view may be active at '+width+'px: '+JSON.stringify(initialGeometry))
       if(width<741){
         await page.waitForFunction(()=>document.documentElement.classList.contains('mobile-shell-ready'))
         await page.locator('.mobile-menu-button').click()
@@ -94,6 +103,15 @@ try{
       await page.evaluate(()=>window.scrollTo(0,0))
       await page.locator('#playlist-featured .playlist-card').first().evaluate(e=>e.click())
       await page.waitForFunction(()=>document.querySelectorAll('#playlist-detail-songs .playlist-song-row').length>=50)
+      const detailGeometry=await page.evaluate(()=>({
+        viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,
+        bodyWidth:document.body.scrollWidth,
+        activeViews:[...document.querySelectorAll('.view-panel')].filter(n=>n.classList.contains('active')).length
+      }))
+      assert.ok(detailGeometry.documentWidth<=width+1&&detailGeometry.bodyWidth<=width+1,
+        'Playlist detail must not create horizontal overflow at '+width+'px: '+JSON.stringify(detailGeometry))
+      assert.equal(detailGeometry.activeViews,1,
+        'Playlist detail must not reveal multiple main views: '+JSON.stringify(detailGeometry))
       for(const total of [100,105]){
         await page.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight))
         await page.waitForFunction(n=>document.querySelectorAll('#playlist-detail-songs .playlist-song-row').length>=n,total,

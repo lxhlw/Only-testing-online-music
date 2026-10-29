@@ -63,7 +63,7 @@ function normalizeTrack(src){
 const qqDefaults={g_tk:'5381',uin:'0',inCharset:'utf8',outCharset:'utf-8',notice:'0',platform:'h5',needNewCode:'1'};
 export async function onRequestGet({request}){
  const q=new URL(request.url).searchParams,kind=q.get('kind')||'rank';
- const id=q.get('id')||'',term=safe(q.get('s')||'',60);
+ const id=q.get('id')||'',term=safe(q.get('s')||'',60).trim();
  const offset=Number(q.get('offset')||0);
  const limit=Math.min(50,Math.max(1,Math.floor(Number(q.get('limit')||20)||20)));
  if(!['rank','playlist'].includes(kind)||(!/^[0-9]{1,18}$/.test(id)&&id)||
