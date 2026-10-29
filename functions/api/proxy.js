@@ -475,8 +475,9 @@ async function fetchFlowerResolverViaHttpBridge(target, request) {
 // Fast path for the SAME Flower resolver, not a different playback provider.
 // Previously a failing TCP connection was awaited before many DNS/relay
 // addresses, turning a single musicUrl request into a long serial waterfall.
-// Race three published Flower host aliases and its canonical socket under one
-// strict deadline. Keep all original safety checks for every redirect.
+// Race Flower host aliases, public DNS aliases for that SAME canonical IP,
+// and the canonical socket under one strict deadline. Every hop still
+// passes SSRF/redirect validation and never changes playback provider.
 async function fetchFlowerResolverFast(target, request) {
   const operation = String(request.method || 'GET').toUpperCase();
   if (operation !== 'GET' && operation !== 'HEAD') {
@@ -499,33 +500,60 @@ async function fetchFlowerResolverFast(target, request) {
     if(val)flowerHeaders.set(key,val);
   }
   const endpoints = [
-    'http://ts.tempmusic.tk'+shortPath,
-    'http://tm.tempmusic.tk'+shortPath,
-    'https://ts.tempmusic.tk'+originalPath,
-    'https://tm.tempmusic.tk'+originalPath
+    ['ts-short','http://ts.tempmusic.tk'+shortPath],
+    ['tm-short','http://tm.tempmusic.tk'+shortPath],
+    ['ts-full','https://ts.tempmusic.tk'+originalPath],
+    ['tm-full','https://tm.tempmusic.tk'+originalPath],
+    // Cloudflare Workers fetch cannot target a bare IP. These DNS
+    // aliases resolve to Flower's original public IP (not another source).
+    ['sslip-short','http://97-64-37-235.sslip.io'+shortPath],
+    ['nip-short','http://97-64-37-235.nip.io'+shortPath],
+    ['sslip-full','http://97-64-37-235.sslip.io'+originalPath],
+    ['nip-full','http://97-64-37-235.nip.io'+originalPath]
   ];
-  const tasks = endpoints.map(async endpoint=>{
-    const upstream = await fetchSafeUpstream(endpoint,{
-      method:operation,
-      redirect:'manual',
-      signal:ctrl.signal,
-      headers:flowerHeaders
-    });
-    if(upstream.status<200 || upstream.status>=300)
-      throw new Error('Flower host HTTP '+upstream.status);
-    const text=await upstream.text();
-    const payload=extractFlowerResolverPayload(text);
-    if(!payload)throw new Error('Flower host returned no usable resolver payload');
-    return new Response(payload.body,{
-      status:200,
-      headers:{'Content-Type':payload.contentType,'Cache-Control':'no-store'}
-    });
+  const outcomes=[];
+  function classify(error){
+    const text=String(error&&error.message||error||'');
+    const http=text.match(/(?:Flower host HTTP|Flower socket HTTP)\s*(\d{3})/);
+    if(http)return 'HTTP_'+http[1];
+    if(/resolver payload|no usable|socket response missing/i.test(text))return 'INVALID_PAYLOAD';
+    if(/Blocked unsafe/i.test(text))return 'BLOCKED_TARGET';
+    if(/timeout|timed out|deadline/i.test(text))return 'TIMEOUT';
+    return 'NETWORK_ERROR';
+  }
+  const tasks = endpoints.map(async ([route,endpoint])=>{
+    try{
+      const upstream = await fetchSafeUpstream(endpoint,{
+        method:operation,
+        redirect:'manual',
+        signal:ctrl.signal,
+        headers:flowerHeaders
+      });
+      if(upstream.status<200 || upstream.status>=300)
+        throw new Error('Flower host HTTP '+upstream.status);
+      const text=await upstream.text();
+      const payload=extractFlowerResolverPayload(text);
+      if(!payload)throw new Error('Flower host returned no usable resolver payload');
+      return new Response(payload.body,{
+        status:200,
+        headers:{'Content-Type':payload.contentType,'Cache-Control':'no-store'}
+      });
+    }catch(error){
+      outcomes.push({route,code:classify(error)});
+      throw error;
+    }
   });
-  // Keep the original canonical endpoint as an equal competitor.
-  tasks.push(fetchFlowerResolverViaSocket(target,request).then(response=>{
-    if(response.status<200||response.status>=300)
-      throw new Error('Flower canonical socket unavailable');
+  // Original TCP origin competes with the DNS routes under the same budget.
+  tasks.push(fetchFlowerResolverViaSocket(target,request).then(async response=>{
+    if(response.status<200||response.status>=300){
+      let body={};
+      try{body=await response.json();}catch(e){}
+      throw new Error(String(body?.message||'Flower canonical socket unavailable'));
+    }
     return response;
+  }).catch(error=>{
+    outcomes.push({route:'canonical-socket',code:classify(error)});
+    throw error;
   }));
   let timer;
   try{
@@ -538,6 +566,9 @@ async function fetchFlowerResolverFast(target, request) {
       error:'Flower resolver unavailable',
       diagnostic:error && error.message==='Flower fast resolver deadline'
         ? 'FLOWER_TIMEOUT':'FLOWER_UPSTREAM_UNAVAILABLE',
+      // A bounded, non-sensitive summary of same-Flower connection routes.
+      // Never expose signed media URLs, upstream request headers or song IDs.
+      attempts:outcomes.slice(0,9),
       message:'The Flower upstream did not provide a playable address. It may be offline.'
     }),{
       status:502,
