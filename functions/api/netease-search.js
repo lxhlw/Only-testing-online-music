@@ -106,9 +106,11 @@ export async function onRequest(context) {
       slimSongs.push({
         id: song.id,
         name: song.name,
-        duration: song.duration || 0,
-        artists: Array.isArray(song.artists) ? song.artists : [],
-        album: song.album || {},
+        duration: song.duration || song.dt || 0,
+        artists: Array.isArray(song.artists) && song.artists.length
+          ? song.artists : (Array.isArray(song.ar) ? song.ar : []),
+        album: song.album && Object.keys(song.album).length
+          ? song.album : (song.al || {}),
         privilege: song.privilege || {}
       });
     }
