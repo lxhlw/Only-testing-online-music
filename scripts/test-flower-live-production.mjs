@@ -88,10 +88,15 @@ try {
     }catch{evidence.sourceScript={status:'PUBLISHED_UNAVAILABLE'};}
     if(inspected.ok){
       const headers=flowerRequestHeaders(privateOrigin.headers);
+      const rawTag=privateOrigin.headers && (privateOrigin.headers.tag||
+        privateOrigin.headers.Tag||privateOrigin.headers.TAG);
       evidence.sourceHeaders={
         hasUserAgent:!!headers['User-Agent'],
         hasVersion:!!headers.ver,
-        hasSourceVersion:!!headers['source-ver']
+        hasSourceVersion:!!headers['source-ver'],
+        hasSignedTag:typeof rawTag==='string' && rawTag.length>0,
+        signedTagValidMD5:typeof rawTag==='string' && /^[a-f0-9]{32}$/i.test(rawTag),
+        directReplayIncludedTag:!!headers.tag
       };
       try{
         const upstream=await fetch(raw,{method:'GET',headers,
