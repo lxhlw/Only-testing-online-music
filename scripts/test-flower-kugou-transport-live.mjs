@@ -85,7 +85,7 @@ if(origin){
     hexOnly:tag.hexOnly,headerSafe:tag.headerSafe
   };
   evidence.tagPresentAndValid=tag.type==='string' &&
-    tag.hexOnly && tag.length>=32 && tag.length<=128 &&
+    tag.hexOnly && tag.length>=2 && tag.length<=512 &&
     tag.length%2===0 && tag.headerSafe;
   assert.ok(request.ok,'Safe canonical Kugou request expected');
   if(!evidence.tagPresentAndValid){

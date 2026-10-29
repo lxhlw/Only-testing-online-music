@@ -26,14 +26,15 @@ export async function probeCanonicalFlowerWithDesktopNeedle(raw,meta,sourceHeade
   if(!request.ok)return {status:null,valid:false,kind:'REJECTED_NONCANONICAL'};
   const source=meta?.source||'wy';
   const headers=flowerRequestHeaders(sourceHeaders);
-  // Signature is opaque and can vary by platform/track. The 48-hex WY
-  // signature observed previously must not be assumed for Kugou. Only the
-  // exact current script-generated tag may be relayed, and ONLY to the
-  // verified canonical Flower IP/path. No third-party mirrors or redirects.
+  // The current Flower KG script generated a 142-hex opaque tag for Chengdu,
+  // versus the shorter WY shape. Never impose a guessed fixed size or hash
+  // algorithm: forward the CURRENT script-generated value, validated as
+  // bounded printable hex, exclusively to the canonical Flower IP/path.
+  // Never forward it to aliases, wildcard DNS routes or external relays.
   if(source==='kg'){
     const originalTag=sourceHeaders?.tag??sourceHeaders?.Tag??sourceHeaders?.TAG;
     if(typeof originalTag==='string' &&
-       /^[0-9a-f]{32,128}$/i.test(originalTag) &&
+       /^[0-9a-f]{2,512}$/i.test(originalTag) &&
        originalTag.length%2===0){
       headers.tag=originalTag;
     }
