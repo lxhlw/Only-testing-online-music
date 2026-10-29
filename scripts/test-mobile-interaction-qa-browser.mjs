@@ -6,7 +6,7 @@ const browser=await chromium.launch({headless:true})
 const favorite={id:'123',name:'我的收藏歌单',creator:'朋友',source:'wy',trackCount:65,coverImgUrl:''}
 const song=(i)=>({id:String(i+1),name:'收藏歌曲 '+(i+1),singer:'测试歌手',source:'wy',interval:180000})
 try{
- for(const width of [320,390,424]){
+ for(const width of [320,360,390,424]{
   const page=await browser.newPage({viewport:{width,height:820}})
   const errors=[]
   page.on('pageerror',e=>errors.push(String(e)))
