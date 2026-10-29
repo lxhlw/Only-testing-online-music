@@ -61,6 +61,8 @@ jobs:
           node --check scripts/test-flower-cross-platform-live.mjs
           node --check scripts/test-flower-correlated-live.mjs
           node --check scripts/test-flower-kugou-transport-live.mjs
+          node --check scripts/test-flower-kugou-quality-live.mjs
+          node --check scripts/flower-kugou-quality-parity.mjs
           node --check scripts/flower-raw-http1-parity.mjs
           node --check scripts/flower-egress-parity.mjs
           node --check scripts/flower-correlated-validation.mjs
@@ -83,6 +85,7 @@ jobs:
           node scripts/test-flower-raw-http1-parity-unit.mjs
           node scripts/test-music-search-native.mjs
           node scripts/test-flower-egress-parity-unit.mjs
+          node scripts/test-flower-kugou-quality-parity-unit.mjs
           node scripts/test-flower-cross-platform-unit.mjs
           node scripts/test-flower-correlated-validation-unit.mjs
           node scripts/test-flower-media-validation-unit.mjs
@@ -209,6 +212,12 @@ jobs:
         env:
           TEST_BASE_URL: https://only-testing-online-music.pages.dev
         run: node scripts/test-flower-kugou-transport-live.mjs
+      - name: Real Flower Kugou Chengdu live quality and source fingerprint parity (informational)
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          TEST_BASE_URL: https://only-testing-online-music.pages.dev
+        run: node scripts/test-flower-kugou-quality-live.mjs
       - name: Real Flower KW/MG audio bytes and seek acceptance (informational)
         continue-on-error: true
         timeout-minutes: 4
