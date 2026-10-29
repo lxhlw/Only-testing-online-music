@@ -5,6 +5,7 @@ import {inspectFlowerRequest,inspectFlowerPayload,flowerRequestHeaders,inspectFl
 import {probeCanonicalFlowerWithDesktopNeedle,LX_DESKTOP_NEEDLE_REF}
   from './flower-needle-parity.mjs';
 import {probeFlowerCloudflareWireOnGithub} from './flower-raw-http1-parity.mjs';
+import {summarizeFlowerCloudflareEgress} from './flower-egress-parity.mjs';
 
 // Real Flower-only Kugou Chengdu transport comparison, not a playback PASS.
 // Replays the exact canonical URL and its current script-generated signed
@@ -78,7 +79,8 @@ const {origin,...safe}=captured||{};
 const evidence={source:'Flower',track:'赵雷 / 成都',
   comparison:'same-signed-request-on-github-runner', ...safe,
   nodeFetch:{kind:'SKIPPED'},lxNeedle:{kind:'SKIPPED'},
-  githubWorkerWire:{kind:'SKIPPED'}};
+  githubWorkerWire:{kind:'SKIPPED'},
+  cloudflareSameSignature:{canonicalKind:'NOT_RUN'}};
 if(origin){
   const request=inspectFlowerRequest(origin.url,origin.songmid,origin.quality,'kg');
   const tag=inspectFlowerTagShape(origin.headers);
@@ -95,6 +97,7 @@ if(origin){
     evidence.nodeFetch={kind:'SKIPPED_SOURCE_SIGNATURE_SHAPE'};
     evidence.lxNeedle={kind:'SKIPPED_SOURCE_SIGNATURE_SHAPE'};
     evidence.githubWorkerWire={kind:'SKIPPED_SOURCE_SIGNATURE_SHAPE'};
+    evidence.cloudflareSameSignature={canonicalKind:'SKIPPED_SOURCE_SIGNATURE_SHAPE'};
   } else {
   const headers=flowerRequestHeaders(origin.headers);
   // Preserve this source's current, validated signature on the one approved
@@ -122,19 +125,45 @@ if(origin){
     }catch{return {status:null,valid:false,kind:'CONNECT_OR_TIMEOUT'};}
   }
   const meta={source:'kg',songmid:origin.songmid,quality:'128k'};
-  const [f,n,w]=await Promise.all([
+  // Pair all four transports in the same request window with the SAME
+  // source-script-generated signed URL and headers. This compares the
+  // Cloudflare Worker TCP egress to three clients on one GitHub runner,
+  // without adding an unauthenticated diagnostic endpoint.
+  async function cloudflareSameSignature(){
+    try{
+      const target=new URL('/api/proxy',base);
+      target.searchParams.set('url',origin.url);
+      const response=await fetch(target,{
+        method:'GET',redirect:'manual',signal:AbortSignal.timeout(14000),
+        headers:{Origin:new URL(base).origin,Accept:'application/json',
+          'X-LX-Headers':JSON.stringify(origin.headers)}
+      });
+      let parsed={};
+      try{parsed=await response.json();}catch{}
+      return summarizeFlowerCloudflareEgress(response.status,parsed);
+    }catch{
+      return {proxyStatus:null,canonicalStatus:null,
+        canonicalKind:'CLOUDFLARE_CONNECT_OR_TIMEOUT'};
+    }
+  }
+  const [f,n,w,c]=await Promise.all([
     fetchBounded(),
     probeCanonicalFlowerWithDesktopNeedle(origin.url,meta,origin.headers),
-    probeFlowerCloudflareWireOnGithub(origin.url,meta,origin.headers)
+    probeFlowerCloudflareWireOnGithub(origin.url,meta,origin.headers),
+    cloudflareSameSignature()
   ]);
   evidence.nodeFetch=f;
   evidence.lxNeedle={status:n.status,valid:n.valid,kind:n.kind};
   evidence.githubWorkerWire=w;
+  evidence.cloudflareSameSignature=c;
   evidence.transportComparison={
     sameStatus:f.status!=null&&f.status===n.status,
     sameKind:f.kind===n.kind,
     workerWireMatchesNeedle:w.status!=null&&w.status===n.status,
     workerWireMatchesFetch:w.status!=null&&w.status===f.status,
+    cloudflareVsRunnerStatusComparable:c.canonicalStatus!==null&&n.status!=null,
+    cloudflareVsRunnerStatusDifferent:c.canonicalStatus!==null&&n.status!=null&&
+      c.canonicalStatus!==n.status,
     pinnedLXNeedleRevision:LX_DESKTOP_NEEDLE_REF,
     // This does not prove identical network egress to a Windows Desktop.
     egress:'GITHUB_RUNNER_ONLY'
