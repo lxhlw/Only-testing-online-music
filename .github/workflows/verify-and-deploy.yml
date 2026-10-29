@@ -128,3 +128,42 @@ jobs:
           grep -Fq 'mobile-shell-ready' /tmp/lx-mobile-js
           curl -fsSL https://only-testing-online-music.pages.dev/src/modern-ui.js -o /tmp/lx-modern-ui.js
           grep -Fq 'mediaSession' /tmp/lx-modern-ui.js
+
+      - name: Verify deployed version metadata
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 https://only-testing-online-music.pages.dev/version.json -o /tmp/lx-production-version.json
+          node --input-type=module -e '
+            import fs from "node:fs";
+            import assert from "node:assert/strict";
+            const local = JSON.parse(fs.readFileSync("version.json", "utf8"));
+            const remote = JSON.parse(fs.readFileSync("/tmp/lx-production-version.json", "utf8"));
+            assert.equal(remote.version, local.version, "Production version must equal the release commit");
+            console.log("Production version verified:", remote.version);
+          '
+      - name: Install Chromium for production browser acceptance
+        run: npx playwright install chromium
+      - name: Browser acceptance against the actual Cloudflare Pages site
+        env:
+          TEST_BASE_URL: https://only-testing-online-music.pages.dev
+        run: |
+          set -euo pipefail
+          node scripts/test-modern-web-browser.mjs
+          node scripts/test-playlist-infinite-browser.mjs
+          node scripts/test-mobile-interaction-qa-browser.mjs
+      - name: Live QQ playlist keyword smoke (upstream diagnostic)
+        continue-on-error: true
+        run: |
+          node --input-type=module - <<'NODE'
+          const target = new URL('https://only-testing-online-music.pages.dev/api/qq-catalog');
+          target.searchParams.set('kind','playlist');
+          target.searchParams.set('s','民谣');
+          target.searchParams.set('limit','20');
+          const signal=AbortSignal.timeout(16000);
+          const response=await fetch(target,{signal,headers:{Accept:'application/json'}});
+          const result=await response.json();
+          if(!response.ok || !Array.isArray(result?.result?.playlists)){
+            throw new Error('Live QQ keyword search unavailable: HTTP '+response.status+' '+JSON.stringify(result).slice(0,250));
+          }
+          console.log('Live QQ keyword search responded with',result.result.playlists.length,'playlists');
+          NODE
