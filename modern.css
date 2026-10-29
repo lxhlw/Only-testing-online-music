@@ -1630,6 +1630,12 @@ html.modern-web #search-results>.search-song-row .song-artist{
   display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   max-width:100%;line-height:1.35
 }
+/* KG version disambiguation: album + duration on a third compact line. */
+html.modern-web #search-results>.search-song-row .song-version-meta{
+  color:#718979;font-size:10px;line-height:1.3;
+  display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:100%;font-variant-numeric:tabular-nums
+}
 html.modern-web #search-results>.search-song-row>.search-source{
   grid-column:3;grid-row:1;justify-self:end;
   margin:0;white-space:nowrap;font-size:10px

@@ -2680,6 +2680,25 @@
       var artist=document.createElement('span');artist.className='song-artist';
       artist.textContent=String(item.singer||'未知歌手');
       main.append(name,artist);
+      // Kugou may return several recordings with identical title/artist.
+      // Display the actual per-row album and duration so users can select
+      // the intended version; never silently reorder or auto-select results.
+      if(String(item.source||'').toLowerCase()==='kg'){
+        var album=String(item.albumName||item.album||'').trim();
+        var duration=String(item.interval||'').trim();
+        var details=[];
+        if(album)details.push('专辑：'+album.slice(0,64));
+        if(/^\d{1,3}:\d{2}$/.test(duration))details.push(duration);
+        if(details.length){
+          var versionMeta=document.createElement('small');
+          versionMeta.className='song-version-meta';
+          versionMeta.textContent=details.join(' · ');
+          var trackId=String(item.songmid||item.id||'');
+          if(/^\d{1,20}$/.test(trackId))
+            versionMeta.title='酷狗音频 ID：'+trackId;
+          main.appendChild(versionMeta);
+        }
+      }
       var source=document.createElement('small');
       source.className='search-source';
       source.textContent=String(CHANNEL_NAMES[item.source]||item.source||'');

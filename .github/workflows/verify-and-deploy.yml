@@ -62,6 +62,7 @@ jobs:
           node --check scripts/test-flower-correlated-live.mjs
           node --check scripts/test-flower-kugou-transport-live.mjs
           node --check scripts/test-flower-kugou-quality-live.mjs
+          node --check scripts/test-flower-kugou-variants-live.mjs
           node --check scripts/flower-kugou-quality-parity.mjs
           node --check scripts/flower-raw-http1-parity.mjs
           node --check scripts/flower-egress-parity.mjs
@@ -144,7 +145,7 @@ jobs:
           set -euo pipefail
           READY=0
           for i in {1..12}; do
-            if curl -fsSL 'https://only-testing-online-music.pages.dev/?v=0.4.19' -o /tmp/lx-modern-index.html && grep -Fq 'modern.css?v=0.4.19' /tmp/lx-modern-index.html; then
+            if curl -fsSL 'https://only-testing-online-music.pages.dev/?v=0.4.20' -o /tmp/lx-modern-index.html && grep -Fq 'modern.css?v=0.4.20' /tmp/lx-modern-index.html; then
               READY=1
               break
             fi
@@ -218,6 +219,12 @@ jobs:
         env:
           TEST_BASE_URL: https://only-testing-online-music.pages.dev
         run: node scripts/test-flower-kugou-quality-live.mjs
+      - name: Real Flower Kugou Chengdu all matching recordings matrix (informational)
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          TEST_BASE_URL: https://only-testing-online-music.pages.dev
+        run: node scripts/test-flower-kugou-variants-live.mjs
       - name: Real Flower KW/MG audio bytes and seek acceptance (informational)
         continue-on-error: true
         timeout-minutes: 4
