@@ -55,6 +55,8 @@ jobs:
           node --check scripts/test-playlist-infinite-browser.mjs
           node --check scripts/test-mobile-interaction-qa-browser.mjs
           node --check scripts/test-modern-flower-proxy.mjs
+          node --check scripts/test-flower-cross-platform-live.mjs
+          node --check scripts/flower-cross-platform-diagnostic.mjs
       - name: Version metadata and cache-busting regression
         run: node scripts/test-version.mjs
       - name: Security and local music library regression
@@ -62,6 +64,7 @@ jobs:
           node scripts/test-proxy-security.mjs
           node scripts/test-modern-flower-proxy.mjs
           node scripts/test-flower-protocol-parity-unit.mjs
+          node scripts/test-flower-cross-platform-unit.mjs
           node scripts/test-flower-tcp-socket.mjs
           node scripts/test-music-library.mjs
           node scripts/test-music-lyrics.mjs
@@ -161,6 +164,11 @@ jobs:
         env:
           TEST_BASE_URL: https://only-testing-online-music.pages.dev
         run: node scripts/test-flower-live-production.mjs
+      - name: Real Flower multi-platform song resolver matrix (informational)
+        continue-on-error: true
+        env:
+          TEST_BASE_URL: https://only-testing-online-music.pages.dev
+        run: node scripts/test-flower-cross-platform-live.mjs
       - name: Live QQ playlist keyword smoke (upstream diagnostic)
         continue-on-error: true
         run: |
