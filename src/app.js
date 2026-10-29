@@ -1402,11 +1402,10 @@
     var fastRaceTimer = null;
     var fastRaceStarted = false;
     var flowerFailed = '';
-    var fastEnabled = MODERN_WEB && !playbackState.forceFullResolve &&
-      !!(active && String(active.url || '').indexOf('pdone/lx-music-source/main/flower/latest.js') >= 0 &&
-      active.inited && active.runtime &&
-      active.sources && active.sources[source] &&
-      global.LXMusicSearch && typeof global.LXMusicSearch.resolveMusicUrlFast === 'function');
+    // Web playback is Flower-only. Native/Huibq/GD resolvers are DIFFERENT
+    // providers even when they resolve the same search platform; never race
+    // them silently or attribute their media to Flower.
+    var fastEnabled = false;
 
     function isCurrentAttempt() {
       return token === playbackToken &&
@@ -1446,23 +1445,33 @@
       return 'GD Studio 平台兜底';
     }
 
+    function isFlowerOutage(reason) {
+      return /Flower resolver unavailable|Flower fast resolver deadline|Flower resolver did not return a valid music address|FLOWER_(?:UPSTREAM_UNAVAILABLE|TIMEOUT)|野花音源上游不可用/i
+        .test(String(reason || ''));
+    }
+
     function runFallback(reason) {
       if (!isCurrentAttempt() || !finishAttempt()) return;
+      var sourceUnavailable = MODERN_WEB && isFlowerOutage(reason);
 
-      if (MODERN_WEB && settings.autoFallback && index + 1 < plan.length) {
+      // Downgrading bitrate cannot recover an unreachable Flower server;
+      // preserve quality fallback for track/quality-specific failures.
+      if (MODERN_WEB && settings.autoFallback && !sourceUnavailable && index + 1 < plan.length) {
         playbackState.qualityFallbackReason=String(reason||'高音质解析未成功').slice(0,110);
         setStatus('已请求 '+escapeHtml(quality)+'，但解析失败；现按允许降级的设置改试 '+
           escapeHtml(plan[index+1])+'。原因：'+escapeHtml(playbackState.qualityFallbackReason),'warn');
         return requestQuality(music,source,musicInfo,plan,index+1,token);
       }
       if (NATIVE_COMPANION || MODERN_WEB) {
-        setStatus('当前歌曲暂未取得播放地址：' + escapeHtml(reason || '解析失败') +
-          (MODERN_WEB ? '。野花与同平台备用解析均未成功。' : '。'), 'fail');
+        setStatus(sourceUnavailable
+          ? '野花音源服务器当前无法返回播放地址（HTTP 502）。歌曲搜索仍可使用；本次已停止解析，不会擅自换用其他音源。'
+          : '当前歌曲暂未取得播放地址：' + escapeHtml(reason || '解析失败') +
+            (MODERN_WEB ? '。仅使用野花音源，未尝试其他播放源。' : '。'), 'fail');
         if (MODERN_WEB) {
           var retry = document.createElement('button');
           retry.type = 'button';
           retry.className = 'secondary';
-          retry.textContent = '重试这首歌';
+          retry.textContent = sourceUnavailable ? '稍后重试' : '重试这首歌';
           retry.onclick = function(){ if(token===playbackToken) testMusic(music,false); };
           statusEl.appendChild(retry);
         }
@@ -1553,11 +1562,9 @@
       + ' ' + escapeHtml(quality) + '：' + escapeHtml(music.name) + '……'
     );
 
-    // Flower's imported LX source is authoritative for a Flower track.
-    // Do not race native/aggregate resolvers against it: an independently
-    // resolved URL can be stale or protected even when the exact Flower result
-    // is playable in LX Music. The timeout below still falls back to the same
-    // channel's native resolver when the Flower source cannot respond.
+    // Flower's imported LX source is the only web playback resolver.
+    // Search platform selection never grants permission to switch the
+    // playback provider. Failure is reported, never replaced silently.
     if (!active || !active.inited || !active.runtime ||
         !active.sources || !active.sources[source]) {
       if (NATIVE_COMPANION || MODERN_WEB) {

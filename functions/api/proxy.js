@@ -527,10 +527,13 @@ async function fetchFlowerResolverFast(target, request) {
   }catch(error){
     return new Response(JSON.stringify({
       error:'Flower resolver unavailable',
-      message:'The Flower resolver did not return a valid music address within 9 seconds'
+      diagnostic:error && error.message==='Flower fast resolver deadline'
+        ? 'FLOWER_TIMEOUT':'FLOWER_UPSTREAM_UNAVAILABLE',
+      message:'The Flower upstream did not provide a playable address. It may be offline.'
     }),{
       status:502,
-      headers:Object.assign({'Content-Type':'application/json; charset=utf-8'},corsHeaders(request))
+      headers:Object.assign({'Content-Type':'application/json; charset=utf-8',
+        'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'},corsHeaders(request))
     });
   }finally{
     clearTimeout(timer);

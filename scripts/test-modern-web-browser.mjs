@@ -111,7 +111,7 @@ try {
   await page.goto(url,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.LXSourceManager?.getActive()?.inited,{timeout:14000});
   assert.equal(await page.locator('.brand').textContent(),'LX Music Web');
-  assert.equal(await page.locator('#app-version').textContent(),'v0.4.10');
+  assert.equal(await page.locator('#app-version').textContent(),'v0.4.11');
   assert.equal(await page.locator('#top-source-label').textContent(),'当前音源：野花🌷');
   assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(x=>x.name)),['野花🌷']);
   assert.equal(await page.locator('#legacy-media-panel').count(),0);
@@ -201,25 +201,33 @@ try {
     'Media may stream directly over HTTPS or use the protected first-party proxy');
   assert.equal(state.title,'成都');
 
-  // A live Flower upstream can fail. Verify that one same-platform
-  // replacement resolves without installing a second LX source script.
+  // Provider-wide failure must never trigger a hidden native/GD/Huibq
+  // replacement or a redundant second quality request.
   await page.evaluate(()=>{
     window.__fallbackCalls=0;
-    window.LXSourceManager.requestAction=(source,action,params,done)=>
-      done(new Error('Flower upstream temporarily unavailable'));
+    window.__outageQualityRequests=[];
+    window.LXSourceManager.requestAction=(source,action,params,done)=>{
+      window.__outageQualityRequests.push(params.type);
+      done(new Error('HTTP 502: {"error":"Flower resolver unavailable"}'));
+    };
     window.LXMusicSearch.resolveMusicUrlFast=(source,musicInfo,quality,done)=>{
       window.__fallbackCalls++;
-      done(null,{url:'https://media.example.test/song.wav?id=backup',provider:'netease-native'});
+      done(null,{url:'https://media.example.test/song.wav?id=forbidden',provider:'netease-native'});
     };
     window.OnlyTestingMusicApp.playMusic({
-      id:'backup-test',songmid:'backup-test',name:'备用解析验证',singer:'测试',
+      id:'backup-test',songmid:'backup-test',name:'野花服务不可用验证',singer:'测试',
       source:'wy',interval:8
     });
   });
-  await page.waitForFunction(()=>window.__fallbackCalls===1 && window.__audioPlayCalls>=2,{timeout:5000});
-  assert.equal(await page.locator('#player-title').textContent(),'备用解析验证');
+  await page.waitForFunction(()=>document.querySelector('#status')?.textContent.includes('野花音源服务器当前无法返回播放地址'),{timeout:5000});
+  assert.equal(await page.evaluate(()=>window.__fallbackCalls),0,
+    'Flower-only mode must never call another provider');
+  assert.deepEqual(await page.evaluate(()=>window.__outageQualityRequests),['320k'],
+    'Outage must stop before a redundant 128k retry');
+  assert.equal(await page.evaluate(()=>document.getElementById('audio').getAttribute('src')),null);
+  assert.equal(await page.locator('#status').textContent().then(s=>s.includes('稍后重试')),true);
   assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(s=>s.name)),['野花🌷']);
-  checks.push('Flower-failure-recovery');
+  checks.push('Flower-only-outage-no-provider-switch');
   await page.evaluate(()=>{
     window.__qualityTypes=[];
     window.LXSourceManager.requestAction=(source,action,params,done)=>{
@@ -232,7 +240,7 @@ try {
       id:'fallback-quality',songmid:'fallback-quality',name:'音质降级测试',singer:'测试歌手',source:'wy',interval:8
     });
   });
-  await page.waitForFunction(()=>window.__qualityTypes.includes('128k')&&window.__audioPlayCalls>=3,{timeout:6000});
+  await page.waitForFunction(()=>window.__qualityTypes.includes('128k')&&window.__audioPlayCalls>=2,{timeout:6000});
   assert.deepEqual(await page.evaluate(()=>window.__qualityTypes.slice(0,2)),['320k','128k'],
     'Automatic must try 320k first, then a single low-bitrate fallback');
   checks.push('bounded-quality-fallback');
@@ -610,5 +618,5 @@ try {
   checks.push('320-390-424px-no-overflow-and-drawer-keyboard');
 
   checks.push('mobile');
-  console.log('PASS modern-web:',checks.join(', '),'Flower-first recovery, bounded playback and responsive library');
+  console.log('PASS modern-web:',checks.join(', '),'Flower-only outage reporting, bounded playback and responsive library');
 }finally{await browser.close()}

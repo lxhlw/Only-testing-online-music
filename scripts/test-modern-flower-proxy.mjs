@@ -44,6 +44,8 @@ try{
   assert.equal(failed.status,502);
   const err=await failed.json();
   assert.equal(err.error,'Flower resolver unavailable');
+  assert.equal(err.diagnostic,'FLOWER_UPSTREAM_UNAVAILABLE');
+  assert.equal(failed.headers.get('Cache-Control'),'no-store');
   assert.equal(failed.headers.get('Access-Control-Allow-Origin'),
     'https://only-testing-online-music.pages.dev');
   assert.ok(calls.length<=4,'A failure must not enter the old serial/public-relay waterfall');
