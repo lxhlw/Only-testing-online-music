@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {chromium} from 'playwright';
+import {inspectFlowerRequest,inspectFlowerPayload,flowerRequestHeaders} from './flower-protocol-parity.mjs';
 
 // Non-blocking production diagnostic: unlike mocked playback tests, this
 // calls the actual Flower source script via the deployed Cloudflare proxy.
@@ -28,6 +30,19 @@ try {
     if(!state.sources?.wy?.qualitys?.includes('128k'))return {
       phase:'quality',error:'Flower did not declare WY 128k'};
     const musicInfo={...song,...song.raw,source:'wy',songmid:song.songmid};
+    // Keep raw request material private to this CI process. The public
+    // diagnostic contains only the route shape and comparison outcomes.
+    const privateOrigin=()=>{
+      const calls=state.runtime?.__debugRequests||[];
+      const entry=[...calls].reverse().find(x=>{
+        try {
+          const u=new URL(x.url);
+          return u.hostname==='97.64.37.235' && u.pathname.startsWith('/flower/v1/url/');
+        }catch{return false;}
+      });
+      return {url:entry?.url||'',headers:entry?.headers||{},
+        songmid:song.songmid,quality:'128k',script:state.code||''};
+    };
     try{
       const url=await new Promise((resolve,reject)=>window.LXSourceManager.requestAction(
         'wy','musicUrl',{type:'128k',musicInfo},(err,data)=>
@@ -35,7 +50,8 @@ try {
       ));
       return {phase:'resolve',success:/^https?:\/\//.test(String(url||'')),
         title:song.name,artist:song.singer,seconds:song.interval,
-        idType:typeof song.songmid,source:'Flower',qualityRequested:'128k'};
+        idType:typeof song.songmid,source:'Flower',qualityRequested:'128k',
+        privateOrigin:privateOrigin()};
     }catch(err){
       // Parse only the safe proxy diagnostics; signed request URLs are never
       // printed by this production smoke.
@@ -45,12 +61,61 @@ try {
       return {phase:'resolve',success:false,
         diagnostic:details.diagnostic||'UNKNOWN',
         attempts:Array.isArray(details.attempts)?details.attempts:[],
-        title:song.name,artist:song.singer,seconds:song.interval};
+        title:song.name,artist:song.singer,seconds:song.interval,
+        privateOrigin:privateOrigin()};
     }
   });
-  if(result.reason)result.reason=result.reason.replace(/https?:\/\/[^\s"]+/g,'[redacted]');
+  // A real same-request comparison isolates Cloudflare egress from
+  // protocol/ID mismatch. The signed URL and source script never enter logs.
+  const {privateOrigin,...safeResult}=result;
+  const evidence={};
+  if(privateOrigin){
+    const raw=String(privateOrigin.url||'');
+    const inspected=inspectFlowerRequest(raw,privateOrigin.songmid,privateOrigin.quality);
+    evidence.request=inspected;
+    const localScript=String(privateOrigin.script||'');
+    try{
+      const latest=await fetch('https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js',
+        {signal:AbortSignal.timeout(9000),redirect:'error'});
+      if(!latest.ok)throw Error('latest fetch failed');
+      const published=await latest.text();
+      evidence.sourceScript={
+        matchesPublished:createHash('sha256').update(localScript).digest('hex')===
+          createHash('sha256').update(published).digest('hex'),
+        loadedBytes:Buffer.byteLength(localScript),
+        publishedBytes:Buffer.byteLength(published)
+      };
+    }catch{evidence.sourceScript={status:'PUBLISHED_UNAVAILABLE'};}
+    if(inspected.ok){
+      const headers=flowerRequestHeaders(privateOrigin.headers);
+      evidence.sourceHeaders={
+        hasUserAgent:!!headers['User-Agent'],
+        hasVersion:!!headers.ver,
+        hasSourceVersion:!!headers['source-ver']
+      };
+      try{
+        const upstream=await fetch(raw,{method:'GET',headers,
+          redirect:'manual',signal:AbortSignal.timeout(10000)});
+        const status=upstream.status;
+        let data='',reader=upstream.body?.getReader(),count=0;
+        if(reader){
+          try{
+            while(count<16384){
+              const chunk=await reader.read();
+              if(chunk.done)break;
+              const bytes=chunk.value||new Uint8Array();
+              data+=new TextDecoder().decode(bytes.slice(0,16384-count));
+              count+=bytes.length;
+              if(count>=16384)break;
+            }
+          }finally{try{await reader.cancel();}catch{}}
+        }
+        evidence.githubRunnerOrigin=inspectFlowerPayload(status,data);
+      }catch{evidence.githubRunnerOrigin={kind:'CONNECT_OR_TIMEOUT',valid:false};}
+    }else evidence.githubRunnerOrigin={kind:'SKIPPED_UNSAFE_OR_MISMATCHED'};
+  }
   console.log('FLOWER LIVE PRODUCTION DIAGNOSTIC:',JSON.stringify({
-    ...result,proxyFailures:upstream
+    ...safeResult,proxyFailures:upstream,protocolComparison:evidence
   }));
   assert.equal(result.phase,'resolve','Real search metadata must be complete before Flower resolution');
   assert.equal(result.success,true,'Flower must return an actual media URL; mocked fixtures do not count');

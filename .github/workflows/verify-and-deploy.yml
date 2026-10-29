@@ -61,6 +61,7 @@ jobs:
         run: |
           node scripts/test-proxy-security.mjs
           node scripts/test-modern-flower-proxy.mjs
+          node scripts/test-flower-protocol-parity-unit.mjs
           node scripts/test-flower-tcp-socket.mjs
           node scripts/test-music-library.mjs
           node scripts/test-music-lyrics.mjs
@@ -113,7 +114,7 @@ jobs:
           set -euo pipefail
           READY=0
           for i in {1..12}; do
-            if curl -fsSL 'https://only-testing-online-music.pages.dev/?v=0.4.14' -o /tmp/lx-modern-index.html && grep -Fq 'modern.css?v=0.4.14' /tmp/lx-modern-index.html; then
+            if curl -fsSL 'https://only-testing-online-music.pages.dev/?v=0.4.15' -o /tmp/lx-modern-index.html && grep -Fq 'modern.css?v=0.4.15' /tmp/lx-modern-index.html; then
               READY=1
               break
             fi
