@@ -59,6 +59,8 @@ jobs:
           node --check scripts/test-mobile-interaction-qa-browser.mjs
           node --check scripts/test-modern-flower-proxy.mjs
           node --check scripts/test-flower-cross-platform-live.mjs
+          node --check scripts/flower-needle-parity.mjs
+          node --check scripts/test-flower-needle-parity.mjs
           node --check scripts/flower-cross-platform-diagnostic.mjs
       - name: Version metadata and cache-busting regression
         run: node scripts/test-version.mjs
@@ -68,6 +70,7 @@ jobs:
           node scripts/test-modern-flower-proxy.mjs
           node scripts/test-flower-protocol-parity-unit.mjs
           node scripts/test-lx-runtime-flower-md5.mjs
+          node scripts/test-flower-needle-parity.mjs
           node scripts/test-flower-cross-platform-unit.mjs
           node scripts/test-flower-tcp-socket.mjs
           node scripts/test-music-library.mjs
