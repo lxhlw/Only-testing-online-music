@@ -3,6 +3,10 @@ import {inspectFlowerRequest,inspectFlowerPayload,flowerRequestHeaders,inspectFl
   from './flower-protocol-parity.mjs';
 const target='http://97.64.37.235/flower/v1/url/wy/12345/128k?tag=private';
 assert.equal(inspectFlowerRequest(target,'12345','128k').ok,true);
+const kugouRequest='http://97.64.37.235/flower/v1/url/kg/ABCDEF0123456789ABCDEF0123456789/128k';
+assert.equal(inspectFlowerRequest(kugouRequest,'ABCDEF0123456789ABCDEF0123456789','128k','kg').ok,true);
+assert.equal(inspectFlowerRequest(kugouRequest,'ABCDEF0123456789ABCDEF0123456789','128k','wy').ok,false);
+assert.equal(inspectFlowerRequest(kugouRequest,'ABCDEF0123456789ABCDEF0123456789','128k','wrong').ok,false);
 assert.equal(inspectFlowerRequest(target,'other','128k').reason,'SONG_ID_MISMATCH');
 assert.equal(inspectFlowerRequest(target,'12345','320k').reason,'QUALITY_MISMATCH');
 for(const quality of ['320k','flac']){

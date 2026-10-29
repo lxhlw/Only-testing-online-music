@@ -2,7 +2,7 @@
 // signed query values, or raw upstream responses are ever logged.
 const CANONICAL = '97.64.37.235';
 const VALID_QUALITY = new Set(['128k','320k','flac','flac24bit']);
-export function inspectFlowerRequest(input, songmid, quality) {
+export function inspectFlowerRequest(input, songmid, quality, source='wy') {
   let target;
   try { target = new URL(String(input||'')); } catch {return {ok:false,reason:'INVALID_URL'};}
   if(target.protocol!=='http:'||target.hostname!==CANONICAL||
@@ -10,7 +10,8 @@ export function inspectFlowerRequest(input, songmid, quality) {
     return {ok:false,reason:'NOT_CANONICAL_ORIGIN'};
   const parts=target.pathname.split('/').filter(Boolean);
   const route=parts.slice(0,4).join('/');
-  if(route!=='flower/v1/url/wy'||parts.length!==6)
+  if(!['wy','tx','kg','kw','mg'].includes(source)||
+    route!=='flower/v1/url/'+source||parts.length!==6)
     return {ok:false,reason:'INVALID_ROUTE',shape:{route,segmentCount:parts.length}};
   let id;
   try{id=decodeURIComponent(parts[4]);}catch{return {ok:false,reason:'INVALID_SONG_ID'};}

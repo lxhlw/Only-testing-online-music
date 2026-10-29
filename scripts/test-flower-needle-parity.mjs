@@ -16,6 +16,15 @@ assert.equal((await probeCanonicalFlowerWithDesktopNeedle(
   'http://97.64.37.235/flower/v1/url/wy/12345/128k',
   {songmid:'12345',quality:'128k'},{tag:'invalid'})).kind,'MISSING_VALID_TAG');
 
+assert.equal((await probeCanonicalFlowerWithDesktopNeedle(
+  'http://97.64.37.235/flower/v1/url/kg/ABCDEF0123456789ABCDEF0123456789/128k',
+  {source:'kg',songmid:'ABCDEF0123456789ABCDEF0123456789',quality:'128k'},
+  {tag:'invalid'})).kind,'MISSING_VALID_TAG');
+assert.equal((await probeCanonicalFlowerWithDesktopNeedle(
+  'http://97.64.37.235/flower/v1/url/wy/ABCDEF0123456789ABCDEF0123456789/128k',
+  {source:'kg',songmid:'ABCDEF0123456789ABCDEF0123456789',quality:'128k'},
+  {tag})).kind,'REJECTED_NONCANONICAL');
+
 // Loopback test runs only in GitHub Actions. It verifies the real pinned
 // Needle stack actually transmits source headers and does not follow a
 // redirect to any second host, without hitting the real Flower server.

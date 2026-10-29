@@ -22,7 +22,7 @@ export function describeNeedleTransport(rawHeaders){
 }
 
 export async function probeCanonicalFlowerWithDesktopNeedle(raw,meta,sourceHeaders){
-  const request=inspectFlowerRequest(raw,meta?.songmid,meta?.quality);
+  const request=inspectFlowerRequest(raw,meta?.songmid,meta?.quality,meta?.source||'wy');
   if(!request.ok)return {status:null,valid:false,kind:'REJECTED_NONCANONICAL'};
   const headers=flowerRequestHeaders(sourceHeaders);
   // Only a complete exact source-generated signature may be compared.

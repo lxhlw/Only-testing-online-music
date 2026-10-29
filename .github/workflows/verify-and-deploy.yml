@@ -60,6 +60,7 @@ jobs:
           node --check scripts/test-modern-flower-proxy.mjs
           node --check scripts/test-flower-cross-platform-live.mjs
           node --check scripts/test-flower-correlated-live.mjs
+          node --check scripts/test-flower-kugou-transport-live.mjs
           node --check scripts/flower-correlated-validation.mjs
           node --check scripts/test-flower-audio-live.mjs
           node --check scripts/test-flower-kuwo-ui-live.mjs
@@ -197,6 +198,12 @@ jobs:
           TEST_BASE_URL: https://only-testing-online-music.pages.dev
           FLOWER_DIAGNOSTIC_CASE: kugou-chengdu
         run: node scripts/test-flower-correlated-live.mjs
+      - name: Real Flower Kugou Chengdu GitHub Node vs LX Desktop Needle signed origin comparison
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          TEST_BASE_URL: https://only-testing-online-music.pages.dev
+        run: node scripts/test-flower-kugou-transport-live.mjs
       - name: Real Flower KW/MG audio bytes and seek acceptance (informational)
         continue-on-error: true
         timeout-minutes: 4
