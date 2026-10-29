@@ -60,6 +60,7 @@ jobs:
           node --check scripts/test-modern-flower-proxy.mjs
           node --check scripts/test-flower-cross-platform-live.mjs
           node --check scripts/test-flower-audio-live.mjs
+          node --check scripts/test-flower-kuwo-ui-live.mjs
           node --check scripts/flower-media-validation.mjs
           node --check scripts/flower-needle-parity.mjs
           node --check scripts/test-flower-needle-parity.mjs
@@ -185,6 +186,12 @@ jobs:
         env:
           TEST_BASE_URL: https://only-testing-online-music.pages.dev
         run: node scripts/test-flower-audio-live.mjs
+      - name: Real Flower Kuwo UI search click play and seek (informational)
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          TEST_BASE_URL: https://only-testing-online-music.pages.dev
+        run: node scripts/test-flower-kuwo-ui-live.mjs
       - name: Live QQ playlist keyword smoke (upstream diagnostic)
         continue-on-error: true
         run: |
