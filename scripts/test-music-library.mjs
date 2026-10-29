@@ -113,3 +113,71 @@ assert.equal(createLibrary(storage).snapshot().history.length,300)
 console.log('PASS: modern 300-song listening history persists and evicts oldest first')
 
 console.log('PASS: music library queue/history/favorites persistence')
+
+{
+  // Real catalog shape: same KG numeric ID, distinct 32-hex FileHash.
+  // The two recordings must coexist in every persistent collection.
+  const store = createStorage();
+  const lib = createLibrary(store);
+  const hashA = 'A'.repeat(32), hashB = 'B'.repeat(32);
+  const a = {
+    id:'778899',songmid:'778899',source:'kg',name:'成都',singer:'赵雷',
+    albumName:'成都',interval:'05:28',_interval:328,
+    hash:hashA,albumAudioId:'11',
+    _types:{'128k':{hash:hashA,size:'4.00M'}},
+    types:[{type:'128k',hash:hashA,size:'4.00M'}],typeUrl:{}
+  };
+  const b = {...a,hash:hashB,albumName:'无法长大',
+    albumAudioId:'22',_types:{'128k':{hash:hashB,size:'4.00M'}},
+    types:[{type:'128k',hash:hashB,size:'4.00M'}]};
+  assert.notEqual(lib.keyOf(a),lib.keyOf(b));
+  assert.equal(lib.keyOf(a),lib.keyOf({...a,hash:hashA.toLowerCase()}));
+  assert.equal(lib.keyOf({...a,hash:''}),'kg:778899');
+  assert.equal(lib.keyOf({...a,hash:'bad'}),'kg:778899');
+  assert.equal(lib.keyOf({...a,source:'wy'}),'wy:778899');
+  const oldSaved={id:'778899',songmid:'778899',source:'kg',
+    raw:{hash:hashA}};
+  assert.equal(lib.keyOf(oldSaved),lib.keyOf(a),
+    'Pre-v0.4.21 saved KG items use raw.hash without destructive migration');
+
+  lib.addQueue(a);lib.addQueue(b);
+  assert.equal(lib.snapshot().queue.length,2);
+  lib.addQueue(a);
+  assert.equal(lib.snapshot().queue.length,2,'Exact same hash should deduplicate');
+  assert.deepEqual(Array.from(lib.snapshot().queue,x=>x.hash),[hashB,hashA]);
+  assert.equal(lib.snapshot().queue[0]._types['128k'].hash,hashB);
+  assert.equal(lib.snapshot().queue[1].albumAudioId,'11');
+  lib.addHistory(a);lib.addHistory(b);
+  assert.equal(lib.snapshot().history.length,2);
+  assert.equal(lib.toggleFavorite(a),true);
+  assert.equal(lib.toggleFavorite(b),true);
+  assert.equal(lib.isFavorite(a),true);
+  assert.equal(lib.isFavorite(b),true);
+  const restored=createLibrary(store);
+  assert.equal(restored.snapshot().queue.length,2);
+  assert.equal(restored.snapshot().history.length,2);
+  assert.equal(restored.snapshot().favorites.length,2);
+  assert.equal(restored.snapshot().favorites[0].hash,hashB);
+  assert.equal(restored.snapshot().favorites[0]._types['128k'].hash,hashB);
+  assert.equal(restored.removeQueue(a),true);
+  assert.deepEqual(Array.from(restored.snapshot().queue,x=>x.hash),[hashB]);
+  assert.equal(restored.toggleFavorite(a),false);
+  assert.equal(restored.isFavorite(a),false);
+  assert.equal(restored.isFavorite(b),true);
+  restored.replaceQueue([a,b,a]);
+  assert.deepEqual(Array.from(restored.snapshot().queue,x=>x.hash),
+    [hashA,hashB],'Play-all retains both file variants and order');
+
+  // Playback/UI navigation must share the same identity, not id-only.
+  const appSource=fs.readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
+  const start=appSource.indexOf('  function musicKey(music) {');
+  const finish=appSource.indexOf('\n  // A play-all session',start);
+  assert.ok(start>=0&&finish>start);
+  const appKey=new Function('global',appSource.slice(start,finish)+
+    '\nreturn musicKey;')({LXMusicLibrary:restored});
+  assert.equal(appKey(a),restored.keyOf(a));
+  assert.equal(appKey(b),restored.keyOf(b));
+  assert.notEqual(appKey(a),appKey(b));
+  console.log('PASS KG distinct FileHash survives queue/favorites/history and playback identity');
+}
+

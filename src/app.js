@@ -469,6 +469,11 @@
 
   function musicKey(music) {
     if (!music) return '';
+    // Always use the same identity as persistent library storage. This also
+    // distinguishes KG recordings sharing an Audioid in shuffle, play-all,
+    // next/previous navigation, playing-row highlights and lyric ownership.
+    if (global.LXMusicLibrary && typeof global.LXMusicLibrary.keyOf === 'function')
+      return global.LXMusicLibrary.keyOf(music);
     var source = String(music.source || '').toLowerCase();
     var id = String(music.id || music.songId || music.songmid || music.mid || music.hash || '');
     return source + ':' + id;

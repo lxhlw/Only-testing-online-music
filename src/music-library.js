@@ -49,6 +49,16 @@
     if (!music) return '';
     var source = String(music.source || '').toLowerCase();
     var id = String(music.id || music.songId || music.songmid || music.mid || music.hash || '');
+    // Kugou catalog records can share their numeric Audioid but point to
+    // different actual recordings (FileHash). Keep the old identity for all
+    // other sources, and for legacy Kugou records lacking a valid file hash.
+    // Older saved records often kept the hash inside raw only.
+    if (source === 'kg') {
+      var hash = String(music.hash || music.raw && music.raw.hash ||
+        music.raw && music.raw.FileHash || '');
+      if (/^[0-9a-f]{32}$/i.test(hash))
+        return source + ':' + id + ':file:' + hash.toUpperCase();
+    }
     return source + ':' + id;
   }
 
@@ -57,7 +67,9 @@
     var item = {};
     var fields = [
       'id', 'name', 'singer', 'source', 'albumName', 'interval',
-      'songmid', 'mediaMid', 'albumId', 'image', 'lyricId', 'meta', 'raw'
+      'songmid', 'mediaMid', 'albumId', 'image', 'lyricId', 'meta', 'raw',
+      // Preserve exact KG recording across queue/history/favorites reloads.
+      'hash', 'albumAudioId', '_interval', 'types', '_types', 'typeUrl'
     ];
     for (var i = 0; i < fields.length; i += 1) {
       var key = fields[i];
@@ -174,6 +186,7 @@
   }
 
   global.LXMusicLibrary = {
+    keyOf: keyOf,
     snapshot: snapshot,
     addQueue: addQueue,
     replaceQueue: replaceQueue,
