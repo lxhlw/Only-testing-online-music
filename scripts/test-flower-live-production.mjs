@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {chromium} from 'playwright';
-import {inspectFlowerRequest,inspectFlowerPayload,flowerRequestHeaders} from './flower-protocol-parity.mjs';
+import {inspectFlowerRequest,inspectFlowerPayload,flowerRequestHeaders,inspectFlowerTagShape} from './flower-protocol-parity.mjs';
 
 // Non-blocking production diagnostic: unlike mocked playback tests, this
 // calls the actual Flower source script via the deployed Cloudflare proxy.
@@ -88,15 +88,15 @@ try {
     }catch{evidence.sourceScript={status:'PUBLISHED_UNAVAILABLE'};}
     if(inspected.ok){
       const headers=flowerRequestHeaders(privateOrigin.headers);
-      const rawTag=privateOrigin.headers && (privateOrigin.headers.tag||
-        privateOrigin.headers.Tag||privateOrigin.headers.TAG);
+      const tagShape=inspectFlowerTagShape(privateOrigin.headers);
       evidence.sourceHeaders={
         hasUserAgent:!!headers['User-Agent'],
         hasVersion:!!headers.ver,
         hasSourceVersion:!!headers['source-ver'],
-        hasSignedTag:typeof rawTag==='string' && rawTag.length>0,
-        signatureIs64Hex:typeof rawTag==='string' && /^[a-f0-9]{64}$/i.test(rawTag),
-        directReplayIncludedTag:!!headers.tag
+        hasSignedTag:tagShape.present,
+        signatureIs64Hex:tagShape.type==='string' && tagShape.length===64 && tagShape.hexOnly,
+        directReplayIncludedTag:!!headers.tag,
+        tagShape
       };
       try{
         const upstream=await fetch(raw,{method:'GET',headers,

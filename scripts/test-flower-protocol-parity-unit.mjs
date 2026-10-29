@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {inspectFlowerRequest,inspectFlowerPayload,flowerRequestHeaders}
+import {inspectFlowerRequest,inspectFlowerPayload,flowerRequestHeaders,inspectFlowerTagShape}
   from './flower-protocol-parity.mjs';
 const target='http://97.64.37.235/flower/v1/url/wy/12345/128k?tag=private';
 assert.equal(inspectFlowerRequest(target,'12345','128k').ok,true);
@@ -25,3 +25,15 @@ for(const tag of ['x', '../../secret', 'BAD\r\nCookie:secret',
   assert.equal(Object.hasOwn(flowerRequestHeaders({tag}),'tag'),false);
 }
 console.log('PASS: canonical Flower route, songmid/quality parity and sanitized response classification');
+
+const unknownTag=inspectFlowerTagShape({tag:'YWJjZGVmIQ=='});
+assert.deepEqual(unknownTag,{
+  present:true,type:'string',isArray:false,isUint8Array:false,length:12,
+  asciiOnly:true,printableAscii:true,hexOnly:false,base64Shape:true,
+  whitespacePresent:false,headerSafe:true
+});
+assert.equal(inspectFlowerTagShape({tag:'SECRET-DO-NOT-PRINT'}).length,19);
+assert.equal(JSON.stringify(inspectFlowerTagShape({tag:'SECRET-DO-NOT-PRINT'})).includes('SECRET'),false);
+assert.equal(inspectFlowerTagShape({}).type,'missing');
+assert.equal(inspectFlowerTagShape({tag:['a','b']}).type,'object');
+console.log('PASS Flower tag metadata-only classification; signature values never displayed');
