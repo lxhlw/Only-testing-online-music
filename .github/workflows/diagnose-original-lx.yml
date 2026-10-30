@@ -2,6 +2,10 @@ name: Test original LX v2.12.6 native Electron preload
 on:
   push:
     branches: [diagnostic/lx-native-playback]
+    paths:
+      - '.github/workflows/diagnose-original-lx.yml'
+      - 'scripts/diagnostics/original-lx-compare.mjs'
+      - 'scripts/diagnostics/original-lx-electron-main.cjs'
   workflow_dispatch:
 permissions:
   contents: read

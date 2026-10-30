@@ -20,7 +20,7 @@ ipcMain.on('userApi_init',(_e,value)=>{
    return end({phase:'INIT_FAILED',urlReturned:false,audioStarted:false});
  setTimeout(()=>win.webContents.send('userApi_request',{
   requestKey:'comparison',data:{source:conf.platform,action:'musicUrl',
-  info:{type:'128k',musicInfo:conf.musicInfo}}
+  info:{type:conf.quality,musicInfo:conf.musicInfo}}
  }),80);
 });
 ipcMain.on('userApi_response',async(_e,value)=>{

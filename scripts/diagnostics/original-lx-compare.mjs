@@ -44,10 +44,9 @@ console.log('ORIGINAL_LX_PROVENANCE '+JSON.stringify({
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage();
 const cases=[
- {platform:'wy',keyword:'宋冬野',title:'郭源潮',artist:'宋冬野',testCase:'guoyuanchao'},
- {platform:'tx',keyword:'宋冬野',title:'郭源潮',artist:'宋冬野',testCase:'guoyuanchao'},
- {platform:'kg',keyword:'宋冬野',title:'郭源潮',artist:'宋冬野',testCase:'guoyuanchao'},
- {platform:'kg',keyword:'成都',title:'成都',artist:'赵雷',testCase:'chengdu'}
+ {platform:'wy',keyword:'开始懂了',title:'开始懂了',artist:'孙燕姿',testCase:'kaishidongle'},
+ {platform:'tx',keyword:'开始懂了',title:'开始懂了',artist:'孙燕姿',testCase:'kaishidongle'},
+ {platform:'kg',keyword:'开始懂了',title:'开始懂了',artist:'孙燕姿',testCase:'kaishidongle'}
 ];
 try{
  await page.goto('https://only-testing-online-music.pages.dev',{waitUntil:'domcontentloaded',timeout:30000});
@@ -70,17 +69,22 @@ try{
   }
   const musicInfo={...track,...(track.raw||{}),source:c.platform,
     songmid:track.songmid||track.id};
+  // Use the highest advertised track quality; 128k is only a last fallback,
+  // never the fixed quality of the comparison.
+  const reported=track.meta?._qualitys||track.raw?.meta?._qualitys||{};
+  const quality=['flac24bit','flac','320k','128k']
+   .find(type=>Boolean(reported[type]))||'128k';
   const web=await page.evaluate(({platform,musicInfo})=>new Promise(done=>{
    let called=false;const timer=setTimeout(()=>{if(!called){called=true;done({phase:'TIMEOUT',urlReturned:false})}},14500);
-   window.LXSourceManager.requestAction(platform,'musicUrl',{type:'128k',musicInfo},(err,val)=>{
+   window.LXSourceManager.requestAction(platform,'musicUrl',{type:quality,musicInfo},(err,val)=>{
     if(called)return;called=true;clearTimeout(timer);
     const url=typeof val==='string'?val:typeof val?.url==='string'?val.url:'';
     done({phase:err?'URL_FAILED':/^https?:\/\//.test(url)?'URL_RETURNED':'NO_URL',
       urlReturned:!err&&/^https?:\/\//.test(url)});
    });
-  }),{platform:c.platform,musicInfo});
+  }),{platform:c.platform,musicInfo,quality});
   const meta=join(temp,c.platform+'-'+c.testCase+'.json');
-  writeFileSync(meta,JSON.stringify({...c,musicInfo}));
+  writeFileSync(meta,JSON.stringify({...c,musicInfo,quality}));
   const original=await new Promise(resolveResult=>{
    let completed=false,received=null,buffer='';
    const process=spawn(electronBinary,['--no-sandbox',resolve('scripts/diagnostics/original-lx-electron-main.cjs')],{
@@ -104,6 +108,6 @@ try{
    });
   });
   console.log('ORIGINAL_WEB_COMPARISON '+JSON.stringify({platform:c.platform,
-   testCase:c.testCase,searchFound:true,web,original}));
+   testCase:c.testCase,quality,searchFound:true,web,original}));
  }
 }finally{await browser.close();}
