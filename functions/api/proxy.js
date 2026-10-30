@@ -521,7 +521,11 @@ async function fetchFlowerResolverFast(target, request) {
   // needle client and unlike our canonical socket fallback.
   const sourceHeaders=pickForwardHeaders(request);
   const flowerHeaders=new Headers({Accept:'application/json, text/plain, */*'});
-  for(const key of ['User-Agent','ver','source-ver']){
+  // Flower v1 authenticates the resolver using the source-generated `tag`.
+  // It must reach every HTTP alias exactly as it reaches the socket branch.
+  // Do not forward arbitrary browser headers, credentials or signed values
+  // to unrelated providers; these aliases target the same Flower resolver.
+  for(const key of ['User-Agent','ver','source-ver','tag']){
     const val=sourceHeaders.get(key);
     if(val)flowerHeaders.set(key,val);
   }
