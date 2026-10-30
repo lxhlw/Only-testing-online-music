@@ -1675,9 +1675,16 @@
         if (!isCurrentAttempt() || settled) return;
 
         if (err) {
+          // Never broadcast a source's raw error: it may contain signed URLs
+          // or request metadata. Only safe status/code are observable.
+          var diagnosticError=String(err && (err.message || err) || '');
+          var diagnosticStatusMatch=diagnosticError.match(/\\bHTTP[\\s:_-]*(\\d{3})\\b/i);
+          var diagnosticCode=/timeout|timed out|超时/i.test(diagnosticError)?'timeout':
+            /network|socket|connect|econn|dns|failed to fetch|网络/i.test(diagnosticError)?'network':
+            /invalid|undefined|unexpected|json|format|无效|缺少/i.test(diagnosticError)?'invalid':'unknown';
           global.dispatchEvent(new CustomEvent('fymusic:resolver-error',{detail:{
-            message:String(err && (err.message || err) || ''),
-            source:source
+            status:diagnosticStatusMatch?Number(diagnosticStatusMatch[1]):null,
+            code:diagnosticCode
           }}));
           flowerFailed=activeSourceName+'解析失败：'+String(err && (err.message || err) || '网络错误').slice(0,160);
           if (fastEnabled) { startFastRace(); return; }

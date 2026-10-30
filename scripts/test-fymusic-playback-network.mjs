@@ -35,6 +35,8 @@ test('resolver failure categories do not infer media HTTP response',()=>{
  assert.equal(classifyResolverFailure({status:502}),'resolver_upstream_5xx');
  assert.equal(classifyResolverFailure({message:'connection timed out'}),'resolver_timeout');
  assert.equal(classifyResolverFailure({message:'Network request failed'}),'resolver_network');
+ assert.equal(classifyResolverFailure({status:404,code:'unknown'}),'resolver_http_404');
+ assert.equal(classifyResolverFailure({code:'timeout'}),'resolver_timeout');
  const v=createPlaybackVerifier();
  v.begin({source:'kg'});
  v.resolverError({message:'HTTP 404 https://private.invalid/?auth=secret'});
