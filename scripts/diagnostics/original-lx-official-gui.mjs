@@ -210,7 +210,7 @@ try{
       }
       await appPage.getByRole('tab',{name:'Search',exact:true}).first().click({timeout:9000});
       const query=appPage.locator('input[placeholder="Search for something..."]').first();
-      await query.fill('孙燕姿 开始懂了');
+      await query.fill('开始懂了');
       await query.press('Enter');
       await appPage.waitForTimeout(900);
       const channelTests=[['kg','KG Music'],['wy','WY Music'],['tx','TX Music']];
@@ -238,12 +238,19 @@ try{
           singer:el.querySelectorAll('.list-item-cell span[aria-label]')[1]?.getAttribute('aria-label')||''
          })));
         console.log('OFFICIAL_GUI_TRACK_SEARCH '+JSON.stringify({platform,match:found,
-         samples:sample,query:'孙燕姿 开始懂了'}));
+         samples:sample,query:'开始懂了'}));
         if(!found){record.error='TARGET_TRACK_NOT_FOUND';resultSummary.push(record);continue;}
         record.found=true;
         const playBtn=row.getByRole('button',{name:'Play',exact:true});
-        if(!(await playBtn.count())){record.error='ROW_PLAY_BUTTON_NOT_FOUND';resultSummary.push(record);continue;}
-        await playBtn.click({timeout:8000});
+        if(await playBtn.count()){
+         await playBtn.click({timeout:8000});
+         record.playTrigger='row_play_button';
+        }else{
+         // Official OnlineList renders a double-click playback handler
+         // when list.actionButtonsVisible is false.
+         await row.dblclick({timeout:8000,delay:75});
+         record.playTrigger='row_double_click';
+        }
         record.playClicked=true;
         const check=()=>appPage.evaluate(()=>{
          const audio=[...document.querySelectorAll('audio,video')].map(el=>({
