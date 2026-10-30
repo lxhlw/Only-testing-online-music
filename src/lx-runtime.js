@@ -31,6 +31,34 @@
     return Promise.all(jobs);
   };
 
+  // LX Desktop exposes Node Buffer.from(): strings default to UTF-8.
+  // Truncating a CJK code unit to its last byte changes the bytes used by
+  // imported source scripts for signing, encryption and HTTP request bodies.
+  // This decoder works in Android 4.4 / Chromium 33 without TextEncoder.
+  function encodeUtf8(text) {
+    var bytes = [];
+    for (var i = 0; i < text.length; i += 1) {
+      var cp = text.charCodeAt(i);
+      if (cp >= 0xd800 && cp <= 0xdbff) {
+        var low = i + 1 < text.length ? text.charCodeAt(i + 1) : 0;
+        if (low >= 0xdc00 && low <= 0xdfff) {
+          cp = 0x10000 + ((cp - 0xd800) << 10) + (low - 0xdc00);
+          i += 1;
+        } else cp = 0xfffd;
+      } else if (cp >= 0xdc00 && cp <= 0xdfff) cp = 0xfffd;
+      if (cp <= 0x7f) bytes.push(cp);
+      else if (cp <= 0x7ff) {
+        bytes.push(0xc0 | (cp >> 6), 0x80 | (cp & 63));
+      } else if (cp <= 0xffff) {
+        bytes.push(0xe0 | (cp >> 12), 0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63));
+      } else {
+        bytes.push(0xf0 | (cp >> 18), 0x80 | ((cp >> 12) & 63),
+          0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63));
+      }
+    }
+    return new Uint8Array(bytes);
+  }
+
   function bytesFrom(input, encoding) {
     if (input == null) return new Uint8Array(0);
     if (input instanceof Uint8Array) return input;
@@ -38,23 +66,34 @@
     if (Object.prototype.toString.call(input) === '[object Array]') return new Uint8Array(input);
 
     var text = String(input);
-    if (encoding === 'base64') {
-      var bin = global.atob ? global.atob(text) : '';
+    var mode = String(encoding || 'utf8').toLowerCase();
+    if (mode === 'base64' || mode === 'base64url') {
+      // atob also requires standard alphabet and four-character padding.
+      var encoded = text.replace(/-/g, '+').replace(/_/g, '/').replace(/[^a-z0-9+/=]/gi, '');
+      while (encoded.length % 4) encoded += '=';
+      var bin = global.atob ? global.atob(encoded) : '';
       var out = new Uint8Array(bin.length);
       for (var i = 0; i < bin.length; i += 1) out[i] = bin.charCodeAt(i);
       return out;
     }
-    if (encoding === 'hex') {
-      var clean = text.replace(/[^0-9a-f]/gi, '');
-      var hexOut = new Uint8Array(Math.floor(clean.length / 2));
-      for (var h = 0; h < hexOut.length; h += 1) {
-        hexOut[h] = parseInt(clean.substr(h * 2, 2), 16);
+    if (mode === 'hex') {
+      // Node Buffer stops at the first invalid byte or trailing half-byte.
+      var hex = [];
+      for (var h = 0; h + 1 < text.length; h += 2) {
+        var pair = text.substr(h, 2);
+        if (!/^[0-9a-f]{2}$/i.test(pair)) break;
+        hex.push(parseInt(pair, 16));
       }
-      return hexOut;
+      return new Uint8Array(hex);
     }
-    var result = new Uint8Array(text.length);
-    for (var j = 0; j < text.length; j += 1) result[j] = text.charCodeAt(j) & 255;
-    return result;
+    if (mode === 'binary' || mode === 'latin1' || mode === 'ascii') {
+      var result = new Uint8Array(text.length);
+      for (var j = 0; j < text.length; j += 1) result[j] = text.charCodeAt(j) & 255;
+      return result;
+    }
+    // Match default Node Buffer.from(str), including replacement for lone
+    // UTF-16 surrogate halves; no browser APIs or polyfills are required.
+    return encodeUtf8(text);
   }
 
   function latin1(bytes) {
@@ -211,7 +250,10 @@
         buffer: {
           from: makeBuffer,
           bufToString: function (buffer, format) {
-            return makeBuffer(buffer).toString(format);
+            // Desktop explicitly calls Buffer.from(buf, 'binary') here.
+            // Preserve that separate contract for STRING inputs, even
+            // though buffer.from(string) itself defaults to UTF-8.
+            return makeBuffer(buffer, typeof buffer === 'string' ? 'binary' : undefined).toString(format);
           }
         },
         crypto: {
