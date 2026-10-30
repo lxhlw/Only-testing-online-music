@@ -94,7 +94,7 @@ try {
       const row={quality,declared,hasQualityHash,resolverState:'NOT_TRIED',
         flowerRequested:false,canonical:false,routeQualityMatched:false,
         routeMatchesBaseHash:false,routeMatchesSelectedQualityHash:false,
-        candidateUrlReturned:false};
+        candidateUrlReturned:false,tagParity:null};
       if(!declared||!hasQualityHash){row.resolverState='QUALITY_UNAVAILABLE';result.qualityAttempts.push(row);continue;}
       const before=active.runtime?.__debugRequests?.length||0;
       const response=await timed(done=>window.LXSourceManager.requestAction(
@@ -108,6 +108,33 @@ try {
           u.pathname.startsWith('/flower/v1/url/kg/');}catch{return false;}
       });
       if(request){
+      // The current public Flower v1 script builds its tag with
+      // Buffer.from(JSON.stringify(K.match(/(?:\d\w)+/g), null, 1))
+      // converted to hex; K is the route suffix after /flower/v1.
+      // Recompute independently with the browser's TextEncoder, NOT the
+      // LX buffer shim under test. Never return/log tag, hash or URL.
+      const url=new URL(request.url);
+      const route=url.pathname.slice('/flower/v1'.length);
+      const signingText=JSON.stringify(route.match(/(?:\d\w)+/g),null,1);
+      const encoded=new TextEncoder().encode(signingText);
+      let expected='';
+      for(const byte of encoded)expected+=byte.toString(16).padStart(2,'0');
+      const hs=request.headers||{};
+      const getHeader=name=>{
+        const key=Object.keys(hs).find(k=>k.toLowerCase()===name.toLowerCase());
+        return key?String(hs[key]):'';
+      };
+      const actual=getHeader('tag');
+      row.tagParity={
+        routePrefixMatched:url.pathname.startsWith('/flower/v1/url/kg/'),
+        tagPresent:actual.length>0,
+        hexFormat:/^[a-f0-9]+$/.test(actual),
+        byteExactMatch:actual===expected,
+        desktopUserAgentMatched:getHeader('User-Agent')==='lx-music/desktop',
+        desktopVersionMatched:getHeader('ver')==='2.0.0',
+        sourceVersionMatched:getHeader('source-version')===
+          String(active.runtime?.currentScriptInfo?.version||'')
+      };
         const segments=new URL(request.url).pathname.split('/').filter(Boolean);
         const routeHash=String(segments[4]||'').toUpperCase();
         row.flowerRequested=true;
@@ -143,3 +170,9 @@ assert.equal(output.flowerActive,true,'Genuine Flower script must be active');
 assert.equal(output.searchFound,true,'Genuine Kugou Chengdu track must be found');
 assert.ok(output.qualityAttempts.some(x=>x.flowerRequested),
   'At least one actual Flower quality request is required');
+assert.ok(output.qualityAttempts.filter(x=>x.flowerRequested).every(x=>
+  x.tagParity?.routePrefixMatched&&x.tagParity?.tagPresent&&
+  x.tagParity?.hexFormat&&x.tagParity?.byteExactMatch&&
+  x.tagParity?.desktopUserAgentMatched&&x.tagParity?.desktopVersionMatched&&
+  x.tagParity?.sourceVersionMatched),
+  'Flower v1 signed tag and LX Desktop header parity must match independently');

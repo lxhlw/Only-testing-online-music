@@ -12,6 +12,7 @@ on:
       - 'scripts/flower-*.mjs'
       - 'scripts/test-lx-runtime-flower-md5.mjs'
       - 'scripts/test-lx-runtime-crypto-parity.mjs'
+      - 'scripts/test-flower-kugou-tag-reference-unit.mjs'
       - 'scripts/test-chart-catalog.mjs'
       - 'scripts/test-playlist-infinite-browser.mjs'
       - 'scripts/test-mobile-interaction-qa-browser.mjs'
@@ -63,6 +64,7 @@ jobs:
           node --check scripts/test-flower-correlated-live.mjs
           node --check scripts/test-flower-kugou-transport-live.mjs
           node --check scripts/test-flower-kugou-quality-live.mjs
+          node --check scripts/test-flower-kugou-tag-reference-unit.mjs
           node --check scripts/test-flower-kugou-variants-live.mjs
           node --check scripts/flower-kugou-quality-parity.mjs
           node --check scripts/flower-raw-http1-parity.mjs
@@ -90,6 +92,7 @@ jobs:
           node scripts/test-music-search-native.mjs
           node scripts/test-flower-egress-parity-unit.mjs
           node scripts/test-flower-kugou-quality-parity-unit.mjs
+          node scripts/test-flower-kugou-tag-reference-unit.mjs
           node scripts/test-flower-cross-platform-unit.mjs
           node scripts/test-flower-correlated-validation-unit.mjs
           node scripts/test-flower-media-validation-unit.mjs
@@ -148,7 +151,7 @@ jobs:
           set -euo pipefail
           READY=0
           for i in {1..12}; do
-            if curl -fsSL 'https://only-testing-online-music.pages.dev/?v=0.4.23' -o /tmp/lx-modern-index.html && grep -Fq 'modern.css?v=0.4.23' /tmp/lx-modern-index.html; then
+            if curl -fsSL 'https://only-testing-online-music.pages.dev/?v=0.4.24' -o /tmp/lx-modern-index.html && grep -Fq 'modern.css?v=0.4.24' /tmp/lx-modern-index.html; then
               READY=1
               break
             fi
