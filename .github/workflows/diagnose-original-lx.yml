@@ -1,0 +1,32 @@
+name: Test original LX v2.12.6 native Electron preload
+on:
+  push:
+    branches: [diagnostic/lx-native-playback]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original:
+    name: Real Electron original LX preload - ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install diagnostic dependencies
+        run: |
+          npm install --no-audit --no-fund
+          npm install --no-save --no-audit --no-fund electron@42.11.6 esbuild@0.25.12 tunnel@0.0.6
+          npx playwright install chromium
+      - name: Original source and desktop core test (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node scripts/diagnostics/original-lx-compare.mjs
+      - name: Original source and desktop core test (Windows)
+        if: runner.os == 'Windows'
+        run: node scripts/diagnostics/original-lx-compare.mjs
