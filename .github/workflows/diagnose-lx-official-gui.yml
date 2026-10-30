@@ -1,0 +1,37 @@
+name: Diagnostic - official packaged LX Music Windows GUI
+on:
+  push:
+    branches: [diagnostic/lx-native-playback]
+    paths:
+      - '.github/workflows/diagnose-lx-official-gui.yml'
+      - 'scripts/diagnostics/original-lx-official-gui.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  official-gui:
+    runs-on: windows-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser tools
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install chromium
+      - name: Download and unpack official LX Music 2.12.6 portable Windows release
+        shell: pwsh
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          $url = "https://github.com/lyswhut/lx-music-desktop/releases/download/v2.12.6/lx-music-desktop-v2.12.6-win_x64-green.7z"
+          Invoke-WebRequest -Uri $url -OutFile "$env:RUNNER_TEMP\lx-release.7z"
+          $extract = "$env:RUNNER_TEMP\lx-release"
+          New-Item -ItemType Directory -Force -Path $extract | Out-Null
+          & "$env:ProgramFiles\7-Zip\7z.exe" x "$env:RUNNER_TEMP\lx-release.7z" "-o$extract" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Start full official LX GUI and inspect Chromium bridge
+        env:
+          LX_RELEASE_DIR: ${{ runner.temp }}\lx-release
+        run: node scripts/diagnostics/original-lx-official-gui.mjs
