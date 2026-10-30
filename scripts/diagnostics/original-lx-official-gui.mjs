@@ -182,6 +182,8 @@ try{
       // Use the highest available ORIGINAL quality preference. LX itself
       // chooses flac24bit/flac/320k/128k according to the source and song.
       // This is NOT a forced 128k test.
+      // Setting/index.vue mounts only the active section; open Playback first.
+      await appPage.getByRole('tab',{name:'Playback',exact:true}).click({timeout:8500});
       const maxQuality=appPage.getByRole('radio',{name:'flac24bit',exact:true});
       if(!(await maxQuality.count()))throw Error('QUALITY_OPTION_NOT_FOUND');
       await maxQuality.click({force:true,timeout:9000});
