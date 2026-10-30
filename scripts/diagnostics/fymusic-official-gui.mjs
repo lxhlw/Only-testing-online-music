@@ -5,6 +5,60 @@ import {readdirSync,statSync} from 'node:fs';
 import {join,dirname} from 'node:path';
 import {spawn} from 'node:child_process';
 import {chromium} from 'playwright';
+
+// Read-only metadata comparison. Raw IDs/hashes never enter logs or artifacts.
+// GUI data is taken from Vue 3 component props backing the clicked list row.
+const cleanName=value=>String(value||'').normalize('NFKC').toLowerCase()
+ .replace(/[\s\u00a0\u3000_.·-]+/g,'');
+const ID_FIELDS=['id','songmid','hash','albumAudioId'];
+const qualityFields=['flac24bit','flac','320k','128k'];
+function shapeInfo(track){
+ if(!track)return null;
+ const raw=track.raw&&typeof track.raw==='object'?track.raw:{};
+ const q=track.meta?._qualitys||raw.meta?._qualitys||{};
+ const ids={};
+ for(const k of ID_FIELDS)ids[k]=String(track[k]??raw[k]??'').trim();
+ return {ids,title:String(track.name||''),
+  artist:String(track.singer||''),
+  album:String(track.meta?.albumName||track.albumName||raw.albumName||''),
+  interval:String(track.interval||raw.interval||''),
+  qualities:Object.fromEntries(qualityFields.map(k=>[k,Boolean(q[k]||raw._types?.[k])]))};
+}
+function safeParity(gui,web){
+ const G=shapeInfo(gui),W=(web||[]).map(shapeInfo).filter(Boolean);
+ if(!G)return {observed:false,reason:'VUE_PROPS_NOT_EXPOSED',webCandidates:W.length,
+  actualRequestedQuality:'not_observed'};
+ const valid=v=>Boolean(v&&String(v).trim());
+ const same=(a,b)=>valid(a)&&valid(b)&&String(a).toLowerCase()===String(b).toLowerCase();
+ const scored=W.map((w,index)=>{
+  const flags={
+   id:same(G.ids.id,w.ids.id),
+   songmid:same(G.ids.songmid,w.ids.songmid),
+   hash:same(G.ids.hash,w.ids.hash),
+   albumAudioId:same(G.ids.albumAudioId,w.ids.albumAudioId),
+   album:cleanName(G.album)!==''&&cleanName(G.album)===cleanName(w.album),
+   interval:valid(G.interval)&&valid(w.interval)&&G.interval===w.interval,
+   titleAndArtist:cleanName(G.title)===cleanName(w.title)&&
+    cleanName(G.artist)===cleanName(w.artist)
+  };
+  const score=(flags.hash?8:0)+(flags.albumAudioId?8:0)+
+   (flags.id?4:0)+(flags.songmid?4:0)+(flags.album?2:0)+
+   (flags.interval?1:0);
+  return {index,flags,score};
+ }).sort((a,b)=>b.score-a.score);
+ const best=scored[0]||null;
+ return {observed:true,webCandidates:W.length,
+  guiIdPresent:Boolean(G.ids.id),guiBaseHashPresent:Boolean(G.ids.hash),
+  guiSongmidPresent:Boolean(G.ids.songmid),
+  guiAlbumAudioIdPresent:Boolean(G.ids.albumAudioId),
+  guiQualityFlags:G.qualities,
+  bestCatalogMatch:best?{matchingIndex:best.index+1,
+   ...best.flags,identityScore:best.score}:null,
+  anyStrongIdentityMatch:scored.some(x=>x.flags.hash||x.flags.albumAudioId||
+   x.flags.id||x.flags.songmid),
+  anyAlbumMatch:scored.some(x=>x.flags.album&&x.flags.titleAndArtist),
+  actualRequestedQuality:'not_observed'};
+}
 const root=process.env.LX_RELEASE_DIR;
 function walk(dir,depth=0) {
  if(depth>5)return [];
@@ -210,8 +264,89 @@ try{
       }
       await appPage.getByRole('tab',{name:'Search',exact:true}).first().click({timeout:9000});
       const query=appPage.locator('input[placeholder="Search for something..."]').first();
-      const channelTests=[['kg','KG Music'],['wy','WY Music'],['tx','TX Music']];
+      const channelTests=[['kg','KG Music']];
       const resultSummary=[];
+      // Separate real FyMusic browser, same Windows runner. Its search
+      // uses the actual platform API and remains independent of official LX.
+      let webBrowser=null,webPage=null;
+      try{
+       webBrowser=await chromium.launch({headless:true});
+       webPage=await webBrowser.newPage();
+       await webPage.goto('http://127.0.0.1:8788/',{
+        waitUntil:'domcontentloaded',timeout:25000});
+       await webPage.waitForFunction(()=>Boolean(window.LXMusicSearch?.search),
+        null,{timeout:16000});
+      }catch{
+       console.log('FYMUSIC_GUI_WEB_CATALOG_UNAVAILABLE');
+       if(webBrowser)await webBrowser.close().catch(()=>{});
+       webBrowser=null;webPage=null;
+      }
+      const getWebMatches=async(keyword,platform)=>{
+       if(!webPage)return null;
+       return webPage.evaluate(({keyword,platform})=>new Promise(done=>{
+        let finished=false;
+        const timer=setTimeout(()=>{if(!finished){finished=true;done(null);}},20000);
+        window.LXMusicSearch.search(platform,keyword,1,30,(err,data)=>{
+         if(finished)return;
+         finished=true;clearTimeout(timer);
+         if(err){done(null);return;}
+         const norm=s=>String(s||'').normalize('NFKC').toLowerCase()
+          .replace(/[\s_.·-]+/g,'');
+         const list=(Array.isArray(data?.list)?data.list:[]).filter(x=>
+          x.source===platform&&norm(x.name)===norm('开始懂了')&&
+          norm(x.singer).includes(norm('孙燕姿')));
+         done(list.slice(0,25));
+        });
+       }),{keyword,platform}).catch(()=>null);
+      };
+      const readSelectedGui=async(row)=>row.evaluate(el=>{
+       const name=el.querySelector('.list-item-cell.name span.select.name')
+        ?.getAttribute('aria-label')||'';
+       const labels=[...el.querySelectorAll('.list-item-cell span[aria-label]')]
+        .map(x=>x.getAttribute('aria-label')||'');
+       const rawIndex=Number(el.querySelector('.list-item-cell.num')?.textContent?.trim());
+       let node=el, checked=0;
+       const clean=s=>String(s||'').normalize('NFKC').toLowerCase()
+        .replace(/[\s_.·-]+/g,'');
+       while(node&&checked++<28){
+        let inst=node.__vueParentComponent;
+        let depth=0;
+        while(inst&&depth++<32){
+         const list=inst.props?.list;
+         if(Array.isArray(list)&&list.length){
+          const idx=Number.isInteger(rawIndex)&&rawIndex>0?rawIndex-1:-1;
+          const indexMatches=i=>{
+           const x=list[i];
+           return Boolean(x&&clean(x.name)===clean(name)&&
+            labels.some(y=>clean(y)===clean(x.singer)));
+          };
+          let chosen=-1;
+          if(idx>=0&&idx<list.length&&indexMatches(idx))chosen=idx;
+          else chosen=list.findIndex((_,i)=>indexMatches(i));
+          if(chosen>=0){
+           const x=list[chosen],raw=x.raw||{};
+           // Only allowlisted fields, never serialized entire object.
+           return {
+            observed:true,componentListCount:list.length,
+            selectedOrdinal:chosen+1,
+            track:{name:String(x.name||''),singer:String(x.singer||''),
+             id:String(x.id||''),songmid:String(x.songmid||''),
+             hash:String(x.hash||''),albumAudioId:String(x.albumAudioId||''),
+             interval:String(x.interval||''),
+             meta:{albumName:String(x.meta?.albumName||''),
+              _qualitys:Object.fromEntries(['flac24bit','flac','320k','128k']
+               .map(q=>[q,Boolean(x.meta?._qualitys?.[q])]))}
+            }
+           };
+          }
+         }
+         inst=inst.parent;
+        }
+        node=node.parentElement;
+       }
+       return {observed:false,reason:'NO_MATCHING_VUE_LIST'};
+      });
+
       const readList=()=>appPage.evaluate(()=>{
         const rows=[...document.querySelectorAll('.list-item')];
         const normalize=s=>String(s||'').normalize('NFKC').toLowerCase()
@@ -283,6 +418,22 @@ try{
           if(!row){record.reason='EXACT_MATCH_NOT_FOUND';continue;}
           record.found=true;
           record.selectedCandidateOrdinal=1;
+          // The Vue row props are the same object passed to GUI playback.
+          // Evaluate both catalogs on this runner and emit only comparisons.
+          const guiData=await readSelectedGui(row).catch(()=>({observed:false}));
+          const webList=await getWebMatches('孙燕姿 开始懂了',platform);
+          record.vueListObserved=Boolean(guiData?.observed);
+          record.identityParity=safeParity(guiData?.track,
+           Array.isArray(webList)?webList:[]);
+          record.guiSelectedOrdinal=guiData?.observed?
+           guiData.selectedOrdinal:null;
+          record.webCatalogAvailable=Array.isArray(webList);
+          console.log('FYMUSIC_GUI_IDENTITY_PARITY '+JSON.stringify({
+            platform,guiListRead:record.vueListObserved,
+            candidateOrdinal:record.guiSelectedOrdinal,
+            webCatalogAvailable:record.webCatalogAvailable,
+            parity:record.identityParity
+          }));
           const play=row.getByRole('button',{name:'Play',exact:true});
           mediaStats.players=0;mediaStats.events=0;
           if(await play.count()){
@@ -327,6 +478,7 @@ try{
             platform,category:record.reason}));
         }
       }
+      if(webBrowser)await webBrowser.close().catch(()=>{});
       console.log('FYMUSIC_GUI_SUMMARY '+JSON.stringify(resultSummary));
      }
     }

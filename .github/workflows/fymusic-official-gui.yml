@@ -31,7 +31,24 @@ jobs:
           New-Item -ItemType Directory -Force -Path $extract | Out-Null
           & "$env:ProgramFiles\7-Zip\7z.exe" x "$env:RUNNER_TEMP\lx-release.7z" "-o$extract" -y | Out-Null
           if ($LASTEXITCODE -ne 0) { exit 1 }
-      - name: Start full official LX GUI and inspect Chromium bridge
+      - name: Compare real official GUI catalog with FyMusic on one Windows runner
+        shell: pwsh
         env:
           LX_RELEASE_DIR: ${{ runner.temp }}\lx-release
-        run: node scripts/diagnostics/fymusic-official-gui.mjs
+        run: |
+          $site=Start-Process -FilePath "cmd.exe" -ArgumentList '/c','npx wrangler pages dev . --ip 127.0.0.1 --port 8788' -NoNewWindow -PassThru -RedirectStandardOutput "$env:RUNNER_TEMP\fymusic-parity-site.log" -RedirectStandardError "$env:RUNNER_TEMP\fymusic-parity-site.err.log"
+          try {
+            $ready=$false
+            for ($i=0; $i -lt 55; $i++) {
+              try {
+                $resp=Invoke-WebRequest -Uri "http://127.0.0.1:8788/api/audio-selftest" -TimeoutSec 3
+                if ($resp.StatusCode -eq 200) { $ready=$true; break }
+              } catch {}
+              Start-Sleep -Seconds 1
+            }
+            if (-not $ready) { throw 'FYMUSIC_LOCAL_SITE_NOT_READY' }
+            node scripts/diagnostics/fymusic-official-gui.mjs
+            if ($LASTEXITCODE -ne 0) { throw "OFFICIAL_GUI_PARITY_EXIT_$LASTEXITCODE" }
+          } finally {
+            Stop-Process -Id $site.Id -Force -ErrorAction SilentlyContinue
+          }
