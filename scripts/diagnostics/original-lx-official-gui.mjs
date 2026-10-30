@@ -240,9 +240,9 @@ try{
           errorCode:el.error?.code||null
          }));
          const txt=document.body?.innerText||'';
-         return {audio,progress:(txt.match(/\\d{1,2}:\\d{2}\\s*\\/\\s*\\d{1,2}:\\d{2}/)||[])[0]||null,
+         return {audio,progress:txt.split('\n').find(x=>x.includes(' / ') && x.includes(':'))?.slice(0,80)||null,
           hasRequestedSong:txt.includes('开始懂了')&&txt.includes('孙燕姿'),
-          statusTail:txt.slice(-280).replace(/https?:\\/\\/\\S+/g,'[URL_REDACTED]')};
+          };
         });
         await appPage.waitForTimeout(12000);
         const first=await check();
