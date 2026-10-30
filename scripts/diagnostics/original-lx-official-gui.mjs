@@ -130,9 +130,20 @@ try{
    .filter({has:changelog})
    .locator('xpath=preceding-sibling::header/button');
   if(await close.count()!==1)throw Error('OFFICIAL_GUI_CHANGELOG_CLOSE_NOT_FOUND');
-  await close.click({timeout:8000,force:true});
-  await changelog.waitFor({state:'hidden',timeout:10000});
-  console.log('OFFICIAL_GUI_CHANGELOG_CLOSED');
+  let dismissed=false;
+  for(let attempt=1;attempt<=4;attempt++){
+   await close.click({timeout:5000,force:true});
+   try{
+    await changelog.waitFor({state:'hidden',timeout:2500});
+    dismissed=true;
+    console.log('OFFICIAL_GUI_CHANGELOG_CLOSED '+JSON.stringify({attempt}));
+    break;
+   }catch{
+    console.log('OFFICIAL_GUI_CHANGELOG_RETRY '+JSON.stringify({attempt,stillVisible:true}));
+    await appPage.waitForTimeout(700);
+   }
+  }
+  if(!dismissed)throw Error('OFFICIAL_GUI_CHANGELOG_DISMISS_FAILED');
  }else{
   console.log('OFFICIAL_GUI_CHANGELOG_NOT_VISIBLE');
  }
