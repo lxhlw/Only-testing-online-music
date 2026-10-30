@@ -7,9 +7,9 @@
   <meta name="description" content="LX Music — 轻盈流畅的现代网页音乐播放器。">
   <script>document.documentElement.classList.add("modern-web");</script>
   <title>LX Music — 轻盈护眼音乐空间</title>
-  <link rel="stylesheet" href="styles.css?v=0.4.24">
-  <link rel="stylesheet" href="modern.css?v=0.4.24">
-  <link rel="stylesheet" href="src/mobile-shell.css?v=0.4.24">
+  <link rel="stylesheet" href="styles.css?v=0.4.25">
+  <link rel="stylesheet" href="modern.css?v=0.4.25">
+  <link rel="stylesheet" href="src/mobile-shell.css?v=0.4.25">
 </head>
 <body>
   <div id="app">
@@ -17,7 +17,7 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">LX Music Web</div>
-          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.24</span></div>
+          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.25</span></div>
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">护眼淡绿模式</span>
@@ -288,13 +288,14 @@
             </div>
 
             <div class="settings-section">
-              <div class="section-header"><h2>野花音源 · 唯一播放源</h2><span id="source-count" class="badge">0</span></div>
+              <div class="section-header"><h2>LX 音源管理 · 手动选择播放源</h2><span id="source-count" class="badge">0</span></div>
+              <p class="muted">默认使用野花。若上游不可用，可自行导入其他原版 LX 音源并点击“设为当前音源”。不会自动切换，也不会把其他平台的音频冒充当前来源。实际播放取决于所选音源的服务。</p>
               <label for="source-url">LX 音源 URL</label>
               <input id="source-url" type="text" autocapitalize="off" autocomplete="off" spellcheck="false"
                 value="https://ghproxy.net/raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js">
               <div class="source-setting-actions">
                 <button id="install-btn" type="button">导入音源</button>
-                <button id="verified-install-btn" type="button" class="secondary">一键导入 Huibq（真实音源）</button>
+                <button id="verified-install-btn" type="button" class="secondary">导入 Huibq（手动选择）</button>
                 <button id="sixyin-install-btn" type="button" class="secondary">一键导入六音</button>
                 <button id="restore-default-sources-btn" type="button" class="secondary">重新加载野花音源</button>
                 <button id="clear-btn" type="button" class="ghost-button">清空</button>
@@ -305,7 +306,7 @@
 
             <div class="settings-section">
               <h2>版本信息</h2>
-              <div class="version-detail"><strong id="version-current">v0.4.24</strong><span id="version-release-date">2026-10-29</span></div>
+              <div class="version-detail"><strong id="version-current">v0.4.25</strong><span id="version-release-date">2026-10-29</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
             </div>
@@ -456,13 +457,13 @@
   <script src="src/source-transpiler-modern.js"></script>
   <script src="src/sha1.js"></script>
   <script src="src/play-settings.js"></script>
-  <script src="src/music-search.js?v=0.4.24"></script>
+  <script src="src/music-search.js?v=0.4.25"></script>
   <script src="src/lx-runtime.js"></script>
-  <script src="src/source-manager.js?v=0.4.24"></script>
-  <script src="src/music-library.js?v=0.4.24"></script>
-  <script src="src/music-lyrics.js?v=0.4.24"></script>
+  <script src="src/source-manager.js?v=0.4.25"></script>
+  <script src="src/music-library.js?v=0.4.25"></script>
+  <script src="src/music-lyrics.js?v=0.4.25"></script>
   <script src="src/player-controls.js"></script>
-  <script src="src/app.js?v=0.4.24"></script>
+  <script src="src/app.js?v=0.4.25"></script>
   <script>
   (function (global) {
     'use strict';
@@ -1422,8 +1423,8 @@
     };
   })(window);
   </script>
-  <script type="module" src="src/modern-ui.js?v=0.4.24"></script>
-  <script type="module" src="src/now-playing-experience.js?v=0.4.24"></script>
-  <script type="module" src="src/mobile-shell.js?v=0.4.24"></script>
+  <script type="module" src="src/modern-ui.js?v=0.4.25"></script>
+  <script type="module" src="src/now-playing-experience.js?v=0.4.25"></script>
+  <script type="module" src="src/mobile-shell.js?v=0.4.25"></script>
 </body>
 </html>

@@ -21,6 +21,11 @@
   // are independent, so this removes the old Huibq/TuneHub/GD waterfall
   // without sacrificing search, playlists, favorites or the play queue.
   var FLOWER_ONLY_NATIVE = true;
+  // Keep the single-source Android companion unchanged, but not the Web app.
+  var IS_NATIVE_COMPANION = false;
+  try { IS_NATIVE_COMPANION=!!(global.LXNativeAudio &&
+    typeof global.LXNativeAudio.isAvailable==='function' &&
+    global.LXNativeAudio.isAvailable()); } catch (ignored) {}
   function isFlower(item) {
     return !!item && String(item.url || '').indexOf(
       'pdone/lx-music-source/main/flower/latest.js') >= 0;
@@ -293,7 +298,7 @@
   }
 
   function addOrReplace(item, preserveActive) {
-    if (FLOWER_ONLY_NATIVE && isFlower(item)) {
+    if (FLOWER_ONLY_NATIVE && IS_NATIVE_COMPANION && isFlower(item)) {
       // A refresh must replace the old mirror/raw Flower rather than
       // accumulating duplicate Flower rows in APK storage.
       sources=[item];
@@ -636,7 +641,7 @@
   function init() {
     var savedId=loadActiveId();
     sources=loadRaw();
-    if (FLOWER_ONLY_NATIVE) {
+    if (FLOWER_ONLY_NATIVE && IS_NATIVE_COMPANION) {
       var cachedFlower = null;
       for (var fi=0;fi<sources.length;fi+=1) {
         if (isFlower(sources[fi]) &&
@@ -665,14 +670,18 @@
         // Never fetch Huibq/TuneHub/GD Studio in the native APK.
         // A cached Flower is rehydrated locally, without another download.
         global.setTimeout(function () {
-          if (FLOWER_ONLY_NATIVE) {
+          if (FLOWER_ONLY_NATIVE && IS_NATIVE_COMPANION) {
             ensureNativeFlower(false,function(err) {
               if (err && global.OnlyTestingMusicApp &&
                   global.OnlyTestingMusicApp.onFlowerBootstrapError) {
                 global.OnlyTestingMusicApp.onFlowerBootstrapError(err);
               }
             });
-          } else ensureDefaultSources(false);
+          } else if (!sources.length) {
+            // First Web visit starts with Flower; previously chosen sources
+            // are never replaced or silently switched on reload.
+            ensureNativeFlower(false);
+          }
         }, 80);
         return;
       }
@@ -738,7 +747,7 @@
     remove:remove,clear:clear,activate:activate,requestAction:requestAction,
     getSources:function(){return sources.slice();},
     getActive:function(){return active;},
-    isFlowerOnlyNative:function(){return FLOWER_ONLY_NATIVE;},
+    isFlowerOnlyNative:function(){return FLOWER_ONLY_NATIVE && IS_NATIVE_COMPANION;},
     ensureNativeFlower:ensureNativeFlower
   };
 })(window);

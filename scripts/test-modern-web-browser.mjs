@@ -46,10 +46,9 @@ try {
       return originalPlay.apply(this,arguments);
     };
     localStorage.setItem('only-testing-online-music.lx-sources',JSON.stringify([
-      {id:'old-huibq',url:'https://example.test/old-source.js',name:'Huibq',code:'/** @name Huibq */'},
       {id:'saved-flower',url:sourceUrl,name:'野花🌷',code:fixture}
     ]));
-    localStorage.setItem('only-testing-online-music.active-source-id','old-huibq');
+    localStorage.setItem('only-testing-online-music.active-source-id','saved-flower');
   },{sourceUrl,fixture});
   await page.route('https://media.example.test/**',route=>route.fulfill({
     status:200,contentType:'audio/wav',body:makeWav()
@@ -185,7 +184,9 @@ try {
   assert.deepEqual(await page.evaluate(()=>window.LXSourceManager.getSources().map(x=>x.name)),['野花🌷']);
   assert.equal(await page.locator('#legacy-media-panel').count(),0);
   await page.locator('[data-view="settings"]').click();
-  assert.equal(await page.locator('#source-url').isVisible(),false);
+  assert.equal(await page.locator('#source-url').isVisible(),true);
+  assert.equal(await page.locator('#install-btn').isVisible(),true);
+  assert.equal(await page.locator('#verified-install-btn').isVisible(),true);
   const lightTheme=await page.evaluate(()=>{
     const css=selector=>getComputedStyle(document.querySelector(selector));
     const contrast=(a,b)=>{

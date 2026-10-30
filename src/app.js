@@ -1411,6 +1411,7 @@
     // providers even when they resolve the same search platform; never race
     // them silently or attribute their media to Flower.
     var fastEnabled = false;
+    var activeSourceName=active&&active.name?String(active.name):'当前 LX 音源';
 
     function isCurrentAttempt() {
       return token === playbackToken &&
@@ -1471,7 +1472,7 @@
         setStatus(sourceUnavailable
           ? '野花音源服务器当前无法返回播放地址（HTTP 502）。歌曲搜索仍可使用；本次已停止解析，不会擅自换用其他音源。'
           : '当前歌曲暂未取得播放地址：' + escapeHtml(reason || '解析失败') +
-            (MODERN_WEB ? '。仅使用野花音源，未尝试其他播放源。' : '。'), 'fail');
+            (MODERN_WEB ? '。仅使用选中的 LX 音源“'+escapeHtml(activeSourceName)+'”，未自动切换其他播放源。' : '。'), 'fail');
         if (MODERN_WEB) {
           var retry = document.createElement('button');
           retry.type = 'button';
@@ -1576,7 +1577,7 @@
         // First installation and Babel startup complete asynchronously.
         // Allow one bounded wait for Flower to be ready, with no fallback.
         var started = Date.now ? Date.now() : new Date().getTime();
-        setStatus('正在准备野花音源，初始化成功后自动解析歌曲……', 'warn');
+        setStatus('正在准备当前选中的 LX 音源“'+escapeHtml(activeSourceName)+'”，初始化后解析歌曲……', 'warn');
         var pollFlower = function () {
           if (!isCurrentAttempt() || settled) return;
           var ready = global.LXSourceManager.getActive();
@@ -1609,14 +1610,14 @@
           }
           if (ready && ready.error) {
             finishAttempt();
-            setStatus('野花音源初始化失败：' + escapeHtml(ready.error) +
+            setStatus('当前 LX 音源初始化失败：' + escapeHtml(ready.error) +
               '。可在设置中重新加载野花。', 'fail');
             return;
           }
           var now = Date.now ? Date.now() : new Date().getTime();
           if (now-started>=(MODERN_WEB ? 10000 : 25000)) {
             finishAttempt();
-            setStatus('野花音源尚未准备好，已停止等待。请在设置中重新加载野花。','fail');
+            setStatus('当前 LX 音源尚未准备好，请在设置中重新导入或选择音源。','fail');
             return;
           }
           global.setTimeout(pollFlower,200);
@@ -1663,7 +1664,7 @@
         if (!isCurrentAttempt() || settled) return;
 
         if (err) {
-          flowerFailed='野花解析失败：'+String(err && (err.message || err) || '网络错误').slice(0,160);
+          flowerFailed=activeSourceName+'解析失败：'+String(err && (err.message || err) || '网络错误').slice(0,160);
           if (fastEnabled) { startFastRace(); return; }
           return runFallback(flowerFailed);
         }
@@ -1674,7 +1675,7 @@
         if (url != null) url = String(url).replace(/^\\s+|\\s+$/g, '');
 
         if (!url || !/^https?:/i.test(url)) {
-          flowerFailed='野花没有返回有效的播放地址';
+          flowerFailed=activeSourceName+'没有返回有效的播放地址';
           if (fastEnabled) { startFastRace(); return; }
           return runFallback(flowerFailed);
         }
@@ -1684,7 +1685,7 @@
           typeof global.LXMusicSearch.isPlayableUrlForSource === 'function' &&
           !global.LXMusicSearch.isPlayableUrlForSource(source, url)
         ) {
-          flowerFailed='野花返回了不属于当前渠道的链接';
+          flowerFailed=activeSourceName+'返回了不属于当前渠道的链接';
           if (fastEnabled) { startFastRace(); return; }
           return runFallback(flowerFailed);
         }

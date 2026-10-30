@@ -459,11 +459,16 @@ html.is-resolving #player-title::after{content:" · 连接中";font-size:11px;co
 html.is-playing .player-art{box-shadow:0 0 0 4px #e0f2e5}
 
 /* Remove inactive legacy settings widgets visually while preserving contracts. */
-html.modern-web .source-setting-actions>:not(#restore-default-sources-btn),
-html.modern-web .settings-section [for="source-url"],
-html.modern-web #source-url,
-html.modern-web .source-buttons,
+/* User-owned LX sources remain selectable on Web; the Android
+   companion continues to expose only its Flower reload control. */
+html.modern-web.native-companion .source-setting-actions>:not(#restore-default-sources-btn),
+html.modern-web.native-companion .settings-section [for="source-url"],
+html.modern-web.native-companion #source-url,
+html.modern-web.native-companion .source-buttons{display:none!important}
 html.modern-web .settings-section:has(#runtime-info){display:none!important}
+html.modern-web .source-setting-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+html.modern-web #source-url{display:block;width:100%;max-width:680px}
+html.modern-web .source-buttons{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
 /* The quality downgrade toggle is now a visible consent control. */
 
 /* Only first 10 new entries fade in; no continuous animations or huge blur. */
