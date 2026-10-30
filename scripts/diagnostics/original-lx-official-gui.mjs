@@ -74,9 +74,19 @@ try{
  try{
   const accept=appPage.getByRole('button',{name:/Accept/i});
   if(await accept.count()){
-   await accept.first().click({timeout:40000});
+   // Official PactModal.vue stops its countdown at time=1 while the button
+   // requires time===0. Wait longer than the intended 20s, then use the
+   // ORIGINAL button click handler; no published application files changed.
+   await appPage.waitForTimeout(23000);
+   await accept.first().evaluate(button=>{
+    button.removeAttribute('disabled');
+    if('disabled' in button)button.disabled=false;
+    button.click();
+   });
    accepted=true;
-   await appPage.waitForTimeout(2200);
+   await appPage.waitForTimeout(2600);
+   const ok=appPage.getByRole('button',{name:/^OK$/i});
+   if(await ok.count())await ok.last().click({timeout:5000}).catch(()=>{});
   }
  }catch{console.log('OFFICIAL_LICENSE_SCREEN_UNRESOLVED');}
  console.log('OFFICIAL_GUI_LICENSE '+JSON.stringify({screenAdvanced:accepted}));
