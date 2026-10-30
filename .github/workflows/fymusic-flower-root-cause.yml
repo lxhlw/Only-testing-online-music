@@ -1,0 +1,53 @@
+name: FyMusic Flower Root Cause
+
+on:
+  push:
+    branches: [feature/fymusic-playback-verifier]
+    paths:
+      - '.github/workflows/fymusic-flower-root-cause.yml'
+      - 'scripts/diagnose-fymusic-flower-root-cause.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  flower-root-cause:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax validation
+        run: node --check scripts/diagnose-fymusic-flower-root-cause.mjs
+      - name: Install project dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Start local Cloudflare Pages
+        shell: bash
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/fymusic-root.log 2>&1 &
+          for i in {1..45}; do
+            if curl --fail --silent http://127.0.0.1:8788/api/audio-selftest > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/fymusic-root.log
+          exit 1
+      - name: Diagnose Flower quality and KG proxy status
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/diagnose-fymusic-flower-root-cause.mjs
+      - name: Upload safe diagnostic report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fymusic-flower-root-cause
+          path: diagnostics/fymusic-flower-root-cause.json
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Show local service logs on failure
+        if: failure()
+        run: cat /tmp/fymusic-root.log || true
