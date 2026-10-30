@@ -55,7 +55,13 @@ try{
   running.push(promise);
  });
  page.on('requestfailed',request=>{
-  if(active&&request.resourceType()==='media')active.mediaNetworkError=true;
+  const row=active;
+  if(!row||request.resourceType()!=='media')return;
+  // A previous song's aborted request must NOT be attributed to the next song.
+  const url=request.url(); // transient only, never logged or stored
+  running.push(page.evaluate(current=>
+    document.getElementById('audio')?.currentSrc===current,url)
+   .then(matches=>{if(matches)row.mediaNetworkError=true;}).catch(()=>{}));
  });
  await page.addInitScript(()=>{
   localStorage.setItem('only-testing-online-music.play-settings',JSON.stringify({
@@ -133,7 +139,8 @@ try{
       return {hits:hits.slice(0,20),status:window.__fyLiveSearch?.status,
        provider:window.FyMusicPlaybackDiagnostics.report()?.search?.provider};
      },{title:TITLE,artist:ARTIST});
-     row.searchProvider=safe(info.provider);
+     // The report() API reflects the last *selected* song while the next
+     // search is in progress. Provider attribution happens AFTER row click.
      row.candidates=info.hits.length;
      row.searchStatus=safe(info.status);
      if(info.hits.length){index=info.hits[0];break;}
@@ -158,8 +165,28 @@ try{
      },null,{timeout:33000});
     }catch{}
     await snooze(250);
-    const r=await page.evaluate(()=>window.FyMusicPlaybackDiagnostics.report());
+    let r=await page.evaluate(()=>window.FyMusicPlaybackDiagnostics.report());
+    // A transient 0.7s clip is insufficient: verify the SAME stream
+    // continues for another 3.6s and exposes plausible song duration.
+    if(r.media?.progressConfirmed){
+     const start=r.media.mediaSeconds||0;
+     await snooze(3600);
+     const sustained=await page.evaluate(()=>{
+      const a=document.getElementById('audio');
+      return {seconds:Number(a?.currentTime)||0,duration:Number(a?.duration)||0,
+       paused:!!a?.paused,ended:!!a?.ended,errorCode:a?.error?.code||null};
+     });
+     row.durationSeconds=Math.round(sustained.duration*10)/10;
+     row.sustainedProgress=sustained.seconds>=Math.max(3,start+2.3)&&
+      sustained.duration>=120&&sustained.duration<=700&&!sustained.ended&&
+      !sustained.errorCode;
+     r=await page.evaluate(()=>window.FyMusicPlaybackDiagnostics.report());
+    }
     row.outcome=safe(r.outcome==='pending'?'playback_unconfirmed':r.outcome);
+    row.searchProvider=safe(r.search?.provider);
+    row.linkedSource=safe(r.source);
+    row.provenanceConsistent=row.linkedSource===platform&&
+      r.search?.status==='selected';
     row.stage=safe(r.blockedAt|| (r.media?.progressConfirmed?'media_progress':
       r.media?.urlResolved?'media_load':'resolve'));
     row.searchLink=safe(r.search?.status);
@@ -173,6 +200,8 @@ try{
     row.mediaReady=!!r.media?.mediaReady;
     row.progressConfirmed=!!r.media?.progressConfirmed;
     row.mediaSeconds=Math.round((Number(r.media?.mediaSeconds)||0)*10)/10;
+    // 'progressConfirmed' is a short clock-observation, not a multi-second
+    // playback guarantee. The sustained flag is the stronger independent check.
     row.httpStatus=Number.isInteger(r.media?.http?.status)?r.media.http.status:null;
     row.httpClassification=safe(r.media?.http?.result);
     row.audioErrorCode=Number.isInteger(r.media?.mediaErrorCode)?r.media.mediaErrorCode:null;
