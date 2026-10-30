@@ -12,7 +12,7 @@ try{
  const pageErrors=[];
  page.on('pageerror',e=>pageErrors.push(String(e).slice(0,160)));
  await page.goto(base,{waitUntil:'domcontentloaded',timeout:30000});
- await page.waitForFunction(()=>Boolean(window.FyMusicPlaybackDiagnostics),{timeout:18000});
+ await page.waitForFunction(()=>Boolean(window.FyMusicPlaybackDiagnostics),null,{timeout:18000});
  assert.match(await page.title(),/FyMusic/);
  assert.equal(await page.locator('#fymusic-playback-debug').count(),0);
  await page.evaluate(()=>{
@@ -34,7 +34,7 @@ try{
   await audio.play();
  });
  await page.waitForFunction(()=>window.FyMusicPlaybackDiagnostics.snapshot().progressConfirmed,
-  {timeout:9000});
+  null,{timeout:9000});
  const valid=await page.evaluate(()=>window.FyMusicPlaybackDiagnostics.snapshot());
  assert.equal(valid.progressConfirmed,true);
  assert.equal(valid.mediaReady,true);
@@ -65,7 +65,7 @@ try{
   await audio.play().catch(()=>{});
  });
  await page.waitForFunction(()=>window.FyMusicPlaybackDiagnostics.snapshot().failed,
-  {timeout:9000});
+  null,{timeout:9000});
  const invalid=await page.evaluate(()=>window.FyMusicPlaybackDiagnostics.snapshot());
  assert.equal(invalid.progressConfirmed,false);
  assert.equal(invalid.failureCode,'media_error');

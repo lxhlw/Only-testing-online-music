@@ -2,6 +2,17 @@
 // No URL/token storage, proxying, timers, or playback control.
 const safeCode = value=>String(value||'unknown').replace(/[^a-z0-9_-]/gi,'_').slice(0,48);
 const safeText = value=>String(value||'').slice(0,100);
+// Never propagate arbitrary provider/source labels into diagnostics snapshots.
+const allow = (value,list) => {
+ const key=String(value||'').toLowerCase();
+ return list.includes(key)?key:'unknown';
+};
+const source = value=>allow(value,['wy','tx','kg','kw','mg','local','test']);
+const quality = value=>allow(value,['128k','192k','256k','320k','flac','flac24bit',
+ 'flac32bit','ape','wav','hires','master','atmos','atmos_plus','24bit']);
+const provider = value=>allow(value,['lx-source','selftest','huibq','tune-free',
+ 'kugou-native','kuwo-native','netease-native','gd-studio']);
+const transport = value=>allow(value,['direct','proxy']);
 export function createPlaybackVerifier({now=()=>performance.now(),maxEvents=24}={}){
  let generation=0,start=now(),checkpoint=null,playingSeen=false,seeking=false;
  const make=()=>({generation,phase:'idle',title:'',artist:'',source:'',quality:'',
@@ -18,14 +29,14 @@ export function createPlaybackVerifier({now=()=>performance.now(),maxEvents=24}=
  function begin(track={}){
    generation++;start=now();checkpoint=null;playingSeen=false;seeking=false;state=make();
    state.title=safeText(track.name);state.artist=safeText(track.singer);
-   state.source=safeCode(track.source);state.phase='track_selected';
+   state.source=source(track.source);state.phase='track_selected';
    note('track_selected');return snapshot();
  }
  function resolved(detail={}){
    if(state.phase==='idle')begin();
    checkpoint=null;playingSeen=false;seeking=false;
-   Object.assign(state,{quality:safeCode(detail.quality),source:safeCode(detail.source||state.source),
-     provider:safeCode(detail.provider),transport:safeCode(detail.transport),
+   Object.assign(state,{quality:quality(detail.quality),source:source(detail.source||state.source),
+     provider:provider(detail.provider),transport:transport(detail.transport),
      urlResolved:true,metadataLoaded:false,mediaReady:false,playingEvent:false,
      progressConfirmed:false,completed:false,failed:false,failureCode:null,
      mediaErrorCode:null,mediaSeconds:0,durationSeconds:null,phase:'url_resolved'});
