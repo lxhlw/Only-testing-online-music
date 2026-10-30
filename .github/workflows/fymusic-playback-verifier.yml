@@ -49,6 +49,10 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-fymusic-playback-browser.mjs
+      - name: Test complete UI search, row selection, source resolution and real audio
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-fymusic-full-ui-browser.mjs
       - name: Show site logs on failure
         if: failure()
         run: cat /tmp/fymusic-pages.log || true
