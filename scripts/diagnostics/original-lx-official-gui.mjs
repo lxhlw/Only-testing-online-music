@@ -110,6 +110,17 @@ try{
   await appPage.waitForTimeout(650);
  }
  await snapshot('AFTER_DIALOGS');
+ // The official new-version change log has a close icon with no accessible
+ // label; use the existing close BUTTON event, not a Vue/store mutation.
+ await appPage.evaluate(()=>{
+  for(const h of document.querySelectorAll('h2')){
+   if(String(h.textContent||'').includes('当前版本更新日志')){
+    const btn=h.closest('main')?.parentElement?.querySelector('header button');
+    if(btn)btn.click();
+   }
+  }
+ }).catch(()=>{});
+ await appPage.waitForTimeout(900);
  try{
   await appPage.getByRole('button',{name:/^Settings$/i}).first().click({timeout:12000});
   await appPage.waitForTimeout(1700);
