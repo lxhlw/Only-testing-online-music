@@ -45,9 +45,19 @@ try{
   officialSource:'LX Music Desktop v2.12.6 Windows x64 green release'}));
  if(!connected)throw Error('FULL_GUI_CDP_NOT_AVAILABLE');
  const pw=await chromium.connectOverCDP('http://127.0.0.1:9368');
- const contexts=pw.contexts();
- const pages=contexts.flatMap(c=>c.pages());
+ let pages=[];
+ for(let i=0;i<40;i++){
+  pages=pw.contexts().flatMap(c=>c.pages());
+  if(pages.length)break;
+  await new Promise(r=>setTimeout(r,1000));
+ }
  console.log('OFFICIAL_GUI_PAGE_COUNT '+pages.length);
+ const targets=await fetch('http://127.0.0.1:9368/json/list')
+  .then(x=>x.json()).catch(()=>[]);
+ console.log('OFFICIAL_CDP_TARGET_TYPES '+JSON.stringify(
+  targets.map(t=>({type:t.type,title:String(t.title||'').slice(0,55),
+    urlScheme:String(t.url||'').split(':')[0]})).slice(0,12)));
+ if(!pages.length)throw Error('ORIGINAL_GUI_NO_RENDERER_TARGET');
  for(const page of pages.slice(0,4)){
   const info=await page.evaluate(()=>{
    const texts=Array.from(document.querySelectorAll('button,[role="button"],a'))
