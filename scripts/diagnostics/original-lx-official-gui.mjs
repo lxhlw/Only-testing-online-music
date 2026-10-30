@@ -138,7 +138,9 @@ try{
  }
  await snapshot('AFTER_CHANGELOG');
  try{
-  await appPage.getByRole('button',{name:/^Settings$/i}).first().click({timeout:12000});
+  // Official LX Aside/NavBar.vue uses router-link role="tab" for Settings.
+  await appPage.getByRole('tab',{name:/^Settings$/i}).first().click({timeout:12000});
+  console.log('OFFICIAL_GUI_SETTINGS_TAB_CLICKED');
   await appPage.waitForTimeout(1700);
   await snapshot('SETTINGS');
   try{
