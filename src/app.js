@@ -1678,7 +1678,7 @@
           // Never broadcast a source's raw error: it may contain signed URLs
           // or request metadata. Only safe status/code are observable.
           var diagnosticError=String(err && (err.message || err) || '');
-          var diagnosticStatusMatch=diagnosticError.match(/\\bHTTP[\\s:_-]*(\\d{3})\\b/i);
+          var diagnosticStatusMatch=diagnosticError.match(/\bHTTP[\s:_-]*(\d{3})\b/i);
           var diagnosticCode=/timeout|timed out|超时/i.test(diagnosticError)?'timeout':
             /network|socket|connect|econn|dns|failed to fetch|网络/i.test(diagnosticError)?'network':
             /invalid|undefined|unexpected|json|format|无效|缺少/i.test(diagnosticError)?'invalid':'unknown';
