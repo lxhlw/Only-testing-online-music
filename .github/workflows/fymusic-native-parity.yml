@@ -27,20 +27,27 @@ jobs:
           npm install --no-audit --no-fund
           npm install --no-save --no-audit --no-fund electron@42.11.6 esbuild@0.25.12 tunnel@0.0.6
           npx playwright install chromium
-      - name: Start isolated Cloudflare Pages server on Windows
+      - name: Start Pages and compare native official LX preload in one Windows session
         shell: pwsh
-        run: |
-          $job = Start-Process -FilePath "cmd.exe" -ArgumentList '/c','npx wrangler pages dev . --ip 127.0.0.1 --port 8788' -NoNewWindow -PassThru -RedirectStandardOutput "$env:RUNNER_TEMP\fymusic-native-pages.log" -RedirectStandardError "$env:RUNNER_TEMP\fymusic-native-pages.err.log"
-          for ($i=0; $i -lt 55; $i++) {
-            try {
-              $r=Invoke-WebRequest -Uri "http://127.0.0.1:8788/api/audio-selftest" -TimeoutSec 3
-              if ($r.StatusCode -eq 200) { exit 0 }
-            } catch {}
-            Start-Sleep -Seconds 1
-          }
-          Get-Content "$env:RUNNER_TEMP\fymusic-native-pages.err.log" -ErrorAction SilentlyContinue
-          exit 1
-      - name: Run native official-preload and FyMusic comparison
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
-        run: node scripts/diagnostics/fymusic-native-parity.mjs
+        run: |
+          $proc=Start-Process -FilePath "cmd.exe" -ArgumentList '/c','npx wrangler pages dev . --ip 127.0.0.1 --port 8788' -NoNewWindow -PassThru -RedirectStandardOutput "$env:RUNNER_TEMP\fymusic-native-pages.log" -RedirectStandardError "$env:RUNNER_TEMP\fymusic-native-pages.err.log"
+          $started=$false
+          try {
+            for ($i=0; $i -lt 55; $i++) {
+              try {
+                $r=Invoke-WebRequest -Uri "http://127.0.0.1:8788/api/audio-selftest" -TimeoutSec 3
+                if ($r.StatusCode -eq 200) { $started=$true; break }
+              } catch {}
+              Start-Sleep -Seconds 1
+            }
+            if (-not $started) {
+              Get-Content "$env:RUNNER_TEMP\fymusic-native-pages.err.log" -ErrorAction SilentlyContinue
+              throw 'PAGES_SERVER_NOT_READY'
+            }
+            node scripts/diagnostics/fymusic-native-parity.mjs
+            if ($LASTEXITCODE -ne 0) { throw "NATIVE_PARITY_EXIT_$LASTEXITCODE" }
+          } finally {
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+          }
