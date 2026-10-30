@@ -1,3 +1,4 @@
+import {classifyMediaResponse,classifyResolverFailure,compareCatalogIdentity} from './fymusic-diagnostic-classifier.js';
 // FyMusic Phase 1 - evidence-based media playback observer.
 // No URL/token storage, proxying, timers, or playback control.
 const safeCode = value=>String(value||'unknown').replace(/[^a-z0-9_-]/gi,'_').slice(0,48);
@@ -19,7 +20,8 @@ export function createPlaybackVerifier({now=()=>performance.now(),maxEvents=24}=
    provider:'',transport:'',urlResolved:false,metadataLoaded:false,
    mediaReady:false,playingEvent:false,progressConfirmed:false,completed:false,
    failed:false,failureCode:null,mediaErrorCode:null,mediaSeconds:0,
-   durationSeconds:null,events:[]});
+   durationSeconds:null,mediaHttp:null,identity:{status:'unverified',reason:'not_checked'},
+   resolverFailure:null,events:[]});
  let state=make();
  function note(value){
    state.events.push({event:safeCode(value),elapsedMs:Math.max(0,Math.round(now()-start))});
@@ -39,12 +41,25 @@ export function createPlaybackVerifier({now=()=>performance.now(),maxEvents=24}=
      provider:provider(detail.provider),transport:transport(detail.transport),
      urlResolved:true,metadataLoaded:false,mediaReady:false,playingEvent:false,
      progressConfirmed:false,completed:false,failed:false,failureCode:null,
-     mediaErrorCode:null,mediaSeconds:0,durationSeconds:null,phase:'url_resolved'});
+     mediaErrorCode:null,mediaSeconds:0,durationSeconds:null,mediaHttp:null,
+     resolverFailure:null,phase:'url_resolved'});
    note('url_resolved');return snapshot();
  }
- function resolverError(code='resolver_error'){
-   // A failed quality attempt may be followed by another working quality.
-   note(code);return snapshot();
+ function resolverError(info='resolver_error'){
+   // A source's reported HTTP error is not a verified media HTTP status.
+   state.resolverFailure=classifyResolverFailure(info);
+   note(state.resolverFailure);return snapshot();
+ }
+ function httpResponse(info={}){
+   if(!state.urlResolved)return snapshot();
+   state.mediaHttp=classifyMediaResponse(info);
+   note('media_http_'+state.mediaHttp.result);
+   return snapshot();
+ }
+ function catalogIdentity(expected={},candidate={}){
+   state.identity=compareCatalogIdentity(expected,candidate);
+   note('identity_'+state.identity.status);
+   return snapshot();
  }
  function fail(code='unknown',mediaErrorCode=null){
    state.phase='failed';state.failed=true;state.failureCode=safeCode(code);
@@ -111,5 +126,5 @@ export function createPlaybackVerifier({now=()=>performance.now(),maxEvents=24}=
    }
    return snapshot();
  }
- return Object.freeze({begin,resolved,resolverError,fail,media,snapshot});
+ return Object.freeze({begin,resolved,resolverError,httpResponse,catalogIdentity,fail,media,snapshot});
 }

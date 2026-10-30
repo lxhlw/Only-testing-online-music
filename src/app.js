@@ -1398,6 +1398,12 @@
     // cross-source retries or repeated multibit-rate waterfalls.
     if (NATIVE_COMPANION && plan.length > 1) plan = [plan[0]];
     var quality = plan[index];
+    // Compare the selected catalog row with what we actually pass to the
+    // resolver. This does NOT verify the audio content or copyright.
+    global.dispatchEvent(new CustomEvent('fymusic:catalog-identity',{detail:{
+      expected:{name:music.name,singer:music.singer,source:source},
+      candidate:{name:musicInfo.name,singer:musicInfo.singer,source:musicInfo.source}
+    }}));
     playbackState.index = index;
     playbackState.quality = quality;
     playbackState.waitingForAudio = false;
@@ -1670,7 +1676,8 @@
 
         if (err) {
           global.dispatchEvent(new CustomEvent('fymusic:resolver-error',{detail:{
-            code:'resolver_request_failed'
+            message:String(err && (err.message || err) || ''),
+            source:source
           }}));
           flowerFailed=activeSourceName+'解析失败：'+String(err && (err.message || err) || '网络错误').slice(0,160);
           if (fastEnabled) { startFastRace(); return; }
