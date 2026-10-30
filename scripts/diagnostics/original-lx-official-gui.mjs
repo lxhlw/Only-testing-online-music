@@ -101,10 +101,41 @@ try{
   console.log('OFFICIAL_GUI_'+stage+' '+JSON.stringify(data));
  };
  await snapshot('AFTER_LICENSE');
+ // Official first-run shows both a free-software notice and an absent-audio-
+ // device notice on Windows CI. Dismiss UI-only dialogs; no private settings.
+ for(let i=0;i<5;i++){
+  const buttons=appPage.getByRole('button',{name:/^(?:OK|好的\s*\(OK\))$/i});
+  if(!(await buttons.count()))break;
+  try{await buttons.last().click({timeout:2800,force:true});}catch{break;}
+  await appPage.waitForTimeout(650);
+ }
+ await snapshot('AFTER_DIALOGS');
  try{
   await appPage.getByRole('button',{name:/^Settings$/i}).first().click({timeout:12000});
   await appPage.waitForTimeout(1700);
   await snapshot('SETTINGS');
+  try{
+   const manage=appPage.getByText('Music API Management',{exact:true});
+   if(await manage.count()){
+    await manage.last().click({timeout:8500,force:true});
+    await appPage.waitForTimeout(1100);
+    await snapshot('API_MANAGER');
+    const online=appPage.getByText('Import from Network',{exact:true});
+    if(await online.count()){
+     await online.last().click({timeout:7500,force:true});
+     await appPage.waitForTimeout(700);
+     await snapshot('API_IMPORT');
+     const input=appPage.getByPlaceholder('Please enter an HTTP link');
+     if(await input.count()){
+      await input.first().fill('https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js');
+      const submit=appPage.getByRole('button',{name:/^Import$/i});
+      if(await submit.count())await submit.last().click({timeout:8000});
+      await appPage.waitForTimeout(2800);
+      await snapshot('API_IMPORTED');
+     }
+    }
+   }
+  }catch{console.log('OFFICIAL_GUI_IMPORT_STEP_INCOMPLETE');}
  }catch{console.log('OFFICIAL_GUI_SETTINGS_NOT_REACHED');}
  await pw.close();
 }finally{
