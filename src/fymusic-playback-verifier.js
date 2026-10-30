@@ -1,7 +1,9 @@
 import {createPlaybackVerifier} from './fymusic-playback-core.js';
+import {createPlaybackChain} from './fymusic-chain-report.js';
 // Passive, event-driven observer: does not modify audio.src, play(), or handlers.
 const audio=document.getElementById('audio');
 const monitor=createPlaybackVerifier();
+const chain=createPlaybackChain();
 const events=['loadstart','loadedmetadata','loadeddata','canplay','playing',
  'timeupdate','waiting','stalled','pause','ended','error','seeking','seeked','emptied','abort'];
 let panel=null;
@@ -11,6 +13,9 @@ function notify(){
   panel.textContent=[
    'FyMusic · 播放诊断',
    '状态：'+s.phase,
+   '链路结果：'+chain.report(s).outcome,
+   '搜索关联：'+chain.report(s).search.status,
+   '解析：'+chain.report(s).stages.resolver,
    '来源：'+(s.source||'—')+' · 请求音质：'+(s.quality||'—'),
    'URL：'+(s.urlResolved?'已获得':'未获得'),
    '媒体 HTTP：'+(s.mediaHttp?.status??'未暴露')+
@@ -27,15 +32,34 @@ function notify(){
  }
  window.dispatchEvent(new CustomEvent('fymusic:diagnostics-update'));
 }
-window.FyMusicPlaybackDiagnostics=Object.freeze({snapshot:()=>monitor.snapshot()});
+window.FyMusicPlaybackDiagnostics=Object.freeze({
+ snapshot:()=>monitor.snapshot(),
+ report:()=>chain.report(monitor.snapshot())
+});
+window.addEventListener('fymusic:search-start',event=>{
+ chain.searchStart(event.detail||{});notify();
+});
+window.addEventListener('fymusic:search-page',event=>{
+ chain.searchPage(event.detail||{});notify();
+});
+window.addEventListener('fymusic:search-error',event=>{
+ chain.searchError(event.detail||{});notify();
+});
+window.addEventListener('fymusic:search-selection',event=>{
+ chain.selectFromSearch(event.detail||{});
+});
+window.addEventListener('fymusic:resolver-attempt',event=>{
+ chain.resolverAttempt(event.detail||{});notify();
+});
 window.addEventListener('lx:trackchange',event=>{
- monitor.begin(event.detail||{});notify();
+ monitor.begin(event.detail||{});chain.begin(event.detail||{});notify();
 });
 window.addEventListener('fymusic:url-resolved',event=>{
- monitor.resolved(event.detail||{});notify();
+ monitor.resolved(event.detail||{});chain.urlResolved(event.detail||{});notify();
 });
 window.addEventListener('fymusic:resolver-error',event=>{
- monitor.resolverError(event.detail||{});notify();
+ monitor.resolverError(event.detail||{});
+ chain.resolverError(monitor.snapshot().resolverFailure);notify();
 });
 window.addEventListener('fymusic:catalog-identity',event=>{
  monitor.catalogIdentity(event.detail?.expected,event.detail?.candidate);notify();

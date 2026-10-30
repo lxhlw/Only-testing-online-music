@@ -1404,6 +1404,9 @@
       expected:{name:music.name,singer:music.singer,source:source},
       candidate:{name:musicInfo.name,singer:musicInfo.singer,source:musicInfo.source}
     }}));
+    global.dispatchEvent(new CustomEvent('fymusic:resolver-attempt',{detail:{
+      source:source,quality:quality
+    }}));
     playbackState.index = index;
     playbackState.quality = quality;
     playbackState.waitingForAudio = false;
@@ -2607,6 +2610,9 @@
       keyword:keyword,channel:channel,token:token,page:0,
       loading:false,hasMore:true,seen:Object.create(null),count:0
     };
+    global.dispatchEvent(new CustomEvent('fymusic:search-start',{detail:{
+      id:token,source:channel
+    }}));
     resultsEl.innerHTML='';
     global.__LXLastSearchResults=[];
     loadNextSongSearchPage();
@@ -2633,6 +2639,13 @@
       session.loading=false;
       if(err){
         if(nextPage===1){
+          var errorText=String(err&&err.message||err||'');
+          var errorClass=/timeout|超时/i.test(errorText)?'timeout':
+            /\bHTTP\s+[45][0-9][0-9]\b/i.test(errorText)?'http_error':
+            /network|socket|网络|failed/i.test(errorText)?'network':'unknown';
+          global.dispatchEvent(new CustomEvent('fymusic:search-error',{detail:{
+            id:session.token,source:session.channel,code:errorClass
+          }}));
           setStatus('搜索失败：'+escapeHtml(err.message||err)+'。可重新搜索。','fail');
           resultsEl.innerHTML='<div class="empty-note">网络或音源暂时不可用。<button type="button" id="retry-song-search">重新搜索</button></div>';
           var retry=document.getElementById('retry-song-search');
@@ -2650,6 +2663,13 @@
         if(session.seen[key])continue;
         session.seen[key]=1;unique.push(item);
       }
+      global.dispatchEvent(new CustomEvent('fymusic:search-page',{detail:{
+        id:session.token,source:session.channel,page:nextPage,
+        provider:String(result&&result.searchProvider||'unknown'),
+        items:unique.slice(0,160).map(function(x){return {
+          name:x.name,singer:x.singer,source:x.source||session.channel
+        };})
+      }}));
       session.page=nextPage;
       session.count+=unique.length;
       var counter=document.getElementById('song-result-counter');
@@ -2731,7 +2751,12 @@
       source.className='search-source';
       source.textContent=String(CHANNEL_NAMES[item.source]||item.source||'');
       var actions=document.createElement('div');actions.className='search-actions';
-      const play=function(){testMusic(item,true);};
+      const play=function(){
+        global.dispatchEvent(new CustomEvent('fymusic:search-selection',{detail:{
+          name:item.name,singer:item.singer,source:item.source
+        }}));
+        testMusic(item,true);
+      };
       main.onclick=play;
       main.onkeydown=function(event){
         if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();play();}
