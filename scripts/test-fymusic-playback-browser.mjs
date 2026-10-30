@@ -32,9 +32,23 @@ try{
  assert.match(await page.title(),/FyMusic/);
  assert.equal(await page.locator('#fymusic-playback-debug').count(),0);
  await page.evaluate(()=>{
-  window.dispatchEvent(new CustomEvent('lx:trackchange',{detail:{
-   source:'test',name:'授权校准测试音',singer:'FyMusic'
-  }}));
+  // Instrument the exact same event sequence the search row + resolver
+  // produce; the audio clip remains only the site's calibration test.
+  const track={source:'test',name:'授权校准测试音',singer:'FyMusic'};
+  window.dispatchEvent(new CustomEvent('fymusic:search-start',{
+   detail:{id:17,source:'test'}
+  }));
+  window.dispatchEvent(new CustomEvent('fymusic:search-page',{
+   detail:{id:17,source:'test',page:1,provider:'selftest',items:[track]}
+  }));
+  window.dispatchEvent(new CustomEvent('fymusic:search-selection',{detail:track}));
+  window.dispatchEvent(new CustomEvent('lx:trackchange',{detail:track}));
+  window.dispatchEvent(new CustomEvent('fymusic:catalog-identity',{
+   detail:{expected:track,candidate:track}
+  }));
+  window.dispatchEvent(new CustomEvent('fymusic:resolver-attempt',{
+   detail:{source:'test',quality:'320k'}
+  }));
   window.dispatchEvent(new CustomEvent('fymusic:url-resolved',{detail:{
    source:'test',quality:'320k',provider:'selftest',transport:'direct'
   }}));
@@ -57,6 +71,18 @@ try{
  assert.ok(valid.mediaSeconds>0);
  assert.equal(valid.source,'test');
  assert.equal(valid.quality,'320k');
+ const correlated=await page.evaluate(()=>window.FyMusicPlaybackDiagnostics.report());
+ assert.equal(correlated.outcome,'playback_progress_confirmed');
+ assert.equal(correlated.search.status,'selected');
+ assert.equal(correlated.stages.catalog,'matched');
+ assert.equal(correlated.resolver.attemptCount,1);
+ assert.equal(correlated.media.progressConfirmed,true);
+ assert.ok(!JSON.stringify(correlated).includes('/api/audio-selftest'));
+ console.log('FYMUSIC_FULL_CHAIN '+JSON.stringify({
+  outcome:correlated.outcome,search:correlated.search.status,
+  catalog:correlated.stages.catalog,resolver:correlated.stages.resolver,
+  mediaProgress:correlated.media.progressConfirmed
+ }));
  assert.equal(JSON.stringify(valid).includes('/api/audio-selftest'),false);
  await page.waitForFunction(()=>Boolean(window.FyMusicPlaybackDiagnostics.snapshot().mediaHttp),
   null,{timeout:5000});
