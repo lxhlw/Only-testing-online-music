@@ -82,6 +82,12 @@ test('diagnostic metadata cannot retain raw URLs or arbitrary HTTP content type'
  v.httpResponse({status:206,contentType:'audio/mpeg;token=very-secret',
   provenance:'browser_test',url:'https://secret.invalid/key=very-secret'});
  assert.equal(v.snapshot().mediaHttp.mime,'audio/mpeg');
+ // A low-trust observer must not overwrite a trusted header.
+ v.httpResponse({status:200,contentType:'x-private/auth=SECRET',provenance:'mystery'});
+ assert.equal(v.snapshot().mediaHttp.mime,'audio/mpeg');
+ assert.equal(v.snapshot().mediaHttp.provenance,'browser_test');
+ // A fresh attempt may nevertheless report an unknown, sanitized type.
+ v.resolved({source:'wy',quality:'flac'});
  v.httpResponse({status:200,contentType:'x-private/auth=SECRET',provenance:'mystery'});
  assert.equal(v.snapshot().mediaHttp.mime,'other');
  assert.equal(v.snapshot().mediaHttp.provenance,'unknown');
