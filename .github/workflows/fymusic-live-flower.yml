@@ -1,0 +1,52 @@
+name: FyMusic Live Flower Song Probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/fymusic-playback-verifier]
+    paths:
+      - '.github/workflows/fymusic-live-flower.yml'
+      - 'scripts/diagnose-fymusic-live-song.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  live-diagnostics:
+    name: Real Flower / Sun Yanzi song
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Start isolated Cloudflare Pages
+        shell: bash
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/fymusic-live.log 2>&1 &
+          for i in {1..45}; do
+            if curl --fail --silent http://127.0.0.1:8788/api/audio-selftest > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/fymusic-live.log
+          exit 1
+      - name: Run unmocked Sun Yanzi song diagnostics
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/diagnose-fymusic-live-song.mjs
+      - name: Upload safe diagnostic summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fymusic-live-song-summary
+          path: diagnostics/fymusic-live-flower.json
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Show local service logs if infrastructure fails
+        if: failure()
+        run: cat /tmp/fymusic-live.log || true
