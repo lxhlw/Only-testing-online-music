@@ -273,7 +273,9 @@
             cipher.start(startOptions);
             cipher.update(global.forge.util.createBuffer(input, 'raw'));
             cipher.finish();
-            return makeBuffer(cipher.output.getBytes());
+            // Forge getBytes() is a binary/latin1 string, not UTF-8 text.
+            // Node createCipheriv returns a Buffer of the exact ciphertext bytes.
+            return makeBuffer(cipher.output.getBytes(), 'binary');
           },
           rsaEncrypt: function (buffer, key) {
             if (!global.forge || !global.forge.pki) throw new Error('crypto runtime is not loaded');
@@ -287,7 +289,9 @@
             if (raw.length > keySize) throw new Error('RSA input is too large');
             while (raw.length < keySize) raw = '\x00' + raw;
             var out = publicKey.encrypt(raw, 'NONE');
-            return makeBuffer(out);
+            // Forge RSA output is also a raw byte string. Encoding it as UTF-8
+            // changes 0x80-0xff bytes and breaks LX Desktop parity.
+            return makeBuffer(out, 'binary');
           }
         },
         zlib: {
