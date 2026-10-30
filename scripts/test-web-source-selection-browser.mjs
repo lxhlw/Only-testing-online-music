@@ -13,6 +13,8 @@ function fixture(name){
 const page=await browser.newPage({viewport:{width:1280,height:800}});
 try{
  await page.addInitScript(data=>{
+  if(sessionStorage.getItem('lx-multi-source-fixture-ready')==='1')return;
+  sessionStorage.setItem('lx-multi-source-fixture-ready','1');
   localStorage.setItem('only-testing-online-music.lx-sources',JSON.stringify([
    {id:'flower',url:data.flowerUrl,name:'Flower Fixture',code:data.flowerCode},
    {id:'custom',url:data.customUrl,name:'Custom LX Fixture',code:data.customCode}

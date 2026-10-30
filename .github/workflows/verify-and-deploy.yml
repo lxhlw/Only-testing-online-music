@@ -17,6 +17,7 @@ on:
       - 'scripts/test-playlist-infinite-browser.mjs'
       - 'scripts/test-mobile-interaction-qa-browser.mjs'
       - 'scripts/test-web-source-selection-browser.mjs'
+      - 'scripts/test-huibq-explicit-playback-live.mjs'
       - 'package.json'
       - 'version.json'
       - 'settings.html'
@@ -61,6 +62,7 @@ jobs:
           node --check scripts/test-playlist-infinite-browser.mjs
           node --check scripts/test-mobile-interaction-qa-browser.mjs
           node --check scripts/test-web-source-selection-browser.mjs
+          node --check scripts/test-huibq-explicit-playback-live.mjs
           node --check scripts/test-modern-flower-proxy.mjs
           node --check scripts/test-flower-cross-platform-live.mjs
           node --check scripts/test-flower-correlated-live.mjs
@@ -193,6 +195,12 @@ jobs:
           node scripts/test-modern-web-browser.mjs
           node scripts/test-playlist-infinite-browser.mjs
           node scripts/test-mobile-interaction-qa-browser.mjs
+      - name: Explicit Huibq LX source real-media feasibility (informational)
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          TEST_BASE_URL: https://only-testing-online-music.pages.dev
+        run: node scripts/test-huibq-explicit-playback-live.mjs
       - name: Live Flower musicUrl smoke (upstream diagnostic; no simulated audio)
         continue-on-error: true
         env:
