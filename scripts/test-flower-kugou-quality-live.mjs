@@ -132,7 +132,9 @@ try {
         byteExactMatch:actual===expected,
         desktopUserAgentMatched:getHeader('User-Agent')==='lx-music/desktop',
         desktopVersionMatched:getHeader('ver')==='2.0.0',
-        sourceVersionMatched:getHeader('source-version')===
+        // The public Flower v1 header is literally 'source-ver', not
+        // 'source-version'; compare the original script's exact field.
+        sourceVersionMatched:getHeader('source-ver')===
           String(active.runtime?.currentScriptInfo?.version||'')
       };
         const segments=new URL(request.url).pathname.split('/').filter(Boolean);
