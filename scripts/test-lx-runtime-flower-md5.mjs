@@ -6,7 +6,13 @@ import {runInNewContext} from 'node:vm';
 // Independent reference vectors for the LX runtime's MD5 and buffer helpers.
  // This DOES NOT prove Flower's live tag is an MD5 of a particular input.
 const src=readFileSync(new URL('../src/lx-runtime.js',import.meta.url),'utf8');
-const scope={window:{},Uint8Array,ArrayBuffer,TextEncoder,TextDecoder};
+const scope={
+  window:{
+    atob(value){return Buffer.from(String(value),'base64').toString('binary');},
+    btoa(value){return Buffer.from(String(value),'binary').toString('base64');}
+  },
+  Uint8Array,ArrayBuffer,TextEncoder,TextDecoder
+};
 runInNewContext(src,scope,{timeout:3000});
 const runtime=scope.window.createLXRuntime({env:'desktop'});
 assert.equal(runtime.env,'desktop');
@@ -24,7 +30,7 @@ for(const value of ['', 'abc', 'message digest','宋冬野','477251491',
 console.log('PASS LX runtime MD5 matches Node for ASCII, CJK, IDs and paths');
 
 for(const input of ['', 'ascii ASCII', '赵雷', '成都', '宋冬野',
-  '128k_音质', '🙂🎵', 'a\ud800b', '\udc00', '\ud83d\ude80'){
+  '128k_音质', '🙂🎵', 'a\ud800b', '\udc00', '\ud83d\ude80']){
   for(const encoding of [undefined, 'utf8', 'UTF-8']){
     const actual=runtime.utils.buffer.from(input,encoding);
     const expected=Buffer.from(input,encoding);
