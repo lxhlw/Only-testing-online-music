@@ -8,6 +8,8 @@ on:
       - 'src/app.js'
       - 'index.html'
       - 'scripts/test-fymusic-playback-*.mjs'
+      - 'scripts/test-fymusic-chain-report.mjs'
+      - 'scripts/test-fymusic-full-ui-browser.mjs'
   workflow_dispatch:
 
 permissions:
