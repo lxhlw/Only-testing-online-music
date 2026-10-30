@@ -1472,6 +1472,16 @@
 
     function runFallback(reason) {
       if (!isCurrentAttempt() || !finishAttempt()) return;
+      // A failed resolver may never return an HTTP status (timeout/empty data).
+      // Report only bounded classifications, not raw URLs or failure text.
+      var diagnosticReason=String(reason||'');
+      var reportedHttp=diagnosticReason.match(/\bHTTP[\s:_-]*([45][0-9]{2})\b/i);
+      global.dispatchEvent(new CustomEvent('fymusic:resolver-error',{detail:{
+        status:reportedHttp?Number(reportedHttp[1]):null,
+        code:/timeout|超时|deadline|timed out/i.test(diagnosticReason)?'timeout':
+          /network|socket|connect|econn|dns|网络/i.test(diagnosticReason)?'network':
+          'unknown'
+      }}));
       var sourceUnavailable = MODERN_WEB && isFlowerOutage(reason);
 
       // Downgrading bitrate cannot recover an unreachable Flower server;
@@ -2753,7 +2763,7 @@
       var actions=document.createElement('div');actions.className='search-actions';
       const play=function(){
         global.dispatchEvent(new CustomEvent('fymusic:search-selection',{detail:{
-          name:item.name,singer:item.singer,source:item.source
+          name:item.name,singer:item.singer,source:item.source||selectedChannel
         }}));
         testMusic(item,true);
       };
