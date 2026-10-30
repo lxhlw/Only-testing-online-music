@@ -52,8 +52,17 @@ export function createPlaybackVerifier({now=()=>performance.now(),maxEvents=24}=
  }
  function httpResponse(info={}){
    if(!state.urlResolved)return snapshot();
-   state.mediaHttp=classifyMediaResponse(info);
-   note('media_http_'+state.mediaHttp.result);
+   const next=classifyMediaResponse(info);
+   // Playwright captures actual HTTP headers; ResourceTiming may expose
+   // only a status and arrive later. Never replace richer evidence with
+   // a lower-confidence observation from a late browser callback.
+   const confidence={unknown:0,resource_timing:1,server_observed:2,browser_test:3};
+   if(state.mediaHttp&&
+      confidence[next.provenance]<confidence[state.mediaHttp.provenance]){
+     return snapshot();
+   }
+   state.mediaHttp=next;
+   note('media_http_'+next.result);
    return snapshot();
  }
  function catalogIdentity(expected={},candidate={}){
