@@ -24,9 +24,10 @@ jobs:
           node-version: '22'
       - name: Verify evidence engine syntax and deterministic cases
         run: |
+          node --check src/fymusic-diagnostic-classifier.js
           node --check src/fymusic-playback-core.js
           node --check src/fymusic-playback-verifier.js
-          node --test scripts/test-fymusic-playback-core.mjs
+          node --test scripts/test-fymusic-playback-core.mjs scripts/test-fymusic-playback-network.mjs
       - name: Install existing project dependencies
         run: npm install --no-audit --no-fund
       - name: Install Chromium for real audio decoding
