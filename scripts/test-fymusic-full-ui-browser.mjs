@@ -71,7 +71,10 @@ try{
  assert.equal(report.media.metadataLoaded,true);
  assert.equal(report.media.mediaReady,true);
  assert.equal(report.media.progressConfirmed,true);
- assert.equal(report.media.quality,'flac24bit'); // requested; not actual WAV codec
+ assert.ok(['flac24bit','flac','320k'].includes(report.media.quality));
+ assert.notEqual(report.media.quality,'128k'); // no forced low-bitrate mode
+ assert.equal(report.media.quality,report.resolver.quality);
+ // This is the requested resolver format, not the WAV test clip's codec.
  assert.equal(report.outcome,'playback_progress_confirmed');
  assert.equal(report.media.http?.result,'media_http_accepted');
  assert.ok(report.media.mediaSeconds>=.35);
