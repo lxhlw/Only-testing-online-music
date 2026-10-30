@@ -68,6 +68,34 @@ try{
   }).catch(()=>({title:'INACCESSIBLE'}));
   console.log('OFFICIAL_GUI_PAGE '+JSON.stringify(info));
  }
+ const appPage=pages.find(p=>!p.isClosed()&&(p.url().startsWith('file:')||p.url().startsWith('http:')));
+ if(!appPage)throw Error('NO_APP_PAGE');
+ let accepted=false;
+ try{
+  const accept=appPage.getByRole('button',{name:/Accept/i});
+  if(await accept.count()){
+   await accept.first().click({timeout:40000});
+   accepted=true;
+   await appPage.waitForTimeout(2200);
+  }
+ }catch{console.log('OFFICIAL_LICENSE_SCREEN_UNRESOLVED');}
+ console.log('OFFICIAL_GUI_LICENSE '+JSON.stringify({screenAdvanced:accepted}));
+ const snapshot=async(stage)=>{
+  const data=await appPage.evaluate(()=>{
+   const texts=[...document.querySelectorAll('button,[role="button"],a')]
+    .filter(e=>e.getBoundingClientRect().width>0)
+    .map(e=>(e.innerText||e.title||e.getAttribute('aria-label')||'').trim())
+    .filter(Boolean).map(s=>s.slice(0,50)).slice(0,80);
+   return {text:document.body?.innerText?.slice(0,1300)||'',controls:texts};
+  }).catch(()=>({unavailable:true}));
+  console.log('OFFICIAL_GUI_'+stage+' '+JSON.stringify(data));
+ };
+ await snapshot('AFTER_LICENSE');
+ try{
+  await appPage.getByRole('button',{name:/^Settings$/i}).first().click({timeout:12000});
+  await appPage.waitForTimeout(1700);
+  await snapshot('SETTINGS');
+ }catch{console.log('OFFICIAL_GUI_SETTINGS_NOT_REACHED');}
  await pw.close();
 }finally{
  try{proc.kill()}catch{}
