@@ -44,7 +44,9 @@ writeFileSync(join(dir,'renderer','preload.js'),preload);
 writeFileSync(join(dir,'rendererEvent','name.js'),eventNames);
 const flowerFile=join(dir,'flower.js');
 writeFileSync(flowerFile,flower);
-const preloadBuild=join(dir,'original-lx-preload.cjs');
+// Resolve the original preload's external needle/tunnel modules from the
+// checked-out workspace, where CI installs them; source stays unmodified.
+const preloadBuild=resolve('.fymusic-original-preload.cjs');
 await build({entryPoints:[join(dir,'renderer','preload.js')],outfile:preloadBuild,
  bundle:true,platform:'node',format:'cjs',
  external:['electron','needle','tunnel'],logLevel:'silent'});
