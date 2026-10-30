@@ -110,17 +110,33 @@ try{
   await appPage.waitForTimeout(650);
  }
  await snapshot('AFTER_DIALOGS');
- // The official new-version change log has a close icon with no accessible
- // label; use the existing close BUTTON event, not a Vue/store mutation.
- await appPage.evaluate(()=>{
-  for(const h of document.querySelectorAll('h2')){
-   if(String(h.textContent||'').includes('当前版本更新日志')){
-    const btn=h.closest('main')?.parentElement?.querySelector('header button');
-    if(btn)btn.click();
-   }
-  }
- }).catch(()=>{});
- await appPage.waitForTimeout(900);
+ // The official MaterialModal close button is a sibling of the slot MAIN.
+ // Locate the real button and confirm that the changelog becomes hidden.
+ const changelog=appPage.getByRole('heading',{name:'当前版本更新日志',exact:true});
+ const changelogInfo=await appPage.evaluate(()=>{
+  const heading=[...document.querySelectorAll('h2')]
+   .find(e=>e.textContent?.trim()==='当前版本更新日志');
+  const main=heading?.closest('main');
+  const header=main?.previousElementSibling;
+  const close=header?.matches('header')?header.querySelector('button'):null;
+  return {heading:!!heading,main:main?.tagName||null,
+   header:header?.tagName||null,closeButton:!!close,
+   closeVisible:!!(close&&close.getBoundingClientRect().width&&
+     close.getBoundingClientRect().height)};
+ });
+ console.log('OFFICIAL_GUI_CHANGELOG_DOM '+JSON.stringify(changelogInfo));
+ if(await changelog.count() && await changelog.isVisible()){
+  const close=appPage.locator('main')
+   .filter({has:changelog})
+   .locator('xpath=preceding-sibling::header/button');
+  if(await close.count()!==1)throw Error('OFFICIAL_GUI_CHANGELOG_CLOSE_NOT_FOUND');
+  await close.click({timeout:8000,force:true});
+  await changelog.waitFor({state:'hidden',timeout:10000});
+  console.log('OFFICIAL_GUI_CHANGELOG_CLOSED');
+ }else{
+  console.log('OFFICIAL_GUI_CHANGELOG_NOT_VISIBLE');
+ }
+ await snapshot('AFTER_CHANGELOG');
  try{
   await appPage.getByRole('button',{name:/^Settings$/i}).first().click({timeout:12000});
   await appPage.waitForTimeout(1700);
@@ -146,8 +162,8 @@ try{
      }
     }
    }
-  }catch{console.log('OFFICIAL_GUI_IMPORT_STEP_INCOMPLETE');}
- }catch{console.log('OFFICIAL_GUI_SETTINGS_NOT_REACHED');}
+  }catch(err){console.log('OFFICIAL_GUI_IMPORT_STEP_INCOMPLETE '+String(err?.message||err).split('\n')[0].slice(0,180));}
+ }catch(err){throw Error('OFFICIAL_GUI_SETTINGS_NOT_REACHED: '+String(err?.message||err).split('\n')[0].slice(0,180));}
  await pw.close();
 }finally{
  try{proc.kill()}catch{}
