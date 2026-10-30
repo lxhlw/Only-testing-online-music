@@ -81,7 +81,9 @@ export function createPlaybackVerifier({now=()=>performance.now(),maxEvents=24}=
            }
          }
        }
-       checkpoint={at:t,time:current};
+       // Keep the baseline across ordinary ~250 ms timeupdate events.
+       // Otherwise a 0.35s progress threshold could never be reached.
+       if(!checkpoint||state.progressConfirmed)checkpoint={at:t,time:current};
      }else checkpoint=null;
    }else if(event==='waiting'||event==='stalled'){
      checkpoint=null;state.phase=event==='waiting'?'buffering':'stalled';note(event);

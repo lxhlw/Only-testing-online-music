@@ -997,6 +997,11 @@
     playbackState.resolver = viaLabel || 'LX source';
     playbackState.resolverProvider = viaProvider || 'lx-source';
     playbackState.expectedDuration = getExpectedDurationSeconds(music);
+    // Diagnostics receives only safe metadata, NEVER an audio URL or signature.
+    global.dispatchEvent(new CustomEvent('fymusic:url-resolved',{detail:{
+      source:source,quality:quality,provider:playbackState.resolverProvider,
+      transport:playbackState.transport
+    }}));
 
     if (usingNative) {
       playbackState.nativePlayback = true;
@@ -1664,6 +1669,9 @@
         if (!isCurrentAttempt() || settled) return;
 
         if (err) {
+          global.dispatchEvent(new CustomEvent('fymusic:resolver-error',{detail:{
+            code:'resolver_request_failed'
+          }}));
           flowerFailed=activeSourceName+'解析失败：'+String(err && (err.message || err) || '网络错误').slice(0,160);
           if (fastEnabled) { startFastRace(); return; }
           return runFallback(flowerFailed);
