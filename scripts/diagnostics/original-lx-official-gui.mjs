@@ -161,6 +161,116 @@ try{
       if(await submit.count())await submit.last().click({timeout:8000});
       await appPage.waitForTimeout(2800);
       await snapshot('API_IMPORTED');
+
+      // Only the genuine official GUI is used below. No patched original code,
+      // no replacement stream URLs, no direct pre-seeded musicInfo.
+      const selectedSource=appPage.getByRole('radio',{name:/野花/}).first();
+      const managerHeading=appPage.getByRole('heading',{name:'Music API Management',exact:true});
+      if(!(await selectedSource.count()))throw Error('FLOWER_SOURCE_NOT_IMPORTED');
+      if(await managerHeading.count() && await managerHeading.isVisible()){
+       const closeManager=appPage.locator('main').filter({has:managerHeading})
+        .locator('xpath=preceding-sibling::header/button');
+       if(await closeManager.count()!==1)throw Error('API_MANAGER_CLOSE_MISSING');
+       await closeManager.click({force:true,timeout:8000});
+       await managerHeading.waitFor({state:'hidden',timeout:9000});
+      }
+      await selectedSource.click({force:true,timeout:9000});
+      const flowerSelected=await selectedSource.getAttribute('aria-checked');
+      console.log('OFFICIAL_GUI_FLOWER_ACTIVATED '+JSON.stringify({selected:flowerSelected==='true'}));
+      if(flowerSelected!=='true')throw Error('FLOWER_NOT_SELECTED');
+
+      // Use the highest available ORIGINAL quality preference. LX itself
+      // chooses flac24bit/flac/320k/128k according to the source and song.
+      // This is NOT a forced 128k test.
+      const maxQuality=appPage.getByRole('radio',{name:'flac24bit',exact:true});
+      if(!(await maxQuality.count()))throw Error('QUALITY_OPTION_NOT_FOUND');
+      await maxQuality.click({force:true,timeout:9000});
+      const qualitySelected=await maxQuality.getAttribute('aria-checked');
+      console.log('OFFICIAL_GUI_QUALITY_PREFERENCE '+JSON.stringify({
+       preference:'flac24bit',selected:qualitySelected==='true',
+       fallbackPolicy:'original LX automatic supported-quality selection',
+       requestedQualityNotYetObserved:true}));
+      if(qualitySelected!=='true')throw Error('QUALITY_NOT_SELECTED');
+      const autoSkip=appPage.locator('#setting_player_auto_skip_on_error');
+      if(await autoSkip.count() && await autoSkip.isChecked()){
+       await appPage.locator('label[for="setting_player_auto_skip_on_error"]').click({force:true});
+      }
+      await appPage.getByRole('tab',{name:'Search',exact:true}).first().click({timeout:9000});
+      const query=appPage.locator('input[placeholder="Search for something..."]').first();
+      await query.fill('孙燕姿 开始懂了');
+      await query.press('Enter');
+      await appPage.waitForTimeout(900);
+      const channelTests=[['kg','KG Music'],['wy','WY Music'],['tx','TX Music']];
+      const resultSummary=[];
+      for(const [platform,tabLabel] of channelTests){
+       const record={platform,track:'开始懂了',artist:'孙燕姿',
+        found:false,playClicked:false,audioProgressConfirmed:false,
+        actualQuality:'unverified',error:null};
+       try{
+        const channel=appPage.getByRole('tab',{name:tabLabel,exact:true}).last();
+        await channel.click({timeout:10000});
+        await appPage.waitForTimeout(1000);
+        const row=appPage.locator('.list-item')
+         .filter({has:appPage.locator('.list-item-cell.name span.select.name[aria-label="开始懂了"]')})
+         .filter({has:appPage.locator('.list-item-cell span[aria-label*="孙燕姿"]')})
+         .first();
+        let found=false;
+        for(let attempt=0;attempt<34;attempt++){
+         if(await row.count() && await row.isVisible()){found=true;break;}
+         await appPage.waitForTimeout(750);
+        }
+        const sample=await appPage.locator('.list-item').evaluateAll(rows=>
+         rows.slice(0,7).map(el=>({
+          name:el.querySelector('.list-item-cell.name span.select.name')?.getAttribute('aria-label')||'',
+          singer:el.querySelectorAll('.list-item-cell span[aria-label]')[1]?.getAttribute('aria-label')||''
+         })));
+        console.log('OFFICIAL_GUI_TRACK_SEARCH '+JSON.stringify({platform,match:found,
+         samples:sample,query:'孙燕姿 开始懂了'}));
+        if(!found){record.error='TARGET_TRACK_NOT_FOUND';resultSummary.push(record);continue;}
+        record.found=true;
+        const playBtn=row.getByRole('button',{name:'Play',exact:true});
+        if(!(await playBtn.count())){record.error='ROW_PLAY_BUTTON_NOT_FOUND';resultSummary.push(record);continue;}
+        await playBtn.click({timeout:8000});
+        record.playClicked=true;
+        const check=()=>appPage.evaluate(()=>{
+         const audio=[...document.querySelectorAll('audio,video')].map(el=>({
+          readyState:el.readyState,networkState:el.networkState,
+          paused:el.paused,currentTime:Math.round(el.currentTime*10)/10,
+          duration:Number.isFinite(el.duration)?Math.round(el.duration):null,
+          errorCode:el.error?.code||null
+         }));
+         const txt=document.body?.innerText||'';
+         return {audio,progress:(txt.match(/\\d{1,2}:\\d{2}\\s*\\/\\s*\\d{1,2}:\\d{2}/)||[])[0]||null,
+          hasRequestedSong:txt.includes('开始懂了')&&txt.includes('孙燕姿'),
+          statusTail:txt.slice(-280).replace(/https?:\\/\\/\\S+/g,'[URL_REDACTED]')};
+        });
+        await appPage.waitForTimeout(12000);
+        const first=await check();
+        await appPage.waitForTimeout(3100);
+        const second=await check();
+        const maxProgress=first.audio.reduce((m,a)=>Math.max(m,a.currentTime),0);
+        record.audioProgressConfirmed=second.audio.some(a=>
+         a.currentTime>maxProgress+1&&a.duration>30&&!a.paused);
+        record.mediaDurationFound=second.audio.some(a=>a.duration>30);
+        record.mediaReadyFound=second.audio.some(a=>a.readyState>=2);
+        record.finalProgress=second.progress;
+        console.log('OFFICIAL_GUI_TRACK_PLAYBACK '+JSON.stringify({
+         platform,track:'开始懂了',artist:'孙燕姿',
+         qualityPreference:'flac24bit',actualQuality:'unverified',
+         found:record.found,playClicked:record.playClicked,
+         progressConfirmed:record.audioProgressConfirmed,
+         first,second}));
+        // Keep the next channel independent. Stop ongoing audio if possible.
+        const pause=appPage.getByRole('button',{name:/^Pause$/i}).first();
+        if(await pause.count()&&await pause.isVisible())
+         await pause.click({timeout:3000}).catch(()=>{});
+       }catch(err){
+        record.error=String(err?.message||err).split('\n')[0].slice(0,150);
+        console.log('OFFICIAL_GUI_TRACK_ERROR '+JSON.stringify({platform,error:record.error}));
+       }
+       resultSummary.push(record);
+      }
+      console.log('OFFICIAL_GUI_TRACK_SUMMARY '+JSON.stringify(resultSummary));
      }
     }
    }
