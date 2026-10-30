@@ -29,7 +29,11 @@ ipcMain.on('userApi_response',async(_e,value)=>{
   const err=String(value?.message||'');
   return end({phase:'URL_FAILED',urlReturned:false,audioStarted:false,
    reason:/\b404\b/.test(err)?'HTTP_404':/\b400\b/.test(err)?'HTTP_400':
-    /\b403\b/.test(err)?'HTTP_403':/timeout/i.test(err)?'TIMEOUT':'OTHER'});
+    /\b403\b/.test(err)?'HTTP_403':/timeout/i.test(err)?'TIMEOUT':
+    /服务器异常/.test(err)?'FLOWER_SERVER_ABNORMAL':
+    /^(?:Error:\s*)?failed$/i.test(err)?'GENERIC_FAILED':
+    /Cannot read|undefined|not a function|is not defined/.test(err)?'RUNTIME_EXCEPTION':
+    /^\d{3}$/.test(err)?'HTTP_'+err:'OTHER',errorMessageLength:err.length});
  }
  const url=value?.data?.result?.data?.url;
  if(typeof url!=='string'||!/^https?:\/\//.test(url))

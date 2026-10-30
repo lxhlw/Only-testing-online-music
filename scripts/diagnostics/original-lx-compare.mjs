@@ -83,7 +83,7 @@ try{
   writeFileSync(meta,JSON.stringify({...c,musicInfo}));
   const original=await new Promise(resolveResult=>{
    let completed=false,received=null,buffer='';
-   const process=spawn(electronBinary,[resolve('scripts/diagnostics/original-lx-electron-main.cjs')],{
+   const process=spawn(electronBinary,['--no-sandbox',resolve('scripts/diagnostics/original-lx-electron-main.cjs')],{
     env:{...globalThis.process.env,LX_DIAG_META:meta,LX_DIAG_PRELOAD:output,
       LX_DIAG_FLOWER:flowerFile,ELECTRON_DISABLE_SECURITY_WARNINGS:'true'},
     stdio:['ignore','pipe','pipe']});
@@ -94,9 +94,9 @@ try{
      try{received=JSON.parse(line.slice(line.indexOf('ORIGINAL_NATIVE_RESULT ')+23));}catch{}
     }
    });
-   process.on('close',code=>{
+   process.on('close',(code,signal)=>{
     if(completed)return;completed=true;clearTimeout(limit);
-    resolveResult(received||{phase:'EXIT_WITHOUT_RESULT',exitCode:code,urlReturned:false});
+    resolveResult(received||{phase:'EXIT_WITHOUT_RESULT',exitCode:code,signal:String(signal||'NONE'),urlReturned:false});
    });
    process.on('error',()=>{
     if(completed)return;completed=true;clearTimeout(limit);
