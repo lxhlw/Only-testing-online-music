@@ -120,3 +120,26 @@ Cookie、Native IPC 原始数据或音源响应正文。
 观测 Native Needle 与 Web 代理各自的安全状态类别及失败位置，
 日志禁止输出原始歌曲身份、签名、Cookie、Token 或媒体 URL。
 优先排查 HTTP 400/403/404/502 的分层来源；不要将 UI 时钟推进表述为解码证明。
+
+## 2026-10-31 阶段五：网络失败位置与 HTTP 状态（已实测）
+
+[Windows Run 41218702093](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41218702093) 在开发分支运行，并保留此前强身份、实际音质对照：
+
+- 官方 LX GUI：目标酷狗歌曲候选第 1 条，实际 IPC 请求 musicUrl type=128k，UI 时间推进，但没有独立媒体解码证明。
+- FyMusic：真实浏览器中选中与 GUI 相同 Hash 且 Songmid/AlbumAudioId 对应的歌曲；野花声明 KG 仅支持 128k，网页确实提交一次同质量解析请求。
+- **Web 浏览器收到** /api/proxy HTTP **502**，诊断代码 FLOWER_UPSTREAM_UNAVAILABLE。
+- **Worker canonical-socket**（访问原始野花 HTTP IP）得到 FLOWER_SOCKET_HTTP_404。
+- **同一 Windows runner 的单独 Node/Needle 探针**对 FyMusic 浏览器刚提交的**同一原始野花 URL** 直连，得到实际 HTTP **404**。
+- Worker 其他尝试：nip-full、sslip-full 得到 HTTP 404；nip-short、sslip-short 得到 HTTP 403；ts-short、ts-full、tm-short、tm-full 报 NETWORK_ERROR。
+- 因此 502 是 **Cloudflare 代理聚合失败后的错误码**，不是原始野花 IP 直接返回的状态码。
+
+### 证据边界
+
+1. 独立 Node/Needle 探针不等于官方 LX 进程的原始 Needle 网络请求。它只验证**测试时 Windows runner 对 Web 发出的原始 URL 的独立可达性**。不能推断用户本地电脑、其他网络出口或其他时刻也必然 HTTP 404。
+2. 此次网页 Worker 和独立 Node 探针都命中 HTTP 404，支持“上游此路由没有返回音乐解析结果”的结论；不说明原版 LX GUI 采用了相同的 URL、Headers、重定向或 IPC 回调参数。
+3. 抓取器仅记录 HTTP 状态、经允许列表过滤的路径别名、错误分类和音质枚举。原始 URL、歌曲 ID、Hash、签名、Cookie、Token 和响应正文未写入报告。
+4. 对官方 GUI，“播放器时钟推进”依旧只有 UI_TIME_ONLY 证据。音频真实解码、可听性以及是否播放目标录音尚未确认。
+
+### 下一阶段决策
+
+**先验证官方 LX 进程真实 Needle 请求与 FyMusic Web 上游请求的参数差异**，优先检查请求地址类别、实际源版本、Host / UA / Referer / Accept 的*存在性*、状态码和是否有重定向，不收集原始鉴权数据。当前证据不支持为此强制锁定 128k、修改歌曲标识或将所有 404 重试为 502。若原始服务器在特定出口持续 404，应明确归类“音源/区域/上游不可用”，停止无意义的多次重试，而不是让 UI 卡住。
