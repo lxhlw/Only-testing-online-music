@@ -149,10 +149,59 @@ try{
   'stale KW response must not create a confirmation button');
  assert.equal(await page.evaluate(()=>window.__alternateQA.kwResolvers),2,
   'stale alternate response must not start playback');
+ // A real Flower outage can also strike the previously approved KW.
+ // The KG search tab remains selected: the retry button must repeat ONLY
+ // that manually approved KW version, not reject it as a cross-tab selection.
+ await page.evaluate(()=>{
+  const stats=window.__alternateQA;
+  window.LXMusicSearch.search=(source,keyword,page,limit,callback)=>{
+   if(source==='kw'){
+    stats.kwSearch++;
+    return callback(null,{list:[{
+     source:'kw',id:'kw-approved-retry',name:'安全备用校准',
+     singer:'FyMusic QA',albumName:'受控音频',interval:'00:48'
+    }]});
+   }
+   callback(new Error('unexpected fixture search'));
+  };
+  window.LXSourceManager.requestAction=(source,action,info,callback)=>{
+   if(source==='kw'&&action==='musicUrl'){
+    stats.kwResolvers++;stats.qualities.push(info.type);
+    return callback(new Error('Flower resolver unavailable'));
+   }
+   callback(new Error('unexpected fixture resolver'));
+  };
+ });
+ await page.locator('.search-song-row .search-song-main').first().click();
+ await page.locator('.fymusic-alternate-search').waitFor({timeout:7000});
+ await page.locator('.fymusic-alternate-search').click();
+ await page.locator('.fymusic-alternate-confirm').waitFor({timeout:5000});
+ const retryBase=await page.evaluate(()=>({
+  kw:window.__alternateQA.kwResolvers,
+  searches:window.__alternateQA.kwSearch
+ }));
+ await page.locator('.fymusic-alternate-confirm').click();
+ const retry=page.getByRole('button',{name:'稍后重试',exact:true});
+ await retry.waitFor({timeout:7000});
+ await page.waitForTimeout(250);
+ assert.equal(await page.evaluate(()=>window.__alternateQA.kwResolvers),retryBase.kw+1,
+  'failed KW must not auto-retry');
+ await retry.click();
+ await page.waitForFunction(expected=>window.__alternateQA.kwResolvers===expected,
+  retryBase.kw+2,{timeout:5000});
+ assert.equal(await page.evaluate(()=>window.__alternateQA.kwSearch),retryBase.searches,
+  'approved KW retry must not search/reconfirm or switch platforms');
+ assert.equal(await page.evaluate(()=>window.__LXNowPlayingTrack.source),'kw',
+  'retry must stay on the approved KW channel');
+ assert.doesNotMatch(await page.locator('#status').innerText(),/请重新搜索/,
+  'approved KW retry was incorrectly blocked by KG search tab');
+ assert.equal((await page.evaluate(()=>window.__alternateQA.qualities)).at(-1),'flac24bit',
+  'approved retry must preserve fixed high-quality selection');
  assert.deepEqual(errors,[]);
  console.log('FYMUSIC_EXPLICIT_KG_KW_BROWSER_PASS '+JSON.stringify({
   searches:stats.kwSearch,confirmedResolvers:stats.kwResolvers,
   quality:stats.qualities[0],actualAudio:true,
-  unsupportedQualityProtected:true,staleCallbackIgnored:true
+  unsupportedQualityProtected:true,staleCallbackIgnored:true,
+  explicitKwRetryPreserved:true
  }));
 }finally{await browser.close();}
