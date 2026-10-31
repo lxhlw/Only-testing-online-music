@@ -312,16 +312,13 @@ try{
        const domCells=[...el.querySelectorAll('.list-item-cell')];
        const dom={
         ordinal:Number.isInteger(rawIndex)&&rawIndex>0?rawIndex:null,
-        album:domCells.find(c=>c.getAttribute('style')?.includes('22%')&&
-         c.querySelector('span[aria-label]')&&
-         clean(c.querySelector('span[aria-label]').getAttribute('aria-label'))!==
-         clean(labels[0]))?.querySelector('span[aria-label]')?.getAttribute('aria-label')||'',
+        album:domCells[3]?.querySelector('span[aria-label]')?.getAttribute('aria-label')||'',
         interval:domCells.find(c=>/\b\d{1,2}:\d{2}\b/.test(c.textContent||''))
          ?.textContent?.trim()?.slice(0,12)||'',
         badgeCount:el.querySelectorAll('.badge').length
        };
        const probe={domVueInstance:false,domVNode:false,appRoot:false,
-        appInstance:false,componentsVisited:0,listsChecked:0,
+        appInstance:false,rootVNode:false,componentsVisited:0,listsChecked:0,
         objectsVisited:0,hitPath:null};
        const roots=[];
        for(let n=el;n;n=n.parentElement){
@@ -333,6 +330,12 @@ try{
          probe.domVNode=true;
          roots.push({value:n.__vnode,path:'dom.vnode'});
         }
+        // Vue 3 production renderer retains the root VNode as
+        // container._vnode even when app._instance is not exposed.
+        if(n._vnode){
+         probe.rootVNode=true;
+         roots.push({value:n._vnode,path:'dom.root.vnode'});
+        }
         if(n.__vue__){
          probe.domVueInstance=true;
          roots.push({value:n.__vue__,path:'dom.vue2'});
@@ -341,7 +344,10 @@ try{
          probe.appRoot=true;
          probe.appInstance=probe.appInstance||Boolean(n.__vue_app__._instance);
          roots.push({value:n.__vue_app__._instance,path:'app.instance'});
-         roots.push({value:n.__vue_app__._container?.__vnode,path:'app.container.vnode'});
+         const container=n.__vue_app__._container;
+         if(container?._vnode)probe.rootVNode=true;
+         roots.push({value:container?._vnode,path:'app.container._vnode'});
+         roots.push({value:container?.__vnode,path:'app.container.__vnode'});
         }
        }
        const visited=new Set();
