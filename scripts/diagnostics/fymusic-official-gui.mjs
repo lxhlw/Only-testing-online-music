@@ -208,7 +208,10 @@ try{
   if(await close.count()!==1)throw Error('OFFICIAL_GUI_CHANGELOG_CLOSE_NOT_FOUND');
   let dismissed=false;
   for(let attempt=1;attempt<=4;attempt++){
-   await close.click({timeout:5000,force:true});
+   // The official modal close button may be outside the WinCI viewport.
+   // Trigger its ORIGINAL DOM click handler instead of changing its layout.
+   // No application code, styles, or input state is patched.
+   await close.evaluate(button=>button.click(),{timeout:5000});
    try{
     await changelog.waitFor({state:'hidden',timeout:2500});
     dismissed=true;
