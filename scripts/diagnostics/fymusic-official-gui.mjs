@@ -499,6 +499,73 @@ try{
         session.on('Media.playerEventsAdded',x=>{mediaStats.events+=(x.events||[]).length;});
         await session.send('Media.enable').catch(()=>{});
       }
+      // Passive CDP function breakpoint: read only the quality enum at
+      // original renderer IPC. Never replace functions or log private data.
+      const qualityAudit={
+       attach:'not_attempted',breakpoint:'not_set',
+       invokes:0,musicUrlRequests:[],pauseErrors:0
+      };
+      let qualityBreakpointId=null,qualityAuditActive=false;
+      let pendingQualityPauses=0;
+      const onQualityPaused=async(event)=>{
+       pendingQualityPauses++;
+       try{
+        qualityAudit.invokes++;
+        const frame=event.callFrames?.[0];
+        if(frame){
+         const result=await session.send('Debugger.evaluateOnCallFrame',{
+          callFrameId:frame.callFrameId,returnByValue:true,silent:true,
+          expression:"(()=>{\n try{\n  const a=arguments,p=a[1],d=p?.data;\n  const valid=['flac24bit','flac','320k','128k'];\n  return {target:String(a[0]||'').includes('request_user_api'),\n   source:d?.source==='kg'?'kg':'other',\n   action:d?.action==='musicUrl'?'musicUrl':'other',\n   quality:valid.includes(d?.info?.type)?d.info.type:'unknown'};\n }catch{return {target:false,failed:true};}\n})()"
+         }).catch(()=>null);
+         const v=result?.result?.value;
+         if(v?.failed)qualityAudit.pauseErrors++;
+         if(v?.target&&v?.source==='kg'&&v?.action==='musicUrl')
+          qualityAudit.musicUrlRequests.push(v.quality);
+        }
+       }catch{qualityAudit.pauseErrors++;}
+       finally{
+        await session.send('Debugger.resume').catch(()=>{});
+        pendingQualityPauses--;
+       }
+      };
+      const armQualityAudit=async()=>{
+       if(!session){qualityAudit.attach='no_cdp';return;}
+       try{
+        await session.send('Runtime.enable');
+        await session.send('Debugger.enable');
+        const ref=await session.send('Runtime.evaluate',{
+         expression:"(typeof require === 'function' && require('electron')?.ipcRenderer?.invoke) || undefined",
+         objectGroup:'fymusic-quality-readonly',returnByValue:false,silent:true
+        });
+        if(!ref?.result?.objectId){
+         qualityAudit.attach='electron_ipc_not_visible';
+         await session.send('Debugger.disable').catch(()=>{});
+         return;
+        }
+        qualityAudit.attach='electron_ipc_visible';
+        session.on('Debugger.paused',onQualityPaused);
+        const bp=await session.send('Debugger.setBreakpointOnFunctionCall',{
+         objectId:ref.result.objectId
+        });
+        qualityBreakpointId=bp.breakpointId;
+        qualityAudit.breakpoint='armed';
+        qualityAuditActive=true;
+       }catch{
+        qualityAudit.attach=qualityAudit.attach==='not_attempted'?'cdp_attach_failed':qualityAudit.attach;
+        qualityAudit.breakpoint='not_supported';
+        await session.send('Debugger.disable').catch(()=>{});
+       }finally{
+        await session.send('Runtime.releaseObjectGroup',{objectGroup:'fymusic-quality-readonly'}).catch(()=>{});
+       }
+      };
+      const disarmQualityAudit=async()=>{
+       if(!session)return;
+       if(qualityBreakpointId)
+        await session.send('Debugger.removeBreakpoint',{breakpointId:qualityBreakpointId}).catch(()=>{});
+       if(qualityAuditActive)session.off('Debugger.paused',onQualityPaused);
+       await session.send('Debugger.disable').catch(()=>{});
+       qualityAuditActive=false;
+      };
       for(const [platform,tabLabel] of channelTests){
         const record={platform,found:false,playClicked:false,actualQuality:'unverified',
           searchAttempts:[],uiClockProgress:false,mediaConfirmed:false,
@@ -555,6 +622,8 @@ try{
             vueProbe:record.vueProbe,domFallback:record.domFallback
           }));
           const play=row.getByRole('button',{name:'Play',exact:true});
+          // Observe only around the actual original GUI playback click.
+          await armQualityAudit();
           mediaStats.players=0;mediaStats.events=0;
           if(await play.count()){
             await play.first().click({timeout:9000});
@@ -565,6 +634,19 @@ try{
           }
           record.playClicked=true;
           await appPage.waitForTimeout(8000);
+          await disarmQualityAudit();
+          record.qualityObservation={
+           channel:'renderer_ipc_call',attach:qualityAudit.attach,
+           breakpoint:qualityAudit.breakpoint,seenCalls:qualityAudit.invokes,
+           pauseErrors:qualityAudit.pauseErrors,
+           requestedQualities:[...qualityAudit.musicUrlRequests],
+           pendingPauses:pendingQualityPauses
+          };
+          record.actualQuality=qualityAudit.musicUrlRequests.length?
+           qualityAudit.musicUrlRequests.at(-1):'not_observed';
+          console.log('FYMUSIC_GUI_ACTUAL_QUALITY '+JSON.stringify({
+           platform,...record.qualityObservation,actualRequestedQuality:record.actualQuality
+          }));
           const before=await readClock();
           await appPage.waitForTimeout(3500);
           const after=await readClock();
@@ -583,7 +665,7 @@ try{
           record.reason=record.mediaConfirmed?'CONFIRMED_MEDIA':
             record.uiClockProgress?'UI_TIME_ONLY':'NO_MEDIA_PROOF';
           console.log('FYMUSIC_GUI_PLAY '+JSON.stringify({
-            platform,playClicked:true,requestedQuality:'unverified',
+            platform,playClicked:true,requestedQuality:record.actualQuality,
             qualityPreference:'flac24bit',mediaConfirmed:record.mediaConfirmed,
             uiClockProgress:record.uiClockProgress,clock:record.clock,
             cdpMedia:record.cdpMedia,htmlMediaCount:audio.length
@@ -592,6 +674,7 @@ try{
           if(await pause.count()&&await pause.isVisible())
             await pause.click({timeout:3500}).catch(()=>{});
         }catch(err){
+          await disarmQualityAudit().catch(()=>{});
           const e=String(err?.message||err);
           record.reason=/timeout/i.test(e)?'GUI_TIMEOUT':'GUI_INTERACTION_ERROR';
           console.log('FYMUSIC_GUI_CASE_ERROR '+JSON.stringify({
