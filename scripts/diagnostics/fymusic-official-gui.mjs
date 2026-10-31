@@ -760,25 +760,36 @@ try{
       let nativeRequestHandler=null,nativeAttached=false;
       const nativeCallbackBreakpoints=new Map();
       const isSafeStatus=x=>Number.isInteger(x)&&x>=100&&x<=599?x:null;
+      // Use regex on *in-memory* arguments, not new URL(). A CDP
+      // cross-world bridge frame may have no URL constructor/arguments;
+      // examine up to four caller frames without logging raw values.
       const nativeRequestEval=String.raw`(()=>{
        try{
-        const a=arguments,u=new URL(String(a[0]||'')),opts=a[1]||{};
-        const h=opts.headers||{};
+        const a=arguments;
+        const u=typeof a?.[0]==='string'?a[0]:'';
+        const opts=a?.[1]&&typeof a[1]==='object'?a[1]:{};
+        const h=opts.headers&&typeof opts.headers==='object'?opts.headers:{};
         const names=Object.keys(h).map(x=>x.toLowerCase());
-        const first=(key)=>names.includes(key);
-        const host=u.hostname.toLowerCase();
+        const first=key=>names.includes(key);
+        const flower=/^https?:\/\/97\.64\.37\.235(?:[:/]|$)/i.test(u);
+        const alias=/^https?:\/\/(?:ts|tm)\.tempmusic\.tk(?:[:/]|$)/i.test(u);
         return {
-         urlClass:host==='97.64.37.235'?'flower_canonical_ip':
-          host==='ts.tempmusic.tk'||host==='tm.tempmusic.tk'?'flower_host_alias':'other',
-         pathClass:/^\/flower\/v1\/url\/kg\//.test(u.pathname)?'flower_kg':
-          /^\/flower\/v1\/url\//.test(u.pathname)?'flower_other':'other',
-         method:String(opts.method||'get').toUpperCase().slice(0,12),
+         argumentCount:typeof a?.length==='number'?Math.min(20,a.length):null,
+         firstType:typeof a?.[0],secondType:typeof a?.[1],
+         urlClass:flower?'flower_canonical_ip':alias?'flower_host_alias':
+          /^https?:\/\//i.test(u)?'other_http':u?'other':'no_url_argument',
+         pathClass:/^https?:\/\/[^/]+\/flower\/v1\/url\/kg\//i.test(u)?
+          'flower_kg':/^https?:\/\/[^/]+\/flower\/v1\/url\//i.test(u)?
+          'flower_other':'other',
+         method:typeof opts.method==='string'?
+          opts.method.toUpperCase().slice(0,12):'unspecified',
          sourceHeaders:{userAgent:first('user-agent'),referer:first('referer'),
           accept:first('accept'),origin:first('origin'),cookie:first('cookie'),
           acceptEncoding:first('accept-encoding')},
-         callback:typeof a[2]==='function'
+         callback:typeof a?.[2]==='function'
         };
-       }catch{return {urlClass:'unparsed',pathClass:'unknown',method:'unknown'};}
+       }catch{return {urlClass:'probe_exception',pathClass:'unknown',
+        firstType:'unknown',argumentCount:null};}
       })()`;
       const nativeCallbackEval=String.raw`(()=>{
        try{
@@ -820,15 +831,33 @@ try{
           const reqHit=event.hitBreakpoints?.includes(nativeRequestBreakpointId);
           if(reqHit){
            nativeNeedleAudit.requestHits++;
-           const obs=await nativeSourceSession.send('Debugger.evaluateOnCallFrame',{
-            callFrameId:frame.callFrameId,expression:nativeRequestEval,
-            returnByValue:true,silent:true
-           }).catch(()=>null);
-           if(obs?.result?.value&&nativeNeedleAudit.requestSamples.length<12)
-            nativeNeedleAudit.requestSamples.push(obs.result.value);
-           if(nativeCallbackBreakpoints.size<12){
+           const observed=[];
+           for(const [position,candidate] of event.callFrames.slice(0,4).entries()){
+            const obs=await nativeSourceSession.send('Debugger.evaluateOnCallFrame',{
+             callFrameId:candidate.callFrameId,expression:nativeRequestEval,
+             returnByValue:true,silent:true
+            }).catch(()=>null);
+            if(obs?.result?.value)observed.push({
+             position,frameName:String(candidate.functionName||'').slice(0,35),
+             ...obs.result.value,callFrameId:candidate.callFrameId
+            });
+           }
+           const best=observed.find(x=>x.pathClass==='flower_kg')||
+            observed.find(x=>x.urlClass==='flower_canonical_ip')||
+            observed.find(x=>x.firstType==='string')||observed[0];
+           if(nativeNeedleAudit.requestSamples.length<12)
+            nativeNeedleAudit.requestSamples.push({
+             selectedFrame:best?.position??null,
+             ...(best?{urlClass:best.urlClass,pathClass:best.pathClass,
+              method:best.method,sourceHeaders:best.sourceHeaders,
+              argumentCount:best.argumentCount,callback:best.callback}:{}),
+             frames:observed.map(x=>({position:x.position,frameName:x.frameName,
+              argumentCount:x.argumentCount,firstType:x.firstType,
+              urlClass:x.urlClass,pathClass:x.pathClass}))
+            });
+           if(best?.callback&&nativeCallbackBreakpoints.size<12){
             const cb=await nativeSourceSession.send('Debugger.evaluateOnCallFrame',{
-             callFrameId:frame.callFrameId,expression:'arguments[2]',
+             callFrameId:best.callFrameId,expression:'arguments[2]',
              returnByValue:false,silent:true
             }).catch(()=>null);
             if(cb?.result?.type==='function'&&cb.result.objectId){
