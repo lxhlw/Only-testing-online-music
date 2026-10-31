@@ -768,6 +768,7 @@ try{
       const nativeNeedleAudit={
        attach:'not_attempted',requestBreakpoint:'not_set',
        requestHits:0,requestSamples:[],callbacks:[],callbackBreakpoints:0,
+       callbackAttribution:'not_confirmed',
        errors:0,pending:0
       };
       let nativeSourceSession=null,nativeRequestBreakpointId=null;
@@ -791,10 +792,15 @@ try{
         const first=key=>names.includes(key);
         const flower=/^https?:\/\/97\.64\.37\.235(?:[:/]|$)/i.test(u);
         const alias=/^https?:\/\/(?:ts|tm)\.tempmusic\.tk(?:[:/]|$)/i.test(u);
+        const platformMatch=/^https?:\/\/[^/]+\/flower\/v1\/url\/([a-z]{2})(?:\/|[?#]|$)/i.exec(u);
+        const rawPlatform=String(platformMatch?.[1]||'').toLowerCase();
+        const pathPlatform=['kg','kw','wy','tx','mg'].includes(rawPlatform)?
+         rawPlatform:'unknown';
         const callbackIndex=a.findIndex((v,i)=>i>urlIndex&&typeof v==='function');
         return {
          argumentCount:a.length,argumentTypes:a.map(v=>typeof v),
          urlArgIndex:urlIndex,callbackArgIndex:callbackIndex,
+         pathPlatform,
          firstType:typeof a[0],secondType:typeof a[1],
          urlClass:flower?'flower_canonical_ip':alias?'flower_host_alias':
           /^https?:\/\//i.test(u)?'other_http':u?'other':'no_url_argument',
@@ -884,13 +890,15 @@ try{
             nativeNeedleAudit.requestSamples.push({
              selectedFrame:best?.position??null,
              ...(best?{urlClass:best.urlClass,pathClass:best.pathClass,
-              method:best.method,sourceHeaders:best.sourceHeaders,
+              method:best.method,pathPlatform:best.pathPlatform,
+              sourceHeaders:best.sourceHeaders,
               argumentCount:best.argumentCount,callback:best.callback,
               urlArgIndex:best.urlArgIndex,callbackArgIndex:best.callbackArgIndex}:{}),
              frames:observed.map(x=>({position:x.position,frameName:x.frameName,
               argumentCount:x.argumentCount,argumentTypes:x.argumentTypes,
               urlArgIndex:x.urlArgIndex,callbackArgIndex:x.callbackArgIndex,
-              firstType:x.firstType,urlClass:x.urlClass,pathClass:x.pathClass}))
+              firstType:x.firstType,urlClass:x.urlClass,
+              pathClass:x.pathClass,pathPlatform:x.pathPlatform}))
             });
            if(best?.callback&&nativeCallbackBreakpoints.size<12){
             const cb=await nativeSourceSession.send('Debugger.evaluateOnCallFrame',{
@@ -903,6 +911,8 @@ try{
               objectId:cb.result.objectId
              }).catch(()=>null);
              if(res?.breakpointId){
+              if(nativeCallbackBreakpoints.has(res.breakpointId))
+               nativeNeedleAudit.callbackAttribution='shared_callback_breakpoint';
               nativeCallbackBreakpoints.set(res.breakpointId,nativeNeedleAudit.requestHits);
               nativeNeedleAudit.callbackBreakpoints++;
              }
