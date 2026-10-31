@@ -233,3 +233,5 @@ KG 失效后仍能播放、FyMusic 当前同平台 KG-only 流程失败”具有
 必须标示使用的平台、严格验证歌曲标题/歌手/时长等信息，在可信证据不足时
 停止而非静默播放错误歌曲；保持快速加载和顺滑现代 UI，不支持旧版 Android 4.4，
 不强制音质停留在 128k。尚未实现该功能，也未合并生产 main。
+
+CI 门槛复测：[Run 41224551539](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41224551539) 为 **completed/success**，且本次确实点击目标歌曲、原版独立 Audio readyState=4、errorCode=null、duration=271.5s、currentTime 5.3s→9.0s、decodedProgress=true，验证新增的功能验收门槛能在真实解码成功时通过。
