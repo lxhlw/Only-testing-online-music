@@ -104,9 +104,55 @@ try{
  assert.equal(stats.qualities[0],'flac24bit','preserve top declared format');
  assert.equal(await page.evaluate(()=>window.__LXNowPlayingTrack.source),'kw');
  assert.match(await page.locator('#status').innerText(),/酷我|备用/);
+ // Fixed FLAC 24bit is unsupported by KG but supported by KW.
+ // It must not be silently reduced to 128k; alternate requires approval.
+ await page.evaluate(()=>{
+  window.LXSourceManager.getActive().sources.kg.qualitys=['128k'];
+ });
+ await page.locator('.search-song-row .search-song-main').first().click();
+ await page.locator('.fymusic-alternate-search').waitFor({timeout:7000});
+ assert.equal(await page.evaluate(()=>window.__alternateQA.kgResolvers),1,
+  'unsupported KG FLAC must not trigger guessed 128k');
+ await page.locator('.fymusic-alternate-search').click();
+ await page.locator('.fymusic-alternate-confirm').waitFor({timeout:5000});
+ assert.equal(await page.evaluate(()=>window.__alternateQA.kwResolvers),1,
+  'unsupported quality must not auto-play an alternate');
+ await page.locator('.fymusic-alternate-confirm').click();
+ await page.waitForFunction(()=>window.__alternateQA.kwResolvers===2,null,{timeout:6000});
+ assert.equal((await page.evaluate(()=>window.__alternateQA.qualities))[1],'flac24bit');
+
+ // Reject stale KW search callbacks after the listener selects a new song.
+ await page.evaluate(()=>{
+  const original=window.LXMusicSearch.search;
+  window.LXMusicSearch.search=function(source,query,number,limit,callback){
+   if(source==='kw'){
+    window.__alternateQA.kwSearch++;
+    window.__alternateDelayedKw=callback;
+    return;
+   }
+   return original(source,query,number,limit,callback);
+  };
+ });
+ await page.locator('.search-song-row .search-song-main').first().click();
+ await page.locator('.fymusic-alternate-search').waitFor({timeout:7000});
+ await page.locator('.fymusic-alternate-search').click();
+ await page.waitForFunction(()=>typeof window.__alternateDelayedKw==='function',
+  null,{timeout:3000});
+ await page.locator('.search-song-row .search-song-main').first().click();
+ await page.evaluate(()=>{
+  window.__alternateDelayedKw(null,{list:[{
+   source:'kw',id:'late',name:'安全备用校准',singer:'FyMusic QA',
+   albumName:'受控音频',interval:'00:48'
+  }]});
+ });
+ assert.equal(await page.locator('.fymusic-alternate-confirm').count(),0,
+  'stale KW response must not create a confirmation button');
+ assert.equal(await page.evaluate(()=>window.__alternateQA.kwResolvers),2,
+  'stale alternate response must not start playback');
  assert.deepEqual(errors,[]);
  console.log('FYMUSIC_EXPLICIT_KG_KW_BROWSER_PASS '+JSON.stringify({
   searches:stats.kwSearch,confirmedResolvers:stats.kwResolvers,
-  quality:stats.qualities[0],actualAudio:true
+  quality:stats.qualities[0],actualAudio:true,
+  unsupportedQualityProtected:true,staleCallbackIgnored:true
  }));
 }finally{await browser.close();}
