@@ -15,7 +15,25 @@ const evidence = {
   actualKwAttempt: false, actualKwUrl: false,
   actualKwMedia: false, decodedProgress: false,
   qualityRequests: [], resolverEvents: [], flowerProxy: [], mediaResponses: [],
-  playback: null, result: 'NOT_STARTED'
+  playback: null, performance: { timingsMs: {}, requestCounts: {
+    kgFlowerProxy: 0, kwFlowerProxy: 0, kwCatalogSearch: 0, mediaRequests: 0
+  }, longTasks: { count: 0, maxDurationMs: 0 } }, result: 'NOT_STARTED'
+};
+const stageMarks = {};
+const markStage = name => { stageMarks[name] = performance.now(); };
+const elapsed = (begin, end) => Number.isFinite(stageMarks[begin]) &&
+  Number.isFinite(stageMarks[end])
+  ? Math.round(stageMarks[end] - stageMarks[begin]) : null;
+const addDurations = () => {
+  evidence.performance.timingsMs = {
+    flowerImport: elapsed('flowerImportBegin', 'flowerImportReady'),
+    kgCatalogSearch: elapsed('kgCatalogBegin', 'kgCatalogReady'),
+    kgFailureToAlternateOffer: elapsed('kgClick', 'alternateOffer'),
+    kwManualSearchToCandidates: elapsed('kwSearchClick', 'kwCandidatesReady'),
+    kwConfirmationToAudioReady: elapsed('kwConfirmClick', 'kwAudioReady'),
+    kwConfirmationToVerifiedPlayback: elapsed('kwConfirmClick', 'kwPlaybackVerified'),
+    kgSelectionToVerifiedKwPlayback: elapsed('kgClick', 'kwPlaybackVerified')
+  };
 };
 const bounded = (list, item, limit = 16) => {
   if (list.length < limit) list.push(item);
@@ -30,6 +48,25 @@ try {
   page = await browser.newPage({ viewport: { width: 1366, height: 900 } });
   const pageErrors = [];
   page.on('pageerror', () => bounded(pageErrors, 'PAGE_ERROR'));
+  page.on('request', request => {
+    // Count actual requests without storing any URL, IDs, tags or signatures.
+    try {
+      if (request.resourceType() === 'media')
+        evidence.performance.requestCounts.mediaRequests++;
+      const requestUrl = new URL(request.url());
+      if (requestUrl.pathname !== '/api/proxy') return;
+      const upstream = new URL(requestUrl.searchParams.get('url') || '');
+      if (upstream.hostname === 'search.kuwo.cn' &&
+          upstream.pathname === '/r.s')
+        evidence.performance.requestCounts.kwCatalogSearch++;
+      if (upstream.pathname.includes('/flower/') &&
+          /\/url\/(?:kg|kw)(?:\/|$)/i.test(upstream.pathname)) {
+        const source = /\/url\/kw(?:\/|$)/i.test(upstream.pathname)
+          ? 'kwFlowerProxy' : 'kgFlowerProxy';
+        evidence.performance.requestCounts[source]++;
+      }
+    } catch { /* do not log sensitive request data */ }
+  });
 
   // Observe transport metadata only. Never serialize URL, query or response body.
   page.on('response', async response => {
@@ -82,6 +119,17 @@ try {
   ), null, { timeout: 18000 });
 
   await page.evaluate(() => {
+    window.__fymusicPerfStats = { count: 0, maxDurationMs: 0 };
+    try {
+      const observer = new PerformanceObserver(entries => {
+        for (const entry of entries.getEntries()) {
+          window.__fymusicPerfStats.count++;
+          window.__fymusicPerfStats.maxDurationMs =
+            Math.max(window.__fymusicPerfStats.maxDurationMs, entry.duration);
+        }
+      });
+      observer.observe({ type: 'longtask', buffered: true });
+    } catch { /* optional modern browser performance API */ }
     window.__fymusicRealEvents = [];
     for (const name of [
       'fymusic:alternate-search', 'fymusic:alternate-approved',
@@ -100,6 +148,7 @@ try {
   });
 
   evidence.result = 'FLOWER_IMPORT';
+  markStage('flowerImportBegin');
   const flower = await page.evaluate(async ({ url, mirror }) => {
     const mgr = window.LXSourceManager;
     const attempts = [];
@@ -155,9 +204,11 @@ try {
   evidence.sourceSupportsKg = flower.kg;
   evidence.sourceSupportsKw = flower.kw;
   assert.ok(flower.ok, 'FLOWER_IMPORT_OR_KG_KW_ACTION_UNAVAILABLE');
+  markStage('flowerImportReady');
 
   // Real catalog search; preserve selected page row rather than injecting IDs.
   evidence.result = 'KG_SEARCH';
+  markStage('kgCatalogBegin');
   let rows = 0;
   for (const keyword of ['孙燕姿 开始懂了', '开始懂了']) {
     await page.locator('#channel-list .channel-button[title="KG"]').click();
@@ -173,6 +224,7 @@ try {
   }
   evidence.kgSearch = rows > 0;
   assert.ok(evidence.kgSearch, 'REAL_KG_SEARCH_TARGET_NOT_FOUND');
+  markStage('kgCatalogReady');
 
   evidence.result = 'KG_RESOLUTION';
   const row = page.locator('.search-song-row')
@@ -184,6 +236,7 @@ try {
     'REAL_KG_SELECTED_ROW_MISMATCH');
   assert.ok(!/\bLive\b|现场版|演唱会|翻唱/i.test(rowText),
     'REAL_KG_VERSION_NOT_STUDIO');
+  markStage('kgClick');
   await row.locator('.search-song-main').click();
   evidence.kgSelected = true;
   const button = page.locator('.fymusic-alternate-search');
@@ -200,12 +253,14 @@ try {
       : 'KG_FAILED_BUT_MANUAL_KW_ENTRY_MISSING');
   }
   evidence.manualSearchOffered = true;
+  markStage('alternateOffer');
   evidence.result = 'KW_MANUAL_SEARCH';
   let history = await page.evaluate(() => window.__fymusicRealEvents);
   assert.equal(history.filter(x => x.name === 'fymusic:alternate-search').length, 0,
     'KW_SEARCH_STARTED_BEFORE_CLICK');
   assert.equal(history.filter(x => x.name === 'fymusic:alternate-approved').length, 0,
     'KW_APPROVED_BEFORE_CLICK');
+  markStage('kwSearchClick');
   await button.click();
   evidence.manualSearchClicked = true;
   const firstCandidate = page.locator('.fymusic-alternate-confirm').first();
@@ -214,6 +269,7 @@ try {
   } catch {
     throw new Error('REAL_KW_SEARCH_NO_STRICT_MATCH_OR_TIMED_OUT');
   }
+  markStage('kwCandidatesReady');
   evidence.manualCandidateCount = await page.locator('.fymusic-alternate-confirm').count();
   assert.ok(evidence.manualCandidateCount <= 3 && evidence.manualCandidateCount >= 1,
     'KW_CANDIDATE_COUNT_UNEXPECTED');
@@ -222,6 +278,7 @@ try {
     'KW_AUTO_APPROVAL_DETECTED');
 
   evidence.result = 'KW_REAL_RESOLUTION';
+  markStage('kwConfirmClick');
   await firstCandidate.click();
   evidence.candidateConfirmed = true;
   try {
@@ -234,6 +291,7 @@ try {
   } catch {
     throw new Error('REAL_KW_URL_OR_MEDIA_NOT_DECODED');
   }
+  markStage('kwAudioReady');
   const before = await page.evaluate(() => document.querySelector('#audio').currentTime);
   await page.waitForTimeout(3300);
   const playback = await page.evaluate(() => {
@@ -265,6 +323,17 @@ try {
   assert.ok(evidence.actualKwUrl, 'NO_REAL_KW_RESOLVED_URL');
   assert.ok(evidence.actualKwMedia, 'NO_REAL_MEDIA_HTTP_200_OR_206');
   assert.ok(evidence.decodedProgress, 'NO_REAL_KW_AUDIO_PROGRESS');
+  // One user confirmation should not cause duplicate KW catalog lookups or
+  // redundant Flower resolver HTTP calls. Count actual browser requests.
+  assert.equal(evidence.performance.requestCounts.kwCatalogSearch, 1,
+    'DUPLICATE_OR_MISSING_KW_CATALOG_REQUEST');
+  assert.equal(evidence.performance.requestCounts.kwFlowerProxy, 1,
+    'DUPLICATE_OR_MISSING_KW_FLOWER_REQUEST');
+  assert.equal(history.filter(x => x.name === 'fymusic:alternate-search').length, 1,
+    'DUPLICATE_KW_SEARCH_ACTION');
+  assert.equal(history.filter(x => x.name === 'fymusic:alternate-approved').length, 1,
+    'DUPLICATE_KW_CONFIRM_ACTION');
+  markStage('kwPlaybackVerified');
   assert.deepEqual(pageErrors, [], 'UNCAUGHT_BROWSER_ERRORS');
   evidence.result = 'REAL_KW_DECODED_PROGRESS_PASS';
 } catch (error) {
@@ -283,7 +352,11 @@ try {
     'REAL_KW_URL_OR_MEDIA_NOT_DECODED',
     'NO_REAL_KW_RESOLVER_ATTEMPT', 'NO_REAL_KW_RESOLVED_URL',
     'NO_REAL_MEDIA_HTTP_200_OR_206', 'NO_REAL_KW_AUDIO_PROGRESS',
-    'UNCAUGHT_BROWSER_ERRORS'
+    'UNCAUGHT_BROWSER_ERRORS',
+    'DUPLICATE_OR_MISSING_KW_CATALOG_REQUEST',
+    'DUPLICATE_OR_MISSING_KW_FLOWER_REQUEST',
+    'DUPLICATE_KW_SEARCH_ACTION',
+    'DUPLICATE_KW_CONFIRM_ACTION'
   ];
   evidence.failureCode = allowed.includes(error?.message) ? error.message : evidence.failure;
 } finally {
@@ -300,6 +373,17 @@ try {
     evidence.actualKwAttempt = evidence.qualityRequests.some(x => x.platform === 'kw');
     evidence.actualKwUrl = safe.some(x =>
       x.name === 'fymusic:url-resolved' && x.detail.source === 'kw');
+  }
+  addDurations();
+  if (page) {
+    const longTaskStats = await page.evaluate(() => window.__fymusicPerfStats || null)
+      .catch(() => null);
+    if (longTaskStats) {
+      evidence.performance.longTasks = {
+        count: Math.min(999, Number(longTaskStats.count) || 0),
+        maxDurationMs: Math.round(Number(longTaskStats.maxDurationMs) || 0)
+      };
+    }
   }
   console.log('FYMUSIC_REAL_FLOWER_KW_EVIDENCE ' + JSON.stringify(evidence));
   await browser.close();
