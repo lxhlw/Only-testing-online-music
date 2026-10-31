@@ -24,9 +24,9 @@ function shapeInfo(track){
   interval:String(track.interval||raw.interval||''),
   qualities:Object.fromEntries(qualityFields.map(k=>[k,Boolean(q[k]||raw._types?.[k])]))};
 }
-function safeParity(gui,web){
+function safeParity(gui,web,missingReason='VUE_PROPS_NOT_EXPOSED'){
  const G=shapeInfo(gui),W=(web||[]).map(shapeInfo).filter(Boolean);
- if(!G)return {observed:false,reason:'VUE_PROPS_NOT_EXPOSED',webCandidates:W.length,
+ if(!G)return {observed:false,reason:missingReason,webCandidates:W.length,
   actualRequestedQuality:'not_observed'};
  const valid=v=>Boolean(v&&String(v).trim());
  const same=(a,b)=>valid(a)&&valid(b)&&String(a).toLowerCase()===String(b).toLowerCase();
@@ -299,52 +299,138 @@ try{
         });
        }),{keyword,platform}).catch(()=>null);
       };
+      // Production Vue may not put __vueParentComponent on DOM nodes.
+      // Read only existing renderer objects; do not change app/source/player.
       const readSelectedGui=async(row)=>row.evaluate(el=>{
-       const name=el.querySelector('.list-item-cell.name span.select.name')
+       const clean=s=>String(s||'').normalize('NFKC').toLowerCase()
+        .replace(/[\s_.·-]+/g,'');
+       const songName=el.querySelector('.list-item-cell.name span.select.name')
         ?.getAttribute('aria-label')||'';
        const labels=[...el.querySelectorAll('.list-item-cell span[aria-label]')]
         .map(x=>x.getAttribute('aria-label')||'');
        const rawIndex=Number(el.querySelector('.list-item-cell.num')?.textContent?.trim());
-       let node=el, checked=0;
-       const clean=s=>String(s||'').normalize('NFKC').toLowerCase()
-        .replace(/[\s_.·-]+/g,'');
-       while(node&&checked++<28){
-        let inst=node.__vueParentComponent;
-        let depth=0;
-        while(inst&&depth++<32){
-         const list=inst.props?.list;
-         if(Array.isArray(list)&&list.length){
-          const idx=Number.isInteger(rawIndex)&&rawIndex>0?rawIndex-1:-1;
-          const indexMatches=i=>{
-           const x=list[i];
-           return Boolean(x&&clean(x.name)===clean(name)&&
-            labels.some(y=>clean(y)===clean(x.singer)));
-          };
-          let chosen=-1;
-          if(idx>=0&&idx<list.length&&indexMatches(idx))chosen=idx;
-          else chosen=list.findIndex((_,i)=>indexMatches(i));
-          if(chosen>=0){
-           const x=list[chosen],raw=x.raw||{};
-           // Only allowlisted fields, never serialized entire object.
-           return {
-            observed:true,componentListCount:list.length,
-            selectedOrdinal:chosen+1,
-            track:{name:String(x.name||''),singer:String(x.singer||''),
-             id:String(x.id||''),songmid:String(x.songmid||''),
-             hash:String(x.hash||''),albumAudioId:String(x.albumAudioId||''),
-             interval:String(x.interval||''),
-             meta:{albumName:String(x.meta?.albumName||''),
-              _qualitys:Object.fromEntries(['flac24bit','flac','320k','128k']
-               .map(q=>[q,Boolean(x.meta?._qualitys?.[q])]))}
-            }
-           };
-          }
-         }
-         inst=inst.parent;
+       const domCells=[...el.querySelectorAll('.list-item-cell')];
+       const dom={
+        ordinal:Number.isInteger(rawIndex)&&rawIndex>0?rawIndex:null,
+        album:domCells.find(c=>c.getAttribute('style')?.includes('22%')&&
+         c.querySelector('span[aria-label]')&&
+         clean(c.querySelector('span[aria-label]').getAttribute('aria-label'))!==
+         clean(labels[0]))?.querySelector('span[aria-label]')?.getAttribute('aria-label')||'',
+        interval:domCells.find(c=>/\b\d{1,2}:\d{2}\b/.test(c.textContent||''))
+         ?.textContent?.trim()?.slice(0,12)||'',
+        badgeCount:el.querySelectorAll('.badge').length
+       };
+       const probe={domVueInstance:false,domVNode:false,appRoot:false,
+        appInstance:false,componentsVisited:0,listsChecked:0,
+        objectsVisited:0,hitPath:null};
+       const roots=[];
+       for(let n=el;n;n=n.parentElement){
+        if(n.__vueParentComponent){
+         probe.domVueInstance=true;
+         roots.push({value:n.__vueParentComponent,path:'dom.component'});
         }
-        node=node.parentElement;
+        if(n.__vnode){
+         probe.domVNode=true;
+         roots.push({value:n.__vnode,path:'dom.vnode'});
+        }
+        if(n.__vue__){
+         probe.domVueInstance=true;
+         roots.push({value:n.__vue__,path:'dom.vue2'});
+        }
+        if(n.__vue_app__){
+         probe.appRoot=true;
+         probe.appInstance=probe.appInstance||Boolean(n.__vue_app__._instance);
+         roots.push({value:n.__vue_app__._instance,path:'app.instance'});
+         roots.push({value:n.__vue_app__._container?.__vnode,path:'app.container.vnode'});
+        }
        }
-       return {observed:false,reason:'NO_MATCHING_VUE_LIST'};
+       const visited=new Set();
+       const stack=roots.filter(x=>x.value);
+       const matchesList=(list,path)=>{
+        if(!Array.isArray(list)||list.length<1||list.length>5000)return null;
+        probe.listsChecked++;
+        const same=i=>{
+         const x=list[i];
+         return Boolean(x&&typeof x==='object'&&
+          clean(x.name)===clean(songName)&&
+          labels.some(s=>clean(s)===clean(x.singer)));
+        };
+        const hinted=Number.isInteger(rawIndex)&&rawIndex>0?rawIndex-1:-1;
+        let index=-1;
+        if(hinted>=0&&hinted<list.length&&same(hinted))index=hinted;
+        else{
+         const found=[];
+         for(let i=0;i<list.length;i++){
+          if(same(i))found.push(i);
+          if(found.length>1)break;
+         }
+         // Do not guess which of several identical title/artist entries
+         // the official GUI actually clicked.
+         if(found.length===1)index=found[0];
+        }
+        if(index<0)return null;
+        const x=list[index];
+        const r=x.raw||{};
+        probe.hitPath=path;
+        return {observed:true,source:path,componentListCount:list.length,
+         selectedOrdinal:index+1,probe,
+         track:{
+          name:String(x.name||''),singer:String(x.singer||''),
+          id:String(x.id||r.id||''),songmid:String(x.songmid||r.songmid||''),
+          hash:String(x.hash||r.hash||''),albumAudioId:String(x.albumAudioId||r.albumAudioId||''),
+          interval:String(x.interval||r.interval||''),
+          meta:{albumName:String(x.meta?.albumName||r.albumName||''),
+           _qualitys:Object.fromEntries(['flac24bit','flac','320k','128k']
+            .map(q=>[q,Boolean(x.meta?._qualitys?.[q]||r.meta?._qualitys?.[q])]))}
+         }};
+       };
+       let result=null;
+       // Traverse only existing Vue component/vnode references. This is
+       // bounded and never calls app methods or triggers UI behavior.
+       while(stack.length&&visited.size<12000&&!result){
+        const {value,path}=stack.pop();
+        if(!value||typeof value!=='object'||visited.has(value))continue;
+        visited.add(value);
+        const component=Boolean(value.subTree||value.setupState||value.proxy||
+         value.$children||value.vnode?.component);
+        if(component)probe.componentsVisited++;
+        for(const key of ['props','setupState','ctx','proxy','$props']){
+         let src;
+         try{src=key==='proxy'?value.proxy:key==='$props'?value.$props:value[key];}
+         catch{continue;}
+         if(!src||typeof src!=='object')continue;
+         const options=[
+          ['list',src.list],['listInfo.list',src.listInfo?.list],
+          ['listInfo.value.list',src.listInfo?.value?.list]];
+         for(const [field,list] of options){
+          result=matchesList(list,path+'.'+key+'.'+field);
+          if(result)break;
+         }
+         if(result)break;
+        }
+        if(result)break;
+        if(Array.isArray(value.children)){
+         for(const child of value.children)if(child&&typeof child==='object')
+          stack.push({value:child,path:path+'.children'});
+        }
+        if(Array.isArray(value.$children)){
+         for(const child of value.$children)if(child&&typeof child==='object')
+          stack.push({value:child,path:path+'.$children'});
+        }
+        for(const key of ['subTree','vnode','component','ssContent','ssFallback',
+         'parent','_instance']){
+         try{if(value[key]&&typeof value[key]==='object')
+          stack.push({value:value[key],path:path+'.'+key});}catch{}
+        }
+        if(value.dynamicChildren&&Array.isArray(value.dynamicChildren))
+         for(const child of value.dynamicChildren)
+          if(child&&typeof child==='object')
+           stack.push({value:child,path:path+'.dynamicChildren'});
+       }
+       probe.objectsVisited=visited.size;
+       return result||{observed:false,
+        reason:roots.length?'NO_MATCHING_VUE_LIST':'NO_VUE_ROOT_EXPOSED',
+        probe,dom};
       });
 
       const readList=()=>appPage.evaluate(()=>{
@@ -417,22 +503,25 @@ try{
           }
           if(!row){record.reason='EXACT_MATCH_NOT_FOUND';continue;}
           record.found=true;
-          record.selectedCandidateOrdinal=1;
+          record.selectedCandidateOrdinal=null;
           // The Vue row props are the same object passed to GUI playback.
           // Evaluate both catalogs on this runner and emit only comparisons.
-          const guiData=await readSelectedGui(row).catch(()=>({observed:false}));
+          const guiData=await readSelectedGui(row).catch(()=>({observed:false,reason:'GUI_VUE_READ_EXCEPTION'}));
           const webList=await getWebMatches('孙燕姿 开始懂了',platform);
           record.vueListObserved=Boolean(guiData?.observed);
           record.identityParity=safeParity(guiData?.track,
-           Array.isArray(webList)?webList:[]);
+           Array.isArray(webList)?webList:[],guiData?.reason);
           record.guiSelectedOrdinal=guiData?.observed?
            guiData.selectedOrdinal:null;
+          record.vueProbe=guiData?.probe||null;
+          record.domFallback=guiData?.observed?null:guiData?.dom||null;
           record.webCatalogAvailable=Array.isArray(webList);
           console.log('FYMUSIC_GUI_IDENTITY_PARITY '+JSON.stringify({
             platform,guiListRead:record.vueListObserved,
             candidateOrdinal:record.guiSelectedOrdinal,
             webCatalogAvailable:record.webCatalogAvailable,
-            parity:record.identityParity
+            parity:record.identityParity,
+            vueProbe:record.vueProbe,domFallback:record.domFallback
           }));
           const play=row.getByRole('button',{name:'Play',exact:true});
           mediaStats.players=0;mediaStats.events=0;
