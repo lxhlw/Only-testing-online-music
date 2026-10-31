@@ -1604,7 +1604,28 @@
           retry.type = 'button';
           retry.className = 'secondary';
           retry.textContent = sourceUnavailable ? '稍后重试' : '重试这首歌';
-          retry.onclick = function(){ if(token===playbackToken) testMusic(music,false); };
+          retry.onclick = function(){
+            if(token!==playbackToken || !playbackState ||
+                playbackState.token!==token || playbackState.music!==music ||
+                playbackState.source!==source)return;
+            // An explicitly confirmed KW substitute can be playing while the
+            // catalog/search tab remains KG. testMusic() correctly rejects
+            // normal cross-tab selection, but must not block a USER-CLICKED
+            // retry of this exact previously approved KW candidate.
+            if(source==='kw' && playbackState.manualAlternativeOrigin==='kg'){
+              var now=global.LXSourceManager.getActive();
+              if(selectedChannel!=='kg'||!now||!now.inited||!now.runtime||
+                  String(now.id||now.url||'')!==playbackState.activeSourceId||
+                  !now.sources||!now.sources.kw||
+                  !Array.isArray(now.sources.kw.actions)||
+                  now.sources.kw.actions.indexOf('musicUrl')<0)return;
+              startPlayback(music,'kw');
+              if(playbackState&&playbackState.source==='kw')
+                playbackState.manualAlternativeOrigin='kg';
+              return;
+            }
+            testMusic(music,false);
+          };
           statusEl.appendChild(retry);
           offerCrossPlatformAlternative(music,source,token);
         }
