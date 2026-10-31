@@ -765,17 +765,23 @@ try{
       // examine up to four caller frames without logging raw values.
       const nativeRequestEval=String.raw`(()=>{
        try{
-        const a=arguments;
-        const u=typeof a?.[0]==='string'?a[0]:'';
-        const opts=a?.[1]&&typeof a[1]==='object'?a[1]:{};
+        const a=Array.prototype.slice.call(arguments,0,8);
+        // Electron contextBridge wrapper can prepend a function argument;
+        // do not assume the URL is argument zero.
+        const urlIndex=a.findIndex(v=>typeof v==='string'&&/^https?:\/\//i.test(v));
+        const u=urlIndex>=0?a[urlIndex]:'';
+        const opts=urlIndex>=0&&a[urlIndex+1]&&typeof a[urlIndex+1]==='object'?
+         a[urlIndex+1]:{};
         const h=opts.headers&&typeof opts.headers==='object'?opts.headers:{};
         const names=Object.keys(h).map(x=>x.toLowerCase());
         const first=key=>names.includes(key);
         const flower=/^https?:\/\/97\.64\.37\.235(?:[:/]|$)/i.test(u);
         const alias=/^https?:\/\/(?:ts|tm)\.tempmusic\.tk(?:[:/]|$)/i.test(u);
+        const callbackIndex=a.findIndex((v,i)=>i>urlIndex&&typeof v==='function');
         return {
-         argumentCount:typeof a?.length==='number'?Math.min(20,a.length):null,
-         firstType:typeof a?.[0],secondType:typeof a?.[1],
+         argumentCount:a.length,argumentTypes:a.map(v=>typeof v),
+         urlArgIndex:urlIndex,callbackArgIndex:callbackIndex,
+         firstType:typeof a[0],secondType:typeof a[1],
          urlClass:flower?'flower_canonical_ip':alias?'flower_host_alias':
           /^https?:\/\//i.test(u)?'other_http':u?'other':'no_url_argument',
          pathClass:/^https?:\/\/[^/]+\/flower\/v1\/url\/kg\//i.test(u)?
@@ -786,7 +792,7 @@ try{
          sourceHeaders:{userAgent:first('user-agent'),referer:first('referer'),
           accept:first('accept'),origin:first('origin'),cookie:first('cookie'),
           acceptEncoding:first('accept-encoding')},
-         callback:typeof a?.[2]==='function'
+         callback:urlIndex>=0&&callbackIndex>urlIndex
         };
        }catch{return {urlClass:'probe_exception',pathClass:'unknown',
         firstType:'unknown',argumentCount:null};}
@@ -850,14 +856,17 @@ try{
              selectedFrame:best?.position??null,
              ...(best?{urlClass:best.urlClass,pathClass:best.pathClass,
               method:best.method,sourceHeaders:best.sourceHeaders,
-              argumentCount:best.argumentCount,callback:best.callback}:{}),
+              argumentCount:best.argumentCount,callback:best.callback,
+              urlArgIndex:best.urlArgIndex,callbackArgIndex:best.callbackArgIndex}:{}),
              frames:observed.map(x=>({position:x.position,frameName:x.frameName,
-              argumentCount:x.argumentCount,firstType:x.firstType,
-              urlClass:x.urlClass,pathClass:x.pathClass}))
+              argumentCount:x.argumentCount,argumentTypes:x.argumentTypes,
+              urlArgIndex:x.urlArgIndex,callbackArgIndex:x.callbackArgIndex,
+              firstType:x.firstType,urlClass:x.urlClass,pathClass:x.pathClass}))
             });
            if(best?.callback&&nativeCallbackBreakpoints.size<12){
             const cb=await nativeSourceSession.send('Debugger.evaluateOnCallFrame',{
-             callFrameId:best.callFrameId,expression:'arguments[2]',
+             callFrameId:best.callFrameId,
+             expression:'arguments['+best.callbackArgIndex+']',
              returnByValue:false,silent:true
             }).catch(()=>null);
             if(cb?.result?.type==='function'&&cb.result.objectId){
