@@ -320,6 +320,101 @@ try{
         });
        }),{keyword,platform}).catch(()=>null);
       };
+      // Independent real FyMusic browser run for the GUI-matched KG record.
+      // Only app-issued resolver-attempt events and sanitized HTTP categories
+      // are retained. No media URL, song ID/hash or auth value is logged.
+      const probeWebRequestedQuality=async(guiTrack)=>{
+       if(!webPage||!guiTrack?.hash)return {status:'web_or_gui_identity_unavailable'};
+       const row={status:'not_started',sourceImported:false,
+        matchingRow:false,requestedQualities:[],declaredQualities:[],
+        proxyRequests:0};
+       const webHttp=[];
+       const captureRequest=req=>{
+        try{
+         const u=new URL(req.url()),upstream=u.searchParams.get('url');
+         if(!upstream)return;
+         const path=new URL(upstream).pathname;
+         if(!/^\/flower\/v1\/url\/kg\//.test(path))return;
+         webHttp.push(true);
+        }catch{}
+       };
+       webPage.on('request',captureRequest);
+       try{
+        await webPage.addInitScript(()=>{
+         localStorage.setItem('only-testing-online-music.play-settings',JSON.stringify({
+          qualityMode:'highest',fixedQuality:'320k',autoFallback:true
+         }));
+         window.__fyQualityAudit=[];
+         window.__fyQualitySearch={finished:false,status:'pending'};
+         window.addEventListener('fymusic:resolver-attempt',event=>{
+          const d=event.detail||{};
+          if(d.source==='kg'&&['128k','320k','flac','flac24bit'].includes(d.quality))
+           window.__fyQualityAudit.push(d.quality);
+         });
+         window.addEventListener('fymusic:search-start',()=>{
+          window.__fyQualitySearch={finished:false,status:'pending'};
+         });
+         window.addEventListener('fymusic:search-page',event=>{
+          window.__fyQualitySearch={finished:true,status:'result',
+           count:event.detail?.items?.length||0};
+         });
+         window.addEventListener('fymusic:search-error',()=>{
+          window.__fyQualitySearch={finished:true,status:'error'};
+         });
+        });
+        await webPage.reload({waitUntil:'domcontentloaded',timeout:25000});
+        await webPage.locator('.nav-item[data-view="settings"]').click({timeout:10000});
+        await webPage.locator('#source-url')
+         .fill('https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js');
+        await webPage.locator('#install-btn').click({timeout:10000});
+        await webPage.waitForFunction(()=>{
+         const a=window.LXSourceManager?.getActive?.();
+         return Boolean(a?.inited&&a?.runtime&&
+          String(a.url||'').endsWith('/flower/latest.js'));
+        },null,{timeout:40000});
+        row.sourceImported=true;
+        row.declaredQualities=await webPage.evaluate(()=>{
+         const q=window.LXSourceManager?.getActive?.()?.sources?.kg?.qualitys||[];
+         return q.filter(x=>['flac24bit','flac','320k','128k'].includes(x));
+        });
+        await webPage.locator('.nav-item[data-view="search"]').click({timeout:12000});
+        await webPage.locator('#channel-list .channel-button[title="KG"]')
+         .click({timeout:12000});
+        const q=webPage.locator('#global-search-input');
+        await q.fill('孙燕姿 开始懂了');
+        await webPage.locator('#global-search-btn').click();
+        await webPage.waitForFunction(()=>window.__fyQualitySearch?.finished===true,
+         null,{timeout:22000});
+        // Select only an independently verified identity match: never infer
+        // correspondence from matching title and artist alone.
+        const index=await webPage.evaluate(ref=>{
+         const list=window.__LXLastSearchResults||[];
+         const norm=x=>String(x||'').toLowerCase().trim();
+         return list.findIndex(x=>norm(x.hash)===norm(ref.hash)&&
+          (norm(x.songmid)===norm(ref.songmid)||
+           norm(x.albumAudioId)===norm(ref.albumAudioId)));
+        },{hash:guiTrack.hash,songmid:guiTrack.songmid,
+           albumAudioId:guiTrack.albumAudioId});
+        if(index<0){row.status='exact_web_catalog_row_not_found';return row;}
+        row.matchingRow=true;
+        const song=webPage.locator('#search-results .search-song-row .search-song-main').nth(index);
+        if(!(await song.count())){row.status='web_song_row_not_rendered';return row;}
+        await song.click({timeout:8500});
+        await webPage.waitForTimeout(3700);
+        row.requestedQualities=await webPage.evaluate(()=>
+         Array.isArray(window.__fyQualityAudit)?window.__fyQualityAudit.slice(0,8):[]);
+        row.proxyRequests=webHttp.length;
+        row.status=row.requestedQualities.length?
+         'resolver_attempt_observed':'resolver_attempt_not_observed';
+       }catch(err){
+        row.status=/timeout/i.test(String(err?.message||''))?
+         'web_quality_probe_timeout':'web_quality_probe_error';
+       }finally{
+        webPage.off('request',captureRequest);
+       }
+       return row;
+      };
+
       // Production Vue may not put __vueParentComponent on DOM nodes.
       // Read only existing renderer objects; do not change app/source/player.
       const readSelectedGui=async(row)=>row.evaluate(el=>{
@@ -673,6 +768,14 @@ try{
           const pause=appPage.getByRole('button',{name:/^Pause$/i}).first();
           if(await pause.count()&&await pause.isVisible())
             await pause.click({timeout:3500}).catch(()=>{});
+          record.webQualityObservation=await probeWebRequestedQuality(guiData?.track);
+          console.log('FYMUSIC_WEB_ACTUAL_QUALITY '+JSON.stringify({
+           platform,...record.webQualityObservation,
+           nativeRequestedQuality:record.actualQuality,
+           webFirstRequestedQuality:record.webQualityObservation.requestedQualities?.[0]||'not_observed',
+           initialRequestQualityParity:record.actualQuality!=='not_observed'&&
+            record.actualQuality===record.webQualityObservation.requestedQualities?.[0]
+          }));
         }catch(err){
           await disarmQualityAudit().catch(()=>{});
           const e=String(err?.message||err);
