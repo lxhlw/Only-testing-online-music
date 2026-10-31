@@ -4,7 +4,7 @@
  // Catalog metadata is not an audio fingerprint: keep confirmation mandatory.
  function normalize(value) {
   return String(value == null ? '' : value).normalize('NFKC').toLowerCase()
-   .replace(/[\\s\\u00b7·._'"‘’“”–—,，:：!?！？()（）\[\]【】]+/g,'');
+   .replace(/[\s\u00b7·._'"‘’“”–—,，:：!?！？()（）\[\]【】]+/g,'');
  }
  function durationSeconds(track) {
   if(!track || typeof track!=='object') return null;
