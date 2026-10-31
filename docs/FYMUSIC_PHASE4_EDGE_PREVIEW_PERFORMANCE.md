@@ -60,6 +60,25 @@ https://7ab95c06.only-testing-online-music.pages.dev
 - 请求次数：KG Flower **1**、KW Flower **1**、KW 搜索 **1**、媒体请求 **1**。未见重复请求。
 - 浏览器报告 LongTask **1**，最长 **85ms**；这是单次 GitHub-hosted Chromium 采样，不代表全部机器的帧率。
 
+## Cloudflare Edge 第二次独立复测（失败，必须保留）
+
+[Run 41229982116 — Attempt 2](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41229982116)，Job `124622392918`，**completed/failure**：
+
+- 重新通过 Cloudflare 生产分支保护，重新发布非生产 Preview，预览资产检查也通过。
+- 第二个真实 Preview 地址：`https://636b1d77.only-testing-online-music.pages.dev`。
+- 原始野花导入成功，真实 KG 目标搜索及选曲成功，严格 KW 同曲候选 **1**，真实二次确认已经发生。
+- KG Flower 代理 HTTP **502 / FLOWER_UPSTREAM_UNAVAILABLE**，符合之前模式。
+- **KW Flower 代理也返回 HTTP 502 / FLOWER_UPSTREAM_UNAVAILABLE**，因此 `actualKwUrl=false`、`actualKwMedia=false`、`decodedProgress=false`。
+- 浏览器无媒体响应，不能把 KW 请求发出当作成功；验收正确报 `REAL_KW_URL_OR_MEDIA_NOT_DECODED`。
+- KW 搜索与 KW 解析各只有一次，没有出现重复请求放大上游压力。
+- `flowerImport=327ms`、`kgCatalogSearch=3384ms`、`kgFailureToAlternateOffer=805ms`、`kwManualSearchToCandidates=1295ms`。
+- LongTask 共 **1**，最长 **51ms**。本次音频尚未开始，无法报告「确认到音频就绪」耗时。
+- 这证明 Cloudflare Edge 路径有**真实上游间歇性可用性问题（2次中1次成功、1次失败）**，不能以第一次成功就宣布已稳定。
+
+针对该失败已补充脱敏的各上游路由失败分类以便下一轮区别 HTTP 400/403/404、网络失败、时限失败，不暴露原始请求路径、ID、tag 或媒体地址。
+
+在复盘中还发现：当前界面 KG 搜索标签保持选中时，已经二次确认的 KW 候选若解析失败，原有「稍后重试」经过常规选中渠道校验可能无法重试该 KW 候选。已在开发分支修复此边界：用户可再次点击重试同一已确认的 KW 版本；不会自动换平台、重新搜索或自动无限重试，并加入浏览器回归测试。需要以最新 CI 结果确认修复有效。
+
 ## 解释和限制
 
 1. **真实 Cloudflare Edge Preview 上，FyMusic 的 KG 失败 → KW 显式确认 → 原始野花解析 → 媒体下载 → 浏览器解码播放，至少一次完整成功**；这与之前只证明本地模拟器有效相比有实质提升。
