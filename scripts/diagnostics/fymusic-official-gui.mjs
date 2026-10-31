@@ -825,35 +825,7 @@ try{
        }catch{return {urlClass:'probe_exception',pathClass:'unknown',
         firstType:'unknown',argumentCount:null};}
       })()`;
-      const nativeCallbackEval=String.raw`(()=>{
-       try{
-        const a=Array.prototype.slice.call(arguments,0,8);
-        const types=a.map(v=>v===null?'null':typeof v);
-        let status=null,responsePresent=false,errorPresent=false,errorClass=null;
-        const safeCode=v=>{
-         try{return typeof v?.code==='string'?v.code:'';}catch{return '';}
-        };
-        for(const v of a){
-         if(v===null||v===undefined)continue;
-         if(typeof v!=='object')continue;
-         try{
-          const code=v.statusCode;
-          if(Number.isInteger(code)&&code>=100&&code<=599){
-           status=code;responsePresent=true;continue;
-          }
-         }catch{}
-         const c=safeCode(v);
-         if(c){
-          errorPresent=true;
-          errorClass=/^E(?:CONNREFUSED|CONNRESET|HOSTUNREACH|NETUNREACH)$/.test(c)?
-           c:/^(?:ETIMEDOUT|ENOTFOUND|EAI_AGAIN)$/.test(c)?
-           c:'OTHER_ERROR';
-         }
-        }
-        return {status,errorClass,responsePresent,errorPresent,argumentTypes:types};
-       }catch{return {status:null,errorClass:'OBSERVATION_ERROR',
-        responsePresent:false,errorPresent:false,argumentTypes:[]};}
-      })()`;
+      const nativeCallbackEval="(()=>{\ntry{\nconst a=Array.from(arguments).slice(0,8),types=a.map(v=>v===null?'null':typeof v);\nlet status=null,errorClass=null,response=null,errorPresent=false;\nfor(const v of a){\n if(v===null||typeof v!=='object')continue;\n if(Number.isInteger(v.statusCode)&&v.statusCode>=100&&v.statusCode<=599){\n  status=v.statusCode;response=v;continue;\n }\n const code=typeof v.code==='string'?v.code:'';\n if(code){errorPresent=true;errorClass=/^E(?:CONNRESET|CONNREFUSED|HOSTUNREACH|NETUNREACH)$/.test(code)?code:/^(?:ETIMEDOUT|ENOTFOUND|EAI_AGAIN)$/.test(code)?code:'OTHER_NETWORK';}\n}\nconst body=response?.body,kind=body===null?'null':Array.isArray(body)?'array':typeof body;\nconst bytes=Number(response?.bytes)||0;\nlet hasUrl=false,hasAudioExtension=false,likelyAudioUrl=false,visited=0;\nconst seen=new Set();\nconst inspect=(v,depth)=>{\n if(depth>5||visited++>180||bytes>1048576||v==null)return;\n if(typeof v==='string'){\n  const trimmed=v.trim();let urls=[];\n  if(/^https?:\\/\\/\\S+$/i.test(trimmed)&&trimmed.length<2500)urls=[trimmed];\n  else if(trimmed.length<=20000)urls=(trimmed.match(/https?:\\/\\/[^\\s\"'<>\\\\]+/gi)||[]).slice(0,8);\n  for(const u of urls){\n   if(u.length>2500)continue;hasUrl=true;\n   const ext=/\\.(?:mp3|m4a|aac|flac|ogg|wav)(?:[?#]|$)/i.test(u);\n   if(ext)hasAudioExtension=true;\n   if(ext||/\\/(?:audio|media|stream|music|download)\\b/i.test(u))likelyAudioUrl=true;\n  }\n  if(trimmed.length<15000&&/^[\\[{]/.test(trimmed))\n   try{inspect(JSON.parse(trimmed),depth+1);}catch{}\n }else if(typeof v==='object'&&!seen.has(v)){\n  seen.add(v);\n  for(const k of Object.keys(v).slice(0,90)){\n   if(/^(?:raw|headers|cookie|request|config|token|signature)$/i.test(k))continue;\n   const item=v[k];if(typeof item==='string'||typeof item==='object')inspect(item,depth+1);\n  }\n }\n};\ninspect(body,0);\nlet innerCode=null;\nif(body&&typeof body==='object')for(const k of ['code','status','statusCode'])\n if(Number.isInteger(body[k])&&body[k]>=-1000&&body[k]<=999){innerCode=body[k];break;}\nreturn {status,errorClass,responsePresent:!!response,errorPresent,argumentTypes:types,bodyKind:kind,\n bytesBand:bytes===0?'zero':bytes<1024?'small':bytes<16384?'medium':bytes<1048576?'large':'too_large',\n hasUrl,hasAudioExtension,likelyAudioUrl,innerCode};\n}catch{return {status:null,errorClass:'OBSERVATION_ERROR',bodyKind:'not_observed',\n hasUrl:false,hasAudioExtension:false,likelyAudioUrl:false};}\n})()";
       const armNativeNeedleAudit=async()=>{
        const candidate=pw.contexts().flatMap(c=>c.pages())
         .find(p=>!p.isClosed()&&p.url().startsWith('data:text/html'));
@@ -964,9 +936,15 @@ try{
              status:isSafeStatus(best.status),errorClass:best.errorClass,
              responsePresent:Boolean(best.responsePresent),
              errorPresent:Boolean(best.errorPresent),
+             bodyKind:best.bodyKind,bytesBand:best.bytesBand,
+             hasUrl:best.hasUrl,likelyAudioUrl:best.likelyAudioUrl,
+             hasAudioExtension:best.hasAudioExtension,innerCode:best.innerCode,
              inspectedFrames:frames.map(x=>({position:x.position,
               argumentTypes:x.argumentTypes,status:isSafeStatus(x.status),
-              errorClass:x.errorClass}))
+              errorClass:x.errorClass,bodyKind:x.bodyKind,
+              bytesBand:x.bytesBand,hasUrl:x.hasUrl,
+              likelyAudioUrl:x.likelyAudioUrl,hasAudioExtension:x.hasAudioExtension,
+              innerCode:x.innerCode}))
             });
            }
           }
