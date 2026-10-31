@@ -747,6 +747,148 @@ try{
         session.on('Media.playerEventsAdded',x=>{mediaStats.events+=(x.events||[]).length;});
         await session.send('Media.enable').catch(()=>{});
       }
+      // Attach directly to the original hidden LX User API BrowserWindow.
+      // The window runs the ORIGINAL Flower script with the ORIGINAL Needle
+      // preload. CDP breakpoints inspect arguments and callback status ONLY;
+      // no source mutation, request interception, or raw-URL/header logging.
+      const nativeNeedleAudit={
+       attach:'not_attempted',requestBreakpoint:'not_set',
+       requestHits:0,requestSamples:[],callbacks:[],callbackBreakpoints:0,
+       errors:0,pending:0
+      };
+      let nativeSourceSession=null,nativeRequestBreakpointId=null;
+      let nativeRequestHandler=null,nativeAttached=false;
+      const nativeCallbackBreakpoints=new Map();
+      const isSafeStatus=x=>Number.isInteger(x)&&x>=100&&x<=599?x:null;
+      const nativeRequestEval=String.raw`(()=>{
+       try{
+        const a=arguments,u=new URL(String(a[0]||'')),opts=a[1]||{};
+        const h=opts.headers||{};
+        const names=Object.keys(h).map(x=>x.toLowerCase());
+        const first=(key)=>names.includes(key);
+        const host=u.hostname.toLowerCase();
+        return {
+         urlClass:host==='97.64.37.235'?'flower_canonical_ip':
+          host==='ts.tempmusic.tk'||host==='tm.tempmusic.tk'?'flower_host_alias':'other',
+         pathClass:/^\/flower\/v1\/url\/kg\//.test(u.pathname)?'flower_kg':
+          /^\/flower\/v1\/url\//.test(u.pathname)?'flower_other':'other',
+         method:String(opts.method||'get').toUpperCase().slice(0,12),
+         sourceHeaders:{userAgent:first('user-agent'),referer:first('referer'),
+          accept:first('accept'),origin:first('origin'),cookie:first('cookie'),
+          acceptEncoding:first('accept-encoding')},
+         callback:typeof a[2]==='function'
+        };
+       }catch{return {urlClass:'unparsed',pathClass:'unknown',method:'unknown'};}
+      })()`;
+      const nativeCallbackEval=String.raw`(()=>{
+       try{
+        const a=arguments,e=a[0],res=a[1],status=res?.statusCode;
+        const code=String(e?.code||'');
+        return {
+         status:typeof status==='number'?status:null,
+         errorClass:/^E(?:CONNREFUSED|CONNRESET|HOSTUNREACH|NETUNREACH)$/.test(code)?
+          code:/^(?:ETIMEDOUT|ENOTFOUND|EAI_AGAIN)$/.test(code)?code:
+          e?'OTHER_ERROR':null,
+         responsePresent:Boolean(res),
+         errorPresent:Boolean(e)
+        };
+       }catch{return {status:null,errorClass:'OBSERVATION_ERROR'};}
+      })()`;
+      const armNativeNeedleAudit=async()=>{
+       const candidate=pw.contexts().flatMap(c=>c.pages())
+        .find(p=>!p.isClosed()&&p.url().startsWith('data:text/html'));
+       if(!candidate){nativeNeedleAudit.attach='data_page_not_exposed';return;}
+       try{
+        nativeSourceSession=await candidate.context().newCDPSession(candidate);
+        await nativeSourceSession.send('Runtime.enable');
+        await nativeSourceSession.send('Debugger.enable');
+        const fn=await nativeSourceSession.send('Runtime.evaluate',{
+         expression:"window.lx && typeof window.lx.request==='function' ? window.lx.request : undefined",
+         returnByValue:false,silent:true
+        });
+        if(fn?.result?.type!=='function'||!fn.result.objectId){
+         nativeNeedleAudit.attach='source_request_not_exposed';
+         await nativeSourceSession.send('Debugger.disable').catch(()=>{});
+         return;
+        }
+        nativeNeedleAudit.attach='original_user_api_window';
+        nativeRequestHandler=async(event)=>{
+         nativeNeedleAudit.pending++;
+         try{
+          const frame=event.callFrames?.[0];
+          if(!frame)return;
+          const reqHit=event.hitBreakpoints?.includes(nativeRequestBreakpointId);
+          if(reqHit){
+           nativeNeedleAudit.requestHits++;
+           const obs=await nativeSourceSession.send('Debugger.evaluateOnCallFrame',{
+            callFrameId:frame.callFrameId,expression:nativeRequestEval,
+            returnByValue:true,silent:true
+           }).catch(()=>null);
+           if(obs?.result?.value&&nativeNeedleAudit.requestSamples.length<12)
+            nativeNeedleAudit.requestSamples.push(obs.result.value);
+           if(nativeCallbackBreakpoints.size<12){
+            const cb=await nativeSourceSession.send('Debugger.evaluateOnCallFrame',{
+             callFrameId:frame.callFrameId,expression:'arguments[2]',
+             returnByValue:false,silent:true
+            }).catch(()=>null);
+            if(cb?.result?.type==='function'&&cb.result.objectId){
+             const res=await nativeSourceSession.send('Debugger.setBreakpointOnFunctionCall',{
+              objectId:cb.result.objectId
+             }).catch(()=>null);
+             if(res?.breakpointId){
+              nativeCallbackBreakpoints.set(res.breakpointId,nativeNeedleAudit.requestHits);
+              nativeNeedleAudit.callbackBreakpoints++;
+             }
+            }
+           }
+          }else{
+           const hits=(event.hitBreakpoints||[])
+            .filter(id=>nativeCallbackBreakpoints.has(id));
+           if(hits.length&&nativeNeedleAudit.callbacks.length<20){
+            const obs=await nativeSourceSession.send('Debugger.evaluateOnCallFrame',{
+             callFrameId:frame.callFrameId,expression:nativeCallbackEval,
+             returnByValue:true,silent:true
+            }).catch(()=>null);
+            const v=obs?.result?.value;
+            if(v)nativeNeedleAudit.callbacks.push({
+             requestOrdinal:nativeCallbackBreakpoints.get(hits[0]),
+             status:isSafeStatus(v.status),errorClass:v.errorClass,
+             responsePresent:Boolean(v.responsePresent),errorPresent:Boolean(v.errorPresent)
+            });
+           }
+          }
+         }catch{nativeNeedleAudit.errors++;}
+         finally{
+          await nativeSourceSession.send('Debugger.resume').catch(()=>{});
+          nativeNeedleAudit.pending--;
+         }
+        };
+        nativeSourceSession.on('Debugger.paused',nativeRequestHandler);
+        const bp=await nativeSourceSession.send('Debugger.setBreakpointOnFunctionCall',{
+         objectId:fn.result.objectId
+        });
+        nativeRequestBreakpointId=bp.breakpointId;
+        nativeNeedleAudit.requestBreakpoint='armed';
+        nativeAttached=true;
+       }catch{
+        nativeNeedleAudit.attach='cdp_attach_failed';
+        await nativeSourceSession?.send('Debugger.disable').catch(()=>{});
+       }
+      };
+      const disarmNativeNeedleAudit=async()=>{
+       if(!nativeSourceSession)return;
+       if(nativeRequestBreakpointId)await nativeSourceSession.send('Debugger.removeBreakpoint',{
+        breakpointId:nativeRequestBreakpointId
+       }).catch(()=>{});
+       for(const breakpointId of nativeCallbackBreakpoints.keys())
+        await nativeSourceSession.send('Debugger.removeBreakpoint',{breakpointId}).catch(()=>{});
+       if(nativeAttached&&nativeRequestHandler)
+        nativeSourceSession.off('Debugger.paused',nativeRequestHandler);
+       await nativeSourceSession.send('Debugger.disable').catch(()=>{});
+       await nativeSourceSession.detach().catch(()=>{});
+       nativeAttached=false;nativeSourceSession=null;
+      };
+
       // Passive CDP function breakpoint: read only the quality enum at
       // original renderer IPC. Never replace functions or log private data.
       const qualityAudit={
@@ -871,6 +1013,7 @@ try{
           }));
           const play=row.getByRole('button',{name:'Play',exact:true});
           await nativeTargetAudit('before_play');
+          await armNativeNeedleAudit();
           // Observe only around the actual original GUI playback click.
           await armQualityAudit();
           mediaStats.players=0;mediaStats.events=0;
@@ -884,6 +1027,11 @@ try{
           record.playClicked=true;
           await appPage.waitForTimeout(8000);
           await disarmQualityAudit();
+          await disarmNativeNeedleAudit();
+          record.nativeNeedleObservation={...nativeNeedleAudit};
+          console.log('FYMUSIC_NATIVE_NEEDLE_OBSERVATION '+JSON.stringify({
+           platform,...record.nativeNeedleObservation
+          }));
           record.qualityObservation={
            channel:'renderer_ipc_call',attach:qualityAudit.attach,
            breakpoint:qualityAudit.breakpoint,seenCalls:qualityAudit.invokes,
@@ -932,6 +1080,7 @@ try{
           }));
         }catch(err){
           await disarmQualityAudit().catch(()=>{});
+          await disarmNativeNeedleAudit().catch(()=>{});
           const e=String(err?.message||err);
           record.reason=/timeout/i.test(e)?'GUI_TIMEOUT':'GUI_INTERACTION_ERROR';
           console.log('FYMUSIC_GUI_CASE_ERROR '+JSON.stringify({
