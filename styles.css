@@ -1138,3 +1138,14 @@ html.native-companion.legacy-native-media #app {padding-bottom:105px!important}
   html.native-companion.legacy-native-media .nav-rail {bottom:auto!important}
   html.native-companion.legacy-native-media .view-container {padding-bottom:115px!important}
 }
+
+/* FyMusic explicitly approved alternate-source recovery; compact, responsive. */
+.fymusic-alternate-offer{margin-top:10px;padding:12px 14px;border:1px solid var(--border-color,#d8e4da);border-radius:13px;background:rgba(255,255,255,.72);color:var(--text-primary,#26392c);max-width:100%}
+.fymusic-alternate-explanation{margin:0 0 9px;font-size:13px;line-height:1.55}
+.fymusic-alternate-results{display:grid;gap:8px;margin-top:10px;font-size:13px}
+.fymusic-alternate-results:empty{display:none}
+.fymusic-alternate-candidate{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:8px 10px;border:1px solid rgba(80,120,95,.19);border-radius:9px;background:rgba(245,250,246,.92)}
+.fymusic-alternate-candidate span{min-width:0;overflow-wrap:anywhere;flex:1 1 230px}
+.fymusic-alternate-candidate button{flex-shrink:0}
+.fymusic-alternate-offer button{max-width:100%;min-height:34px}
+@media(max-width:600px){.fymusic-alternate-offer{padding:10px}.fymusic-alternate-candidate button{width:100%}}
