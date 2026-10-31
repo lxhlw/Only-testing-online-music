@@ -1223,6 +1223,11 @@ try{
       if(!resultSummary.some(x=>x.playClicked)){
        console.log('FYMUSIC_GUI_TEST_INCOMPLETE '+JSON.stringify({reason:'TARGET_NOT_PLAYED'}));
        process.exitCode=1;
+      }else if(!resultSummary.some(x=>x.playClicked&&x.mediaConfirmed&&
+        x.detachedAudio?.decodedProgress)){
+       console.log('FYMUSIC_GUI_TEST_INCOMPLETE '+JSON.stringify({
+        reason:'DECODED_AUDIO_PROGRESS_NOT_CONFIRMED'}));
+       process.exitCode=1;
       }
      }
     }
