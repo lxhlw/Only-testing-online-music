@@ -15,14 +15,26 @@ const qualityFields=['flac24bit','flac','320k','128k'];
 function shapeInfo(track){
  if(!track)return null;
  const raw=track.raw&&typeof track.raw==='object'?track.raw:{};
- const q=track.meta?._qualitys||raw.meta?._qualitys||{};
- const ids={};
- for(const k of ID_FIELDS)ids[k]=String(track[k]??raw[k]??'').trim();
+ const m=track.meta||{};
+ const ids={
+  id:String(track.id||raw.id||'').trim(),
+  songmid:String(track.songmid||m.songId||raw.songmid||raw.meta?.songId||'').trim(),
+  hash:String(track.hash||m.hash||raw.hash||raw.meta?.hash||'').trim(),
+  albumAudioId:String(track.albumAudioId||m.albumAudioId||
+   raw.albumAudioId||raw.meta?.albumAudioId||'').trim()
+ };
+ const q=m._qualitys||raw.meta?._qualitys||{};
+ const qualityHashes=Object.fromEntries(qualityFields.map(k=>[k,String(
+  m._qualityHashes?.[k]||m._types?.[k]?.hash||
+  track._types?.[k]?.hash||raw._types?.[k]?.hash||q[k]?.hash||''
+ ).trim()]));
  return {ids,title:String(track.name||''),
   artist:String(track.singer||''),
-  album:String(track.meta?.albumName||track.albumName||raw.albumName||''),
+  album:String(m.albumName||track.albumName||raw.albumName||''),
   interval:String(track.interval||raw.interval||''),
-  qualities:Object.fromEntries(qualityFields.map(k=>[k,Boolean(q[k]||raw._types?.[k])]))};
+  qualities:Object.fromEntries(qualityFields.map(k=>[k,
+   Boolean(q[k]||track._types?.[k]||raw._types?.[k])])),
+  qualityHashes};
 }
 function safeParity(gui,web,missingReason='VUE_PROPS_NOT_EXPOSED'){
  const G=shapeInfo(gui),W=(web||[]).map(shapeInfo).filter(Boolean);
@@ -31,6 +43,10 @@ function safeParity(gui,web,missingReason='VUE_PROPS_NOT_EXPOSED'){
  const valid=v=>Boolean(v&&String(v).trim());
  const same=(a,b)=>valid(a)&&valid(b)&&String(a).toLowerCase()===String(b).toLowerCase();
  const scored=W.map((w,index)=>{
+  const qualityHashMatch=Object.fromEntries(qualityFields.map(k=>[k,
+   same(G.qualityHashes[k],w.qualityHashes[k])]));
+  const qualityHashComparable=Object.fromEntries(qualityFields.map(k=>[k,
+   valid(G.qualityHashes[k])&&valid(w.qualityHashes[k])]));
   const flags={
    id:same(G.ids.id,w.ids.id),
    songmid:same(G.ids.songmid,w.ids.songmid),
@@ -39,11 +55,13 @@ function safeParity(gui,web,missingReason='VUE_PROPS_NOT_EXPOSED'){
    album:cleanName(G.album)!==''&&cleanName(G.album)===cleanName(w.album),
    interval:valid(G.interval)&&valid(w.interval)&&G.interval===w.interval,
    titleAndArtist:cleanName(G.title)===cleanName(w.title)&&
-    cleanName(G.artist)===cleanName(w.artist)
+    cleanName(G.artist)===cleanName(w.artist),
+   qualityHashMatch,qualityHashComparable
   };
+  const qualityMatches=qualityFields.filter(k=>qualityHashMatch[k]).length;
   const score=(flags.hash?8:0)+(flags.albumAudioId?8:0)+
    (flags.id?4:0)+(flags.songmid?4:0)+(flags.album?2:0)+
-   (flags.interval?1:0);
+   (flags.interval?1:0)+qualityMatches*8;
   return {index,flags,score};
  }).sort((a,b)=>b.score-a.score);
  const best=scored[0]||null;
@@ -52,10 +70,13 @@ function safeParity(gui,web,missingReason='VUE_PROPS_NOT_EXPOSED'){
   guiSongmidPresent:Boolean(G.ids.songmid),
   guiAlbumAudioIdPresent:Boolean(G.ids.albumAudioId),
   guiQualityFlags:G.qualities,
+  guiQualityHashPresent:Object.fromEntries(qualityFields.map(k=>[k,
+   Boolean(G.qualityHashes[k])])),
   bestCatalogMatch:best?{matchingIndex:best.index+1,
    ...best.flags,identityScore:best.score}:null,
   anyStrongIdentityMatch:scored.some(x=>x.flags.hash||x.flags.albumAudioId||
-   x.flags.id||x.flags.songmid),
+   x.flags.id||x.flags.songmid||
+   qualityFields.some(k=>x.flags.qualityHashMatch[k])),
   anyAlbumMatch:scored.some(x=>x.flags.album&&x.flags.titleAndArtist),
   actualRequestedQuality:'not_observed'};
 }
@@ -382,12 +403,16 @@ try{
          selectedOrdinal:index+1,probe,
          track:{
           name:String(x.name||''),singer:String(x.singer||''),
-          id:String(x.id||r.id||''),songmid:String(x.songmid||r.songmid||''),
-          hash:String(x.hash||r.hash||''),albumAudioId:String(x.albumAudioId||r.albumAudioId||''),
+          id:String(x.id||r.id||''),songmid:String(x.songmid||x.meta?.songId||r.songmid||''),
+          hash:String(x.hash||x.meta?.hash||r.hash||''),
+          albumAudioId:String(x.albumAudioId||x.meta?.albumAudioId||r.albumAudioId||''),
           interval:String(x.interval||r.interval||''),
           meta:{albumName:String(x.meta?.albumName||r.albumName||''),
            _qualitys:Object.fromEntries(['flac24bit','flac','320k','128k']
-            .map(q=>[q,Boolean(x.meta?._qualitys?.[q]||r.meta?._qualitys?.[q])]))}
+            .map(q=>[q,Boolean(x.meta?._qualitys?.[q]||r.meta?._qualitys?.[q])])),
+           _qualityHashes:Object.fromEntries(['flac24bit','flac','320k','128k']
+            .map(q=>[q,String(x.meta?._qualitys?.[q]?.hash||
+             x.meta?._types?.[q]?.hash||r._types?.[q]?.hash||'')]))}
          }};
        };
        let result=null;
