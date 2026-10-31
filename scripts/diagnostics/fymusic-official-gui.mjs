@@ -759,6 +759,30 @@ try{
           {seconds:null,duration:null};
       });
       const session=await appPage.context().newCDPSession(appPage).catch(()=>null);
+      // Original LX creates detached new Audio(); no DOM <audio> exists.
+      // CDP reads the existing live media objects without touching playback.
+      const inspectDetachedAudio=async()=>{
+       if(!session)return {observed:false,reason:'no_cdp'};
+       const group='fymusic-original-audio-readonly';
+       try{
+        await session.send('Runtime.enable');
+        const p=await session.send('Runtime.evaluate',{
+         expression:'HTMLAudioElement.prototype',objectGroup:group
+        });
+        if(!p?.result?.objectId)return {observed:false,reason:'prototype_not_exposed'};
+        const objs=await session.send('Runtime.queryObjects',{
+         prototypeObjectId:p.result.objectId,objectGroup:group
+        });
+        if(!objs?.objects?.objectId)return {observed:false,reason:'object_query_failed'};
+        const r=await session.send('Runtime.callFunctionOn',{
+         objectId:objs.objects.objectId,functionDeclaration:"function(){\ntry{\n return Array.from(this).slice(0,12).filter(a=>a instanceof HTMLAudioElement).map(a=>{\n  const num=n=>Number.isFinite(n)?Math.round(n*10)/10:null;\n  let bufferedEnd=null;\n  try{if(a.buffered.length)bufferedEnd=num(a.buffered.end(a.buffered.length-1));}catch{}\n  return {hasSource:!!a.currentSrc||!!a.src,readyState:a.readyState,\n   networkState:a.networkState,paused:a.paused,ended:a.ended,\n   seconds:num(a.currentTime),duration:num(a.duration),\n   bufferedEnd,errorCode:a.error?.code??null};\n });\n}catch{return [];}\n}",
+         returnByValue:true,silent:true
+        });
+        const items=Array.isArray(r?.result?.value)?r.result.value.slice(0,12):[];
+        return {observed:true,count:items.length,items};
+       }catch{return {observed:false,reason:'heap_read_unavailable'};}
+       finally{await session.send('Runtime.releaseObjectGroup',{objectGroup:group}).catch(()=>{});}
+      };
       const mediaStats={players:0,events:0};
       if(session){
         session.on('Media.playersCreated',x=>{mediaStats.players+=(x.players||[]).length;});
@@ -1117,6 +1141,7 @@ try{
           }
           record.playClicked=true;
           await appPage.waitForTimeout(8000);
+          const audioHeapBefore=await inspectDetachedAudio();
           await disarmQualityAudit();
           await disarmNativeNeedleAudit();
           record.nativeNeedleObservation={...nativeNeedleAudit};
@@ -1138,15 +1163,27 @@ try{
           const before=await readClock();
           await appPage.waitForTimeout(3500);
           const after=await readClock();
+          const audioHeapAfter=await inspectDetachedAudio();
           const audio=await appPage.evaluate(()=>[...document.querySelectorAll('audio,video')]
             .map(x=>({ready:x.readyState,seconds:x.currentTime,
               paused:x.paused,error:!!x.error})));
           record.uiClockProgress=Number.isFinite(before.seconds)&&
             Number.isFinite(after.seconds)&&after.seconds>=before.seconds+2&&
             after.duration>=120&&after.duration<=700;
-          record.mediaConfirmed=record.uiClockProgress&&
-            audio.some(x=>x.ready>=2&&x.seconds>.5&&!x.paused&&!x.error);
-          record.mediaEvidence=record.mediaConfirmed?'decoded_element':
+          const decodedHeap=Boolean(audioHeapBefore.items?.some(x=>x.hasSource&&
+           x.readyState>=2&&Number.isFinite(x.seconds)&&x.seconds>=0.5&&x.errorCode==null) &&
+           audioHeapAfter.items?.some(y=>y.hasSource&&y.readyState>=2&&
+            Number.isFinite(y.seconds)&&y.errorCode==null&&
+            audioHeapBefore.items.some(x=>x.hasSource&&Number.isFinite(x.seconds)&&
+             y.seconds>=x.seconds+1.5)));
+          record.mediaConfirmed=decodedHeap||(record.uiClockProgress&&
+           audio.some(x=>x.ready>=2&&x.seconds>.5&&!x.paused&&!x.error));
+          record.detachedAudio={before:audioHeapBefore,after:audioHeapAfter,
+           decodedProgress:decodedHeap};
+          console.log('FYMUSIC_GUI_DETACHED_AUDIO '+JSON.stringify({
+           platform,...record.detachedAudio
+          }));
+          record.mediaEvidence=record.mediaConfirmed?'decoded_audio_element':
             record.uiClockProgress?'ui_clock_only':'not_confirmed';
           record.clock={before,after};
           record.cdpMedia={players:mediaStats.players,events:mediaStats.events};
