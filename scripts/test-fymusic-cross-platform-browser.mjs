@@ -73,7 +73,7 @@ try{
   window.LXMusicSearch.isPlayableUrlForSource=(source,url)=>
     source==='kw' && new URL(url).pathname==='/fymusic-alternate-calibration.wav';
  });
- await page.locator('#channel-list .channel-button').filter({hasText:'酷狗'}).first().click();
+ await page.locator('#channel-list .channel-button[title="KG"]').click();
  await page.locator('#global-search-input').fill('安全备用校准');
  await page.locator('#global-search-btn').click();
  await page.locator('.search-song-row .search-song-main').first().click();
