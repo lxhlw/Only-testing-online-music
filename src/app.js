@@ -1900,6 +1900,7 @@
     var qualityChoice=getPlaySettings();
     var advertisedQuality=active&&active.sources&&active.sources[source]&&
       active.sources[source].qualitys||[];
+    var qualityUnsupported=false;
     var missingFixed=MODERN_WEB&&qualityChoice.qualityMode==='fixed'&&
       Array.isArray(advertisedQuality)&&advertisedQuality.length>0&&
       !advertisedQuality.some(function(q){
@@ -1913,7 +1914,7 @@
       var advertised=active.sources[source].qualitys||[];
       setStatus('当前野花渠道未声明支持 '+escapeHtml(requested.qualityMode==='fixed'?requested.fixedQuality:'所选音质')+
         '。可用：'+escapeHtml(advertised.join('、')||'未知')+'。未擅自改成128k。','fail');
-      return;
+      qualityUnsupported=true;
     }
     if (!plan.length) {
       // Startup placeholder only: it MUST be recalculated after Flower
@@ -1978,6 +1979,12 @@
     if(missingFixed&&qualityChoice.autoFallback&&plan.length){
       setStatus('野花渠道不支持 '+escapeHtml(qualityChoice.fixedQuality)+
         '，已获你的允许，降到 '+escapeHtml(plan[0])+' 进行播放解析。','warn');
+    }
+    // Unsupported fixed KG quality is not silently reduced to 128k.
+    // Offer only the same explicitly approved alternate catalog flow.
+    if(qualityUnsupported){
+      offerCrossPlatformAlternative(music,source,token);
+      return;
     }
     requestQuality(music, source, buildMusicInfo(music, source), plan, 0, token);
   }
