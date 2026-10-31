@@ -1389,6 +1389,108 @@
     };
   }
 
+
+  // Optional KG -> KW recovery requires TWO explicit user interactions.
+  // No background cross-platform search or automatic playback substitution.
+  function offerCrossPlatformAlternative(original,source,token){
+    if(!MODERN_WEB||source!=='kg'||token!==playbackToken||
+      selectedChannel!=='kg'||!playbackState||playbackState.token!==token||
+      playbackState.source!=='kg'||!global.FyMusicCrossPlatformMatch||
+      !global.LXMusicSearch||typeof global.LXMusicSearch.search!=='function')return;
+    var active=global.LXSourceManager.getActive();
+    var kw=active&&active.sources&&active.sources.kw;
+    if(!active||!active.inited||!active.runtime||!kw||
+      !Array.isArray(kw.actions)||kw.actions.indexOf('musicUrl')<0)return;
+    var activeId=String(active.id||active.url||''),gate=global.FyMusicCrossPlatformMatch;
+    var box=document.createElement('div');box.className='fymusic-alternate-offer';
+    var description=document.createElement('p');
+    description.className='fymusic-alternate-explanation';
+    description.textContent='酷狗解析未成功。可手动查找酷我同曲版本；不会自动换平台。' +
+      '候选须匹配歌名、歌手、时长及可核对的专辑，仍不能保证录音内容相同。';
+    var button=document.createElement('button');
+    button.type='button';button.className='secondary fymusic-alternate-search';
+    button.textContent='查找酷我同曲（手动）';
+    var results=document.createElement('div');
+    results.className='fymusic-alternate-results';
+    results.setAttribute('role','status');
+    results.setAttribute('aria-live','polite');
+    box.append(description,button,results);statusEl.appendChild(box);
+    function current(){
+      var a=global.LXSourceManager.getActive();
+      return token===playbackToken&&playbackState&&
+       playbackState.token===token&&playbackState.music===original&&
+       playbackState.source==='kg'&&selectedChannel==='kg'&&
+       String(a&&(a.id||a.url)||'')===activeId&&box.isConnected;
+    }
+    button.onclick=function(){
+      if(!current())return;
+      button.disabled=true;results.textContent='正在酷我搜索并核对同曲版本…';
+      global.dispatchEvent(new CustomEvent('fymusic:alternate-search',{
+        detail:{from:'kg',to:'kw'}
+      }));
+      var settled=false;
+      var timer=global.setTimeout(function(){
+        if(settled)return;settled=true;
+        if(current()){button.disabled=false;results.textContent='搜索超时。未切换歌曲，可再次手动查找。';}
+      },9000);
+      try{
+        global.LXMusicSearch.search('kw',
+          String(original.name||'')+' '+String(original.singer||''),1,20,
+          function(err,response){
+            if(settled)return;settled=true;global.clearTimeout(timer);
+            if(!current())return;
+            button.disabled=false;results.replaceChildren();
+            if(err){results.textContent='酷我搜索暂不可用。没有更改当前歌曲。';return;}
+            var matches=gate.choices(original,response&&response.list,3);
+            if(!matches.length){
+              results.textContent='未找到歌名、歌手、时长与专辑校验通过的酷我版本。' +
+                '没有切换歌曲，可自行通过搜索页面选择其他录音。';
+              return;
+            }
+            var info=document.createElement('p');
+            info.className='fymusic-alternate-explanation';
+            info.textContent='以下为酷我候选（仅元数据匹配，并未验证音频指纹）。' +
+              '必须再次确认具体版本才会尝试播放：';
+            results.appendChild(info);
+            matches.forEach(function(entry){
+              var candidate=entry.item,row=document.createElement('div');
+              row.className='fymusic-alternate-candidate';
+              var label=document.createElement('span');
+              label.textContent='酷我 · '+String(candidate.name||'')+' — '+
+                String(candidate.singer||'')+' · '+String(candidate.interval||'')+
+                (candidate.albumName?' · '+String(candidate.albumName).slice(0,70):'');
+              var confirm=document.createElement('button');
+              confirm.type='button';confirm.className='secondary fymusic-alternate-confirm';
+              confirm.textContent='确认尝试此酷我版本';
+              confirm.onclick=function(){
+                if(!current()||!gate.inspect(original,candidate).accepted)return;
+                var now=global.LXSourceManager.getActive();
+                if(!now||!now.inited||!now.sources||!now.sources.kw||
+                  !Array.isArray(now.sources.kw.actions)||
+                  now.sources.kw.actions.indexOf('musicUrl')<0){
+                  results.textContent='当前音源不再支持酷我解析，未切换歌曲。';return;
+                }
+                global.dispatchEvent(new CustomEvent('fymusic:alternate-approved',{
+                  detail:{from:'kg',to:'kw',verified:'metadata_only'}
+                }));
+                // This explicit selection bypasses testMusic's KG search-tab
+                // restriction but still uses regular KW source and quality plan.
+                startPlayback(candidate,'kw');
+                if(playbackState&&playbackState.source==='kw')
+                  playbackState.manualAlternativeOrigin='kg';
+              };
+              row.append(label,confirm);results.appendChild(row);
+            });
+          });
+      }catch(e){
+        if(!settled){
+          settled=true;global.clearTimeout(timer);
+          if(current()){button.disabled=false;results.textContent='酷我搜索未能启动，未切换歌曲。';}
+        }
+      }
+    };
+  }
+
   function requestQuality(music, source, musicInfo, plan, index, token) {
     var active = global.LXSourceManager.getActive();
     var settings = getPlaySettings();
@@ -1504,6 +1606,7 @@
           retry.textContent = sourceUnavailable ? '稍后重试' : '重试这首歌';
           retry.onclick = function(){ if(token===playbackToken) testMusic(music,false); };
           statusEl.appendChild(retry);
+          offerCrossPlatformAlternative(music,source,token);
         }
         return;
       }
@@ -1911,7 +2014,8 @@
     var qualityMessage='请求 '+state.quality+
       (downgraded?'（由 '+state.initialQuality+' 降级；'+(state.qualityFallbackReason||'高音质不可用')+'）':'')+
       ' · 实际码率未经检测';
-    setStatus((CHANNEL_NAMES[state.source]||state.source.toUpperCase())+
+    setStatus((state.manualAlternativeOrigin==='kg' ? '已手动确认的酷我备用版本' :
+      (CHANNEL_NAMES[state.source]||state.source.toUpperCase()))+
       ' 正在播放 · '+escapeHtml(qualityMessage),'ready');
     var playbackQualityNode=document.getElementById('inline-current-quality');
     if(playbackQualityNode)playbackQualityNode.textContent='本曲：'+qualityMessage;
