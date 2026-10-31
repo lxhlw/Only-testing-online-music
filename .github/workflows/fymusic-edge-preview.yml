@@ -1,0 +1,109 @@
+name: FyMusic Phase 4 - Isolated Cloudflare Edge Preview
+on:
+  push:
+    branches: [feature/fymusic-playback-verifier]
+    paths:
+      - '.github/workflows/fymusic-edge-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fymusic-isolated-edge-preview-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify-preview:
+    if: github.ref == 'refs/heads/feature/fymusic-playback-verifier'
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PROJECT_NAME: only-testing-online-music
+      PREVIEW_BRANCH: feature/fymusic-playback-verifier
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Hard guard against a production deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/$PREVIEW_BRANCH"
+          test "$PREVIEW_BRANCH" != "main"
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo 'FYMUSIC_PREVIEW_SECRETS_UNAVAILABLE'
+            exit 1
+          fi
+          if ! curl -fsS --max-time 20 \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT_NAME" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -o /tmp/fymusic-project-metadata.json; then
+            echo 'FYMUSIC_PREVIEW_PROJECT_QUERY_FAILED'
+            exit 1
+          fi
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const data=JSON.parse(fs.readFileSync('/tmp/fymusic-project-metadata.json','utf8'));
+          if(data.success!==true || data.result?.production_branch!=='main'){
+            console.error('FYMUSIC_PREVIEW_GUARD_STOP: production branch not verified as main');
+            process.exit(1);
+          }
+          console.log('FYMUSIC_PREVIEW_GUARD_PASS production_branch=main');
+          NODE
+      - name: Install existing project dependencies
+        run: npm install --no-audit --no-fund
+      - name: Syntax-check unmocked browser evidence gate
+        run: node --check scripts/diagnostics/fymusic-real-flower-kw.mjs
+      - name: Deploy ONLY this non-production branch to Cloudflare Pages Preview
+        id: preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! npx wrangler pages deploy . \
+            --project-name "$PROJECT_NAME" \
+            --branch "$PREVIEW_BRANCH" \
+            --commit-hash "$GITHUB_SHA" \
+            --commit-message "FyMusic isolated preview playback validation" \
+            > /tmp/fymusic-preview-deploy.log 2>&1; then
+            echo 'FYMUSIC_PREVIEW_UPLOAD_FAILED'
+            exit 1
+          fi
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const output=fs.readFileSync('/tmp/fymusic-preview-deploy.log','utf8');
+          const hosts=[...output.matchAll(/https:\/\/[a-z0-9-]+\.only-testing-online-music\.pages\.dev(?:\/)?/gi)]
+            .map(x=>x[0].replace(/\/$/,''));
+          const url=hosts.find(u=>{
+            const host=new URL(u).hostname;
+            return host!=='only-testing-online-music.pages.dev' &&
+              host.endsWith('.only-testing-online-music.pages.dev');
+          });
+          if(!url){
+            console.error('FYMUSIC_PREVIEW_URL_MISSING_OR_PRODUCTION_URL');
+            process.exit(1);
+          }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'preview_url='+url+'\n');
+          console.log('FYMUSIC_SAFE_PREVIEW_URL '+url);
+          NODE
+      - name: Ensure the isolated Preview serves new FyMusic code
+        shell: bash
+        env:
+          PREVIEW_URL: ${{ steps.preview.outputs.preview_url }}
+        run: |
+          set -euo pipefail
+          test "$PREVIEW_URL" != "https://only-testing-online-music.pages.dev"
+          curl -fsSL --max-time 20 \
+            "$PREVIEW_URL/src/fymusic-cross-platform-match.js" \
+            -o /tmp/fymusic-edge-match.js
+          grep -Fq 'FyMusicCrossPlatformMatch' /tmp/fymusic-edge-match.js
+          echo 'FYMUSIC_REAL_EDGE_PREVIEW_ASSET_PASS'
+      - name: Install Chromium for unmocked REAL Edge playback
+        run: npx playwright install --with-deps chromium
+      - name: Verify real Flower KG to approved KW via Cloudflare Edge Preview
+        env:
+          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: node scripts/diagnostics/fymusic-real-flower-kw.mjs
