@@ -1,0 +1,53 @@
+name: FyMusic Phase 3 - Real Flower KW Recovery
+on:
+  push:
+    branches: [feature/fymusic-playback-verifier]
+    paths:
+      - '.github/workflows/fymusic-real-flower-kw.yml'
+      - 'scripts/diagnostics/fymusic-real-flower-kw.mjs'
+      - 'src/app.js'
+      - 'src/fymusic-cross-platform-match.js'
+      - 'src/music-search.js'
+      - 'src/source-manager.js'
+      - 'functions/api/proxy.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-flower-kw:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify live-only test syntax
+        run: node --check scripts/diagnostics/fymusic-real-flower-kw.mjs
+      - name: Install existing project dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Start isolated development-branch Cloudflare Pages
+        shell: bash
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/fymusic-kw-site.log 2>&1 &
+          for i in {1..45}; do
+            if curl --fail --silent http://127.0.0.1:8788/api/audio-selftest > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo 'FYMUSIC_LOCAL_SITE_NOT_READY'
+          exit 1
+      - name: Test real unmodified Flower KG-to-KW recovery and media decoding
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/diagnostics/fymusic-real-flower-kw.mjs
+      - name: Report local server error class on failure
+        if: failure()
+        run: |
+          echo 'FYMUSIC_LIVE_KW_JOB_FAILED'
+          # Full proxy logs may contain URLs and must not be printed.
