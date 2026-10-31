@@ -175,3 +175,61 @@ Cookie、Native IPC 原始数据或音源响应正文。
 **可见、可配置、同歌信息严格校验的跨平台备用音源选项**，不可静默替换所选歌曲/平台，不应牺牲页面流畅度。
 默认仍尊重用户指定平台；仍然保留音源实际支持的高音质（320k/FLAC/FLAC 24-bit），不得锁死 128k。
 不要在成功播放和音频身份验证前修改生产 main、宣称已经修复或上线。
+
+## 2026-10-31 阶段七：真实隐藏播放器音频解码（决定性证据）
+
+本阶段仍以官方未修改的 LX Music Desktop v2.12.6 Windows GUI、同一野花脚本、
+酷狗孙燕姿《开始懂了》为目标；所有断点和日志仅在 FyMusic 的 Windows 测试脚本里，
+从未改官方可执行文件、媒体地址、源脚本、实际播放状态或生产 main。
+
+### 真实 Native HTTP 回调及媒体负载
+
+[Run 41223940137](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41223940137)
+在官方隐藏的 User API BrowserWindow 原始 Needle 回调中，只读检测 HTTP 状态、内部状态、
+响应体类型和 URL 分类：
+
+- 第一条：HTTP 400；内部状态码 400；小型 JSON/对象负载，未发现可识别 URL。
+- 第二条：HTTP 200；内部状态码 0；小型 JSON/对象负载，包含带典型音频文件扩展名的 URL。
+- 测试中调用和回调事件顺序：KG request → HTTP 400 callback → KW request → HTTP 200 callback。
+- 该回调断点存在复用，因此 **HTTP 200 与具体 KW 请求还未以请求级 ID 严格绑定**，但时间和负载证据支持 KW 后续解析成功的解释。
+- 日志没有输出任意真实 URL、响应正文、签名、歌曲 ID、Hash、Cookie 或 Token。
+
+### 真实音频解码与播放
+
+官方源码 src/renderer/plugins/player/index.ts 使用 **new window.Audio()**
+创建独立音频元素而非挂入 DOM，因而早期检查 document.querySelectorAll('audio')
+等于 0 不能否定播放能力。
+
+[Run 41223990630](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41223990630)
+虽然 Actions 为 success，但当时官方 KG 搜索临时返回空列表，**未执行目标播放**，
+不能作为解码证据。后续测试增强了最多四次搜索提交且若未真正点击目标歌曲则 fail CI。
+
+[Run 41224255652](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41224255652)
+再次成功搜索、点击与 Web 资源身份强匹配的目标歌曲。CDP
+Runtime.queryObjects(HTMLAudioElement.prototype) 只读读取实际存在的独立 Audio 对象：
+
+- 音频元素 readyState = 4、networkState = 1、paused = false、errorCode = null。
+- 长音频 duration = **271.5 秒**，bufferedEnd = **204.7 秒**。
+- 真正 Audio.currentTime 在两个取样间从 **4.6 秒推进到 8.5 秒**，与 GUI 时钟相符。
+- 同时捕获一个 2.2 秒的已暂停短音频对象，未将其误当目标歌曲。
+- 诊断判定 decodedProgress = true、mediaConfirmed = true，已独立证明 **真实可解码媒体流正在播放**。
+- Web 同一 KG 资源的精确原始请求 URL 私有内存比较相同、请求音质 128k 相同，
+  但 Web 代理返回 HTTP 502，原始上游网络结果 400/404；Web 并未触发后续 KW 路径。
+
+### 证据边界与实施决策
+
+**已验证**：原版 LX 对 KG 解析失败后实际又请求 KW，后续原版 HTTP 200
+返回带音频地址的负载，且官方播放器最终完成长音频解码和播放。因此“LX 在
+KG 失效后仍能播放、FyMusic 当前同平台 KG-only 流程失败”具有清晰的可重现技术解释。
+
+**尚未严格验证**：HTTP 200 的单次响应与 KW 请求唯一对应、备用平台媒体流
+是否与指定原始录音完全一致（未做内容指纹/听音校验）、用户当地网络在未来时间的稳定性。
+不得把音频播放成功简单等同于完全相同版权录音或来源授权。
+
+已增加 CI 真实性门槛：若没有点击目标歌曲，或者 CDP 没有证明真实 Audio 解码推进，
+该 Windows GUI 工作流应报告失败，防止绿色 Actions 掩盖无效测试。
+
+下一阶段在开发分支评估 **可见的、显式选择/授权的跨平台备用解析模式**：
+必须标示使用的平台、严格验证歌曲标题/歌手/时长等信息，在可信证据不足时
+停止而非静默播放错误歌曲；保持快速加载和顺滑现代 UI，不支持旧版 Android 4.4，
+不强制音质停留在 128k。尚未实现该功能，也未合并生产 main。
