@@ -143,3 +143,35 @@ Cookie、Native IPC 原始数据或音源响应正文。
 ### 下一阶段决策
 
 **先验证官方 LX 进程真实 Needle 请求与 FyMusic Web 上游请求的参数差异**，优先检查请求地址类别、实际源版本、Host / UA / Referer / Accept 的*存在性*、状态码和是否有重定向，不收集原始鉴权数据。当前证据不支持为此强制锁定 128k、修改歌曲标识或将所有 404 重试为 502。若原始服务器在特定出口持续 404，应明确归类“音源/区域/上游不可用”，停止无意义的多次重试，而不是让 UI 卡住。
+
+## 2026-10-31 阶段六：官方隐藏音源窗口、Native HTTP 与跨平台尝试
+
+本阶段直接观察原版 LX Music Desktop v2.12.6 未修改的 Windows 官方程序（不是自制 Native 替代 harness），
+在被点击的酷狗搜索结果上采用未经修改的原始野花音源。所有修改只存在于 FyMusic 开发分支的 CDP 诊断脚本中。
+
+### 验证运行
+
+- [Run 41220789019](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41220789019)：官方 LX 导入野花之后，CDP 枚举到独立的 data: 目标，属于隐藏 User API BrowserWindow；此外有主 file: GUI 页面和两个 Worker。
+- [Run 41221112332](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41221112332)：在隐藏窗原始 lx.request 安装只读函数断点，检测到两次调用，但由于 Electron contextBridge 包装层，固定位置参数读取失败。
+- [Run 41221407012](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41221407012)：上层调用帧显示 wrapper 参数长度 4，首项是 function，不能把首项当 URL。
+- [Run 41221681503](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41221681503)：官方更新日志关闭按钮在 CI 视口之外，属于 UI 自动化基础设施失败，未执行音乐测试；随后在脚本中调用原官方按钮的 click 事件修复。
+- [Run 41221903783](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41221903783)：成功识别实参位置 URL=1、callback=3；原版 lx.request 实际请求野花原始 IP 的酷狗解析 GET，显式 User-Agent 存在，Referer/Accept/Origin/Cookie/Accept-Encoding 未显式传递。
+- [Run 41222200361](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41222200361)：在原版隐藏窗口中获得 HTTP 400 和 200 回调；Web 代理最终 HTTP 502；两端显式请求头字段的存在性一致。
+- [Run 41222516442](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41222516442)：证实原版 LX 真实访问野花原始 IP 的 **KG（酷狗）** 和 **KW（酷我）** 两类 URL 解析路径。
+- [Run 41222857079](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41222857079)：最终复测通过，事件记录顺序是 **KG 请求 → HTTP 400 回调 → KW 请求 → HTTP 200 回调**。原版 LX KG 上游 URL 与 FyMusic Web KG 上游 URL 经过本进程内私有摘要比较，**exactNativeKgUrlMatch=true**。Web 只发起 KG 请求，最终代理 HTTP 502（本轮 canonical-socket 的上游为 HTTP 404），独立 Node/Needle 探针对网页使用的相同原始 URL 直连也为 HTTP 404。
+
+### 已证实结论
+
+1. 桌面 LX 目标歌曲不是因为不同搜索结果或 128k/FLAC 音质选择而与 Web 产生差异：已经验证歌曲身份强匹配、实际请求音质相同，而且 **KG 的完整原始上游 URL 完全一致**。
+2. 源头请求行为不同：**官方 LX 在 KG 解析尝试之后还发送了 KW 请求**；目前的 FyMusic Web 对照限定同平台 KG，因此没有这条跨平台请求。这是一个可复现的关键行为差异。
+3. Native 隐藏窗回调见到 HTTP 400 和 200，时序支持 KG 失败之后 KW 返回成功 HTTP 响应的解释；但调试断点是**复用回调函数**，单条回调到单条请求的最终对应关系还未严格绑定，不能仅依赖时序断言 200 一定属于 KW。
+4. HTTP 200 仅表示服务器响应成功，**没有独立验证完整有效媒体播放 URL、正确录音、音频字节解码或可听结果**。官方 GUI 时钟推进只能作为 UI 级证据。
+5. Web 的 502 是代理聚合失败；原始野花上游在不同调用及网络出口下曾返回 400 或 404。需要避免将不同的上游状态混称为“代理本身返回 404”，也不能认定所有环境都永久失败。
+
+### 后续技术决策
+
+先在测试中**验证原版 KW 的 HTTP 200 是否包含可用媒体 URL、是否触发官方播放器真实解码**，
+并验证是否是原版播放流程的跨平台回退而非另一个独立请求。若证实，再考虑 FyMusic 开发分支加入
+**可见、可配置、同歌信息严格校验的跨平台备用音源选项**，不可静默替换所选歌曲/平台，不应牺牲页面流畅度。
+默认仍尊重用户指定平台；仍然保留音源实际支持的高音质（320k/FLAC/FLAC 24-bit），不得锁死 128k。
+不要在成功播放和音频身份验证前修改生产 main、宣称已经修复或上线。
