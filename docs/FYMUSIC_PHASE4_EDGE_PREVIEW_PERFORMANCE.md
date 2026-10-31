@@ -79,6 +79,31 @@ https://7ab95c06.only-testing-online-music.pages.dev
 
 在复盘中还发现：当前界面 KG 搜索标签保持选中时，已经二次确认的 KW 候选若解析失败，原有「稍后重试」经过常规选中渠道校验可能无法重试该 KW 候选。已在开发分支修复此边界：用户可再次点击重试同一已确认的 KW 版本；不会自动换平台、重新搜索或自动无限重试，并加入浏览器回归测试。需要以最新 CI 结果确认修复有效。
 
+## 第三次真实 Edge 与修复后的 CI 复验
+
+[Run 41230472337](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41230472337)，Job `124623454850`，**completed/success**。
+
+本次部署的开发分支 Preview 地址：
+
+https://3c8933af.only-testing-online-music.pages.dev
+
+- 再次通过 Cloudflare API 生产分支 `main` 严格校验和 Preview 代码资产检查。
+- 真正 KG 目标搜索、Flower KG 失败 `HTTP 502`，用户手动 KW 搜索与元数据匹配 1 个候选，并二次确认。
+- 真正 KW musicUrl 通过 Cloudflare Edge `HTTP 200`；真实音频 `HTTP 206`，`readyState=4`、`paused=false`、`errorCode=null`、`duration=271.493333s`，媒体时间推进门槛通过。
+- 从用户确认 KW 到音频就绪 **2503ms**；从点击 KG 到完成持续播放验收 **8448ms**（含 3.3s 持续播放观察）。
+- KW 搜索 **1** 次、KW 解析 **1** 次，未重复；本轮首次 KW 即成功，`manualKwRetryCount=0`，因此**没有在真实 Edge 上实际走过重新点击重试的故障分支**。
+- 页面 LongTask **1** 次、最长 **82ms**。
+- 原 KG 故障的安全上游分类可见：sslip/nip short `HTTP 403`、ts/tm `HTTP 530`、full DNS aliases `HTTP 400`、原始 socket `HTTP 404`。这些都是当前某次 KG 请求的现场类别，不可推断所有音源、所有时间都一样。
+
+本轮之前已修复用户显式确认过的 KW 在 KG 搜索标签下无法通过「稍后重试」重启的问题：
+- `src/app.js` 修复提交 `0c91310a418063d838303724deb38dc6808e3ce1`。
+- `scripts/test-fymusic-cross-platform-browser.mjs` 新增“真实失败语义下只允许手动重试同一 KW 候选”的受控回归，提交 `9829cae5c2682449097790610fb52ddf61a571b7`。
+- [Run 41230331090](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41230331090) `completed/success`，日志明确记录 `explicitKwRetryPreserved=true`、`staleCallbackIgnored=true`、`unsupportedQualityProtected=true`。
+- [Run 41230463244](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41230463244) 本地 Pages 模拟器真实 Flower 测试 `completed/success`，验证保留修复后真实 KW 网络播放仍然可用。
+- 新增 `scripts/diagnostics/fymusic-real-flower-kw.mjs` 原始上游失败路由分类及最多 1 次**显式用户点击**的 KW 重试验收，不会自动发起第二个 KW 请求。
+
+**到目前为止：三次独立真实 Cloudflare Edge 现场测试，2 次真实解码成功，1 次 KW 上游 502 失败；涉及不断完善的开发分支版本，不能作为长期成功率或服务等级统计。** 用户再次点击重试的页面行为已经在受控浏览器得到验证，但真实 Edge 的“先失败、用户重试、再成功”仍须等待独立证据。
+
 ## 解释和限制
 
 1. **真实 Cloudflare Edge Preview 上，FyMusic 的 KG 失败 → KW 显式确认 → 原始野花解析 → 媒体下载 → 浏览器解码播放，至少一次完整成功**；这与之前只证明本地模拟器有效相比有实质提升。
