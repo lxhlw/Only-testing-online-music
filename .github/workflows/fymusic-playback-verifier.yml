@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/fymusic-playback-verifier.yml'
       - 'src/fymusic-playback-*.js'
+      - 'src/fymusic-cross-platform-match.js'
+      - 'scripts/test-fymusic-cross-platform-*.mjs'
       - 'src/app.js'
       - 'index.html'
       - 'scripts/test-fymusic-playback-*.mjs'
@@ -30,7 +32,8 @@ jobs:
           node --check src/fymusic-chain-report.js
           node --check src/fymusic-playback-core.js
           node --check src/fymusic-playback-verifier.js
-          node --test scripts/test-fymusic-playback-core.mjs scripts/test-fymusic-playback-network.mjs scripts/test-fymusic-chain-report.mjs
+          node --check src/fymusic-cross-platform-match.js
+          node --test scripts/test-fymusic-playback-core.mjs scripts/test-fymusic-playback-network.mjs scripts/test-fymusic-chain-report.mjs scripts/test-fymusic-cross-platform-match.mjs
       - name: Install existing project dependencies
         run: npm install --no-audit --no-fund
       - name: Install Chromium for real audio decoding
@@ -55,6 +58,10 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-fymusic-full-ui-browser.mjs
+      - name: Verify explicit KG-to-KW approval and decoded fixture playback
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-fymusic-cross-platform-browser.mjs
       - name: Show site logs on failure
         if: failure()
         run: cat /tmp/fymusic-pages.log || true
