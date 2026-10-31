@@ -11,7 +11,7 @@ const evidence = {
   target: TARGET, sourceImported: false, sourceImportAttempts: [], sourceTransportStatuses: [], sourceSupportsKg: false,
   sourceSupportsKw: false, kgSearch: false, kgSelected: false,
   manualSearchOffered: false, manualSearchClicked: false,
-  manualCandidateCount: 0, candidateConfirmed: false,
+  manualCandidateCount: 0, candidateConfirmed: false, manualKwRetryCount: 0,
   actualKwAttempt: false, actualKwUrl: false,
   actualKwMedia: false, decodedProgress: false,
   qualityRequests: [], resolverEvents: [], flowerProxy: [], mediaResponses: [],
@@ -296,13 +296,45 @@ try {
   markStage('kwConfirmClick');
   await firstCandidate.click();
   evidence.candidateConfirmed = true;
+  const kwAudioReady = () => {
+    const a = document.querySelector('#audio');
+    return window.__LXNowPlayingTrack?.source === 'kw' &&
+      a && a.readyState >= 2 && !a.error && !a.paused &&
+      a.currentTime >= 1 && Number.isFinite(a.duration) && a.duration >= 120;
+  };
   try {
-    await page.waitForFunction(() => {
+    // The first real Cloudflare KW request can fail transiently. Never retry
+    // automatically. Wait for the actual UI to offer a retry, then simulate
+    // exactly ONE deliberate user click of the previously confirmed KW track.
+    const first = await page.waitForFunction(() => {
       const a = document.querySelector('#audio');
-      return window.__LXNowPlayingTrack?.source === 'kw' &&
-        a && a.readyState >= 2 && !a.error && !a.paused &&
-        a.currentTime >= 1 && Number.isFinite(a.duration) && a.duration >= 120;
+      if (window.__LXNowPlayingTrack?.source === 'kw' &&
+          a && a.readyState >= 2 && !a.error && !a.paused &&
+          a.currentTime >= 1 && Number.isFinite(a.duration) && a.duration >= 120)
+        return 'ready';
+      const buttons = [...document.querySelectorAll('#status button')];
+      return buttons.some(x => ['稍后重试','重试这首歌'].includes(x.textContent.trim()))
+        ? 'retry' : false;
     }, null, { timeout: 42000 });
+    if (await first.jsonValue() === 'retry') {
+      const beforeRetry = evidence.performance.requestCounts.kwFlowerProxy;
+      await page.waitForTimeout(350);
+      assert.equal(evidence.performance.requestCounts.kwFlowerProxy, beforeRetry,
+        'UNSOLICITED_KW_RETRY_DETECTED');
+      assert.equal(beforeRetry, 1, 'FIRST_KW_REQUEST_COUNT_UNEXPECTED');
+      const retry = page.locator('#status button').filter({
+        hasText: /^(?:稍后重试|重试这首歌)$/
+      }).first();
+      evidence.manualKwRetryCount = 1;
+      markStage('kwManualRetryClick');
+      await retry.click();
+      await page.waitForFunction(() => {
+        const a = document.querySelector('#audio');
+        return window.__LXNowPlayingTrack?.source === 'kw' &&
+          a && a.readyState >= 2 && !a.error && !a.paused &&
+          a.currentTime >= 1 && Number.isFinite(a.duration) && a.duration >= 120;
+      }, null, { timeout: 42000 });
+    }
   } catch {
     throw new Error('REAL_KW_URL_OR_MEDIA_NOT_DECODED');
   }
@@ -342,7 +374,8 @@ try {
   // redundant Flower resolver HTTP calls. Count actual browser requests.
   assert.equal(evidence.performance.requestCounts.kwCatalogSearch, 1,
     'DUPLICATE_OR_MISSING_KW_CATALOG_REQUEST');
-  assert.equal(evidence.performance.requestCounts.kwFlowerProxy, 1,
+  assert.equal(evidence.performance.requestCounts.kwFlowerProxy,
+    1 + evidence.manualKwRetryCount,
     'DUPLICATE_OR_MISSING_KW_FLOWER_REQUEST');
   assert.equal(history.filter(x => x.name === 'fymusic:alternate-search').length, 1,
     'DUPLICATE_KW_SEARCH_ACTION');
