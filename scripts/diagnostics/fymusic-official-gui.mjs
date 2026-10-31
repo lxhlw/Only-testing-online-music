@@ -1079,7 +1079,10 @@ try{
         try{
           await appPage.getByRole('tab',{name:tabLabel,exact:true}).last().click({timeout:10000});
           let row=null;
-          for(const keyword of ['开始懂了','孙燕姿 开始懂了']){
+          // Transient KG search failures must not masquerade as an audio test.
+          // At most four actual search submissions; never switch test songs.
+          for(const keyword of ['开始懂了','孙燕姿 开始懂了',
+           '开始懂了','孙燕姿 开始懂了']){
             // Re-submit AFTER platform tab click. Prior script searched before switching.
             await query.fill('');
             await query.fill(keyword);
@@ -1217,6 +1220,10 @@ try{
       }
       if(webBrowser)await webBrowser.close().catch(()=>{});
       console.log('FYMUSIC_GUI_SUMMARY '+JSON.stringify(resultSummary));
+      if(!resultSummary.some(x=>x.playClicked)){
+       console.log('FYMUSIC_GUI_TEST_INCOMPLETE '+JSON.stringify({reason:'TARGET_NOT_PLAYED'}));
+       process.exitCode=1;
+      }
      }
     }
    }
