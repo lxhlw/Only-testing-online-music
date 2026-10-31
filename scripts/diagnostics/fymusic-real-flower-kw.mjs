@@ -90,12 +90,27 @@ try {
         if (target.pathname.includes('/flower/') && /\/url\/(?:kg|kw)(?:\/|$)/i.test(target.pathname)) {
           const platform = /\/url\/kw(?:\/|$)/i.test(target.pathname) ? 'kw' : 'kg';
           let diagnostic = null;
+          let routeOutcomes = [];
           if (response.status() >= 400) {
             const body = await response.json().catch(() => null);
             if (typeof body?.diagnostic === 'string' && /^FLOWER_[A-Z0-9_]{1,60}$/.test(body.diagnostic))
               diagnostic = body.diagnostic;
+            // The proxy already exposes bounded, non-sensitive route categories.
+            // Allow-list routes/status labels; never persist a URL or response.
+            const names = new Set(['ts-short', 'tm-short', 'ts-full',
+              'tm-full', 'sslip-short', 'nip-short', 'sslip-full',
+              'nip-full', 'canonical-socket']);
+            if (Array.isArray(body?.attempts)) {
+              routeOutcomes = body.attempts.slice(0,9).filter(item =>
+                item && names.has(item.route) &&
+                typeof item.code === 'string' &&
+                /^(?:NETWORK_ERROR|INVALID_PAYLOAD|BLOCKED_TARGET|TIMEOUT|HTTP_[0-9]{3}|FLOWER_SOCKET_[A-Z0-9_]{1,40})$/.test(item.code))
+                .map(item => ({ route: item.route, code: item.code }));
+            }
           }
-          bounded(evidence.flowerProxy, { platform, status: response.status(), diagnostic });
+          bounded(evidence.flowerProxy, {
+            platform, status: response.status(), diagnostic, routeOutcomes
+          });
         }
       }
       if (request.resourceType() === 'media') {
