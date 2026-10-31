@@ -444,8 +444,19 @@ try{
          const raw=new URL(upstream);
          if(!/^\/flower\/v1\/url\/kg\//.test(raw.pathname))return;
          const headers=req.headers();
+         let suppliedKeys=[];
+         try{
+          const obj=JSON.parse(headers['x-lx-headers']||'{}');
+          if(obj&&typeof obj==='object'&&!Array.isArray(obj))
+           suppliedKeys=Object.keys(obj).map(x=>x.toLowerCase());
+         }catch{}
+         const provided=key=>suppliedKeys.includes(key);
          const item={method:req.method(),status:null,
           contentType:'not_observed',transport:'pending',
+          sourceHeaders:{userAgent:provided('user-agent'),
+           referer:provided('referer'),accept:provided('accept'),
+           origin:provided('origin'),cookie:provided('cookie'),
+           acceptEncoding:provided('accept-encoding')},
           proxy:null};
          webHttp.push(item);tracked.set(req,item);
          if(!directNeedle&&raw.hostname==='97.64.37.235'){
@@ -802,17 +813,32 @@ try{
       })()`;
       const nativeCallbackEval=String.raw`(()=>{
        try{
-        const a=arguments,e=a[0],res=a[1],status=res?.statusCode;
-        const code=String(e?.code||'');
-        return {
-         status:typeof status==='number'?status:null,
-         errorClass:/^E(?:CONNREFUSED|CONNRESET|HOSTUNREACH|NETUNREACH)$/.test(code)?
-          code:/^(?:ETIMEDOUT|ENOTFOUND|EAI_AGAIN)$/.test(code)?code:
-          e?'OTHER_ERROR':null,
-         responsePresent:Boolean(res),
-         errorPresent:Boolean(e)
+        const a=Array.prototype.slice.call(arguments,0,8);
+        const types=a.map(v=>v===null?'null':typeof v);
+        let status=null,responsePresent=false,errorPresent=false,errorClass=null;
+        const safeCode=v=>{
+         try{return typeof v?.code==='string'?v.code:'';}catch{return '';}
         };
-       }catch{return {status:null,errorClass:'OBSERVATION_ERROR'};}
+        for(const v of a){
+         if(v===null||v===undefined)continue;
+         if(typeof v!=='object')continue;
+         try{
+          const code=v.statusCode;
+          if(Number.isInteger(code)&&code>=100&&code<=599){
+           status=code;responsePresent=true;continue;
+          }
+         }catch{}
+         const c=safeCode(v);
+         if(c){
+          errorPresent=true;
+          errorClass=/^E(?:CONNREFUSED|CONNRESET|HOSTUNREACH|NETUNREACH)$/.test(c)?
+           c:/^(?:ETIMEDOUT|ENOTFOUND|EAI_AGAIN)$/.test(c)?
+           c:'OTHER_ERROR';
+         }
+        }
+        return {status,errorClass,responsePresent,errorPresent,argumentTypes:types};
+       }catch{return {status:null,errorClass:'OBSERVATION_ERROR',
+        responsePresent:false,errorPresent:false,argumentTypes:[]};}
       })()`;
       const armNativeNeedleAudit=async()=>{
        const candidate=pw.contexts().flatMap(c=>c.pages())
@@ -886,15 +912,28 @@ try{
            const hits=(event.hitBreakpoints||[])
             .filter(id=>nativeCallbackBreakpoints.has(id));
            if(hits.length&&nativeNeedleAudit.callbacks.length<20){
-            const obs=await nativeSourceSession.send('Debugger.evaluateOnCallFrame',{
-             callFrameId:frame.callFrameId,expression:nativeCallbackEval,
-             returnByValue:true,silent:true
-            }).catch(()=>null);
-            const v=obs?.result?.value;
-            if(v)nativeNeedleAudit.callbacks.push({
+            const frames=[];
+            for(const [position,candidate] of event.callFrames.slice(0,4).entries()){
+             const obs=await nativeSourceSession.send('Debugger.evaluateOnCallFrame',{
+              callFrameId:candidate.callFrameId,expression:nativeCallbackEval,
+              returnByValue:true,silent:true
+             }).catch(()=>null);
+             if(obs?.result?.value)frames.push({
+              position,frameName:String(candidate.functionName||'').slice(0,35),
+              ...obs.result.value
+             });
+            }
+            const best=frames.find(x=>isSafeStatus(x.status))||
+             frames.find(x=>x.errorPresent)||frames.find(x=>
+              x.errorClass!=='OBSERVATION_ERROR')||frames[0];
+            if(best)nativeNeedleAudit.callbacks.push({
              requestOrdinal:nativeCallbackBreakpoints.get(hits[0]),
-             status:isSafeStatus(v.status),errorClass:v.errorClass,
-             responsePresent:Boolean(v.responsePresent),errorPresent:Boolean(v.errorPresent)
+             status:isSafeStatus(best.status),errorClass:best.errorClass,
+             responsePresent:Boolean(best.responsePresent),
+             errorPresent:Boolean(best.errorPresent),
+             inspectedFrames:frames.map(x=>({position:x.position,
+              argumentTypes:x.argumentTypes,status:isSafeStatus(x.status),
+              errorClass:x.errorClass}))
             });
            }
           }
