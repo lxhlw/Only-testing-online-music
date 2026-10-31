@@ -84,3 +84,39 @@ Cookie、Native IPC 原始数据或音源响应正文。
 - 没有输出或持久化原始歌曲标识、Hash、签名、媒体 URL 或鉴权数据。
 
 **下一独立阶段：** 只读捕获官方 GUI 实际提交给野花音源的质量档位，并对比 FyMusic 在同一候选上的实际参数；之后才能判断 Native/Web 请求头、传输层或代理出口差异。不得用音质偏好代替实际请求证据，也不得修改官方播放对象制造对照成功。
+
+## 2026-10-31 阶段四：官方 LX / FyMusic 实际请求音质
+
+此阶段均为真实 Windows GitHub Actions 测试，使用原始 LX Music Desktop v2.12.6 Windows release，
+不修改其安装包、野花代码、IPC 函数、歌曲身份数据或媒体 URL。
+
+- [Run 41217011164](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41217011164)：
+  CDP `Debugger.setBreakpointOnFunctionCall` 只读观察 Electron `ipcRenderer.invoke`，
+  仅在传入 `request_user_api` 且 `source=kg, action=musicUrl` 时保留允许的音质枚举。
+  观察 12 次 IPC 调用，其中目标 `musicUrl` 实际提交 `type=128k`。
+  设置界面偏好为 `flac24bit`，但**不能将偏好等同于实际请求**。
+
+- [Run 41217360911](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41217360911)：
+  再次确认官方 IPC 实际请求 `128k`。
+  同一 Windows runner 上打开独立 FyMusic Web，导入未经修改的野花源，
+  在真实搜索结果中仅通过强资源身份（Hash 与相应 songmid/albumAudioId）定位 GUI 对应候选，
+  点击网页歌曲行以触发真正的应用解析流程。
+  Web 观察：`sourceImported=true`、`matchingRow=true`、
+  `declaredQualities=["128k"]`、`requestedQualities=["128k"]`、
+  `proxyRequests=1`、`initialRequestQualityParity=true`。
+
+**已验证：** 官方 GUI 与 FyMusic Web 选择的是强身份匹配的酷狗资源，
+并且在本轮实际播放请求中两端的初始音质均为 `128k`。
+这不构成未来统一锁定 128k 的理由：当前野花对 KG 声明只有 128k；
+如其他有效授权音源提供高质量，应允许按其声明选择高质量音频。
+
+**尚未验证：**
+- 原版 LX 的音频字节是否真被解码，以及是否完整/准确对应指定歌曲。
+- 原版 LX Native Needle 网络链路的实际 HTTP 请求与响应状态。
+- 本轮 Web 代理请求的具体状态码与错误分类（只观察到 HTTP 请求发生）。
+- Native 与 Web 之间 DNS、代理转发、headers、重定向、出口等差异。
+
+下一阶段只针对**同一身份、同一音质**进行只读网络路径对照：
+观测 Native Needle 与 Web 代理各自的安全状态类别及失败位置，
+日志禁止输出原始歌曲身份、签名、Cookie、Token 或媒体 URL。
+优先排查 HTTP 400/403/404/502 的分层来源；不要将 UI 时钟推进表述为解码证明。
