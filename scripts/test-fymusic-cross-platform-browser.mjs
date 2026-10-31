@@ -31,7 +31,7 @@ try{
  await page.evaluate(()=>{
   const active={id:'alternate-qa-source',name:'Fixture Flower',inited:true,runtime:{},
    sources:{
-    kg:{name:'KG',actions:['musicUrl'],qualitys:['128k']},
+    kg:{name:'KG',actions:['musicUrl'],qualitys:['flac24bit','128k']},
     kw:{name:'KW',actions:['musicUrl'],qualitys:['flac24bit','flac','320k','128k']}
    }};
   // Verify the explicitly selected high-fidelity format remains intact.
