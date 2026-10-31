@@ -49,3 +49,38 @@ Cookie、Native IPC 原始数据或音源响应正文。
 即使发现同一 ID 或 Hash，也只能确认 **目录身份数据的一致性**；
 同一次实际解析音质、Native Needle 与 Web Cloudflare 代理的上游 HTTP 差异，
 以及真实音频字节是否对应目标歌曲，仍需要独立证据。
+
+## 2026-10-31 最新实测：官方 GUI 身份一致性确认
+
+本轮只做候选数据与 GUI 只读对照，没有更改正式 `main` 或音乐播放逻辑。
+
+连续 Windows GitHub Actions 的证据：
+
+1. [Run 41215344861](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41215344861)：证实生产构建存在 Vue 根应用，但 DOM 不暴露 `__vueParentComponent`，且 `app._instance` 不可用。
+2. [Run 41215568127](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41215568127)：改为从 Vue 3 渲染容器 `_vnode` 只读遍历 VNode/组件树，成功读取官方 GUI 真正用于列表播放的 `props.list`；实际点击的是搜索结果第 1 条。
+3. [Run 41215952781](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41215952781)：按官方 LX 的真实 KG 结构提取 `meta.hash`、`meta.songId`、`meta.albumAudioId` 与 `meta._qualitys[quality].hash`，在 FyMusic 候选中得到强身份匹配。
+
+最后一轮的脱敏一致性结论（官方 GUI 第 1 条对应 FyMusic 匹配列表第 1 条）：
+
+| 比较字段 | 结果 |
+|---|---|
+| 标题、歌手、专辑、时长 | 全部匹配 |
+| Songmid | 匹配 |
+| 基础 Hash | 匹配 |
+| AlbumAudioId | 匹配 |
+| 128k 资源 Hash | 匹配 |
+| 320k 资源 Hash | 匹配 |
+| FLAC 资源 Hash | 匹配 |
+| FLAC 24-bit 资源 Hash | Web 侧未提供可比较的值 |
+| 顶层 ID | 不一致（可能是表示格式差异，原因尚未独立确认） |
+
+注意：官方 GUI 搜索词为「开始懂了」，本轮 FyMusic 目录取数使用「孙燕姿 开始懂了」后筛选同歌名同歌手。尽管搜索词不同，三种音质资源 Hash、基础 Hash、Songmid、AlbumAudioId 全部匹配，提供了强同一目录记录证据；尚未证实两端搜索排序和完整列表完全相同。
+
+重要限制：
+
+- `flac24bit` 设置为首选、或 GUI `meta._qualitys.flac24bit` 存在，不等于真实请求了该音质。
+- `actualRequestedQuality` 仍然是 `not_observed`。
+- 官方 GUI 的 00:05 → 00:08 时间推进仍为 `UI_TIME_ONLY`，没有独立解码确认。
+- 没有输出或持久化原始歌曲标识、Hash、签名、媒体 URL 或鉴权数据。
+
+**下一独立阶段：** 只读捕获官方 GUI 实际提交给野花音源的质量档位，并对比 FyMusic 在同一候选上的实际参数；之后才能判断 Native/Web 请求头、传输层或代理出口差异。不得用音质偏好代替实际请求证据，也不得修改官方播放对象制造对照成功。
