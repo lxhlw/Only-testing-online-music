@@ -4,6 +4,11 @@ on:
     branches: [feature/fymusic-playback-verifier]
     paths:
       - '.github/workflows/fymusic-edge-preview.yml'
+      - 'scripts/diagnostics/fymusic-real-flower-kw.mjs'
+      - 'scripts/test-fymusic-cross-platform-browser.mjs'
+      - 'src/app.js'
+      - 'src/fymusic-cross-platform-match.js'
+      - 'functions/api/proxy.js'
   workflow_dispatch:
 
 permissions:
