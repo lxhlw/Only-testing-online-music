@@ -6,6 +6,7 @@ import {join,dirname} from 'node:path';
 import {spawn} from 'node:child_process';
 import {chromium} from 'playwright';
 import needle from 'needle';
+import {createHash} from 'node:crypto';
 
 // Read-only metadata comparison. Raw IDs/hashes never enter logs or artifacts.
 // GUI data is taken from Vue 3 component props backing the clicked list row.
@@ -443,6 +444,9 @@ try{
          if(!upstream)return;
          const raw=new URL(upstream);
          if(!/^\/flower\/v1\/url\/kg\//.test(raw.pathname))return;
+         if(row.exactNativeKgUrlMatch===undefined)
+          row.exactNativeKgUrlMatch=nativePrivateUrlDigests.has('kg')?
+           nativePrivateUrlDigests.get('kg')===privateDigest(upstream):null;
          const headers=req.headers();
          let suppliedKeys=[];
          try{
@@ -765,9 +769,13 @@ try{
       // The window runs the ORIGINAL Flower script with the ORIGINAL Needle
       // preload. CDP breakpoints inspect arguments and callback status ONLY;
       // no source mutation, request interception, or raw-URL/header logging.
+      // Private in-memory digests only; never log source URLs, digests,
+      // track IDs, signatures, tokens, or full request arguments.
+      const nativePrivateUrlDigests=new Map();
+      const privateDigest=value=>createHash('sha256').update(String(value)).digest('hex');
       const nativeNeedleAudit={
        attach:'not_attempted',requestBreakpoint:'not_set',
-       requestHits:0,requestSamples:[],callbacks:[],callbackBreakpoints:0,
+       requestHits:0,requestSamples:[],callbacks:[],timeline:[],callbackBreakpoints:0,
        callbackAttribution:'not_confirmed',
        errors:0,pending:0
       };
@@ -800,7 +808,7 @@ try{
         return {
          argumentCount:a.length,argumentTypes:a.map(v=>typeof v),
          urlArgIndex:urlIndex,callbackArgIndex:callbackIndex,
-         pathPlatform,
+         pathPlatform,privateUrl:u,
          firstType:typeof a[0],secondType:typeof a[1],
          urlClass:flower?'flower_canonical_ip':alias?'flower_host_alias':
           /^https?:\/\//i.test(u)?'other_http':u?'other':'no_url_argument',
@@ -878,14 +886,26 @@ try{
              callFrameId:candidate.callFrameId,expression:nativeRequestEval,
              returnByValue:true,silent:true
             }).catch(()=>null);
-            if(obs?.result?.value)observed.push({
-             position,frameName:String(candidate.functionName||'').slice(0,35),
-             ...obs.result.value,callFrameId:candidate.callFrameId
-            });
+            if(obs?.result?.value){
+             // Digest in Node's short-lived process and immediately erase
+             // sensitive URL from the debug result before any logging.
+             const value=obs.result.value;
+             if(typeof value.privateUrl==='string'&&value.privateUrl.startsWith('http')){
+              nativePrivateUrlDigests.set(value.pathPlatform,privateDigest(value.privateUrl));
+             }
+             delete value.privateUrl;
+             observed.push({
+              position,frameName:String(candidate.functionName||'').slice(0,35),
+              ...value,callFrameId:candidate.callFrameId
+             });
+            }
            }
            const best=observed.find(x=>x.pathClass==='flower_kg')||
             observed.find(x=>x.urlClass==='flower_canonical_ip')||
             observed.find(x=>x.firstType==='string')||observed[0];
+           if(nativeNeedleAudit.timeline.length<18)
+            nativeNeedleAudit.timeline.push({event:'request',platform:best?.pathPlatform||'unknown',
+             method:best?.method||'unknown'});
            if(nativeNeedleAudit.requestSamples.length<12)
             nativeNeedleAudit.requestSamples.push({
              selectedFrame:best?.position??null,
@@ -936,6 +956,9 @@ try{
             const best=frames.find(x=>isSafeStatus(x.status))||
              frames.find(x=>x.errorPresent)||frames.find(x=>
               x.errorClass!=='OBSERVATION_ERROR')||frames[0];
+            if(best&&nativeNeedleAudit.timeline.length<18)
+             nativeNeedleAudit.timeline.push({event:'callback',status:isSafeStatus(best.status),
+              errorClass:best.errorClass});
             if(best)nativeNeedleAudit.callbacks.push({
              requestOrdinal:nativeCallbackBreakpoints.get(hits[0]),
              status:isSafeStatus(best.status),errorClass:best.errorClass,
