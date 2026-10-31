@@ -34,6 +34,8 @@ try{
     kg:{name:'KG',actions:['musicUrl'],qualitys:['128k']},
     kw:{name:'KW',actions:['musicUrl'],qualitys:['flac24bit','flac','320k','128k']}
    }};
+  // Verify the explicitly selected high-fidelity format remains intact.
+  window.LXPlaySettings.save({qualityMode:'fixed',fixedQuality:'flac24bit',autoFallback:false});
   const mgr=window.LXSourceManager;
   mgr.getActive=()=>active;
   window.__alternateQA={kwSearch:0,kwResolvers:0,kgResolvers:0,qualities:[],events:[]};
