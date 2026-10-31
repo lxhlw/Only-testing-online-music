@@ -296,12 +296,6 @@ try {
   markStage('kwConfirmClick');
   await firstCandidate.click();
   evidence.candidateConfirmed = true;
-  const kwAudioReady = () => {
-    const a = document.querySelector('#audio');
-    return window.__LXNowPlayingTrack?.source === 'kw' &&
-      a && a.readyState >= 2 && !a.error && !a.paused &&
-      a.currentTime >= 1 && Number.isFinite(a.duration) && a.duration >= 120;
-  };
   try {
     // The first real Cloudflare KW request can fail transiently. Never retry
     // automatically. Wait for the actual UI to offer a retry, then simulate
@@ -335,7 +329,9 @@ try {
           a.currentTime >= 1 && Number.isFinite(a.duration) && a.duration >= 120;
       }, null, { timeout: 42000 });
     }
-  } catch {
+  } catch (error) {
+    if (['UNSOLICITED_KW_RETRY_DETECTED',
+         'FIRST_KW_REQUEST_COUNT_UNEXPECTED'].includes(error?.message)) throw error;
     throw new Error('REAL_KW_URL_OR_MEDIA_NOT_DECODED');
   }
   markStage('kwAudioReady');
@@ -401,6 +397,8 @@ try {
     'NO_REAL_KW_RESOLVER_ATTEMPT', 'NO_REAL_KW_RESOLVED_URL',
     'NO_REAL_MEDIA_HTTP_200_OR_206', 'NO_REAL_KW_AUDIO_PROGRESS',
     'UNCAUGHT_BROWSER_ERRORS',
+    'UNSOLICITED_KW_RETRY_DETECTED',
+    'FIRST_KW_REQUEST_COUNT_UNEXPECTED',
     'DUPLICATE_OR_MISSING_KW_CATALOG_REQUEST',
     'DUPLICATE_OR_MISSING_KW_FLOWER_REQUEST',
     'DUPLICATE_KW_SEARCH_ACTION',
