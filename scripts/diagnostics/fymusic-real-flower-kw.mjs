@@ -8,7 +8,7 @@ const TARGET = { title: '开始懂了', artist: '孙燕姿' };
 const FLOWER = 'https://raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js';
 const MIRROR = 'https://ghproxy.net/raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js';
 const evidence = {
-  target: TARGET, sourceImported: false, sourceSupportsKg: false,
+  target: TARGET, sourceImported: false, sourceImportAttempts: [], sourceTransportStatuses: [], sourceSupportsKg: false,
   sourceSupportsKw: false, kgSearch: false, kgSelected: false,
   manualSearchOffered: false, manualSearchClicked: false,
   manualCandidateCount: 0, candidateConfirmed: false,
@@ -36,8 +36,20 @@ try {
     try {
       const request = response.request();
       const parsed = new URL(response.url());
+      if (['raw.githubusercontent.com', 'ghproxy.net'].includes(parsed.hostname) &&
+          parsed.pathname.includes('/pdone/lx-music-source/') &&
+          parsed.pathname.includes('/flower/latest.js')) {
+        bounded(evidence.sourceTransportStatuses, {
+          via: parsed.hostname === 'raw.githubusercontent.com' ? 'github-raw' : 'mirror',
+          status: response.status()
+        });
+      }
       if (parsed.pathname === '/api/proxy') {
         const target = new URL(parsed.searchParams.get('url') || '');
+        if (target.pathname.includes('/pdone/lx-music-source/') &&
+            target.pathname.includes('/flower/latest.js')) {
+          bounded(evidence.sourceTransportStatuses, { via: 'same-origin-proxy', status: response.status() });
+        }
         if (target.pathname.includes('/flower/') && /\/url\/(?:kg|kw)(?:\/|$)/i.test(target.pathname)) {
           const platform = /\/url\/kw(?:\/|$)/i.test(target.pathname) ? 'kw' : 'kg';
           let diagnostic = null;
@@ -90,25 +102,55 @@ try {
   evidence.result = 'FLOWER_IMPORT';
   const flower = await page.evaluate(async ({ url, mirror }) => {
     const mgr = window.LXSourceManager;
+    const attempts = [];
+    function snapshot(item) {
+      return { codePresent: String(item?.code || '').length > 100,
+        runtimePresent: !!item?.runtime, initialized: !!item?.inited,
+        kgDeclared: !!item?.sources?.kg, kwDeclared: !!item?.sources?.kw,
+        hasError: !!item?.error };
+    }
     function compatible(item) {
       return !!(item?.inited && item.runtime &&
         item.sources?.kg?.actions?.includes('musicUrl') &&
         item.sources?.kw?.actions?.includes('musicUrl'));
     }
+    async function ready(item, deadlineMs = 12000) {
+      const started = Date.now();
+      while (Date.now() - started < deadlineMs) {
+        const active = mgr.getActive();
+        if (compatible(item)) return item;
+        if (compatible(active) && /pdone\/lx-music-source\/main\/flower\/latest\.js/.test(
+          String(active.url || ''))) return active;
+        await new Promise(resolve => setTimeout(resolve, 150));
+      }
+      return item;
+    }
     let item = mgr.getActive();
     if (compatible(item) && /pdone\/lx-music-source\/main\/flower\/latest\.js/.test(String(item.url || '')))
-      return { ok: true, kg: true, kw: true, usedExisting: true };
+      return { ok: true, kg: true, kw: true, usedExisting: true, attempts };
     for (const address of [url, mirror]) {
       const result = await new Promise(resolve => {
-        mgr.installFromUrl(address, (err, installed) => resolve({ err: !!err, installed }));
+        mgr.installFromUrl(address, (err, installed) => resolve({ err: !!err, installed,
+          errorKind: err ? (/timeout/i.test(String(err.message || err)) ? 'timeout' :
+            /network|fetch|http/i.test(String(err.message || err)) ? 'transport' :
+              'runtime_or_parser') : null }));
       });
-      if (result.err || !result.installed) continue;
+      if (result.err || !result.installed) {
+        attempts.push({ transport: address === url ? 'raw' : 'mirror',
+          status: 'install_failed', reason: result.errorKind });
+        continue;
+      }
       item = mgr.activate(result.installed.id);
-      if (compatible(item)) return { ok: true, kg: true, kw: true, usedExisting: false };
+      item = await ready(item);
+      attempts.push({ transport: address === url ? 'raw' : 'mirror',
+        status: compatible(item) ? 'ready' : 'not_ready', ...snapshot(item) });
+      if (compatible(item)) return { ok: true, kg: true, kw: true,
+        usedExisting: false, attempts };
     }
     item = mgr.getActive();
-    return { ok: false, kg: !!item?.sources?.kg, kw: !!item?.sources?.kw };
+    return { ok: false, kg: !!item?.sources?.kg, kw: !!item?.sources?.kw, attempts };
   }, { url: FLOWER, mirror: MIRROR });
+  evidence.sourceImportAttempts = flower.attempts;
   evidence.sourceImported = flower.ok;
   evidence.sourceSupportsKg = flower.kg;
   evidence.sourceSupportsKw = flower.kw;
