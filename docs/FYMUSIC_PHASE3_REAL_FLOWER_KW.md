@@ -47,6 +47,18 @@
 - 验收结论：`REAL_KW_DECODED_PROGRESS_PASS`，`actualKwAttempt=true`、`actualKwUrl=true`、`actualKwMedia=true`、`decodedProgress=true`。
 - 实际本轮 KG 和 KW 解析请求为 `128k`，**不表示播放器被锁死为 128k**。质量设置、源声明与媒体实际编码仍需区分。
 
+## 独立重复执行：同一真实歌曲再次成功
+
+[Run 41229317873 — Attempt 2](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41229317873)：
+
+- 2026-11-01（新加坡时间），Actions Job ID `124620437067`，**completed / success**。
+- 使用相同开发分支代码 `8a44f869ea2eca57883103914f0c05ea2e0d4dae`、未修改原始野花脚本、真实网络和 Chromium 音频对象。
+- `sourceImported=true`，KG 真实搜索与选择成功，KW 手动候选数 **1**，两次显式点击路径保持。
+- KG Flower 代理仍是 `HTTP 502 / FLOWER_UPSTREAM_UNAVAILABLE`。
+- KW Flower 代理仍返回 **HTTP 200**，真实媒体 **HTTP 206**，`actualKwUrl=true`、`actualKwMedia=true`。
+- 实际媒体对象：`readyState=4`、`paused=false`、`errorCode=null`、`duration=271.493333s`、`currentTime=4.315075s`、`bufferedEnd=203.616s`，独立时间推进门槛再次通过。
+- 结论：修正导入测试时序后，**连续两次真实在线 KW 备用解码验证成功（2/2）**。这验证的是当前两次 CI 的可重复性，不是任意地区长期 100% 稳定。
+
 ## 证据边界
 
 已独立证明：**在本轮 GitHub-hosted Linux runner + 本地 Pages 模拟器的网络环境中，FyMusic 按用户显式二次确认的 KG → KW 路径获得实际野花 KW 媒体资源，Chromium 播放器解码长音频并持续推进。**
