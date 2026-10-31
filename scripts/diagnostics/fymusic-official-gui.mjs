@@ -265,6 +265,35 @@ try{
       const flowerSelected=await selectedSource.getAttribute('aria-checked');
       console.log('OFFICIAL_GUI_FLOWER_ACTIVATED '+JSON.stringify({selected:flowerSelected==='true'}));
       if(flowerSelected!=='true')throw Error('FLOWER_NOT_SELECTED');
+      // The official Flower source runs in a separate hidden BrowserWindow,
+      // loaded from a data: URL. Inventory *all* debugger targets AFTER
+      // source activation; /json/list at startup can miss its late creation.
+      // Never print data URLs: they may embed source script content.
+      const nativeTargetAudit=async(stage)=>{
+       const browserCDP=await pw.newBrowserCDPSession();
+       try{
+        const info=await browserCDP.send('Target.getTargets');
+        const items=(info?.targetInfos||[]).map(t=>({
+         type:String(t.type||'').slice(0,24),
+         scheme:String(t.url||'').split(':')[0].slice(0,16),
+         isUserApiDocument:String(t.url||'').startsWith('data:text/html'),
+         titleClass:/LX Music/i.test(String(t.title||''))?'main_gui':
+          /user.?api|music source/i.test(String(t.title||''))?'source_sandbox':'other',
+         attached:Boolean(t.attached)
+        }));
+        console.log('FYMUSIC_NATIVE_TARGET_INVENTORY '+JSON.stringify({
+         stage,total:items.length,types:items.slice(0,18)
+        }));
+        return items;
+       }catch{
+        console.log('FYMUSIC_NATIVE_TARGET_INVENTORY '+JSON.stringify({
+         stage,error:'CDP_TARGET_ENUMERATION_FAILED'
+        }));
+        return [];
+       }finally{await browserCDP.detach().catch(()=>{});}
+      };
+      await nativeTargetAudit('after_source_activation');
+
 
       // Use the highest available ORIGINAL quality preference. LX itself
       // chooses flac24bit/flac/320k/128k according to the source and song.
@@ -841,6 +870,7 @@ try{
             vueProbe:record.vueProbe,domFallback:record.domFallback
           }));
           const play=row.getByRole('button',{name:'Play',exact:true});
+          await nativeTargetAudit('before_play');
           // Observe only around the actual original GUI playback click.
           await armQualityAudit();
           mediaStats.players=0;mediaStats.events=0;
