@@ -5,6 +5,7 @@ import {readdirSync,statSync} from 'node:fs';
 import {join,dirname} from 'node:path';
 import {spawn} from 'node:child_process';
 import {chromium} from 'playwright';
+import needle from 'needle';
 
 // Read-only metadata comparison. Raw IDs/hashes never enter logs or artifacts.
 // GUI data is taken from Vue 3 component props backing the clicked list row.
@@ -320,6 +321,63 @@ try{
         });
        }),{keyword,platform}).catch(()=>null);
       };
+      // This is a SEPARATE Node/Needle reachability test against the
+      // exact original Flower URL seen in the real Web browser, NOT a
+      // recording of the official LX application's own Needle process.
+      // The URL and all source header values are never printed/persisted.
+      const probeCanonicalNeedle=(rawUrl,sourceHeaders,method)=>{
+       const report={probe:'separate_node_needle',status:'not_started',
+        httpStatus:null,errorClass:null,redirected:false};
+       let target;
+       try{target=new URL(rawUrl);}catch{
+        report.status='invalid_url';return Promise.resolve(report);
+       }
+       if(target.protocol!=='http:'||target.hostname!=='97.64.37.235'||
+        !/^\/flower\/v1\/url\/kg\//.test(target.pathname)||
+        !['GET','HEAD'].includes(method)){
+        report.status='not_canonical_flower_kg';return Promise.resolve(report);
+       }
+       const allowedHeaders={};
+       for(const key of ['Accept','User-Agent','Referer','Origin']){
+        const v=sourceHeaders?.[key]||sourceHeaders?.[key.toLowerCase()];
+        if(typeof v==='string'&&v.length<4096&&
+          !/[\r\n]/.test(v))allowedHeaders[key]=v;
+       }
+       return new Promise(resolve=>{
+        let finished=false,request=null;
+        const finish=value=>{
+         if(finished)return;
+         finished=true;clearTimeout(timer);resolve(value);
+        };
+        const timer=setTimeout(()=>{
+         report.status='timeout';report.errorClass='TIMEOUT';
+         try{request?.request?.abort();}catch{}
+         finish(report);
+        },7800);
+        try{
+         request=needle.request(method,rawUrl,null,{
+          headers:allowedHeaders,
+          open_timeout:4500,response_timeout:6500,
+          follow_max:0,parse_response:false,
+          compressed:false
+         },(err,res)=>{
+          report.httpStatus=Number.isInteger(res?.statusCode)?
+           res.statusCode:null;
+          report.redirected=Boolean(report.httpStatus&&
+           report.httpStatus>=300&&report.httpStatus<400);
+          if(err){
+           const c=String(err.code||'');
+           report.status='network_error';
+           report.errorClass=/^E(?:CONNREFUSED|CONNRESET|HOSTUNREACH|NETUNREACH)$/.test(c)?
+            c:/^E(?:TIMEDOUT|AI_AGAIN)$/.test(c)?'TIMEOUT':
+            /^(?:ENOTFOUND|ECONNABORTED|ERR_INVALID_URL)$/.test(c)?c:'OTHER_NETWORK';
+          }else report.status=report.httpStatus?'http_response':'empty_response';
+          finish(report);
+         });
+        }catch{report.status='client_exception';report.errorClass='OTHER_NETWORK';finish(report);}
+       });
+      };
+
       // Independent real FyMusic browser run for the GUI-matched KG record.
       // Only app-issued resolver-attempt events and sanitized HTTP categories
       // are retained. No media URL, song ID/hash or auth value is logged.
@@ -328,17 +386,71 @@ try{
        const row={status:'not_started',sourceImported:false,
         matchingRow:false,requestedQualities:[],declaredQualities:[],
         proxyRequests:0};
-       const webHttp=[];
+       const webHttp=[],pendingResponses=[],tracked=new Map();
+       let directNeedle=null;
+       const supportedCodes=/^(?:HTTP_[1-5]\d\d|FLOWER_(?:TIMEOUT|UPSTREAM_UNAVAILABLE)|FLOWER_SOCKET_(?:CONNECT|WRITE|READ|PARSE|TIMEOUT|MISSING_HTTP|INVALID_STATUS|NO_PAYLOAD|HTTP_[1-5]\d\d)|BLOCKED_TARGET|INVALID_PAYLOAD|NETWORK_ERROR|TIMEOUT)$/;
+       const parseSafeProxyJson=body=>{
+        if(!body||typeof body!=='object')return null;
+        const d=String(body.diagnostic||'');
+        const attempts=Array.isArray(body.attempts)?body.attempts.slice(0,10)
+         .map(x=>{
+          const route=String(x?.route||'');
+          const code=String(x?.code||'');
+          return {
+           route:/^(?:ts-short|tm-short|ts-full|tm-full|sslip-short|nip-short|sslip-full|nip-full|canonical-socket)$/.test(route)?
+            route:'other',
+           code:supportedCodes.test(code)?code:'UNCLASSIFIED'
+          };
+         }):[];
+        return {diagnostic:supportedCodes.test(d)?d:'UNCLASSIFIED',
+         attempts};
+       };
        const captureRequest=req=>{
         try{
          const u=new URL(req.url()),upstream=u.searchParams.get('url');
          if(!upstream)return;
-         const path=new URL(upstream).pathname;
-         if(!/^\/flower\/v1\/url\/kg\//.test(path))return;
-         webHttp.push(true);
+         const raw=new URL(upstream);
+         if(!/^\/flower\/v1\/url\/kg\//.test(raw.pathname))return;
+         const headers=req.headers();
+         const item={method:req.method(),status:null,
+          contentType:'not_observed',transport:'pending',
+          proxy:null};
+         webHttp.push(item);tracked.set(req,item);
+         if(!directNeedle&&raw.hostname==='97.64.37.235'){
+          let forwarded={};
+          try{
+           const supplied=JSON.parse(headers['x-lx-headers']||'{}');
+           if(supplied&&typeof supplied==='object')forwarded=supplied;
+          }catch{}
+          directNeedle=probeCanonicalNeedle(upstream,forwarded,req.method());
+         }
         }catch{}
        };
+       const captureResponse=res=>{
+        const item=tracked.get(res.request());
+        if(!item)return;
+        item.status=res.status();
+        item.transport='response';
+        const kind=String(res.headers()['content-type']||'').toLowerCase();
+        item.contentType=kind.includes('json')?'json':
+         kind.includes('text')?'text':kind.includes('audio')?'audio':
+         kind?'other':'unknown';
+        if(item.status>=400&&item.contentType==='json'){
+         const task=res.text().then(str=>{
+          if(str.length>20000){item.proxy={diagnostic:'TOO_LARGE',attempts:[]};return;}
+          try{item.proxy=parseSafeProxyJson(JSON.parse(str));}
+          catch{item.proxy={diagnostic:'NON_JSON',attempts:[]};}
+         }).catch(()=>{item.proxy={diagnostic:'BODY_UNAVAILABLE',attempts:[]};});
+         pendingResponses.push(task);
+        }
+       };
+       const captureFailure=req=>{
+        const item=tracked.get(req);
+        if(item)item.transport='browser_network_failed';
+       };
        webPage.on('request',captureRequest);
+       webPage.on('response',captureResponse);
+       webPage.on('requestfailed',captureFailure);
        try{
         await webPage.addInitScript(()=>{
          localStorage.setItem('only-testing-online-music.play-settings',JSON.stringify({
@@ -400,10 +512,17 @@ try{
         const song=webPage.locator('#search-results .search-song-row .search-song-main').nth(index);
         if(!(await song.count())){row.status='web_song_row_not_rendered';return row;}
         await song.click({timeout:8500});
-        await webPage.waitForTimeout(3700);
+        // Cloudflare's Flower resolver has a 9s upstream budget. Wait for
+        // its final HTTP result, not just the 1st resolver-attempt event.
+        await webPage.waitForTimeout(11200);
         row.requestedQualities=await webPage.evaluate(()=>
          Array.isArray(window.__fyQualityAudit)?window.__fyQualityAudit.slice(0,8):[]);
+        await Promise.race([Promise.allSettled(pendingResponses),
+         new Promise(r=>setTimeout(r,2600))]);
         row.proxyRequests=webHttp.length;
+        row.webProxy=webHttp.slice(0,6);
+        row.nodeNeedle=directNeedle?await directNeedle:
+         {probe:'separate_node_needle',status:'original_flower_url_not_captured'};
         row.status=row.requestedQualities.length?
          'resolver_attempt_observed':'resolver_attempt_not_observed';
        }catch(err){
@@ -411,6 +530,11 @@ try{
          'web_quality_probe_timeout':'web_quality_probe_error';
        }finally{
         webPage.off('request',captureRequest);
+        webPage.off('response',captureResponse);
+        webPage.off('requestfailed',captureFailure);
+        if(!row.webProxy)row.webProxy=webHttp.slice(0,6);
+        if(!row.nodeNeedle)row.nodeNeedle=directNeedle?await directNeedle:
+         {probe:'separate_node_needle',status:'original_flower_url_not_captured'};
        }
        return row;
       };
