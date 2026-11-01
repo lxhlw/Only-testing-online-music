@@ -9,6 +9,9 @@ on:
       - 'scripts/test-fymusic-cross-platform-*.mjs'
       - 'src/app.js'
       - 'src/modern-ui.js'
+      - 'src/mobile-shell.js'
+      - 'src/mobile-shell.css'
+      - 'scripts/test-fymusic-modern-mobile-a11y.mjs'
       - 'src/now-playing-experience.js'
       - 'src/music-lyrics.js'
       - 'scripts/test-fymusic-long-list-lyrics-browser.mjs'
@@ -43,6 +46,8 @@ jobs:
           node --check src/fymusic-cross-platform-match.js
           node --check src/source-manager.js
           node --check src/modern-ui.js
+          node --check src/mobile-shell.js
+          node --check scripts/test-fymusic-modern-mobile-a11y.mjs
           node --check src/now-playing-experience.js
           node --check src/music-lyrics.js
           node --check scripts/test-fymusic-long-list-lyrics-browser.mjs
@@ -94,6 +99,10 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-fymusic-runtime-request-privacy.mjs
+      - name: Verify mobile navigation, touch targets and keyboard access
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-fymusic-modern-mobile-a11y.mjs
       - name: Show site logs on failure
         if: failure()
         run: cat /tmp/fymusic-pages.log || true
