@@ -18,6 +18,7 @@ on:
       - 'scripts/test-fymusic-foreground-lifecycle-browser.mjs'
       - 'scripts/test-fymusic-media-session-browser.mjs'
       - 'scripts/test-fymusic-fast-track-metadata-browser.mjs'
+      - 'scripts/test-fymusic-cover-error-resource-stress.mjs'
       - 'src/music-lyrics.js'
       - 'scripts/test-fymusic-long-list-lyrics-browser.mjs'
       - 'scripts/test-fymusic-playlist-incremental-browser.mjs'
@@ -59,6 +60,7 @@ jobs:
           node --check scripts/test-fymusic-foreground-lifecycle-browser.mjs
           node --check scripts/test-fymusic-media-session-browser.mjs
           node --check scripts/test-fymusic-fast-track-metadata-browser.mjs
+          node --check scripts/test-fymusic-cover-error-resource-stress.mjs
           node --check src/music-lyrics.js
           node --check scripts/test-fymusic-long-list-lyrics-browser.mjs
           node --check scripts/test-fymusic-playlist-incremental-browser.mjs
@@ -129,6 +131,10 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-fymusic-fast-track-metadata-browser.mjs
+      - name: Verify cover failure races and bounded background list resources
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-fymusic-cover-error-resource-stress.mjs
       - name: Show site logs on failure
         if: failure()
         run: cat /tmp/fymusic-pages.log || true
