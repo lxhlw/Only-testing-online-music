@@ -568,7 +568,9 @@ async function fetchFlowerResolverFast(target, request) {
       if(!payload)throw new Error('Flower host returned no usable resolver payload');
       return new Response(payload.body,{
         status:200,
-        headers:{'Content-Type':payload.contentType,'Cache-Control':'no-store'}
+        // Fixed route label only, never the upstream URL, credentials or tag.
+        headers:{'Content-Type':payload.contentType,'Cache-Control':'no-store',
+          'X-FyMusic-Flower-Route':route}
       });
     }catch(error){
       outcomes.push({route,code:classify(error)});
@@ -583,6 +585,8 @@ async function fetchFlowerResolverFast(target, request) {
       throw new Error(/^FLOWER_SOCKET_[A-Z0-9_]+$/.test(String(body?.diagnostic||''))
         ? body.diagnostic : 'FLOWER_SOCKET_UNKNOWN');
     }
+    // Include the winning same-provider transport in safe diagnostics.
+    response.headers.set('X-FyMusic-Flower-Route','canonical-socket');
     return response;
   }).catch(error=>{
     outcomes.push({route:'canonical-socket',code:classify(error)});
