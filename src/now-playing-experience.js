@@ -12,6 +12,7 @@ const commentList=$('comments-list'),commentStatus=$('comments-status');
 const fullSeek=$('detail-seek'),baseSeek=$('player-seek');
 const artCache=new Map(),commentCache=new Map();
 let track=null,sequence=0,metaAbort=null,commentAbort=null,activeTab='lyrics',lastFocused=null;
+let seekPreview=false,ignoreCancelledSeekChange=false;
 const isOpen=()=>overlay&&!overlay.classList.contains('hidden');
 const sourceNames={wy:'网易云音乐',kw:'酷我音乐',tx:'QQ音乐',kg:'酷狗音乐',mg:'咪咕音乐'};
 const formatSeconds=value=>{
@@ -208,8 +209,9 @@ function setTrack(next){
   const id=String(next.id||''),source=String(next.source||'wy');
   const key=source+':'+id;
   sequence++;
-  // A track change invalidates any lyric-centering frame from the old song.
+  // A track change invalidates old lyric scroll and uncommitted seek preview.
   cancelLyricCenter();
+  cancelSeekPreview();
   const currentSequence=sequence;
   metaAbort?.abort();commentAbort?.abort();
   track={id,source,sequence:currentSequence,name:String(next.name||'未知歌曲'),
@@ -229,9 +231,12 @@ function updateTransport(){
   if(!audio||!isOpen())return;
   const valid=Number.isFinite(audio.duration)&&audio.duration>0;
   const progress=valid?Math.max(0,Math.min(1000,Math.round(audio.currentTime/audio.duration*1000))):0;
-  if(!fullSeek.matches(':active')&&document.activeElement!==fullSeek)fullSeek.value=String(progress);
   fullSeek.disabled=Boolean(baseSeek?.disabled)||!valid;
-  $('detail-current-time').textContent=formatSeconds(audio.currentTime);
+  if(fullSeek.disabled&&seekPreview)cancelSeekPreview();
+  if(!seekPreview)fullSeek.value=String(progress);
+  const shownSeconds=seekPreview&&valid?Number(fullSeek.value)/1000*audio.duration:audio.currentTime;
+  fullSeek.setAttribute('aria-valuetext',formatSeconds(shownSeconds)+' / '+formatSeconds(valid?audio.duration:0));
+  $('detail-current-time').textContent=formatSeconds(shownSeconds);
   $('detail-duration').textContent=formatSeconds(valid?audio.duration:0);
   const playing=!audio.paused&&!audio.ended;
   $('detail-toggle-btn').setAttribute('aria-label',playing?'暂停':'播放');
@@ -289,11 +294,13 @@ function openScreen(){
 function closeScreen(){
   if(!isOpen())return;
   cancelLyricCenter();
+  cancelSeekPreview();
   overlay.classList.add('hidden');
   overlay.setAttribute('aria-hidden','true');
   document.documentElement.classList.remove('lyrics-open');
   coverButton?.setAttribute('aria-expanded','false');
-  lastFocused?.focus?.();
+  const target=lastFocused?.isConnected?lastFocused:coverButton;
+  target?.focus?.({preventScroll:true});
 }
 coverButton?.addEventListener('click',()=>isOpen()?closeScreen():openScreen());
 $('lyrics-close-btn')?.addEventListener('click',closeScreen);
@@ -355,21 +362,62 @@ detailVolume?.addEventListener('input',()=>{
 baseVolume?.addEventListener('input',syncVolume);
 syncVolume();
 
+function cancelSeekPreview(){
+  if(!seekPreview)return;
+  seekPreview=false;
+  window.LXPlayerControls?.cancelSeek?.();
+  // This only restores presentation: it never writes audio.currentTime.
+  updateTransport();
+}
 fullSeek?.addEventListener('input',()=>{
-  if(!baseSeek||baseSeek.disabled)return;
+  if(!isOpen()||!baseSeek||baseSeek.disabled)return;
+  ignoreCancelledSeekChange=false;
+  seekPreview=true;
   baseSeek.value=fullSeek.value;
   baseSeek.dispatchEvent(new Event('input',{bubbles:true}));
   const value=Number(fullSeek.value)/1000*(Number(audio?.duration)||0);
   $('detail-current-time').textContent=formatSeconds(value);
+  fullSeek.setAttribute('aria-valuetext',formatSeconds(value)+' / '+formatSeconds(audio?.duration));
 });
 fullSeek?.addEventListener('change',()=>{
-  if(!baseSeek||baseSeek.disabled)return;
+  if(ignoreCancelledSeekChange){
+    ignoreCancelledSeekChange=false;
+    cancelSeekPreview();
+    return;
+  }
+  if(!isOpen()||!baseSeek||baseSeek.disabled){
+    cancelSeekPreview();return;
+  }
+  seekPreview=false;
   baseSeek.value=fullSeek.value;
   baseSeek.dispatchEvent(new Event('change',{bubbles:true}));
   fullSeek.blur();
+  updateTransport();
 });
+fullSeek?.addEventListener('pointercancel',()=>{
+  ignoreCancelledSeekChange=true;
+  cancelSeekPreview();
+});
+fullSeek?.addEventListener('keydown',event=>{
+  if(event.key==='Escape'&&seekPreview){
+    event.preventDefault();event.stopPropagation();
+    ignoreCancelledSeekChange=true;
+    cancelSeekPreview();
+  }
+});
+window.addEventListener('resize',()=>{
+  if(isOpen()&&activeTab==='lyrics')scheduleLyricCenter(true);
+},{passive:true});
+window.visualViewport?.addEventListener('resize',()=>{
+  if(isOpen()&&activeTab==='lyrics')scheduleLyricCenter(true);
+},{passive:true});
 for(const event of ['timeupdate','durationchange','loadedmetadata','play','playing','pause','ended','waiting','emptied'])
   audio?.addEventListener(event,updateTransport);
+// Keep programmatic keyboard focus inside the modal while it is visible.
+document.addEventListener('focusin',event=>{
+  if(isOpen()&&!overlay.contains(event.target))
+    $('lyrics-close-btn')?.focus({preventScroll:true});
+});
 overlay?.addEventListener('keydown',event=>{
   if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeScreen();return;}
   if(event.key!=='Tab')return;
