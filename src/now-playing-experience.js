@@ -415,6 +415,29 @@ window.addEventListener('resize',()=>{
 window.visualViewport?.addEventListener('resize',()=>{
   if(isOpen()&&activeTab==='lyrics')scheduleLyricCenter(true);
 },{passive:true});
+// A mobile browser may suspend the page in the middle of a touch seek.
+// Cancel only the UI preview; never pause, play, reload, or overwrite media
+// currentTime when the OS sends the tab to the background.
+const suspendImmersive=()=>{
+  cancelLyricCenter();
+  if(seekPreview){
+    ignoreCancelledSeekChange=true;
+    cancelSeekPreview();
+  }
+};
+const resumeImmersive=()=>{
+  if(document.hidden||!isOpen())return;
+  updateTransport();
+  if(activeTab==='lyrics')scheduleLyricCenter(true);
+  if(!overlay.contains(document.activeElement))
+    $('lyrics-close-btn')?.focus({preventScroll:true});
+};
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden)suspendImmersive();
+  else resumeImmersive();
+});
+window.addEventListener('pagehide',suspendImmersive);
+window.addEventListener('pageshow',resumeImmersive);
 for(const event of ['timeupdate','durationchange','loadedmetadata','play','playing','pause','ended','waiting','emptied'])
   audio?.addEventListener(event,updateTransport);
 // Keep programmatic keyboard focus inside the modal while it is visible.
