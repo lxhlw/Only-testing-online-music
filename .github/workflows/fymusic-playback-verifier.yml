@@ -144,7 +144,10 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: |
-          xvfb-run -a -s "-screen 0 1440x900x24" node scripts/test-fymusic-phase31-seek-state-browser.mjs
+          for trial in 1 2 3; do
+            echo "FYMUSIC_PHASE31_INDEPENDENT_TRIAL=$trial"
+            xvfb-run -a -s "-screen 0 1440x900x24" node scripts/test-fymusic-phase31-seek-state-browser.mjs
+          done
           xvfb-run -a -s "-screen 0 1440x900x24" node scripts/test-fymusic-phase30-raw-cdp-real-hidden.mjs
       - name: Verify authorized real media and invalid-response rejection in Chromium
         env:

@@ -2046,6 +2046,13 @@
     if (state.source !== 'mg') clearMiguPlaybackDeadline(state);
     state.waitingForAudio = false;
     state.playing = true;
+    // The native timeupdate listener can refresh seek *before* this callback
+    // confirms progress. Recalculate from the newly confirmed state now,
+    // without waiting for the next (potentially throttled) media event.
+    // This preserves the existing state-derived validity guard.
+    if (global.LXPlayerControls && typeof global.LXPlayerControls.refresh === 'function') {
+      global.LXPlayerControls.refresh();
+    }
     if (global.LXMusicLibrary) {
       global.LXMusicLibrary.addHistory(state.music);
       renderLibrary();

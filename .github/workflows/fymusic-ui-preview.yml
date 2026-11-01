@@ -197,7 +197,10 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
         run: |
-          xvfb-run -a -s "-screen 0 1440x900x24" node scripts/test-fymusic-phase31-seek-state-browser.mjs
+          for trial in 1 2 3; do
+            echo "FYMUSIC_PHASE31_INDEPENDENT_TRIAL=$trial"
+            xvfb-run -a -s "-screen 0 1440x900x24" node scripts/test-fymusic-phase31-seek-state-browser.mjs
+          done
           xvfb-run -a -s "-screen 0 1440x900x24" node scripts/test-fymusic-phase30-raw-cdp-real-hidden.mjs
       - name: Verify modern frame coherence on actual Cloudflare Edge
         env:

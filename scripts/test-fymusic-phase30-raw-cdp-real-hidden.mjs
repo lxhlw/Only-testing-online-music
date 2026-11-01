@@ -190,6 +190,13 @@ try{
   assert.equal(started.audioElements,1);
   assert.equal(started.mediaError,0);
   assert.ok(http.some(x=>x.format==='flac24'&&x.status===206));
+  // A decoded, confirmed track must make its real seek UI available.
+  // Do not silently skip the cancellation assertion on a slow CI run.
+  await waitFor(()=>evaluate(String.raw`(()=>{
+    const a=document.querySelector('#audio');
+    return Boolean(a&&a.duration>0&&!a.paused&&
+      !document.querySelector('#player-seek')?.disabled);
+  })()`),'real seek enabled after playing confirmation',4000);
   // Start a real UI seek preview, do not commit it.
   const preview=await evaluate(String.raw`(()=>{
     document.querySelector('#player-cover-button').click();
@@ -208,7 +215,8 @@ try{
     };
   })()`);
   assert.equal(preview.overlay,'false');
-  if(preview.available)assert.equal(preview.seekHidden,false);
+  assert.equal(preview.available,true);
+  assert.equal(preview.seekHidden,false);
   console.log('FYMUSIC_PHASE30_PREVIEW_CAPABILITY '+JSON.stringify(preview));
   // Opening another Chrome native target, not a Playwright page, delivers
   // genuine browser-origin visibilitychange and document.hidden=true.
@@ -218,7 +226,7 @@ try{
     return s.hidden&&s.visibility==='hidden'&&
       s.events.includes('hidden')?s:null;
   },'actual hidden state and native visibilitychange event',6000);
-  if(preview.available)assert.equal(hidden.seekHidden,true,
+  assert.equal(hidden.seekHidden,true,
     'the real visibility event must discard an unfinished seek preview');
   assert.ok(hidden.src.includes('format=flac24'));
   await delay(800);
@@ -272,7 +280,7 @@ try{
     actualHiddenDocument:true,visibilityEvents:playing.events,
     nativeHiddenMediaTime:+held.seconds.toFixed(3),
     foregroundProgress:true,seekPreviewAvailable:preview.available,
-    uncommittedSeekCancelled:preview.available?hidden.seekHidden===true:null,
+    uncommittedSeekCancelled:hidden.seekHidden===true,
     oldSeekNotCommitted:true,
     explicitOSPausePreservedThroughBackground:true,
     explicitOSResumeContinues:true,

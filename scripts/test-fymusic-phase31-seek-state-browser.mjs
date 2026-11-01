@@ -254,6 +254,12 @@ try{
     throw error;
   }
   console.log('FYMUSIC_PHASE31_SEEK_READY '+JSON.stringify(readyToSeek.phase31));
+  const transition=await evaluate(String.raw`(window.__phase31Trace||[])
+    .find(x=>x.event==='media:timeupdate'&&x.stateWaiting===false)||null`);
+  assert.ok(transition,'expected real timeupdate with confirmed playback state');
+  console.log('FYMUSIC_PHASE31_AT_CONFIRM '+JSON.stringify(transition));
+  assert.equal(transition.baseDisabled,false,
+    'base seek must refresh in the confirming media event, not the next tick');
   // Start a real UI seek preview, do not commit it.
   const preview=await evaluate(String.raw`(()=>{
     document.querySelector('#player-cover-button').click();
