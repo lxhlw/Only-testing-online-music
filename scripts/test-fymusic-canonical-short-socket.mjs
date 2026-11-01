@@ -25,7 +25,13 @@ const encoder=new TextEncoder();
 const decoder=new TextDecoder();
 let scenario='short-ok';
 let captured=[];
-globalThis.fetch=async()=>new Response('Origin unavailable',{status:503});
+globalThis.fetch=async url=>{
+  if(scenario==='alias-fast' && String(url).startsWith('http://tm.tempmusic.tk/url/'))
+    return new Response(JSON.stringify({
+      code:0,data:'https://media.example.test/synthetic.mp3'
+    }),{status:200,headers:{'Content-Type':'application/json'}});
+  return new Response('Origin unavailable',{status:503});
+};
 globalThis.__fymusicMockConnect=({hostname,port})=>{
   assert.equal(hostname,'97.64.37.235');
   assert.equal(port,80);
@@ -41,6 +47,7 @@ globalThis.__fymusicMockConnect=({hostname,port})=>{
       async read(){
         if(readOnce)return {done:true};
         readOnce=true;
+        if(scenario==='alias-fast') await new Promise(r=>setTimeout(r,40));
         const isShort=requestText.startsWith('GET /url/kw/');
         const status=!isShort?(scenario==='full-400'?400:404):
           scenario==='short-ok'?200:404;
@@ -92,9 +99,18 @@ try {
     'Both failed TCP paths must be diagnosable without request URLs');
   assert.ok(!JSON.stringify(failure).includes(tag),
     'Failure summaries must never echo signed headers');
+  // The HTTP alias may win while the original TCP request is pending. A
+  // belated original 404 must not start unnecessary short-path traffic.
+  scenario='alias-fast';captured=[];
+  const aliasWinner=await module.fetchFlowerResolverFast(target,request);
+  assert.equal(aliasWinner.status,200);
+  assert.equal(aliasWinner.headers.get('X-FyMusic-Flower-Route'),'tm-short');
+  await new Promise(r=>setTimeout(r,90));
+  assert.equal(captured.length,1,'Cancelled race must not launch short TCP');
   console.log('FYMUSIC_CANONICAL_SHORT_SOCKET_UNIT_PASS '+
     JSON.stringify({shortOn404:true,noShortOn400:true,sameProvider:true,
-      preserveTag:true,canonicalHeaderParity:true,boundedFailure:true}));
+      preserveTag:true,canonicalHeaderParity:true,boundedFailure:true,
+      noObsoleteSocketAfterWinner:true}));
 } finally {
   globalThis.fetch=originalFetch;
   if(originalConnect===undefined)delete globalThis.__fymusicMockConnect;
