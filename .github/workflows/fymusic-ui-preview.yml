@@ -127,6 +127,8 @@ jobs:
           node --check scripts/diagnostics/fymusic-startup-profile.mjs
       - name: Generate original MP3 AAC-LC and FLAC test assets for isolated QA
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
           command -v ffmpeg
           command -v ffprobe
           node scripts/generate-fymusic-phase25-fixtures.mjs
