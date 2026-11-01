@@ -85,6 +85,18 @@ try{
    'closing source picker with Escape must restore trigger focus');
  assert.equal(await channels.evaluate(el=>el.parentElement===document.body),false);
  await toggle.tap();
+ // Slow Edge source initialization can rebuild #channel-list after the first
+ // fixture insertion. Reinsert the synthetic choice inside the open popover
+ // immediately before the real touch target test. No live source is selected.
+ await channels.evaluate(group=>{
+   if([...group.querySelectorAll('.channel-button')].some(
+     button=>button.textContent==='QA Channel A'))return;
+   const button=document.createElement('button');
+   button.type='button';
+   button.className='channel-button';
+   button.textContent='QA Channel A';
+   group.appendChild(button);
+ });
  await page.getByRole('button',{name:'QA Channel A',exact:true}).tap();
  assert.equal(await toggle.getAttribute('aria-expanded'),'false');
  assert.equal(await toggle.evaluate(el=>el===document.activeElement),true,
