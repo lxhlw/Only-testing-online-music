@@ -111,7 +111,7 @@ jobs:
             -o /tmp/fymusic-edge-ui.js
           grep -Fq 'pendingUpdates=new Set()' /tmp/fymusic-edge-ui.js
           echo 'FYMUSIC_REAL_EDGE_PREVIEW_UI_ASSET_PASS'
-      - name: Install Chromium for unmocked REAL Edge playback
+      - name: Install Chromium for responsive UI browser tests
         run: npx playwright install --with-deps chromium
       - name: Verify modern frame coherence on actual Cloudflare Edge
         env:
