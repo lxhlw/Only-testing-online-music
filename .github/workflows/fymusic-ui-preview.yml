@@ -20,6 +20,7 @@ on:
       - 'scripts/test-fymusic-real-media-lifecycle-browser.mjs'
       - 'scripts/test-fymusic-range-stream-recovery-browser.mjs'
       - 'scripts/test-fymusic-throttled-buffering-browser.mjs'
+      - 'scripts/test-fymusic-mse-starvation-browser.mjs'
       - 'functions/api/fymusic-range-selftest.js'
       - 'functions/api/fymusic-throttle-selftest.js'
       - 'src/music-lyrics.js'
@@ -98,6 +99,7 @@ jobs:
           node --check scripts/test-fymusic-real-media-lifecycle-browser.mjs
           node --check scripts/test-fymusic-range-stream-recovery-browser.mjs
           node --check scripts/test-fymusic-throttled-buffering-browser.mjs
+          node --check scripts/test-fymusic-mse-starvation-browser.mjs
           node --check functions/api/fymusic-range-selftest.js
           node --check functions/api/fymusic-throttle-selftest.js
           node --check src/music-lyrics.js
@@ -206,6 +208,10 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
         run: node scripts/test-fymusic-throttled-buffering-browser.mjs
+      - name: Confirm native buffering and recovery using real Edge MP3 MSE feed
+        env:
+          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: node scripts/test-fymusic-mse-starvation-browser.mjs
       - name: Profile startup CPU on non-production Edge preview
         if: always() && steps.preview.outcome == 'success'
         timeout-minutes: 2

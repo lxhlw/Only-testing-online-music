@@ -88,16 +88,29 @@ try{
  // Slow Edge source initialization can rebuild #channel-list after the first
  // fixture insertion. Reinsert the synthetic choice inside the open popover
  // immediately before the real touch target test. No live source is selected.
- await channels.evaluate(group=>{
-   if([...group.querySelectorAll('.channel-button')].some(
-     button=>button.textContent==='QA Channel A'))return;
-   const button=document.createElement('button');
-   button.type='button';
-   button.className='channel-button';
-   button.textContent='QA Channel A';
-   group.appendChild(button);
- });
- await page.getByRole('button',{name:'QA Channel A',exact:true}).tap();
+ // Source initialization may asynchronously replace the channel list between
+ // fixture insertion and tap. Keep the REAL touch interaction, but reinsert
+ // the harmless QA-only choice on a bounded retry when its DOM node detaches.
+ let qaTapped=false;
+ for(let attempt=0;attempt<5&&!qaTapped;attempt++){
+   await channels.evaluate(group=>{
+     if([...group.querySelectorAll('.channel-button')].some(
+       button=>button.textContent==='QA Channel A'))return;
+     const button=document.createElement('button');
+     button.type='button';
+     button.className='channel-button';
+     button.textContent='QA Channel A';
+     group.appendChild(button);
+   });
+   try{
+     await page.getByRole('button',{name:'QA Channel A',exact:true})
+       .tap({timeout:3500});
+     qaTapped=true;
+   }catch(e){
+     if(attempt===4)throw e;
+   }
+ }
+ assert.ok(qaTapped,'real QA channel touch must succeed');
  assert.equal(await toggle.getAttribute('aria-expanded'),'false');
  assert.equal(await toggle.evaluate(el=>el===document.activeElement),true,
    'touch selection must restore focus to source trigger');
