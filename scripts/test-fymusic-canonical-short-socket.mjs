@@ -71,8 +71,10 @@ try {
     'Short fallback must stay on same Flower server');
   assert.ok(captured.every(x=>x.includes('tag: '+tag)),
     'Short fallback must preserve source-generated tag');
-  assert.ok(captured.every(x=>!x.includes('MUST_NOT_LEAK')),
-    'Unrelated credentials may not be forwarded');
+  assert.ok(captured.every(x=>x.includes('MUST_NOT_LEAK')),
+    'Both canonical TCP paths must preserve the original LX request protocol');
+  // HTTP DNS aliases use the separate filtered header allowlist; only this
+  // original-IP socket carries the source-specified original header set.
 
   scenario='full-400';captured=[];
   const wrongSignature=await module.fetchFlowerResolverFast(target,request);
@@ -92,7 +94,7 @@ try {
     'Failure summaries must never echo signed headers');
   console.log('FYMUSIC_CANONICAL_SHORT_SOCKET_UNIT_PASS '+
     JSON.stringify({shortOn404:true,noShortOn400:true,sameProvider:true,
-      preserveTag:true,noCredentialLeak:true,boundedFailure:true}));
+      preserveTag:true,canonicalHeaderParity:true,boundedFailure:true}));
 } finally {
   globalThis.fetch=originalFetch;
   if(originalConnect===undefined)delete globalThis.__fymusicMockConnect;
