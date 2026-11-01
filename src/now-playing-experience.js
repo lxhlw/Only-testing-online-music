@@ -403,6 +403,10 @@ fullSeek?.addEventListener('keydown',event=>{
     event.preventDefault();event.stopPropagation();
     ignoreCancelledSeekChange=true;
     cancelSeekPreview();
+    // The base player may disable the seek control after cancellation.
+    // Move focus to a stable button within the dialog so a second Escape
+    // still closes the immersive screen instead of landing on <body>.
+    $('lyrics-close-btn')?.focus({preventScroll:true});
   }
 });
 window.addEventListener('resize',()=>{
