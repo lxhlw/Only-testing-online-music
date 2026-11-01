@@ -12,6 +12,7 @@ on:
       - 'src/now-playing-experience.js'
       - 'src/music-lyrics.js'
       - 'scripts/test-fymusic-long-list-lyrics-browser.mjs'
+      - 'scripts/test-fymusic-playlist-incremental-browser.mjs'
       - 'scripts/test-fymusic-frame-coherence-browser.mjs'
       - 'src/source-manager.js'
       - 'scripts/test-fymusic-runtime-request-privacy.mjs'
@@ -45,6 +46,7 @@ jobs:
           node --check src/now-playing-experience.js
           node --check src/music-lyrics.js
           node --check scripts/test-fymusic-long-list-lyrics-browser.mjs
+          node --check scripts/test-fymusic-playlist-incremental-browser.mjs
           node --check scripts/test-fymusic-frame-coherence-browser.mjs
           node --check scripts/test-fymusic-runtime-request-privacy.mjs
           node --test scripts/test-fymusic-playback-core.mjs scripts/test-fymusic-playback-network.mjs scripts/test-fymusic-chain-report.mjs scripts/test-fymusic-cross-platform-match.mjs
@@ -84,6 +86,10 @@ jobs:
         env:
           TEST_BASE_URL: ${{ 'http://127.0.0.1:8788' }}
         run: node scripts/test-fymusic-long-list-lyrics-browser.mjs
+      - name: Preserve playlist rows and keyboard focus while appending a new page
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-fymusic-playlist-incremental-browser.mjs
       - name: Test LX request redaction without changing signed upstream transport
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
