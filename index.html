@@ -838,6 +838,7 @@
         }
         var playlist=data&&data.playlist?data.playlist:item;
         var pageSongs=data&&data.songs instanceof Array?data.songs:[];
+        var previousRowCount=append?playlistDetailSongs.length:0;
         if(append){
           var known={};
           for(var k=0;k<playlistDetailSongs.length;k++)known[playlistSongKey(playlistDetailSongs[k])]=true;
@@ -856,7 +857,7 @@
         el('playlist-detail-count').innerHTML=escapeHtml((playlist.trackCount||playlistDetailSongs.length)+' 首歌曲');
         el('playlist-detail-description').innerHTML=escapeHtml(playlist.description||item.description||'暂无简介');
         el('playlist-detail-status').innerHTML='已加载 '+playlistDetailSongs.length+' 首歌曲';
-        renderPlaylistSongs(playlistDetailSongs);
+        renderPlaylistSongs(playlistDetailSongs,previousRowCount);
         if(playlistHasMore&&typeof IntersectionObserver!=='function'){
           more.innerHTML='加载更多歌曲';removeClass(more,'hidden');
         }
@@ -919,6 +920,7 @@
             // asynchronous results into another playlist.
             if(playlistDetailItem&&String(playlistDetailItem.id)===playlistId&&
               capturedGeneration===playlistPageGeneration){
+              var priorRows=playlistDetailSongs.length;
               var seen={};
               for(var k=0;k<playlistDetailSongs.length;k++)seen[playlistSongKey(playlistDetailSongs[k])]=true;
               var changed=false;
@@ -931,7 +933,7 @@
               playlistNextOffset=nextOffset;
               playlistHasMore=hasMore;
               el('playlist-detail-status').innerHTML='已加载 '+playlistDetailSongs.length+' 首歌曲';
-              if(changed)renderPlaylistSongs(playlistDetailSongs);
+              if(changed)renderPlaylistSongs(playlistDetailSongs,priorRows);
               if(hasMore&&typeof IntersectionObserver!=='function')removeClass(el('playlist-load-more-btn'),'hidden');
               else addClass(el('playlist-load-more-btn'),'hidden');
               updatePlaylistDetailFooter(false);
@@ -945,14 +947,19 @@
       }
     }
 
-    function renderPlaylistSongs(list){
+    function renderPlaylistSongs(list,fromIndex){
       var host=el('playlist-detail-songs');
-      host.innerHTML='';
+      var start=Number(fromIndex)||0;
+      // Append only the unseen page. Keep existing rows (and their focus,
+      // scroll position, event handlers and current-track indication) intact.
+      // If another playlist replaced the DOM, safely rebuild from index 0.
+      if(start<0||start>list.length||host.children.length!==start||
+         (start>0&&!hasClass(host.firstElementChild,'playlist-song-row')))
+        start=0;
+      if(start===0)host.innerHTML='';
       if(!list.length){host.innerHTML='<div class="empty-note">该歌单没有可用歌曲</div>';return;}
-      // DOM fragment + one append prevents large playlists from flashing on
-      // old Via WebViews; each row is keyboard- and touch-operable.
       var fragment=document.createDocumentFragment();
-      for(var i=0;i<list.length;i+=1){
+      for(var i=start;i<list.length;i+=1){
         var item=list[i]||{};
         var row=document.createElement('div');
         row.className='playlist-song-row search-row';
