@@ -35,6 +35,7 @@ on:
       - 'scripts/test-fymusic-phase27-real-ui-state-browser.mjs'
       - 'scripts/test-fymusic-phase28-quality-platform-os-browser.mjs'
       - 'scripts/test-fymusic-phase29-real-tab-lifecycle-browser.mjs'
+      - 'scripts/test-fymusic-phase30-raw-cdp-real-hidden.mjs'
       - 'scripts/generate-fymusic-phase26-fixtures.mjs'
       - 'scripts/generate-fymusic-phase25-fixtures.mjs'
       - 'functions/api/fymusic-codec-selftest.js'
@@ -99,6 +100,7 @@ jobs:
           node --check scripts/test-fymusic-phase27-real-ui-state-browser.mjs
           node --check scripts/test-fymusic-phase28-quality-platform-os-browser.mjs
           node --check scripts/test-fymusic-phase29-real-tab-lifecycle-browser.mjs
+          node --check scripts/test-fymusic-phase30-raw-cdp-real-hidden.mjs
           node --check scripts/generate-fymusic-phase26-fixtures.mjs
           node --check scripts/generate-fymusic-phase25-fixtures.mjs
           node --check functions/api/fymusic-codec-selftest.js
@@ -252,6 +254,10 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-fymusic-phase29-real-tab-lifecycle-browser.mjs
+      - name: Validate genuine Chrome hidden/visible events on headed Xvfb with original hi-res media
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: xvfb-run -a -s "-screen 0 1440x900x24" node scripts/test-fymusic-phase30-raw-cdp-real-hidden.mjs
       - name: Show site logs on failure
         if: failure()
         run: cat /tmp/fymusic-pages.log || true

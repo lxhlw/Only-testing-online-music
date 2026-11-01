@@ -31,6 +31,7 @@ on:
       - 'scripts/test-fymusic-phase27-real-ui-state-browser.mjs'
       - 'scripts/test-fymusic-phase28-quality-platform-os-browser.mjs'
       - 'scripts/test-fymusic-phase29-real-tab-lifecycle-browser.mjs'
+      - 'scripts/test-fymusic-phase30-raw-cdp-real-hidden.mjs'
       - 'scripts/generate-fymusic-phase26-fixtures.mjs'
       - 'scripts/generate-fymusic-phase25-fixtures.mjs'
       - 'functions/api/fymusic-codec-selftest.js'
@@ -124,6 +125,7 @@ jobs:
           node --check scripts/test-fymusic-phase27-real-ui-state-browser.mjs
           node --check scripts/test-fymusic-phase28-quality-platform-os-browser.mjs
           node --check scripts/test-fymusic-phase29-real-tab-lifecycle-browser.mjs
+          node --check scripts/test-fymusic-phase30-raw-cdp-real-hidden.mjs
           node --check scripts/generate-fymusic-phase26-fixtures.mjs
           node --check scripts/generate-fymusic-phase25-fixtures.mjs
           node --check functions/api/fymusic-codec-selftest.js
@@ -289,6 +291,10 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
         run: node scripts/test-fymusic-phase29-real-tab-lifecycle-browser.mjs
+      - name: Validate actual Chrome document.hidden and original audio on isolated Edge preview
+        env:
+          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: xvfb-run -a -s "-screen 0 1440x900x24" node scripts/test-fymusic-phase30-raw-cdp-real-hidden.mjs
       - name: Profile startup CPU on non-production Edge preview
         if: always() && steps.preview.outcome == 'success'
         timeout-minutes: 2
