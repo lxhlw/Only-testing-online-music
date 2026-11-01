@@ -29,6 +29,7 @@ on:
       - 'scripts/test-fymusic-phase25-codecs-browser.mjs'
       - 'scripts/test-fymusic-phase26-metadata-hires-browser.mjs'
       - 'scripts/test-fymusic-phase27-real-ui-state-browser.mjs'
+      - 'scripts/test-fymusic-phase28-quality-platform-os-browser.mjs'
       - 'scripts/generate-fymusic-phase26-fixtures.mjs'
       - 'scripts/generate-fymusic-phase25-fixtures.mjs'
       - 'functions/api/fymusic-codec-selftest.js'
@@ -120,6 +121,7 @@ jobs:
           node --check scripts/test-fymusic-phase25-codecs-browser.mjs
           node --check scripts/test-fymusic-phase26-metadata-hires-browser.mjs
           node --check scripts/test-fymusic-phase27-real-ui-state-browser.mjs
+          node --check scripts/test-fymusic-phase28-quality-platform-os-browser.mjs
           node --check scripts/generate-fymusic-phase26-fixtures.mjs
           node --check scripts/generate-fymusic-phase25-fixtures.mjs
           node --check functions/api/fymusic-codec-selftest.js
@@ -277,6 +279,10 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
         run: node scripts/test-fymusic-phase27-real-ui-state-browser.mjs
+      - name: Verify requested quality, search platform and native OS playback state on Edge
+        env:
+          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: node scripts/test-fymusic-phase28-quality-platform-os-browser.mjs
       - name: Profile startup CPU on non-production Edge preview
         if: always() && steps.preview.outcome == 'success'
         timeout-minutes: 2

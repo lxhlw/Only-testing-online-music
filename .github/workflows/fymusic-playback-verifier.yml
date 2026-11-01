@@ -33,6 +33,7 @@ on:
       - 'scripts/test-fymusic-phase25-codecs-browser.mjs'
       - 'scripts/test-fymusic-phase26-metadata-hires-browser.mjs'
       - 'scripts/test-fymusic-phase27-real-ui-state-browser.mjs'
+      - 'scripts/test-fymusic-phase28-quality-platform-os-browser.mjs'
       - 'scripts/generate-fymusic-phase26-fixtures.mjs'
       - 'scripts/generate-fymusic-phase25-fixtures.mjs'
       - 'functions/api/fymusic-codec-selftest.js'
@@ -95,6 +96,7 @@ jobs:
           node --check scripts/test-fymusic-phase25-codecs-browser.mjs
           node --check scripts/test-fymusic-phase26-metadata-hires-browser.mjs
           node --check scripts/test-fymusic-phase27-real-ui-state-browser.mjs
+          node --check scripts/test-fymusic-phase28-quality-platform-os-browser.mjs
           node --check scripts/generate-fymusic-phase26-fixtures.mjs
           node --check scripts/generate-fymusic-phase25-fixtures.mjs
           node --check functions/api/fymusic-codec-selftest.js
@@ -240,6 +242,10 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-fymusic-phase27-real-ui-state-browser.mjs
+      - name: Verify quality and platform transitions, Media Session and lifecycle with native audio
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-fymusic-phase28-quality-platform-os-browser.mjs
       - name: Show site logs on failure
         if: failure()
         run: cat /tmp/fymusic-pages.log || true
