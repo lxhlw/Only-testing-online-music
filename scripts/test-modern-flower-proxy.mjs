@@ -42,6 +42,7 @@ try{
   const ok=await module.fetchFlowerResolverFast(target,request);
   const elapsed=performance.now()-start;
   assert.equal(ok.status,200);
+  assert.equal(ok.headers.get('X-FyMusic-Flower-Route'),'tm-short');
   assert.ok(elapsed<700,'Parallel Flower host must win without waiting for other hosts or socket');
   const data=await ok.json();
   assert.equal(data.data,'https://media.example.test/allowed-song.mp3');
@@ -69,6 +70,7 @@ try{
   };
   const wildcard=await module.fetchFlowerResolverFast(target,request);
   assert.equal(wildcard.status,200);
+  assert.equal(wildcard.headers.get('X-FyMusic-Flower-Route'),'sslip-full');
   assert.equal((await wildcard.json()).data,'https://media.example.test/flower-wildcard.mp3');
   assert.ok(calls.some(c=>c.url.includes('sslip.io/flower/v1/url/')),'DNS alias must be included in the same-provider race');
   assert.ok(calls.every(v=>v.headers.tag===referenceTag),
@@ -80,6 +82,8 @@ try{
   };
   const failed=await module.fetchFlowerResolverFast(target,request);
   assert.equal(failed.status,502);
+  assert.equal(failed.headers.get('X-FyMusic-Flower-Route'),null,
+    'Failures must not pretend a route succeeded');
   const err=await failed.json();
   assert.equal(err.error,'Flower resolver unavailable');
   assert.equal(err.diagnostic,'FLOWER_UPSTREAM_UNAVAILABLE');
