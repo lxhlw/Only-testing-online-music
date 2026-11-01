@@ -91,17 +91,22 @@ try{
    'touch selection must restore focus to source trigger');
  await toggle.tap();
  await page.setViewportSize({width:375,height:780});
+ await page.waitForFunction(()=>
+   document.querySelector('.mobile-channel-toggle')?.getAttribute('aria-expanded')==='false',
+   null,{timeout:3500});
  assert.equal(await toggle.getAttribute('aria-expanded'),'false',
    'viewport geometry changes must close measured source popover');
  assert.equal(await channels.evaluate(el=>el.parentElement===document.body),false);
  // Resize must restore the exact navigation DOM to its original desktop dock.
  await page.setViewportSize({width:1024,height:768});
- await page.waitForFunction(()=>!matchMedia('(max-width:740px)').matches);
+ await page.waitForFunction(()=>!matchMedia('(max-width:740px)').matches&&
+   document.querySelector('.nav-rail')?.inert===false);
  assert.equal(await navRail.evaluate(el=>el.inert),false);
  assert.equal(await navRail.getAttribute('role'),null);
  assert.equal(await menu.isVisible(),false);
  await page.setViewportSize({width:390,height:844});
- await page.waitForFunction(()=>matchMedia('(max-width:740px)').matches);
+ await page.waitForFunction(()=>matchMedia('(max-width:740px)').matches&&
+   document.querySelector('.nav-rail')?.inert===true);
  assert.equal(await navRail.evaluate(el=>el.inert),true);
  assert.deepEqual(errors,[]);
  console.log('FYMUSIC_MODERN_MOBILE_A11Y_PASS '+JSON.stringify({
