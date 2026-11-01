@@ -198,14 +198,18 @@ function setTab(tab){
   commentView.hidden=activeTab!=='comments';
   lyricView.classList.toggle('hidden',activeTab!=='lyrics');
   commentView.classList.toggle('hidden',activeTab!=='comments');
-  if(activeTab==='comments')loadComments();
-  else requestAnimationFrame(()=>centerActiveLyric(true));
+  if(activeTab==='comments'){
+    cancelLyricCenter();
+    loadComments();
+  }else scheduleLyricCenter(true);
 }
 function setTrack(next){
   if(!next)return;
   const id=String(next.id||''),source=String(next.source||'wy');
   const key=source+':'+id;
   sequence++;
+  // A track change invalidates any lyric-centering frame from the old song.
+  cancelLyricCenter();
   const currentSequence=sequence;
   metaAbort?.abort();commentAbort?.abort();
   track={id,source,sequence:currentSequence,name:String(next.name||'未知歌曲'),
@@ -246,6 +250,20 @@ function centerActiveLyric(instant=false){
   lyricScroll.scrollTo({top:Math.max(0,target),behavior:instant||window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
 }
 let lastActiveLyric=null;
+let pendingLyricCenter=0;
+function cancelLyricCenter(){
+  if(pendingLyricCenter)cancelAnimationFrame(pendingLyricCenter);
+  pendingLyricCenter=0;
+}
+function scheduleLyricCenter(instant=false){
+  // Rapid lyric changes/seeks may happen before paint. Center only the final
+  // active line, at most once per animation frame, never a stale prior track.
+  cancelLyricCenter();
+  pendingLyricCenter=requestAnimationFrame(()=>{
+    pendingLyricCenter=0;
+    centerActiveLyric(instant);
+  });
+}
 if(lyricLines)new MutationObserver(()=>{
   // The small player lyric summary is maintained independently by modern-ui.
   // Avoid querying/centering a hidden immersive screen on each lyric change.
@@ -253,7 +271,7 @@ if(lyricLines)new MutationObserver(()=>{
   const active=lyricLines.querySelector('.lyrics-line.active');
   if(active===lastActiveLyric)return;
   lastActiveLyric=active;
-  if(active)requestAnimationFrame(()=>centerActiveLyric(false));
+  if(active)scheduleLyricCenter(false);
 }).observe(lyricLines,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
 function openScreen(){
   if(!overlay)return;
@@ -266,10 +284,11 @@ function openScreen(){
   updateTransport();
   syncMode();syncVolume();
   $('lyrics-close-btn').focus();
-  requestAnimationFrame(()=>centerActiveLyric(true));
+  scheduleLyricCenter(true);
 }
 function closeScreen(){
   if(!isOpen())return;
+  cancelLyricCenter();
   overlay.classList.add('hidden');
   overlay.setAttribute('aria-hidden','true');
   document.documentElement.classList.remove('lyrics-open');
