@@ -116,29 +116,43 @@ document.addEventListener('keydown',ev=>{
     }
   }
 });
-const animateAdded=container=>{
+// Animate only the newly appended rows, not a scan of the first rows in
+// an ever-growing list. Each mutation burst is capped at twelve entries.
+const animateAdded=(container,entries)=>{
   if(!container)return;
-  // Cap animated entries to protect mid-range devices and long playlists.
-  const entries=Array.from(container.children).slice(0,12);
-  for(let i=0;i<entries.length;i++){
-    const el=entries[i];
-    if(el.dataset.motionSeen==='1')continue;
+  let count=0;
+  for(const el of entries){
+    if(count>=12)break;
+    if(el.nodeType!==1||el.parentElement!==container||
+      el.dataset.motionSeen==='1')continue;
     el.dataset.motionSeen='1';
     el.classList.add('reveal-item');
-    el.style.animationDelay=(i*20)+'ms';
+    el.style.animationDelay=(count*20)+'ms';
     el.addEventListener('animationend',()=>{
       el.classList.remove('reveal-item');
       el.style.animationDelay='';
     },{once:true});
+    count++;
   }
 };
 for(const id of ['search-results','playlist-results','playlist-featured','ranking-songs','playlist-detail-songs']){
   const node=$(id);
-  if(node){
-    const updateListMotion=()=>animateAdded(node);
-    new MutationObserver(()=>schedule(updateListMotion))
-      .observe(node,{childList:true});
-  }
+  if(!node)continue;
+  const newlyAdded=new Set();
+  const updateListMotion=()=>{
+    const batch=[...newlyAdded];
+    newlyAdded.clear();
+    animateAdded(node,batch);
+  };
+  new MutationObserver(records=>{
+    for(const record of records){
+      for(const item of record.addedNodes){
+        if(item.nodeType===1&&item.parentElement===node)
+          newlyAdded.add(item);
+      }
+    }
+    if(newlyAdded.size)schedule(updateListMotion);
+  }).observe(node,{childList:true});
 }
 const modernClick=ev=>{
   if(ev.target.closest('.search-actions button:first-child,.playlist-song-play,.playlist-card-actions button')){
