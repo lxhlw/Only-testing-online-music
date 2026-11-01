@@ -88,12 +88,12 @@ try{
      hint:el?.textContent,hidden:el?.hidden,
      calls:{...data.calls},events:[...data.events]};
  });
- // Mode "gap" sends 3 seconds of genuine PCM audio, holds the remaining
- // HTTP body for 3.8 sec, then resumes the same Response stream. No DOM event
+ // Mode "gap" sends ~3.5 seconds of genuine MP3 frames, holds the remaining
+ // HTTP body for 5.5 sec, then resumes the same Response stream. No DOM event
  // is fabricated and no Playwright route fulfills a fully buffered file.
  await page.evaluate(endpoint=>{
    const a=document.querySelector('#audio');
-   a.src=endpoint+'?mode=gap';
+   a.src=endpoint+'?mode=gap&format=mp3';
    window.__fymusicGapPlay=a.play().then(()=>true,()=>false);
  },endpoint);
  await page.waitForFunction(()=>document.querySelector('#audio').currentTime>.6,
@@ -148,7 +148,7 @@ try{
  // permits the app UI to silently replay, reload or select another source.
  await page.evaluate(endpoint=>{
    const a=document.querySelector('#audio');
-   a.src=endpoint+'?mode=cut';
+   a.src=endpoint+'?mode=cut&format=mp3';
    window.__fymusicCutPlay=a.play().then(()=>true,()=>false);
  },endpoint);
  await page.waitForFunction(()=>document.querySelector('#audio').currentTime>.6,
