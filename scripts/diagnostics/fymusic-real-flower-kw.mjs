@@ -98,6 +98,12 @@ try {
           const platform = /\/url\/kw(?:\/|$)/i.test(target.pathname) ? 'kw' : 'kg';
           let diagnostic = null;
           let routeOutcomes = [];
+          const winner = String(response.headers()['x-fymusic-flower-route'] || '');
+          const allowedRouteNames = new Set(['ts-short', 'tm-short', 'ts-full',
+            'tm-full', 'sslip-short', 'nip-short', 'sslip-full',
+            'nip-full', 'canonical-socket']);
+          const successfulRoute = response.ok() && allowedRouteNames.has(winner)
+            ? winner : null;
           if (response.status() >= 400) {
             const body = await response.json().catch(() => null);
             if (typeof body?.diagnostic === 'string' && /^FLOWER_[A-Z0-9_]{1,60}$/.test(body.diagnostic))
@@ -116,7 +122,7 @@ try {
             }
           }
           bounded(evidence.flowerProxy, {
-            platform, status: response.status(), diagnostic, routeOutcomes
+            platform, status: response.status(), diagnostic, successfulRoute, routeOutcomes
           });
         }
       }
