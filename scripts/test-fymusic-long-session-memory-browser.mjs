@@ -17,7 +17,6 @@ try{
   document.querySelector('#lyrics-lines')),null,{timeout:18000});
  cdp=await page.context().newCDPSession(page);
  await cdp.send('HeapProfiler.enable');
- await cdp.send('Memory.enable');
  await page.evaluate(()=>{
   // No audio source, no third-party metadata, no signed source/stream URLs.
   window.__fymusicSoak={tracks:0,opens:0,closes:0,replacements:0,
