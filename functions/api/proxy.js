@@ -601,7 +601,9 @@ async function fetchFlowerResolverFast(target, request) {
     try {
       return await socketAttempt(target,'canonical-socket');
     } catch(error) {
-      if(error?.message!=='FLOWER_SOCKET_HTTP_404' ||
+      // Another Flower route may already have succeeded and cancelled
+      // this race; do not launch a redundant TCP request after resolution.
+      if(ctrl.signal.aborted || error?.message!=='FLOWER_SOCKET_HTTP_404' ||
          !target.pathname.startsWith('/flower/v1/')) throw error;
       const shortTarget=new URL(target.href);
       shortTarget.pathname=target.pathname.slice('/flower/v1'.length);
