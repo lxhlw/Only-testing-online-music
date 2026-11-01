@@ -9,7 +9,7 @@ const FLOWER = 'https://raw.githubusercontent.com/pdone/lx-music-source/main/flo
 const MIRROR = 'https://ghproxy.net/raw.githubusercontent.com/pdone/lx-music-source/main/flower/latest.js';
 const evidence = {
   target: TARGET, sourceImported: false, sourceImportAttempts: [], sourceTransportStatuses: [], sourceSupportsKg: false,
-  sourceSupportsKw: false, kgSearch: false, kgSelected: false,
+  sourceSupportsKw: false, sourceDeclaredQualities: { kg: [], kw: [] }, kgSearch: false, kgSelected: false,
   manualSearchOffered: false, manualSearchClicked: false,
   manualCandidateCount: 0, candidateConfirmed: false, manualKwRetryCount: 0,
   actualKwAttempt: false, actualKwUrl: false,
@@ -34,6 +34,13 @@ const addDurations = () => {
     kwConfirmationToVerifiedPlayback: elapsed('kwConfirmClick', 'kwPlaybackVerified'),
     kgSelectionToVerifiedKwPlayback: elapsed('kgClick', 'kwPlaybackVerified')
   };
+};
+// Browser monotonic timeline is separate from the Node/test runner clock.
+const setBrowserPhase = async (page, phase) => {
+  await page.evaluate(label => {
+    const stats = window.__fymusicPerfStats;
+    if (stats) stats.phases.push({ phase: label, at: performance.now() });
+  }, phase);
 };
 const bounded = (list, item, limit = 16) => {
   if (list.length < limit) list.push(item);
@@ -118,7 +125,8 @@ try {
         const type = String(headers['content-type'] || '').split(';')[0].toLowerCase();
         bounded(evidence.mediaResponses, {
           status: response.status(),
-          contentType: /^(audio\/|application\/(?:octet-stream|ogg|x-mpegurl|vnd.apple.mpegurl))/.test(type) ? 'media' : 'other'
+          contentType: /^(audio\/|application\/(?:octet-stream|ogg|x-mpegurl|vnd.apple.mpegurl))/.test(type) ? 'media' : 'other',
+          mime: /^(?:audio\/(?:mpeg|mp4|ogg|aac|flac|x-flac|wav|x-wav|webm)|application\/(?:octet-stream|ogg|x-mpegurl|vnd.apple.mpegurl))$/.test(type) ? type : 'other'
         });
       }
     } catch { /* telemetry must never affect playback */ }
@@ -134,13 +142,21 @@ try {
   ), null, { timeout: 18000 });
 
   await page.evaluate(() => {
-    window.__fymusicPerfStats = { count: 0, maxDurationMs: 0 };
+    window.__fymusicPerfStats = {
+      count: 0, maxDurationMs: 0, tasks: [],
+      phases: [{ phase: 'bootstrap', at: 0 }]
+    };
     try {
       const observer = new PerformanceObserver(entries => {
         for (const entry of entries.getEntries()) {
-          window.__fymusicPerfStats.count++;
-          window.__fymusicPerfStats.maxDurationMs =
-            Math.max(window.__fymusicPerfStats.maxDurationMs, entry.duration);
+          const stats = window.__fymusicPerfStats;
+          stats.count++;
+          stats.maxDurationMs = Math.max(stats.maxDurationMs, entry.duration);
+          // Keep only bounded timing primitives, never task URLs, attribution
+          // containers, DOM selectors, stack traces or private song identity.
+          if (stats.tasks.length < 128) stats.tasks.push({
+            start: entry.startTime, duration: entry.duration
+          });
         }
       });
       observer.observe({ type: 'longtask', buffered: true });
@@ -164,6 +180,7 @@ try {
 
   evidence.result = 'FLOWER_IMPORT';
   markStage('flowerImportBegin');
+  await setBrowserPhase(page, 'flower_import');
   const flower = await page.evaluate(async ({ url, mirror }) => {
     const mgr = window.LXSourceManager;
     const attempts = [];
@@ -220,10 +237,20 @@ try {
   evidence.sourceSupportsKw = flower.kw;
   assert.ok(flower.ok, 'FLOWER_IMPORT_OR_KG_KW_ACTION_UNAVAILABLE');
   markStage('flowerImportReady');
+  evidence.sourceDeclaredQualities = await page.evaluate(() => {
+    const a = window.LXSourceManager.getActive();
+    const safe = name => Array.isArray(a?.sources?.[name]?.qualitys)
+      ? [...new Set(a.sources[name].qualitys.filter(q =>
+        typeof q === 'string' &&
+        /^(?:128k|192k|256k|320k|flac|flac24bit|ape|wav)$/i.test(q)))].slice(0,12)
+      : [];
+    return { kg: safe('kg'), kw: safe('kw') };
+  });
 
   // Real catalog search; preserve selected page row rather than injecting IDs.
   evidence.result = 'KG_SEARCH';
   markStage('kgCatalogBegin');
+  await setBrowserPhase(page, 'kg_catalog');
   let rows = 0;
   for (const keyword of ['孙燕姿 开始懂了', '开始懂了']) {
     await page.locator('#channel-list .channel-button[title="KG"]').click();
@@ -252,6 +279,7 @@ try {
   assert.ok(!/\bLive\b|现场版|演唱会|翻唱/i.test(rowText),
     'REAL_KG_VERSION_NOT_STUDIO');
   markStage('kgClick');
+  await setBrowserPhase(page, 'kg_resolution');
   await row.locator('.search-song-main').click();
   evidence.kgSelected = true;
   const button = page.locator('.fymusic-alternate-search');
@@ -276,6 +304,7 @@ try {
   assert.equal(history.filter(x => x.name === 'fymusic:alternate-approved').length, 0,
     'KW_APPROVED_BEFORE_CLICK');
   markStage('kwSearchClick');
+  await setBrowserPhase(page, 'kw_catalog');
   await button.click();
   evidence.manualSearchClicked = true;
   const firstCandidate = page.locator('.fymusic-alternate-confirm').first();
@@ -294,6 +323,7 @@ try {
 
   evidence.result = 'KW_REAL_RESOLUTION';
   markStage('kwConfirmClick');
+  await setBrowserPhase(page, 'kw_resolution');
   await firstCandidate.click();
   evidence.candidateConfirmed = true;
   try {
@@ -321,6 +351,7 @@ try {
       }).first();
       evidence.manualKwRetryCount = 1;
       markStage('kwManualRetryClick');
+      await setBrowserPhase(page, 'kw_manual_retry');
       await retry.click();
       await page.waitForFunction(() => {
         const a = document.querySelector('#audio');
@@ -335,6 +366,7 @@ try {
     throw new Error('REAL_KW_URL_OR_MEDIA_NOT_DECODED');
   }
   markStage('kwAudioReady');
+  await setBrowserPhase(page, 'kw_media_playing');
   const before = await page.evaluate(() => document.querySelector('#audio').currentTime);
   await page.waitForTimeout(3300);
   const playback = await page.evaluate(() => {
@@ -422,12 +454,30 @@ try {
   }
   addDurations();
   if (page) {
-    const longTaskStats = await page.evaluate(() => window.__fymusicPerfStats || null)
-      .catch(() => null);
+    const longTaskStats = await page.evaluate(() => {
+      const x = window.__fymusicPerfStats;
+      if (!x) return null;
+      const byPhase = {};
+      for (const task of x.tasks) {
+        let label = 'bootstrap';
+        for (const phase of x.phases) {
+          if (phase.at > task.start) break;
+          label = phase.phase;
+        }
+        if (!byPhase[label]) byPhase[label] = { count: 0, maxDurationMs: 0 };
+        byPhase[label].count++;
+        byPhase[label].maxDurationMs = Math.max(
+          byPhase[label].maxDurationMs, Math.round(task.duration));
+      }
+      return { count: x.count, maxDurationMs: x.maxDurationMs,
+        byPhase, sampled: x.tasks.length };
+    }).catch(() => null);
     if (longTaskStats) {
       evidence.performance.longTasks = {
         count: Math.min(999, Number(longTaskStats.count) || 0),
-        maxDurationMs: Math.round(Number(longTaskStats.maxDurationMs) || 0)
+        maxDurationMs: Math.round(Number(longTaskStats.maxDurationMs) || 0),
+        byPhase: longTaskStats.byPhase,
+        sampled: longTaskStats.sampled
       };
     }
   }
