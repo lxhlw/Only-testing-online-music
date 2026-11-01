@@ -2,7 +2,11 @@
 const SPECS={
  mp3:{file:'phase25-tone.mp3',mime:'audio/mpeg'},
  aac:{file:'phase25-tone.m4a',mime:'audio/mp4'},
- flac:{file:'phase25-tone.flac',mime:'audio/flac'}
+ flac:{file:'phase25-tone.flac',mime:'audio/flac'},
+ // Phase 26 isolated original metadata/hi-res fixtures, never production songs.
+ 'mp3-cover':{file:'phase26-cover.mp3',mime:'audio/mpeg'},
+ 'aac-tail':{file:'phase26-tail.m4a',mime:'audio/mp4'},
+ flac24:{file:'phase26-hires.flac',mime:'audio/flac'}
 };
 const GAP_MS=10000,CHUNK_SIZE=16384;
 function badRange(headers,total){

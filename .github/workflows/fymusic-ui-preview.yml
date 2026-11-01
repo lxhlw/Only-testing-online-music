@@ -27,6 +27,8 @@ on:
       - 'scripts/test-fymusic-phase23-range-compare-browser.mjs'
       - 'scripts/test-fymusic-phase24-repeated-range-browser.mjs'
       - 'scripts/test-fymusic-phase25-codecs-browser.mjs'
+      - 'scripts/test-fymusic-phase26-metadata-hires-browser.mjs'
+      - 'scripts/generate-fymusic-phase26-fixtures.mjs'
       - 'scripts/generate-fymusic-phase25-fixtures.mjs'
       - 'functions/api/fymusic-codec-selftest.js'
       - 'src/fymusic-media-evidence.js'
@@ -115,6 +117,8 @@ jobs:
           node --check scripts/test-fymusic-phase23-range-compare-browser.mjs
           node --check scripts/test-fymusic-phase24-repeated-range-browser.mjs
           node --check scripts/test-fymusic-phase25-codecs-browser.mjs
+          node --check scripts/test-fymusic-phase26-metadata-hires-browser.mjs
+          node --check scripts/generate-fymusic-phase26-fixtures.mjs
           node --check scripts/generate-fymusic-phase25-fixtures.mjs
           node --check functions/api/fymusic-codec-selftest.js
           node --check src/fymusic-media-evidence.js
@@ -132,6 +136,8 @@ jobs:
           command -v ffmpeg
           command -v ffprobe
           node scripts/generate-fymusic-phase25-fixtures.mjs
+      - name: Generate isolated original hi-res and metadata audio fixtures
+        run: node scripts/generate-fymusic-phase26-fixtures.mjs
       - name: Deploy ONLY this non-production branch to Cloudflare Pages Preview
         id: preview
         shell: bash
@@ -261,6 +267,10 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
         run: node scripts/test-fymusic-phase25-codecs-browser.mjs
+      - name: Verify metadata hi-res formats and rapid source switching on Cloudflare Edge
+        env:
+          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: node scripts/test-fymusic-phase26-metadata-hires-browser.mjs
       - name: Profile startup CPU on non-production Edge preview
         if: always() && steps.preview.outcome == 'success'
         timeout-minutes: 2
