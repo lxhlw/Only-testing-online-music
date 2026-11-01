@@ -11,6 +11,13 @@ const lyricView=$('lyrics-view'),commentView=$('comments-view');
 const commentList=$('comments-list'),commentStatus=$('comments-status');
 const fullSeek=$('detail-seek'),baseSeek=$('player-seek');
 const artCache=new Map(),commentCache=new Map();
+// Keep per-track artwork and comment page caches bounded during long listening.
+// Only lightweight metadata is retained; evict oldest entries once full.
+const cachePut=(cache,key,value,maxEntries)=>{
+  cache.delete(key);
+  cache.set(key,value);
+  if(cache.size>maxEntries)cache.delete(cache.keys().next().value);
+};
 let track=null,sequence=0,metaAbort=null,commentAbort=null,activeTab='lyrics',lastFocused=null;
 let seekPreview=false,ignoreCancelledSeekChange=false;
 const isOpen=()=>overlay&&!overlay.classList.contains('hidden');
@@ -48,13 +55,21 @@ for(const img of coverImages){
     for(const box of coverBoxes)box?.classList.remove('has-album-art');
   });
 }
-function applyMetadata(data){
-  if(!track)return;
-  track={...track,...data};
+function applyMetadata(data,expectedSequence=sequence){
+  // The network response is metadata, never the authority for the playback
+  // identity. A delayed response must not overwrite a newer selected track.
+  if(!track||track.sequence!==expectedSequence)return;
+  const singer=typeof data?.singer==='string'?data.singer.slice(0,180):'';
+  const albumName=typeof data?.albumName==='string'?data.albumName.slice(0,180):'';
+  const image=safeArt(data?.image,track.source);
+  track={...track,
+    singer:singer||track.singer,
+    albumName:albumName||track.albumName,
+    image:image||track.image};
   $('now-playing-artist').textContent=track.singer||'未知歌手';
   $('now-playing-album').textContent='专辑：'+(track.albumName||'未知专辑');
   $('now-playing-platform').textContent='来源：'+(sourceNames[track.source]||'当前平台');
-  if(data.image)setCover(data.image);
+  if(image)setCover(image);
   // Keep the OS/media keyboard display in step with the newly resolved art.
   try{
     if('mediaSession' in navigator&&'MediaMetadata' in window){
@@ -71,17 +86,25 @@ async function resolveCover(current,key){
   const supplied=safeArt(current.image,current.source);
   if(supplied){setCover(supplied);return;}
   if(current.source!=='wy'||!/^\d{1,20}$/.test(current.id))return;
-  if(artCache.has(key)){applyMetadata(artCache.get(key));return;}
+  if(artCache.has(key)){applyMetadata(artCache.get(key),current.sequence);return;}
   metaAbort?.abort();
   const controller=new AbortController();metaAbort=controller;
   try{
     const r=await fetch('/api/netease-song-meta?id='+encodeURIComponent(current.id),{signal:controller.signal});
     if(!r.ok)throw Error('metadata unavailable');
     const data=await r.json();
-    if(!data||data.id!==current.id||!data.image)return;
-    artCache.set(key,data);
+    if(!data||String(data.id)!==current.id||
+       !safeArt(data.image,current.source))return;
     if(sequence!==current.sequence)return;
-    applyMetadata(data);
+    // Only the allowlisted metadata below is cached or applied. Discard any
+    // source, ID or sequence fields from the server response.
+    const details={
+      image:safeArt(data.image,current.source),
+      singer:typeof data.singer==='string'?data.singer.slice(0,180):'',
+      albumName:typeof data.albumName==='string'?data.albumName.slice(0,180):''
+    };
+    cachePut(artCache,key,details,96);
+    applyMetadata(details,current.sequence);
   }catch(e){if(e.name!=='AbortError')console.info('Song artwork not available',current.id)}
 }
 let commentMode='hot',commentOffset=0,commentLoaded=0,commentMore=false,commentLoading=false;
@@ -171,7 +194,7 @@ async function loadComments(force=false,append=false){
     if(!r.ok)throw new Error('Comments service unavailable');
     const data=await r.json();
     if(current!==sequence||!isOpen()||activeTab!=='comments'||commentMode!==mode)return;
-    commentCache.set(key,data);
+    cachePut(commentCache,key,data,48);
     renderComments(data,append);
   }catch(e){
     if(e.name==='AbortError'||current!==sequence||mode!==commentMode)return;
@@ -215,7 +238,8 @@ function setTrack(next){
   const currentSequence=sequence;
   metaAbort?.abort();commentAbort?.abort();
   track={id,source,sequence:currentSequence,name:String(next.name||'未知歌曲'),
-    singer:String(next.singer||''),albumName:String(next.albumName||''),image:String(next.image||'')};
+    singer:String(next.singer||''),albumName:String(next.albumName||''),
+    image:safeArt(next.image,source)};
   $('lyrics-title').textContent=track.name;
   applyMetadata(track);
   setCover(track.image);
