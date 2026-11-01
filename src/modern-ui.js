@@ -50,9 +50,11 @@ const schedule=work=>{
   if(!document.hidden&&!animationFrame)
     animationFrame=requestAnimationFrame(flushUpdates);
 };
-document.addEventListener('visibilitychange',()=>{
-  if(!document.hidden&&pendingUpdates.size&&!animationFrame)
-    animationFrame=requestAnimationFrame(flushUpdates);
+// A BFCache pagehide can suspend a previously scheduled animation frame.
+ // Keep its pending work, but make the next foreground frame schedulable.
+window.addEventListener('pagehide',()=>{
+  if(animationFrame)cancelAnimationFrame(animationFrame);
+  animationFrame=0;
 });
 const syncStatus=()=>{
   if(!status)return;
@@ -88,6 +90,18 @@ if(source)new MutationObserver(()=>schedule(syncSource))
 const lyrics=$('lyrics-lines');
 if(lyrics)new MutationObserver(()=>schedule(syncLyric))
   .observe(lyrics,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
+// Visibility and BFCache restore can happen without a new audio event or
+// MutationObserver callback. Reconcile presentation from the existing audio
+// element and user state only: do NOT start playback, re-resolve a source, seek,
+// or issue a network request. Work remains batched into one paint.
+const syncMiniTransport=()=>window.LXPlayerControls?.refresh?.();
+const reconcileForeground=()=>{
+  if(document.hidden)return;
+  for(const work of [syncActiveView,syncStatus,syncSource,syncLyric,
+                     updateNowPlaying,syncMiniTransport])schedule(work);
+};
+document.addEventListener('visibilitychange',reconcileForeground);
+window.addEventListener('pageshow',reconcileForeground);
 if(audio){
   for(const event of ['playing','pause','ended','waiting','canplay','error','emptied']){
     audio.addEventListener(event,()=>schedule(updateNowPlaying),{passive:true});
