@@ -23,7 +23,9 @@ on:
       - 'scripts/test-fymusic-weak-network-recovery-browser.mjs'
       - 'scripts/test-fymusic-real-media-lifecycle-browser.mjs'
       - 'scripts/test-fymusic-range-stream-recovery-browser.mjs'
+      - 'scripts/test-fymusic-throttled-buffering-browser.mjs'
       - 'functions/api/fymusic-range-selftest.js'
+      - 'functions/api/fymusic-throttle-selftest.js'
       - 'src/music-lyrics.js'
       - 'scripts/test-fymusic-long-list-lyrics-browser.mjs'
       - 'scripts/test-fymusic-playlist-incremental-browser.mjs'
@@ -70,7 +72,9 @@ jobs:
           node --check scripts/test-fymusic-weak-network-recovery-browser.mjs
           node --check scripts/test-fymusic-real-media-lifecycle-browser.mjs
           node --check scripts/test-fymusic-range-stream-recovery-browser.mjs
+          node --check scripts/test-fymusic-throttled-buffering-browser.mjs
           node --check functions/api/fymusic-range-selftest.js
+          node --check functions/api/fymusic-throttle-selftest.js
           node --check src/music-lyrics.js
           node --check scripts/test-fymusic-long-list-lyrics-browser.mjs
           node --check scripts/test-fymusic-playlist-incremental-browser.mjs
@@ -161,6 +165,10 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-fymusic-range-stream-recovery-browser.mjs
+      - name: Verify throttled audio stream, native buffering and recovery in Chromium
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-fymusic-throttled-buffering-browser.mjs
       - name: Show site logs on failure
         if: failure()
         run: cat /tmp/fymusic-pages.log || true
