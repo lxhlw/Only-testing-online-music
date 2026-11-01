@@ -30,6 +30,9 @@ on:
       - 'scripts/test-fymusic-phase22-lead-browser.mjs'
       - 'scripts/test-fymusic-phase23-range-compare-browser.mjs'
       - 'scripts/test-fymusic-phase24-repeated-range-browser.mjs'
+      - 'scripts/test-fymusic-phase25-codecs-browser.mjs'
+      - 'scripts/generate-fymusic-phase25-fixtures.mjs'
+      - 'functions/api/fymusic-codec-selftest.js'
       - 'src/fymusic-media-evidence.js'
       - 'functions/api/fymusic-range-selftest.js'
       - 'functions/api/fymusic-throttle-selftest.js'
@@ -86,6 +89,9 @@ jobs:
           node --check scripts/test-fymusic-phase22-lead-browser.mjs
           node --check scripts/test-fymusic-phase23-range-compare-browser.mjs
           node --check scripts/test-fymusic-phase24-repeated-range-browser.mjs
+          node --check scripts/test-fymusic-phase25-codecs-browser.mjs
+          node --check scripts/generate-fymusic-phase25-fixtures.mjs
+          node --check functions/api/fymusic-codec-selftest.js
           node --check src/fymusic-media-evidence.js
           node --check functions/api/fymusic-range-selftest.js
           node --check functions/api/fymusic-throttle-selftest.js
@@ -99,6 +105,11 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Install Chromium for real audio decoding
         run: npx playwright install --with-deps chromium
+      - name: Generate original MP3 AAC-LC and FLAC test assets for isolated QA
+        run: |
+          command -v ffmpeg
+          command -v ffprobe
+          node scripts/generate-fymusic-phase25-fixtures.mjs
       - name: Start isolated local Cloudflare Pages server
         shell: bash
         run: |
@@ -207,6 +218,10 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-fymusic-phase24-repeated-range-browser.mjs
+      - name: Test original MP3 AAC and FLAC real native audio and RFC 7233 Range in Chromium
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-fymusic-phase25-codecs-browser.mjs
       - name: Show site logs on failure
         if: failure()
         run: cat /tmp/fymusic-pages.log || true
