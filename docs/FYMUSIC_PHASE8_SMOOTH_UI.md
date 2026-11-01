@@ -58,6 +58,17 @@ https://793941e2.only-testing-online-music.pages.dev
 
 本轮 Chromium Linux 首屏采样：DOMContentLoaded ~369ms、First Contentful Paint ~284ms、筛除浏览器 idle 后的本项目/ vendor 直接函数采样约 24ms。此数据是**单次 CI 环境测量**，不是 60 FPS、跨设备延迟或性能提升幅度的证明；没有与同设备同条件的修改前 A/B 对照，不能推断具体提升百分比。
 
+## 独立第二轮 Edge UI 验收
+
+[Phase 8 Run 41273263565](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41273263565)，Job `124750217773`，**completed/success**。
+
+最新独立非生产 Preview：https://c3043d25.only-testing-online-music.pages.dev
+
+- 生产分支校验、独立 Preview 发布、最新 UI 代码资产校验均通过。
+- 同帧状态、音源标签、活动歌词、列表入场、底部状态、关闭弹层时零隐藏进度改写、再次打开播放位置追赶，全部通过。
+- 本轮单次 CI 启动样本 First Contentful Paint ~484ms、DOMContentLoaded ~619ms，筛除 idle 之后采样到的项目/vendor 执行约 20ms。与前次 ~284ms / ~369ms 的差异说明 GitHub 共享 CI 单次性能时序有波动；**不能把这些测量冒充前后 A/B 性能提升**。
+- 新工作流只验证 UI 和首屏，不向酷狗请求歌曲，也不声称证明任何第三方媒体可解码。
+
 ## 明确未解决问题
 
 - 本阶段按照用户要求未继续排查酷狗的网络失败；也没有对原本间歇性不可达的野花服务器做可靠性改动。
