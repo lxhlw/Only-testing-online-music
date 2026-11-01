@@ -73,6 +73,21 @@
 
 https://bc987277.only-testing-online-music.pages.dev
 
+## 独立重复 Edge 验证与防止过期网络探测
+
+[Run 41270227757 — Attempt 2](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41270227757)，Job `124741543742`，**completed/success**：
+
+- 经再次检查 Cloudflare 生产分支确实为 `main`，本轮仍只发布非生产 Preview。
+- 实际 Preview：https://d88f311e.only-testing-online-music.pages.dev
+- 真实 KG Flower HTTP 502；真实 KW Flower HTTP 200，音频 HTTP 206 并持续解码推进。
+- KW 成功路由为 `nip-full`，不是 `canonical-short-socket`。同一套代码在两次独立执行中由不同 Flower 网络路径成功，印证成功路由不是固定单一值。
+- 本轮没有重试：KG 解析 1 次、KW 目录搜索 1 次、KW 解析 1 次、音频请求 1 次。
+- KW 确认到媒体就绪 **1399ms**，KG 点击到完整持续播放验收 **7326ms**。
+- LongTask 1 次 **55ms**，归为初始化阶段。First Contentful Paint **228ms**、DOMContentLoaded **299ms**，排除 idle 之后抽样到的本项目脚本/vendor 直接函数执行约 **17ms**。CPU sampling 时间不能作为绝对值或所有设备的性能承诺。
+- 证明在当前 GitHub-hosted Chromium + 真 Cloudflare Pages Edge 上，这个修复分支至少两次独立成功；并不能证明 Flower 全时段稳定或新增短 TCP 实际生效。
+
+另发现一个应避免的额外负载：当 DNS 别名已经先一步成功，原始 TCP 请求若稍后才返回 404，不应再启动第二次短路径 TCP 探测。修复提交 `917cfc2aec7bc30cfbc01720507600ca7ea8c367` 使用同一请求的 AbortController 完成状态判断，守护原始路径回退；受控测试在别名先赢时检查没有多发 TCP 请求，提交 `21376b0566ff53d7b35c42d01b4f2df50b55bdf8`。
+
 ## 未解决事项和后续安全验证
 
 1. 在真实 Cloudflare Edge 出现原始 Flower `HTTP 404` 的窗口时，新 `canonical-short-socket` 是否能够真正返回可解码音乐，**尚未证明**。不能把受控单元测试当作真实恢复率提升。
