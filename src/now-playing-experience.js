@@ -36,23 +36,34 @@ const safeArt=(value,source='wy')=>{
     return '';
   }catch{return ''}
 };
+let currentCoverUrl='';
 function setCover(src){
   const url=safeArt(src,track?.source);
+  currentCoverUrl=url;
   for(const img of coverImages){
     img.hidden=!url;
-    if(url&&img.src!==url)img.src=url;
-    else if(!url){img.removeAttribute('src')}
+    if(url&&img.getAttribute('src')!==url)img.src=url;
+    else if(!url&&img.hasAttribute('src'))img.removeAttribute('src');
   }
   for(const box of coverBoxes)box?.classList.toggle('has-album-art',Boolean(url));
 }
 for(const img of coverImages){
   img.addEventListener('error',()=>{
-    if(!track)return;
-    const failed=img.src;
-    for(const other of coverImages){
-      if(other.src===failed){other.hidden=true;other.removeAttribute('src')}
-    }
-    for(const box of coverBoxes)box?.classList.remove('has-album-art');
+    // An old request can fail after src has already changed for the new
+    // track. Only a completed, *currently selected* failed image may clear
+    // the shared cover; never let an old error hide the incoming artwork.
+    const url=img.getAttribute('src')||'';
+    if(!track||!url||url!==currentCoverUrl||
+       !img.complete||img.naturalWidth!==0)return;
+    const failedTrack=track;
+    const failedUrl=currentCoverUrl;
+    // Older images can fire their error after the new song was chosen.
+    // Recheck before altering either cover or OS Media Session metadata.
+    if(track!==failedTrack||currentCoverUrl!==failedUrl)return;
+    artCache.delete(track.source+':'+track.id);
+    track={...track,image:''};
+    setCover('');
+    applyMetadata({},track.sequence);
   });
 }
 function applyMetadata(data,expectedSequence=sequence){
@@ -105,7 +116,11 @@ async function resolveCover(current,key){
     };
     cachePut(artCache,key,details,96);
     applyMetadata(details,current.sequence);
-  }catch(e){if(e.name!=='AbortError')console.info('Song artwork not available',current.id)}
+  }catch(e){if(e.name!=='AbortError'&&sequence===current.sequence)
+    console.info('Song artwork not available',current.id);
+  }finally{
+    if(metaAbort===controller)metaAbort=null;
+  }
 }
 let commentMode='hot',commentOffset=0,commentLoaded=0,commentMore=false,commentLoading=false;
 const commentMoreButton=$('comments-load-more'),pageNote=$('comments-page-note');
@@ -207,6 +222,7 @@ async function loadComments(force=false,append=false){
       $('comments-link-wrap').hidden=false;
     }
   }finally{
+    if(commentAbort===controller)commentAbort=null;
     if(current===sequence&&mode===commentMode)commentLoading=false;
   }
 }
