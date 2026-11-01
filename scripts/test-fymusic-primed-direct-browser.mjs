@@ -138,7 +138,11 @@ try {
  console.log('FYMUSIC_PHASE21_PRIMED_DIRECT_OBSERVATIONS '+JSON.stringify(evidence));
  assert.equal(probe.status,200);
  assert.equal(probe.range,'none');
- assert.equal(probe.length,String(209*1600));
+ // Cloudflare may strip the declared length from a live streamed response.
+ // If it is visible it must match our real MP3 length, but media behavior is
+ // never inferred from a header that the browser did not actually receive.
+ if(probe.length!==null)
+   assert.equal(probe.length,String(209*1600));
  assert.equal(probe.bytes,209*1600);
  assert.ok(probe.done&&!probe.failed&&probe.maxGapMs>=12500,
    'real primed MP3 HTTP must transmit leading bytes then pause for ~16s');
