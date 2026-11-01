@@ -145,7 +145,11 @@ jobs:
       - name: Validate Phase32 real mobile and Media Session seek ownership
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
-        run: node scripts/test-fymusic-phase32-real-seek-ownership-browser.mjs
+        run: |
+          for trial in 1 2; do
+            echo "FYMUSIC_PHASE32_INDEPENDENT_TRIAL=$trial"
+            node scripts/test-fymusic-phase32-real-seek-ownership-browser.mjs
+          done
       - name: Validate genuine Chrome hidden/visible events on headed Xvfb with original hi-res media
         env:
           TEST_BASE_URL: http://127.0.0.1:8788

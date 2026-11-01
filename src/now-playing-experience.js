@@ -250,7 +250,7 @@ function setTrack(next){
   sequence++;
   // A track change invalidates old lyric scroll and uncommitted seek preview.
   cancelLyricCenter();
-  cancelSeekPreview();
+  invalidateSeekPreview();
   const currentSequence=sequence;
   metaAbort?.abort();commentAbort?.abort();
   track={id,source,sequence:currentSequence,name:String(next.name||'未知歌曲'),
@@ -412,6 +412,14 @@ function cancelSeekPreview(){
   // This only restores presentation: it never writes audio.currentTime.
   updateTransport();
 }
+function invalidateSeekPreview(){
+  if(!seekPreview)return;
+  // The old browser gesture may dispatch "change" *after* another actor
+  // seeks or selects a different track. Ignore that one pending commit.
+  ignoreCancelledSeekChange=true;
+  cancelSeekPreview();
+}
+window.addEventListener('fymusic:external-seek',invalidateSeekPreview);
 fullSeek?.addEventListener('input',()=>{
   if(!isOpen()||!baseSeek||baseSeek.disabled)return;
   ignoreCancelledSeekChange=false;

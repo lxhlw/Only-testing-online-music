@@ -198,7 +198,11 @@ jobs:
       - name: Validate Phase32 real mobile and Media Session seek ownership
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
-        run: node scripts/test-fymusic-phase32-real-seek-ownership-browser.mjs
+        run: |
+          for trial in 1 2; do
+            echo "FYMUSIC_PHASE32_INDEPENDENT_TRIAL=$trial"
+            node scripts/test-fymusic-phase32-real-seek-ownership-browser.mjs
+          done
       - name: Validate actual Chrome document.hidden and original audio on isolated Edge preview
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
