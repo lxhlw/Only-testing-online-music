@@ -159,6 +159,11 @@ for(const id of ['search-results','playlist-results','playlist-featured','rankin
     animateAdded(node,batch);
   };
   new MutationObserver(records=>{
+    // A hidden tab may replace a whole list before frames resume. Release
+    // detached nodes held from earlier batches before collecting new ones.
+    for(const pending of newlyAdded){
+      if(pending.parentElement!==node)newlyAdded.delete(pending);
+    }
     // The visible animation budget is twelve, but the previous buffer could
     // retain every appended DOM element while requestAnimationFrame was
     // suspended in a background tab. Bound the *buffer* too, including a
