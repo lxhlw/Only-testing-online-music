@@ -105,6 +105,14 @@
     show(tip);
     updateSeekFill();
   }
+  function cancelSeek() {
+    // A touch/pointer cancellation must clear the *base* seek preview too;
+    // otherwise its 'dragging' flag can freeze the small player indefinitely.
+    if(!seek)return;
+    dragging=false;
+    hide(get('player-seek-preview'));
+    refresh();
+  }
   function commitSeek() {
     if (!seek || !audio) return;
     var state = playableState();
@@ -260,5 +268,5 @@
     renderMode();
     refresh();
   }
-  global.LXPlayerControls = { init: init, refresh: refresh, getMode: function () { return mode; }, setMode: setMode, timeString: timeString };
+  global.LXPlayerControls = { init: init, refresh: refresh, cancelSeek: cancelSeek, getMode: function () { return mode; }, setMode: setMode, timeString: timeString };
 })(window);
