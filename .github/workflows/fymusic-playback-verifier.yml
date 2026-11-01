@@ -20,6 +20,7 @@ on:
       - 'scripts/test-fymusic-fast-track-metadata-browser.mjs'
       - 'scripts/test-fymusic-cover-error-resource-stress.mjs'
       - 'scripts/test-fymusic-long-session-memory-browser.mjs'
+      - 'scripts/test-fymusic-weak-network-recovery-browser.mjs'
       - 'src/music-lyrics.js'
       - 'scripts/test-fymusic-long-list-lyrics-browser.mjs'
       - 'scripts/test-fymusic-playlist-incremental-browser.mjs'
@@ -63,6 +64,7 @@ jobs:
           node --check scripts/test-fymusic-fast-track-metadata-browser.mjs
           node --check scripts/test-fymusic-cover-error-resource-stress.mjs
           node --check scripts/test-fymusic-long-session-memory-browser.mjs
+          node --check scripts/test-fymusic-weak-network-recovery-browser.mjs
           node --check src/music-lyrics.js
           node --check scripts/test-fymusic-long-list-lyrics-browser.mjs
           node --check scripts/test-fymusic-playlist-incremental-browser.mjs
@@ -141,6 +143,10 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-fymusic-long-session-memory-browser.mjs
+      - name: Verify offline, buffering and page recovery never cause media retries
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-fymusic-weak-network-recovery-browser.mjs
       - name: Show site logs on failure
         if: failure()
         run: cat /tmp/fymusic-pages.log || true
