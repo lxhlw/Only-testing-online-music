@@ -209,7 +209,14 @@ try{
    audioElements:document.querySelectorAll('audio').length,
    playErrors:d.playErrors};
  });
- const afterFinal=rapid.events.filter(e=>e.ms>=rapid.finalSwitchAt&&
+ // Native src replacement may emit a final timeupdate/emptied while
+ // currentSrc is temporarily empty. Those pre-metadata cleanup events are
+ // not old-track playback. From the final FLAC's own loadedmetadata onward,
+ // all actual playing/progress events must belong to the new source.
+ const finalMetadata=rapid.events.find(e=>e.ms>=rapid.finalSwitchAt&&
+   e.name==='loadedmetadata'&&e.source==='flac24');
+ assert.ok(finalMetadata,'final FLAC must load native metadata after switch');
+ const afterFinal=rapid.events.filter(e=>e.ms>=finalMetadata.ms&&
    ['playing','loadedmetadata','timeupdate'].includes(e.name));
  assert.deepEqual(errors,[]);
  assert.equal(rapid.mediaError,0);
@@ -218,7 +225,7 @@ try{
  assert.ok(rapid.currentTime>1.1&&!rapid.paused);
  assert.ok(Math.abs(rapid.duration-12)<.5);
  assert.ok(afterFinal.length>0&&afterFinal.every(e=>e.source==='flac24'),
-   'late obsolete media events must not replace final native media');
+   'post-FLAC-metadata native playing/progress must stay on final source: '+JSON.stringify(afterFinal));
  assert.ok(!rapid.playErrors.some(x=>x!=='AbortError'),
    'cancelled previous plays may reject AbortError only');
  assert.ok(requestStates.some(x=>x.r.url().includes('rapidC')&&x.status===206),
