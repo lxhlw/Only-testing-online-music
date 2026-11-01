@@ -5,6 +5,9 @@ on:
     paths:
       - '.github/workflows/fymusic-ui-preview.yml'
       - 'src/modern-ui.js'
+      - 'src/mobile-shell.js'
+      - 'src/mobile-shell.css'
+      - 'scripts/test-fymusic-modern-mobile-a11y.mjs'
       - 'src/now-playing-experience.js'
       - 'src/music-lyrics.js'
       - 'scripts/test-fymusic-long-list-lyrics-browser.mjs'
@@ -68,6 +71,8 @@ jobs:
       - name: Syntax-check modern UI and browser evidence
         run: |
           node --check src/modern-ui.js
+          node --check src/mobile-shell.js
+          node --check scripts/test-fymusic-modern-mobile-a11y.mjs
           node --check src/now-playing-experience.js
           node --check src/music-lyrics.js
           node --check scripts/test-fymusic-long-list-lyrics-browser.mjs
@@ -131,6 +136,10 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
         run: node scripts/test-fymusic-playlist-incremental-browser.mjs
+      - name: Verify mobile navigation, touch targets and keyboard access
+        env:
+          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: node scripts/test-fymusic-modern-mobile-a11y.mjs
       - name: Profile startup CPU on non-production Edge preview
         if: always() && steps.preview.outcome == 'success'
         timeout-minutes: 2
