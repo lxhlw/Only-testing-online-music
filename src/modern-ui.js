@@ -159,10 +159,16 @@ for(const id of ['search-results','playlist-results','playlist-featured','rankin
     animateAdded(node,batch);
   };
   new MutationObserver(records=>{
+    // The visible animation budget is twelve, but the previous buffer could
+    // retain every appended DOM element while requestAnimationFrame was
+    // suspended in a background tab. Bound the *buffer* too, including a
+    // single huge DocumentFragment append, without walking a 20k-row batch.
     for(const record of records){
+      if(newlyAdded.size>=12)break;
       for(const item of record.addedNodes){
-        if(item.nodeType===1&&item.parentElement===node)
-          newlyAdded.add(item);
+        if(newlyAdded.size>=12)break;
+        if(item.nodeType===1&&item.parentElement===node&&
+           item.dataset.motionSeen!=='1')newlyAdded.add(item);
       }
     }
     if(newlyAdded.size)schedule(updateListMotion);
