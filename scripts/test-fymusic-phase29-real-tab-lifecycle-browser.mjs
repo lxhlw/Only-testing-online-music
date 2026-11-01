@@ -10,8 +10,9 @@ const F='/api/fymusic-codec-selftest?format=';
 const browser=await chromium.launch({headless:true,
  args:['--autoplay-policy=no-user-gesture-required']});
 try{
- const page=await browser.newPage({viewport:{width:1366,height:900},
+ const context=await browser.newContext({viewport:{width:1366,height:900},
   reducedMotion:'reduce'});
+ const page=await context.newPage();
  const exceptions=[],media=[];
  page.on('pageerror',e=>exceptions.push(String(e?.message||e).slice(0,180)));
  page.on('request',r=>{
