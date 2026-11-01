@@ -21,6 +21,7 @@ on:
       - 'scripts/test-fymusic-range-stream-recovery-browser.mjs'
       - 'scripts/test-fymusic-throttled-buffering-browser.mjs'
       - 'scripts/test-fymusic-mse-starvation-browser.mjs'
+      - 'scripts/test-fymusic-direct-progressive-browser.mjs'
       - 'functions/api/fymusic-range-selftest.js'
       - 'functions/api/fymusic-throttle-selftest.js'
       - 'src/music-lyrics.js'
@@ -100,6 +101,7 @@ jobs:
           node --check scripts/test-fymusic-range-stream-recovery-browser.mjs
           node --check scripts/test-fymusic-throttled-buffering-browser.mjs
           node --check scripts/test-fymusic-mse-starvation-browser.mjs
+          node --check scripts/test-fymusic-direct-progressive-browser.mjs
           node --check functions/api/fymusic-range-selftest.js
           node --check functions/api/fymusic-throttle-selftest.js
           node --check src/music-lyrics.js
@@ -212,6 +214,10 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
         run: node scripts/test-fymusic-mse-starvation-browser.mjs
+      - name: Verify direct MP3 progressive startup on isolated Cloudflare Edge
+        env:
+          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: node scripts/test-fymusic-direct-progressive-browser.mjs
       - name: Profile startup CPU on non-production Edge preview
         if: always() && steps.preview.outcome == 'success'
         timeout-minutes: 2

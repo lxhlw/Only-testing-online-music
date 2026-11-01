@@ -39,21 +39,28 @@ export async function onRequest({request}){
   if(request.method!=='GET'&&request.method!=='HEAD')
     return new Response(null,{status:405,headers:{Allow:'GET, HEAD'}});
   const mode=new URL(request.url).searchParams.get('mode')||'normal';
-  if(!['normal','gap','cut'].includes(mode))
+  if(!['normal','gap','cut','progressive'].includes(mode))
     return new Response('Unsupported test mode',{status:400});
   const format=new URL(request.url).searchParams.get('format')||'wav';
   if(!['wav','mp3'].includes(format))return new Response('Invalid format',{status:400});
+  if(mode==='progressive'&&format!=='mp3')
+    return new Response('Progressive mode requires MP3',{status:400});
   const data=fixture(format),total=data.length;
   const split=format==='mp3'?MP3_STALL_AT:STALL_AT;
   const headers=new Headers({
     'Content-Type':format==='mp3'?'audio/mpeg':'audio/wav',
     'Accept-Ranges':'bytes',
-    'Cache-Control':'no-store',
+    'Cache-Control':'no-store, no-transform',
     'X-Content-Type-Options':'nosniff',
     'X-FyMusic-Synthetic-Fixture':mode
   });
+  // QA-only progressive MP3 intentionally has neither declared length nor
+  // RFC 7233 serving: an unknown-length HTTP 200 byte stream is legal.
+  // This isolates Chromium's known-length/Range prebuffering from HTTP timing.
+  const progressive=mode==='progressive';
+  if(progressive)headers.set('Accept-Ranges','none');
   let first=0,last=total-1,status=200;
-  const range=request.headers.get('range');
+  const range=progressive?null:request.headers.get('range');
   if(range){
     const match=/^bytes=(\d*)-(\d*)$/.exec(range);
     if(!match||(!match[1]&&!match[2]))return invalidRange(headers,total);
@@ -71,7 +78,7 @@ export async function onRequest({request}){
     status=206;
     headers.set('Content-Range',`bytes ${first}-${last}/${total}`);
   }
-  headers.set('Content-Length',String(last-first+1));
+  if(!progressive)headers.set('Content-Length',String(last-first+1));
   if(request.method==='HEAD')return new Response(null,{status,headers});
 
   // A real streaming Response: send ~3 s of playable WAV data, then
@@ -88,7 +95,7 @@ export async function onRequest({request}){
           controller.error(new Error('Synthetic transport cut after 3s'));
           return;
         }
-        if(mode==='gap'&&!delayed){
+        if((mode==='gap'||mode==='progressive')&&!delayed){
           delayed=true;
           await new Promise(resolve=>setTimeout(resolve,format==='mp3'?5500:3800));
         }
