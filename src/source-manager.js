@@ -118,14 +118,26 @@
       var opts = options || {};
       var method = String(opts.method || 'GET').toUpperCase();
       try {
+        // Debug snapshots must not retain a Flower musicUrl, its source tag,
+        // song IDs, signing headers or encoded proxy query. Those belong only
+        // in the live XHR transport below, which preserves LX Desktop parity.
+        var requestCategory='other';
+        try {
+          var diagnosticTarget=new URL(target,global.location.href);
+          if (/^\\/flower\\/v1\\/url\\/(?:kg|kw|wy|mg|tx)(?:\\/|$)/i.test(
+            diagnosticTarget.pathname)) requestCategory='flower-resolver';
+          else if (/\\/flower\\/latest\\.js$/i.test(diagnosticTarget.pathname))
+            requestCategory='flower-script';
+          else if (diagnosticTarget.origin===global.location.origin)
+            requestCategory='same-origin';
+          else requestCategory='external';
+        } catch (ignored) {}
         runtime.__debugRequests.push({
-          url: String(target),
-          method: method,
-          headers: opts.headers || null,
-          proxied: requestUrl !== target,
-          proxyUrl: requestUrl
+          method:method,
+          proxied:requestUrl!==target,
+          category:requestCategory
         });
-        if (runtime.__debugRequests.length > 100) runtime.__debugRequests.shift();
+        if (runtime.__debugRequests.length > 30) runtime.__debugRequests.shift();
       } catch (e) {}
       var xhr = new XMLHttpRequest();
       var done = false;
