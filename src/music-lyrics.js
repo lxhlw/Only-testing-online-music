@@ -79,12 +79,16 @@
     var time = Number(currentSeconds);
     if (!isFinite(time) || time < 0) time = 0;
 
-    var active = -1;
-    for (var i = 0; i < lines.length; i += 1) {
-      if (lines[i].time <= time) active = i;
-      else break;
+    // Parsed LRC timestamps are sorted. Find the *last* timestamp <= time
+    // in O(log n) rather than walking every lyric on every audio timeupdate.
+    // Equal timestamps retain the prior behavior: the later line wins.
+    var lo = 0, hi = lines.length;
+    while (lo < hi) {
+      var mid = lo + Math.floor((hi - lo) / 2);
+      if (lines[mid].time <= time) lo = mid + 1;
+      else hi = mid;
     }
-    return active;
+    return lo - 1;
   }
 
   global.LXMusicLyrics = {
