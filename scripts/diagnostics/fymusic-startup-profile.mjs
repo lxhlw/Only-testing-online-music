@@ -52,8 +52,11 @@ try {
   let sampled = 0;
   for (const id of profile.samples || []) {
     const frame = nodes.get(id)?.callFrame || {};
+    // CDP emits idle/GC/program samples without a script URL. Counting
+    // them as inline JavaScript would falsely attribute idle CPU to FyMusic.
+    if (!frame.url) continue;
     const source = normalizeSource(frame.url);
-    if (source === 'other') continue;
+    if (source === 'other' || source === 'inline') continue;
     sampled++;
     const fn = /^[A-Za-z_$][A-Za-z0-9_$]{0,63}$/.test(frame.functionName || '')
       ? frame.functionName : '(anonymous)';
