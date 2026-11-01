@@ -174,20 +174,84 @@ const modernClick=ev=>{
   }
 };
 document.addEventListener('click',modernClick,{passive:true});
+// System media controls must go through the SAME app transport and verified
+// seek controls as clicks. Direct audio.play/currentTime bypasses resolver state,
+// queue rules, pending-source checks, and the existing error reporting.
 if('mediaSession' in navigator){
-  navigator.mediaSession.setActionHandler?.('play',()=>audio?.play().catch(()=>{}));
-  navigator.mediaSession.setActionHandler?.('pause',()=>audio?.pause());
-  navigator.mediaSession.setActionHandler?.('seekto',e=>{
-    if(audio&&Number.isFinite(audio.duration)&&e.seekTime!=null)
-      audio.currentTime=Math.max(0,Math.min(e.seekTime,audio.duration));
-  });
+  const mediaSession=navigator.mediaSession;
+  const hasMedia=()=>Boolean(audio?.currentSrc);
+  const runTransport=(type)=>{
+    const button=$('player-toggle-btn');
+    if(!button||!hasMedia())return;
+    if(type==='play'&&audio.paused)button.click();
+    else if(type==='pause'&&!audio.paused)button.click();
+  };
+  const runSeek=(seconds)=>{
+    const seek=$('player-seek');
+    const duration=Number(audio?.duration);
+    if(!hasMedia()||!seek||seek.disabled||!Number.isFinite(duration)||
+       duration<=0||!Number.isFinite(seconds))return;
+    const position=Math.max(0,Math.min(duration,seconds));
+    seek.value=String(Math.round(position/duration*1000));
+    // Let the existing transport perform preview, validation and commit.
+    seek.dispatchEvent(new Event('input',{bubbles:true}));
+    seek.dispatchEvent(new Event('change',{bubbles:true}));
+  };
+  const runQueue=(name)=>{
+    if(!window.__LXNowPlayingTrack)return;
+    $(name)?.click();
+  };
+  const actions={
+    play:()=>runTransport('play'),
+    pause:()=>runTransport('pause'),
+    seekto:event=>runSeek(Number(event?.seekTime)),
+    seekbackward:event=>runSeek(Number(audio?.currentTime)-
+      (Number.isFinite(Number(event?.seekOffset))?Number(event.seekOffset):10)),
+    seekforward:event=>runSeek(Number(audio?.currentTime)+
+      (Number.isFinite(Number(event?.seekOffset))?Number(event.seekOffset):10)),
+    previoustrack:()=>runQueue('prev-track-btn'),
+    nexttrack:()=>runQueue('next-track-btn')
+  };
+  // Action support differs by browser. One unsupported optional action must
+  // never prevent the others from registering.
+  for(const [name,handler] of Object.entries(actions)){
+    try{mediaSession.setActionHandler?.(name,handler)}catch{}
+  }
+  let lastPositionKey='';
+  const syncMediaSession=()=>{
+    try{
+      mediaSession.playbackState=!hasMedia()?'none':
+        audio.paused||audio.ended?'paused':'playing';
+      const seek=$('player-seek'),duration=Number(audio?.duration);
+      const current=Number(audio?.currentTime);
+      if(!hasMedia()||seek?.disabled||!Number.isFinite(duration)||
+         duration<=0||!Number.isFinite(current)) {
+        lastPositionKey='';return;
+      }
+      const position=Math.max(0,Math.min(duration,current));
+      const rate=Number(audio.playbackRate);
+      const playbackRate=Number.isFinite(rate)&&rate>0?rate:1;
+      // Avoid flooding media/OS IPC with repeated sub-second timeupdates.
+      const positionKey=audio.currentSrc+'|'+duration+'|'+
+        Math.floor(position)+'|'+playbackRate;
+      if(lastPositionKey===positionKey)return;
+      mediaSession.setPositionState?.({duration,position,playbackRate});
+      lastPositionKey=positionKey;
+    }catch{}
+  };
+  for(const event of ['timeupdate','loadedmetadata','durationchange',
+                      'playing','pause','ended','emptied','ratechange'])
+    audio?.addEventListener(event,()=>schedule(syncMediaSession),{passive:true});
   const updateMetadata=()=>{
+    // now-playing-experience owns rich metadata (actual track/album/artwork).
+    // Never overwrite it with a generic LX Music Web album after a track
+    // event arrives, including when a title mutation settles a frame later.
+    if(window.__LXNowPlayingTrack)return;
     const name=(title?.textContent||'').trim();
-    if(name&&!['未播放',''].includes(name)){
+    if(name&&!['未播放',''].includes(name)&&'MediaMetadata' in window){
       try{
-        navigator.mediaSession.metadata=new MediaMetadata({
-          title:name,
-          artist:($('player-artist')?.textContent||'').trim(),
+        mediaSession.metadata=new MediaMetadata({
+          title:name,artist:($('player-artist')?.textContent||'').trim(),
           album:'LX Music Web'
         });
       }catch{}
@@ -195,8 +259,12 @@ if('mediaSession' in navigator){
   };
   if(title)new MutationObserver(()=>schedule(updateMetadata))
     .observe(title,{childList:true,characterData:true,subtree:true});
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden)schedule(syncMediaSession);
+  });
+  window.addEventListener('pageshow',()=>schedule(syncMediaSession));
+  schedule(syncMediaSession);
 }
-
 /* Popular search prompts are user-triggered shortcuts, not speculative
    search results. They reuse the same app search event and network request. */
 document.querySelectorAll('[data-suggest-query]').forEach(button=>{
