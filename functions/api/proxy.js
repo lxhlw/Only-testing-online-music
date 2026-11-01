@@ -577,21 +577,37 @@ async function fetchFlowerResolverFast(target, request) {
       throw error;
     }
   });
-  // Original TCP origin competes with the DNS routes under the same budget.
-  tasks.push(fetchFlowerResolverViaSocket(target,request).then(async response=>{
-    if(response.status<200||response.status>=300){
-      let body={};
-      try{body=await response.json();}catch(e){}
-      throw new Error(/^FLOWER_SOCKET_[A-Z0-9_]+$/.test(String(body?.diagnostic||''))
-        ? body.diagnostic : 'FLOWER_SOCKET_UNKNOWN');
+  // Original TCP origin competes with DNS aliases under the same deadline.
+  // On a canonical /flower/v1/ HTTP 404 ONLY, try the same original IP via
+  // the legacy /url/ path. This is not another resolver or provider, and does
+  // not silently retry an entire user's song or change the requested quality.
+  async function socketAttempt(socketTarget, route) {
+    try {
+      const response = await fetchFlowerResolverViaSocket(socketTarget,request);
+      if(response.status<200||response.status>=300) {
+        let body={};
+        try{body=await response.json();}catch(e){}
+        throw new Error(/^FLOWER_SOCKET_[A-Z0-9_]+$/.test(String(body?.diagnostic||''))
+          ? body.diagnostic : 'FLOWER_SOCKET_UNKNOWN');
+      }
+      response.headers.set('X-FyMusic-Flower-Route',route);
+      return response;
+    } catch(error) {
+      outcomes.push({route,code:classify(error)});
+      throw error;
     }
-    // Include the winning same-provider transport in safe diagnostics.
-    response.headers.set('X-FyMusic-Flower-Route','canonical-socket');
-    return response;
-  }).catch(error=>{
-    outcomes.push({route:'canonical-socket',code:classify(error)});
-    throw error;
-  }));
+  }
+  tasks.push((async()=>{
+    try {
+      return await socketAttempt(target,'canonical-socket');
+    } catch(error) {
+      if(error?.message!=='FLOWER_SOCKET_HTTP_404' ||
+         !target.pathname.startsWith('/flower/v1/')) throw error;
+      const shortTarget=new URL(target.href);
+      shortTarget.pathname=target.pathname.slice('/flower/v1'.length);
+      return await socketAttempt(shortTarget,'canonical-short-socket');
+    }
+  })());
   let timer;
   try{
     const deadline = new Promise((_,reject)=>{
@@ -605,7 +621,7 @@ async function fetchFlowerResolverFast(target, request) {
         ? 'FLOWER_TIMEOUT':'FLOWER_UPSTREAM_UNAVAILABLE',
       // A bounded, non-sensitive summary of same-Flower connection routes.
       // Never expose signed media URLs, upstream request headers or song IDs.
-      attempts:outcomes.slice(0,9),
+      attempts:outcomes.slice(0,10),
       message:'The Flower upstream did not provide a playable address. It may be offline.'
     }),{
       status:502,
