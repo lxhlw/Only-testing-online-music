@@ -33,6 +33,7 @@ on:
       - 'scripts/test-fymusic-phase29-real-tab-lifecycle-browser.mjs'
       - 'scripts/test-fymusic-phase30-raw-cdp-real-hidden.mjs'
       - 'scripts/test-fymusic-phase31-seek-state-browser.mjs'
+      - 'scripts/test-fymusic-phase32-real-seek-ownership-browser.mjs'
       - 'scripts/generate-fymusic-phase26-fixtures.mjs'
       - 'scripts/generate-fymusic-phase25-fixtures.mjs'
       - 'functions/api/fymusic-codec-selftest.js'
@@ -128,6 +129,7 @@ jobs:
           node --check scripts/test-fymusic-phase29-real-tab-lifecycle-browser.mjs
           node --check scripts/test-fymusic-phase30-raw-cdp-real-hidden.mjs
           node --check scripts/test-fymusic-phase31-seek-state-browser.mjs
+          node --check scripts/test-fymusic-phase32-real-seek-ownership-browser.mjs
           node --check scripts/generate-fymusic-phase26-fixtures.mjs
           node --check scripts/generate-fymusic-phase25-fixtures.mjs
           node --check functions/api/fymusic-codec-selftest.js
@@ -193,6 +195,10 @@ jobs:
           echo 'FYMUSIC_REAL_EDGE_PREVIEW_UI_ASSET_PASS'
       - name: Install Chromium for responsive UI browser tests
         run: npx playwright install --with-deps chromium
+      - name: Validate Phase32 real mobile and Media Session seek ownership
+        env:
+          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: node scripts/test-fymusic-phase32-real-seek-ownership-browser.mjs
       - name: Validate actual Chrome document.hidden and original audio on isolated Edge preview
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}

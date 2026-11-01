@@ -37,6 +37,7 @@ on:
       - 'scripts/test-fymusic-phase29-real-tab-lifecycle-browser.mjs'
       - 'scripts/test-fymusic-phase30-raw-cdp-real-hidden.mjs'
       - 'scripts/test-fymusic-phase31-seek-state-browser.mjs'
+      - 'scripts/test-fymusic-phase32-real-seek-ownership-browser.mjs'
       - 'scripts/generate-fymusic-phase26-fixtures.mjs'
       - 'scripts/generate-fymusic-phase25-fixtures.mjs'
       - 'functions/api/fymusic-codec-selftest.js'
@@ -103,6 +104,7 @@ jobs:
           node --check scripts/test-fymusic-phase29-real-tab-lifecycle-browser.mjs
           node --check scripts/test-fymusic-phase30-raw-cdp-real-hidden.mjs
           node --check scripts/test-fymusic-phase31-seek-state-browser.mjs
+          node --check scripts/test-fymusic-phase32-real-seek-ownership-browser.mjs
           node --check scripts/generate-fymusic-phase26-fixtures.mjs
           node --check scripts/generate-fymusic-phase25-fixtures.mjs
           node --check functions/api/fymusic-codec-selftest.js
@@ -140,6 +142,10 @@ jobs:
           done
           cat /tmp/fymusic-pages.log
           exit 1
+      - name: Validate Phase32 real mobile and Media Session seek ownership
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-fymusic-phase32-real-seek-ownership-browser.mjs
       - name: Validate genuine Chrome hidden/visible events on headed Xvfb with original hi-res media
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
