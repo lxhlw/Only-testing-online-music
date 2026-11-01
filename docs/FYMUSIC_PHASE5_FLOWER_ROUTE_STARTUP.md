@@ -88,6 +88,20 @@ https://bc987277.only-testing-online-music.pages.dev
 
 另发现一个应避免的额外负载：当 DNS 别名已经先一步成功，原始 TCP 请求若稍后才返回 404，不应再启动第二次短路径 TCP 探测。修复提交 `917cfc2aec7bc30cfbc01720507600ca7ea8c367` 使用同一请求的 AbortController 完成状态判断，守护原始路径回退；受控测试在别名先赢时检查没有多发 TCP 请求，提交 `21376b0566ff53d7b35c42d01b4f2df50b55bdf8`。
 
+## 最终提交与最新真实 Edge 验收
+
+[Run 41270388858](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41270388858)，Job `124741960666`，**completed/success**，使用短路径取消优化、完整短路径安全测试和真实 Cloudflare Preview。
+
+- 实际开发预览：https://e3f2b389.only-testing-online-music.pages.dev
+- Cloudflare API 再次核对正式分支 `main`，只向 Preview 发布。
+- 确定性安全测试日志：`FYMUSIC_CANONICAL_SHORT_SOCKET_UNIT_PASS`，包括 `noObsoleteSocketAfterWinner=true`。
+- 真实野花：KG HTTP 502，KW HTTP 200；KW 成功路由 `sslip-full`；媒体 HTTP 206，HTMLAudioElement 解码并持续推进。
+- 真正 KW 请求、KW 目录搜索、媒体请求各 1 次，`manualKwRetryCount=0`。没有自动重复请求。
+- 用户确认 KW 到媒体可用 **1935ms**；从 KG 选择到连续播放验收 **7873ms**（包括持续播放的验证等待）。
+- LongTask 1 次，最长 **82ms**，属于 bootstrap 阶段；独立首屏抽样 First Contentful Paint **352ms**，DOMContentLoaded **449ms**，按修正算法筛出的项目/vendor 函数样本约 **29ms**。
+
+此 CI 证明最新改动在真实 Cloudflare Edge 上没有破坏 KW 恢复。**依然不能证明 `canonical-short-socket` 在真实上游 HTTP 404 时成功产生播放地址；新短路径只得到受控单测的可靠验证。**
+
 ## 未解决事项和后续安全验证
 
 1. 在真实 Cloudflare Edge 出现原始 Flower `HTTP 404` 的窗口时，新 `canonical-short-socket` 是否能够真正返回可解码音乐，**尚未证明**。不能把受控单元测试当作真实恢复率提升。
