@@ -15,7 +15,11 @@ const evidence = {
   actualKwAttempt: false, actualKwUrl: false,
   actualKwMedia: false, decodedProgress: false,
   qualityRequests: [], resolverEvents: [], flowerProxy: [], mediaResponses: [],
-  playback: null, performance: { timingsMs: {}, requestCounts: {
+  playback: null, qualityVerification: { declaredQualityMatch: null,
+    expectedHighestDeclaredMp3: null, actualCodec: null,
+    actualBitrateKbps: null, actualSampleRateHz: null,
+    actualChannels: null, mediaMetadataAvailable: false },
+  performance: { timingsMs: {}, requestCounts: {
     kgFlowerProxy: 0, kwFlowerProxy: 0, kwCatalogSearch: 0, mediaRequests: 0
   }, longTasks: { count: 0, maxDurationMs: 0 } }, result: 'NOT_STARTED'
 };
@@ -55,6 +59,39 @@ try {
   page = await browser.newPage({ viewport: { width: 1366, height: 900 } });
   const pageErrors = [];
   page.on('pageerror', () => bounded(pageErrors, 'PAGE_ERROR'));
+  // Chromium Media domain can report decoder properties without downloading
+  // the media twice. Only allowlisted primitive codec/bitrate metadata leaves
+  // the browser; never print Media.playerId, URLs or arbitrary property text.
+  try {
+    const mediaSession = await page.context().newCDPSession(page);
+    mediaSession.on('Media.playerPropertiesChanged', event => {
+      for (const property of event.properties || []) {
+        const name = String(property.name || '').toLowerCase();
+        const value = String(property.value || '').trim();
+        const q = evidence.qualityVerification;
+        if (name === 'audio_codec_name' || name === 'audio_codec') {
+          if (/^(mp3|mp4a|aac|flac|opus|vorbis|pcm|wav|alac|ac3|eac3)$/i.test(value))
+            q.actualCodec = value.toLowerCase();
+        }
+        if (name === 'audio_bitrate' || name === 'audio_bitrate_bps') {
+          const bits = Number(value);
+          if (Number.isFinite(bits) && bits >= 8000 && bits <= 20000000)
+            q.actualBitrateKbps = Math.round(bits / 1000);
+        }
+        if (name === 'audio_sample_rate') {
+          const hz = Number(value);
+          if (Number.isInteger(hz) && hz >= 8000 && hz <= 384000)
+            q.actualSampleRateHz = hz;
+        }
+        if (name === 'audio_channels' || name === 'audio_channel_count') {
+          const count = Number(value);
+          if (Number.isInteger(count) && count >= 1 && count <= 16)
+            q.actualChannels = count;
+        }
+      }
+    });
+    await mediaSession.send('Media.enable');
+  } catch { /* optional read-only Chromium diagnostic; playback is primary */ }
   page.on('request', request => {
     // Count actual requests without storing any URL, IDs, tags or signatures.
     try {
@@ -404,6 +441,24 @@ try {
   assert.ok(evidence.actualKwUrl, 'NO_REAL_KW_RESOLVED_URL');
   assert.ok(evidence.actualKwMedia, 'NO_REAL_MEDIA_HTTP_200_OR_206');
   assert.ok(evidence.decodedProgress, 'NO_REAL_KW_AUDIO_PROGRESS');
+  const declared = evidence.sourceDeclaredQualities.kw.map(q => q.toLowerCase());
+  const requestedKw = evidence.qualityRequests.filter(q => q.platform === 'kw');
+  const firstRequested = String(requestedKw[0]?.quality || '').toLowerCase();
+  evidence.qualityVerification.declaredQualityMatch = declared.length
+    ? declared.includes(firstRequested) : null;
+  evidence.qualityVerification.expectedHighestDeclaredMp3 =
+    ['320k','256k','192k','128k'].find(q => declared.includes(q)) || null;
+  evidence.qualityVerification.mediaMetadataAvailable = [
+    evidence.qualityVerification.actualCodec,
+    evidence.qualityVerification.actualBitrateKbps,
+    evidence.qualityVerification.actualSampleRateHz
+  ].some(x => x != null);
+  if (declared.length)
+    assert.equal(evidence.qualityVerification.declaredQualityMatch, true,
+      'KW_QUALITY_NOT_DECLARED_BY_SOURCE');
+  if (evidence.qualityVerification.expectedHighestDeclaredMp3)
+    assert.equal(firstRequested, evidence.qualityVerification.expectedHighestDeclaredMp3,
+      'KW_QUALITY_NOT_HIGHEST_DECLARED_MP3');
   // One user confirmation should not cause duplicate KW catalog lookups or
   // redundant Flower resolver HTTP calls. Count actual browser requests.
   assert.equal(evidence.performance.requestCounts.kwCatalogSearch, 1,
@@ -437,6 +492,8 @@ try {
     'UNCAUGHT_BROWSER_ERRORS',
     'UNSOLICITED_KW_RETRY_DETECTED',
     'FIRST_KW_REQUEST_COUNT_UNEXPECTED',
+    'KW_QUALITY_NOT_DECLARED_BY_SOURCE',
+    'KW_QUALITY_NOT_HIGHEST_DECLARED_MP3',
     'DUPLICATE_OR_MISSING_KW_CATALOG_REQUEST',
     'DUPLICATE_OR_MISSING_KW_FLOWER_REQUEST',
     'DUPLICATE_KW_SEARCH_ACTION',
