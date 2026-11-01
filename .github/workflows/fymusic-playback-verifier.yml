@@ -8,6 +8,8 @@ on:
       - 'src/fymusic-cross-platform-match.js'
       - 'scripts/test-fymusic-cross-platform-*.mjs'
       - 'src/app.js'
+      - 'src/source-manager.js'
+      - 'scripts/test-fymusic-runtime-request-privacy.mjs'
       - 'index.html'
       - 'scripts/test-fymusic-playback-*.mjs'
       - 'scripts/test-fymusic-chain-report.mjs'
@@ -33,6 +35,8 @@ jobs:
           node --check src/fymusic-playback-core.js
           node --check src/fymusic-playback-verifier.js
           node --check src/fymusic-cross-platform-match.js
+          node --check src/source-manager.js
+          node --check scripts/test-fymusic-runtime-request-privacy.mjs
           node --test scripts/test-fymusic-playback-core.mjs scripts/test-fymusic-playback-network.mjs scripts/test-fymusic-chain-report.mjs scripts/test-fymusic-cross-platform-match.mjs
       - name: Install existing project dependencies
         run: npm install --no-audit --no-fund
@@ -62,6 +66,10 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-fymusic-cross-platform-browser.mjs
+      - name: Test LX request redaction without changing signed upstream transport
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-fymusic-runtime-request-privacy.mjs
       - name: Show site logs on failure
         if: failure()
         run: cat /tmp/fymusic-pages.log || true
