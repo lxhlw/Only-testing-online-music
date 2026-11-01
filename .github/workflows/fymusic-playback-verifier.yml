@@ -21,6 +21,7 @@ on:
       - 'scripts/test-fymusic-cover-error-resource-stress.mjs'
       - 'scripts/test-fymusic-long-session-memory-browser.mjs'
       - 'scripts/test-fymusic-weak-network-recovery-browser.mjs'
+      - 'scripts/test-fymusic-real-media-lifecycle-browser.mjs'
       - 'src/music-lyrics.js'
       - 'scripts/test-fymusic-long-list-lyrics-browser.mjs'
       - 'scripts/test-fymusic-playlist-incremental-browser.mjs'
@@ -65,6 +66,7 @@ jobs:
           node --check scripts/test-fymusic-cover-error-resource-stress.mjs
           node --check scripts/test-fymusic-long-session-memory-browser.mjs
           node --check scripts/test-fymusic-weak-network-recovery-browser.mjs
+          node --check scripts/test-fymusic-real-media-lifecycle-browser.mjs
           node --check src/music-lyrics.js
           node --check scripts/test-fymusic-long-list-lyrics-browser.mjs
           node --check scripts/test-fymusic-playlist-incremental-browser.mjs
@@ -147,6 +149,10 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-fymusic-weak-network-recovery-browser.mjs
+      - name: Verify genuine HTMLAudioElement media lifecycle with delayed fixture and invalid payload
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-fymusic-real-media-lifecycle-browser.mjs
       - name: Show site logs on failure
         if: failure()
         run: cat /tmp/fymusic-pages.log || true
