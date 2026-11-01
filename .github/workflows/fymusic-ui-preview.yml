@@ -8,6 +8,7 @@ on:
       - 'src/now-playing-experience.js'
       - 'src/music-lyrics.js'
       - 'scripts/test-fymusic-long-list-lyrics-browser.mjs'
+      - 'scripts/test-fymusic-playlist-incremental-browser.mjs'
       - 'scripts/test-fymusic-frame-coherence-browser.mjs'
       - 'scripts/diagnostics/fymusic-startup-profile.mjs'
       - 'index.html'
@@ -70,6 +71,7 @@ jobs:
           node --check src/now-playing-experience.js
           node --check src/music-lyrics.js
           node --check scripts/test-fymusic-long-list-lyrics-browser.mjs
+          node --check scripts/test-fymusic-playlist-incremental-browser.mjs
           node --check scripts/test-fymusic-frame-coherence-browser.mjs
           node --check scripts/diagnostics/fymusic-startup-profile.mjs
       - name: Deploy ONLY this non-production branch to Cloudflare Pages Preview
@@ -125,6 +127,10 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
         run: node scripts/test-fymusic-long-list-lyrics-browser.mjs
+      - name: Preserve playlist rows and focus while appending on Cloudflare Preview
+        env:
+          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: node scripts/test-fymusic-playlist-incremental-browser.mjs
       - name: Profile startup CPU on non-production Edge preview
         if: always() && steps.preview.outcome == 'success'
         timeout-minutes: 2
