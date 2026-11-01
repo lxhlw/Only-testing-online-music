@@ -138,6 +138,10 @@ jobs:
           done
           cat /tmp/fymusic-pages.log
           exit 1
+      - name: Validate genuine Chrome hidden/visible events on headed Xvfb with original hi-res media
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: xvfb-run -a -s "-screen 0 1440x900x24" node scripts/test-fymusic-phase30-raw-cdp-real-hidden.mjs
       - name: Verify authorized real media and invalid-response rejection in Chromium
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
@@ -254,10 +258,6 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-fymusic-phase29-real-tab-lifecycle-browser.mjs
-      - name: Validate genuine Chrome hidden/visible events on headed Xvfb with original hi-res media
-        env:
-          TEST_BASE_URL: http://127.0.0.1:8788
-        run: xvfb-run -a -s "-screen 0 1440x900x24" node scripts/test-fymusic-phase30-raw-cdp-real-hidden.mjs
       - name: Show site logs on failure
         if: failure()
         run: cat /tmp/fymusic-pages.log || true

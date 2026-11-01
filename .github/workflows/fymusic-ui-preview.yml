@@ -191,6 +191,10 @@ jobs:
           echo 'FYMUSIC_REAL_EDGE_PREVIEW_UI_ASSET_PASS'
       - name: Install Chromium for responsive UI browser tests
         run: npx playwright install --with-deps chromium
+      - name: Validate actual Chrome document.hidden and original audio on isolated Edge preview
+        env:
+          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: xvfb-run -a -s "-screen 0 1440x900x24" node scripts/test-fymusic-phase30-raw-cdp-real-hidden.mjs
       - name: Verify modern frame coherence on actual Cloudflare Edge
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
@@ -291,10 +295,6 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
         run: node scripts/test-fymusic-phase29-real-tab-lifecycle-browser.mjs
-      - name: Validate actual Chrome document.hidden and original audio on isolated Edge preview
-        env:
-          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
-        run: xvfb-run -a -s "-screen 0 1440x900x24" node scripts/test-fymusic-phase30-raw-cdp-real-hidden.mjs
       - name: Profile startup CPU on non-production Edge preview
         if: always() && steps.preview.outcome == 'success'
         timeout-minutes: 2

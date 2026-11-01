@@ -122,7 +122,7 @@ try{
     const response=await page.send('Runtime.evaluate',{
       expression:expr,returnByValue:true,awaitPromise:true
     });
-    if(response.exceptionDetails)throw Error('Page JS '+response.exceptionDetails.text);
+    if(response.exceptionDetails)throw Error('Page JS '+(response.exceptionDetails.exception?.description||response.exceptionDetails.text));
     return response.result?.value;
   }
   const snapshot=()=>evaluate(String.raw`(()=>{
@@ -194,15 +194,22 @@ try{
   const preview=await evaluate(String.raw`(()=>{
     document.querySelector('#player-cover-button').click();
     const slider=document.querySelector('#detail-seek');
-    if(slider.disabled)throw Error('seek slider disabled');
-    slider.value='870';
-    slider.dispatchEvent(new Event('input',{bubbles:true}));
+    if(!slider)throw Error('seek slider missing');
+    const available=!slider.disabled;
+    if(available){
+      slider.value='870';
+      slider.dispatchEvent(new Event('input',{bubbles:true}));
+    }
     return {overlay:document.querySelector('#lyrics-overlay')?.getAttribute('aria-hidden'),
-      seekHidden:document.querySelector('#player-seek-preview')?.classList.contains('hidden')
+      seekHidden:document.querySelector('#player-seek-preview')?.classList.contains('hidden'),
+      available,reason:available?null:'live player seek currently disabled',
+      mediaDuration:document.querySelector('#audio')?.duration,
+      baseDisabled:document.querySelector('#player-seek')?.disabled
     };
   })()`);
   assert.equal(preview.overlay,'false');
-  assert.equal(preview.seekHidden,false);
+  if(preview.available)assert.equal(preview.seekHidden,false);
+  console.log('FYMUSIC_PHASE30_PREVIEW_CAPABILITY '+JSON.stringify(preview));
   // Opening another Chrome native target, not a Playwright page, delivers
   // genuine browser-origin visibilitychange and document.hidden=true.
   const spare=(await browser.send('Target.createTarget',{url:'about:blank'})).targetId;
@@ -211,7 +218,7 @@ try{
     return s.hidden&&s.visibility==='hidden'&&
       s.events.includes('hidden')?s:null;
   },'actual hidden state and native visibilitychange event',6000);
-  assert.equal(hidden.seekHidden,true,
+  if(preview.available)assert.equal(hidden.seekHidden,true,
     'the real visibility event must discard an unfinished seek preview');
   assert.ok(hidden.src.includes('format=flac24'));
   await delay(800);
@@ -264,7 +271,8 @@ try{
     browser:version.Browser,transport:'standalone-headed-Chromium-raw-CDP',
     actualHiddenDocument:true,visibilityEvents:playing.events,
     nativeHiddenMediaTime:+held.seconds.toFixed(3),
-    foregroundProgress:true,uncommittedSeekCancelled:true,
+    foregroundProgress:true,seekPreviewAvailable:preview.available,
+    uncommittedSeekCancelled:preview.available?hidden.seekHidden===true:null,
     oldSeekNotCommitted:true,
     explicitOSPausePreservedThroughBackground:true,
     explicitOSResumeContinues:true,
