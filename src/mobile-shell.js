@@ -88,10 +88,21 @@ if(navRail&&nav&&header&&toolbar&&channels){
     navRail.inert=mobile.matches&&!drawerOpen;
     menu.setAttribute('aria-expanded',String(drawerOpen));
     document.body.classList.toggle('mobile-menu-locked',drawerOpen);
-    if(drawerOpen)nav.querySelector('.nav-item.active')?.focus({preventScroll:true});
-    else if(restoreFocus)menu.focus({preventScroll:true});
+    // The mobile drawer acts as a modal navigation surface. Desktop keeps
+    // its original landmark semantics after the same DOM nodes are restored.
+    if(drawerOpen){
+      navRail.setAttribute('role','dialog');
+      navRail.setAttribute('aria-modal','true');
+      navRail.setAttribute('aria-label','主导航');
+      nav.querySelector('.nav-item.active')?.focus({preventScroll:true});
+    }else{
+      navRail.removeAttribute('role');
+      navRail.removeAttribute('aria-modal');
+      navRail.removeAttribute('aria-label');
+      if(restoreFocus&&mobile.matches)menu.focus({preventScroll:true});
+    }
   };
-  const setPicker=(opened)=>{
+  const setPicker=(opened,restoreFocus=false)=>{
     pickerOpen=Boolean(opened&&mobile.matches);
     toolbar.classList.toggle('channel-picker-open',pickerOpen);
     sourceButton.setAttribute('aria-expanded',String(pickerOpen));
@@ -108,24 +119,27 @@ if(navRail&&nav&&header&&toolbar&&channels){
       channels.style.setProperty('--picker-top',Math.round(top)+'px');
       channels.style.setProperty('--picker-left',Math.max(8,Math.round(rect.left))+'px');
       channels.style.setProperty('--picker-width',Math.min(innerWidth-16,Math.max(210,rect.width+148))+'px');
+      (channels.querySelector('.channel-button.active')||
+        channels.querySelector('.channel-button'))?.focus({preventScroll:true});
     }else{
       channels.classList.remove('mobile-channel-popover');
       channels.style.removeProperty('--picker-top');
       channels.style.removeProperty('--picker-left');
       channels.style.removeProperty('--picker-width');
       if(channels.parentNode!==toolbar)toolbar.insertBefore(channels,channelsDock.nextSibling);
+      if(restoreFocus&&mobile.matches)sourceButton.focus({preventScroll:true});
     }
   };
   menu.addEventListener('click',()=>setDrawer(!drawerOpen));
   shade.addEventListener('click',()=>setDrawer(false,true));
   drawerClose.addEventListener('click',()=>setDrawer(false,true));
   nav.addEventListener('click',ev=>{
-    if(ev.target.closest('.nav-item')){setDrawer(false);setPicker(false);}
+    if(ev.target.closest('.nav-item')){setDrawer(false,true);setPicker(false);}
   });
   sourceButton.addEventListener('click',()=>setPicker(!pickerOpen));
   channels.addEventListener('click',ev=>{
     if(ev.target.closest('.channel-button')){
-      setPicker(false);
+      setPicker(false,true);
       refreshSource();
     }
   });
@@ -135,18 +149,26 @@ if(navRail&&nav&&header&&toolbar&&channels){
   document.addEventListener('keydown',ev=>{
     if(ev.key==='Escape'){
       if(drawerOpen){ev.preventDefault();setDrawer(false,true);}
-      else if(pickerOpen){ev.preventDefault();setPicker(false);sourceButton.focus();}
+      else if(pickerOpen){ev.preventDefault();setPicker(false,true);}
     }
   });
-  nav.addEventListener('keydown',ev=>{
+  // The close control is a sibling of the nav links, so trapping Tab on
+  // .main-nav alone misses it and lets focus escape into the page.
+  navRail.addEventListener('keydown',ev=>{
     if(!drawerOpen||ev.key!=='Tab')return;
-    const links=[...nav.querySelectorAll('.nav-item:not([hidden])')];
-    if(!links.length)return;
-    if(ev.shiftKey&&document.activeElement===links[0]){
-      ev.preventDefault();links[links.length-1].focus();
-    }else if(!ev.shiftKey&&document.activeElement===links[links.length-1]){
-      ev.preventDefault();links[0].focus();
+    const controls=[drawerClose,...nav.querySelectorAll('.nav-item:not([hidden])')]
+      .filter(node=>!node.disabled&&node.getClientRects().length);
+    if(!controls.length)return;
+    const first=controls[0],last=controls[controls.length-1];
+    if(ev.shiftKey&&document.activeElement===first){
+      ev.preventDefault();last.focus();
+    }else if(!ev.shiftKey&&document.activeElement===last){
+      ev.preventDefault();first.focus();
     }
+  });
+  document.addEventListener('focusin',ev=>{
+    if(drawerOpen&&!navRail.contains(ev.target))
+      drawerClose.focus({preventScroll:true});
   });
   new MutationObserver(refreshActive).observe(nav,{
     attributes:true,subtree:true,attributeFilter:['class']
@@ -156,6 +178,9 @@ if(navRail&&nav&&header&&toolbar&&channels){
     attributeFilter:['class']
   });
   window.addEventListener('scroll',()=>{if(pickerOpen)setPicker(false);},{passive:true});
+  // The portaled picker uses measured coordinates. Do not leave it
+  // detached from its trigger after viewport rotation or keyboard resize.
+  window.addEventListener('resize',()=>{if(pickerOpen)setPicker(false);},{passive:true});
   mobile.addEventListener('change',()=>{
     setDrawer(false);
     placeDrawer();
