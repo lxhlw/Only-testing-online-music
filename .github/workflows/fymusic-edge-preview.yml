@@ -10,6 +10,8 @@ on:
       - 'scripts/test-fymusic-canonical-short-socket.mjs'
       - 'scripts/test-fymusic-cross-platform-browser.mjs'
       - 'src/app.js'
+      - 'src/source-manager.js'
+      - 'scripts/test-fymusic-runtime-request-privacy.mjs'
       - 'src/fymusic-cross-platform-match.js'
       - 'functions/api/proxy.js'
   workflow_dispatch:
@@ -68,6 +70,8 @@ jobs:
         run: |
           node --check scripts/diagnostics/fymusic-real-flower-kw.mjs
           node --check scripts/diagnostics/fymusic-startup-profile.mjs
+          node --check src/source-manager.js
+          node --check scripts/test-fymusic-runtime-request-privacy.mjs
       - name: Check Flower route classification and same-provider short TCP recovery
         run: |
           node scripts/test-modern-flower-proxy.mjs
@@ -121,6 +125,12 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
         run: node scripts/diagnostics/fymusic-real-flower-kw.mjs
+      - name: Validate signed LX request redaction on isolated Preview
+        if: always() && steps.preview.outcome == 'success'
+        timeout-minutes: 2
+        env:
+          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: node scripts/test-fymusic-runtime-request-privacy.mjs
       - name: Profile startup CPU on non-production Edge preview
         if: always() && steps.preview.outcome == 'success'
         timeout-minutes: 2
