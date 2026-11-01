@@ -47,7 +47,7 @@ try{
    Object.defineProperty(audio,'readyState',{configurable:true,get:()=>4});
    audio.play=()=>{counts.directPlay++;return Promise.resolve()};
    audio.pause=()=>{counts.directPause++};
-   button.onclick=()=>counts.toggle++;
+   button.onclick=()=>{counts.toggle++;paused=!paused};
    prev.onclick=()=>counts.prev++;
    next.onclick=()=>counts.next++;
    baseSeek.oninput=()=>counts.preview++;
@@ -91,6 +91,7 @@ try{
      singer:'Fixture artist',albumName:'Fixture album'};
    os.handlers.nexttrack();os.handlers.previoustrack();
    audio.dispatchEvent(new Event('timeupdate'));
+   paused=false;
    audio.dispatchEvent(new Event('playing'));
    await tick();
    const playing=os.playbackState;
