@@ -51,7 +51,7 @@ export async function onRequest({request}){
   const isPrimed=mode==='primed'||mode==='primed-range';
   const leadFrames=isPrimed?Number(params.get('leadFrames')||PRIMED_MP3_FRAMES):PRIMED_MP3_FRAMES;
   const gapMs=isPrimed?Number(params.get('gapMs')||PRIMED_GAP_MS):PRIMED_GAP_MS;
-  if(isPrimed&&(![136,280,460].includes(leadFrames)||![11000,16000].includes(gapMs)))
+  if(isPrimed&&(![136,280,460].includes(leadFrames)||![5500,11000,16000].includes(gapMs)))
     return new Response('Unsupported QA lead/gap',{status:400});
   const data=fixture(format),total=data.length;
   const split=isPrimed?FRAME_SIZE*leadFrames:
