@@ -220,7 +220,9 @@ function setTrack(next){
   lastActiveLyric=null;
 }
 function updateTransport(){
-  if(!audio)return;
+  // Closed immersive controls do not need DOM writes on every audio
+  // timeupdate. openScreen() refreshes them synchronously before display.
+  if(!audio||!isOpen())return;
   const valid=Number.isFinite(audio.duration)&&audio.duration>0;
   const progress=valid?Math.max(0,Math.min(1000,Math.round(audio.currentTime/audio.duration*1000))):0;
   if(!fullSeek.matches(':active')&&document.activeElement!==fullSeek)fullSeek.value=String(progress);
@@ -245,6 +247,9 @@ function centerActiveLyric(instant=false){
 }
 let lastActiveLyric=null;
 if(lyricLines)new MutationObserver(()=>{
+  // The small player lyric summary is maintained independently by modern-ui.
+  // Avoid querying/centering a hidden immersive screen on each lyric change.
+  if(!isOpen()||activeTab!=='lyrics')return;
   const active=lyricLines.querySelector('.lyrics-line.active');
   if(active===lastActiveLyric)return;
   lastActiveLyric=active;
