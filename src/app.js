@@ -321,10 +321,22 @@
       var hasFallback=qualitySettings.autoFallback;
       var text='音质 '+requestedName+' · '+(selected===requestedName?'按所选播放':'首选 '+selected)+
         (hasFallback&&plan.length>1?' · 可降级':'');
-      if(!available.length)text='音质 '+requestedName+' · 音源准备中';
+      var fixedUnsupported=qualitySettings.qualityMode==='fixed' &&
+        available.length>0 && !available.some(function(q){
+          return String(q||'').toLowerCase()===String(qualitySettings.fixedQuality||'').toLowerCase();
+        });
+      if(!available.length) {
+        text='音质 '+requestedName+' · '+
+          (active&&active.inited?'音源未声明可用音质':'音源准备中');
+      } else if(fixedUnsupported) {
+        text='音质 '+requestedName+' · 音源未声明支持'+
+          (hasFallback&&plan.length?' · 已允许降级至 '+selected:' · 不自动降级');
+      } else if(available.length===1) {
+        text+=' · 音源仅声明 '+available[0];
+      }
       qualitySummaryEl.textContent=text;
       qualitySummaryEl.title='当前渠道声明音质：'+(available.join('、')||'未提供')+
-        '；实际媒体规格以服务器响应为准';
+        '；这是音源能力声明，不是实际媒体码率或格式检测结果';
       qualitySummaryEl.setAttribute('aria-label',qualitySummaryEl.title);
     }
   }
