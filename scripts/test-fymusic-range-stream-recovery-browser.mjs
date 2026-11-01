@@ -176,12 +176,16 @@ try{
  await page.waitForFunction(()=>Boolean(document.querySelector('#audio').error)||
    document.querySelector('#audio').currentTime>.3,
    null,{timeout:16000});
- await page.waitForTimeout(400);
+ // Give the actual truncated 3.55-second frame buffer time to run out.
+ // Record what Chromium truly reports rather than fabricating a stalled event.
+ await page.waitForTimeout(4400);
  await frame();
  const cutMedia=await state();
  const cutHadNativeError=cutMedia.error>0;
  const cutHadNativeProgress=cutMedia.events.some(e=>
    e.mode==='cut'&&e.type==='timeupdate'&&e.time>.3);
+ const cutHadNativeWaitAfterProgress=cutMedia.events.some(e=>
+   e.mode==='cut'&&e.type==='waiting'&&e.time>1.25);
  const cutCalls={...cutMedia.calls};
  await page.evaluate(()=>{
    window.dispatchEvent(new Event('online'));
@@ -216,10 +220,13 @@ try{
    incrementalDeliveryObserved:deliveredIncrementally,
    earlyMp3FramesInterrupted:true,cutFetchFailed:cutTransport.failed,
    cutBytesReceived:cutTransport.received,
+   cutHttpStatus:cutTransport.status,
    chromiumRealMp3Decoder:true,
    nativeMidPlaybackWaitObserved:midPlaybackWait,
    nativeCutMediaErrorObserved:cutHadNativeError,
    nativeCutMediaProgressObserved:cutHadNativeProgress,
+   nativeCutWaitingAfterProgress:cutHadNativeWaitAfterProgress,
+   nativeCutElapsedSeconds:Number(cutMedia.time.toFixed(2)),
    foregroundNoAutoReplay:true,
    explicitNormalWavRecovered:true,
    syntheticFixtureOnly:true,
