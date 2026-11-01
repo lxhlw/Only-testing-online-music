@@ -124,9 +124,9 @@
         var requestCategory='other';
         try {
           var diagnosticTarget=new URL(target,global.location.href);
-          if (/^\\/flower\\/v1\\/url\\/(?:kg|kw|wy|mg|tx)(?:\\/|$)/i.test(
+          if (/^\/flower\/v1\/url\/(?:kg|kw|wy|mg|tx)(?:\/|$)/i.test(
             diagnosticTarget.pathname)) requestCategory='flower-resolver';
-          else if (/\\/flower\\/latest\\.js$/i.test(diagnosticTarget.pathname))
+          else if (/\/flower\/latest\.js$/i.test(diagnosticTarget.pathname))
             requestCategory='flower-script';
           else if (diagnosticTarget.origin===global.location.origin)
             requestCategory='same-origin';
