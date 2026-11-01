@@ -76,10 +76,16 @@ try{
     window.LXMusicSearch.isPlayableUrlForSource=(source,url)=>
       source==='wy'&&new URL(url).pathname==='/api/fymusic-codec-selftest';
   });
-  await page.locator('#channel-list .channel-button[title="WY"]').click();
-  await page.locator('#global-search-input').fill('Phase32 Original');
-  await page.locator('#global-search-btn').click();
-  await page.locator('.search-song-row .search-song-main').first().click();
+  // The channel sidebar is off-canvas on a 390px mobile viewport.
+  // Invoke its real existing click handler without Playwright visibility gating.
+  await page.evaluate(()=>{
+    document.querySelector('#channel-list .channel-button[title="WY"]').click();
+    document.querySelector('#global-search-input').value='Phase32 Original';
+    document.querySelector('#global-search-btn').click();
+    const row=document.querySelector('.search-song-row .search-song-main');
+    if(!row)throw Error('Expected actual search row');
+    row.click();
+  });
   const ready=id=>page.waitForFunction(id=>{
     const a=document.querySelector('#audio');
     return a.currentSrc.includes('phase32='+id)&&a.readyState>=2&&
