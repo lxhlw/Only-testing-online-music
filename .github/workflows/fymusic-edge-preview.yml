@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/fymusic-edge-preview.yml'
       - 'scripts/diagnostics/fymusic-real-flower-kw.mjs'
+      - 'scripts/diagnostics/fymusic-startup-profile.mjs'
+      - 'scripts/test-modern-flower-proxy.mjs'
       - 'scripts/test-fymusic-cross-platform-browser.mjs'
       - 'src/app.js'
       - 'src/fymusic-cross-platform-match.js'
@@ -61,8 +63,12 @@ jobs:
           NODE
       - name: Install existing project dependencies
         run: npm install --no-audit --no-fund
-      - name: Syntax-check unmocked browser evidence gate
-        run: node --check scripts/diagnostics/fymusic-real-flower-kw.mjs
+      - name: Syntax-check real playback and startup profiling
+        run: |
+          node --check scripts/diagnostics/fymusic-real-flower-kw.mjs
+          node --check scripts/diagnostics/fymusic-startup-profile.mjs
+      - name: Check safe Flower successful-route classification
+        run: node scripts/test-modern-flower-proxy.mjs
       - name: Deploy ONLY this non-production branch to Cloudflare Pages Preview
         id: preview
         shell: bash
@@ -112,3 +118,9 @@ jobs:
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
         run: node scripts/diagnostics/fymusic-real-flower-kw.mjs
+      - name: Profile startup CPU on non-production Edge preview
+        if: always() && steps.preview.outcome == 'success'
+        timeout-minutes: 2
+        env:
+          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: node scripts/diagnostics/fymusic-startup-profile.mjs
