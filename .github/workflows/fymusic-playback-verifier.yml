@@ -28,6 +28,7 @@ on:
       - 'scripts/test-fymusic-direct-progressive-browser.mjs'
       - 'scripts/test-fymusic-primed-direct-browser.mjs'
       - 'scripts/test-fymusic-phase22-lead-browser.mjs'
+      - 'scripts/test-fymusic-phase23-range-compare-browser.mjs'
       - 'src/fymusic-media-evidence.js'
       - 'functions/api/fymusic-range-selftest.js'
       - 'functions/api/fymusic-throttle-selftest.js'
@@ -82,6 +83,7 @@ jobs:
           node --check scripts/test-fymusic-direct-progressive-browser.mjs
           node --check scripts/test-fymusic-primed-direct-browser.mjs
           node --check scripts/test-fymusic-phase22-lead-browser.mjs
+          node --check scripts/test-fymusic-phase23-range-compare-browser.mjs
           node --check src/fymusic-media-evidence.js
           node --check functions/api/fymusic-range-selftest.js
           node --check functions/api/fymusic-throttle-selftest.js
@@ -195,6 +197,10 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-fymusic-phase22-lead-browser.mjs
+      - name: Compare direct native MP3 HTTP Range 206 and progressive 200 using real network gaps
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-fymusic-phase23-range-compare-browser.mjs
       - name: Show site logs on failure
         if: failure()
         run: cat /tmp/fymusic-pages.log || true
