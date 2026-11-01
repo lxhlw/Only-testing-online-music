@@ -98,9 +98,21 @@ try{
  },endpoint);
  await page.waitForFunction(()=>document.querySelector('#audio').currentTime>.6,
    null,{timeout:13000});
- await page.waitForFunction(()=>window.__fymusicRangeFixture.events.some(
-   e=>e.type==='waiting'&&e.mode==='gap'&&e.t>=1.25),
-   null,{timeout:13000});
+ try{
+   await page.waitForFunction(()=>window.__fymusicRangeFixture.events.some(
+     e=>e.type==='waiting'&&e.mode==='gap'&&e.t>=1.25),
+     null,{timeout:13000});
+ }catch(error){
+   const diagnosis=await state();
+   console.log('FYMUSIC_RANGE_STALL_DIAGNOSTIC '+JSON.stringify({
+     time:diagnosis.time,duration:diagnosis.duration,
+     error:diagnosis.error,buffering:diagnosis.buffering,
+     readyState:diagnosis.readyState,
+     events:diagnosis.events.filter(e=>e.mode==='gap').map(
+       e=>({type:e.type,t:Number(e.t.toFixed(2)),readyState:e.readyState}))
+   }));
+   throw error;
+ }
  await page.waitForFunction(()=>document.documentElement.classList.contains('is-buffering'),
    null,{timeout:5500});
  const waiting=await state();
