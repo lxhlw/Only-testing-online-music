@@ -93,14 +93,21 @@ try{
    audio.dispatchEvent(new Event('timeupdate'));
    paused=false;
    audio.dispatchEvent(new Event('playing'));
+   // The regular player refresh rejects this synthetic URL because there is
+   // no app-owned playbackState. Explicitly simulate an already-authorized
+   // seek surface AFTER its synchronous event handlers, without weakening
+   // the production valid-state gate.
+   baseSeek.disabled=false;
    await tick();
    const playing=os.playbackState;
    const posCalls=os.positionCalls.length;
    for(let i=0;i<12;i++)audio.dispatchEvent(new Event('timeupdate'));
+   baseSeek.disabled=false;
    await tick();
    const unchangedPositionCalls=os.positionCalls.length;
    time=28;
    audio.dispatchEvent(new Event('timeupdate'));
+   baseSeek.disabled=false;
    await tick();
    const updatedPositionCalls=os.positionCalls.length;
    paused=true;
