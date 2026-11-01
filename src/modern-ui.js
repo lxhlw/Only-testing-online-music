@@ -70,6 +70,47 @@ const updateNowPlaying=()=>{
   if(!audio)return;
   root.classList.toggle('is-playing',!audio.paused&&!audio.ended&&audio.readyState>1);
 };
+// Network events only update presentation. The source verifier, media error
+// fallback and user playback intent remain owned by app.js/player-controls.js.
+// In particular an offline->online or BFCache restore NEVER calls play/load,
+// changes audio.currentTime, repeats signed URLs or selects another provider.
+const networkHint=$('player-network-hint');
+let networkBuffering=false,bufferingSource='';
+const renderNetworkPresence=()=>{
+  if(!audio)return;
+  const source=audio.currentSrc||'';
+  if(bufferingSource!==source){
+    bufferingSource=source;
+    networkBuffering=false;
+  }
+  const active=Boolean(source&&!audio.paused&&!audio.ended&&!audio.error);
+  const offline=active&&navigator.onLine===false;
+  const buffering=active&&!offline&&networkBuffering;
+  root.classList.toggle('is-offline',offline);
+  root.classList.toggle('is-buffering',buffering);
+  if(!networkHint)return;
+  const message=offline?'浏览器报告离线 · 等待网络恢复':
+    buffering?'音频缓冲中 · 保持当前播放位置':'';
+  if(networkHint.textContent!==message)networkHint.textContent=message;
+  networkHint.hidden=!message;
+};
+const observeNetworkEvent=event=>{
+  const type=event.type;
+  if(type==='waiting'||type==='stalled'){
+    // Ignore loadstart/metadata waits and paused seeks; do not claim an
+    // upstream outage based on a single low-level media event.
+    if(audio.currentSrc&&!audio.paused&&!audio.ended&&!audio.error){
+      bufferingSource=audio.currentSrc;networkBuffering=true;
+    }
+  }else if(type==='playing'||type==='canplay'||type==='canplaythrough'||
+           type==='seeked'||type==='pause'||type==='ended'||
+           type==='error'||type==='emptied'||type==='abort'){
+    networkBuffering=false;
+  }else if(type==='timeupdate'&&Number(audio.readyState)>=3){
+    networkBuffering=false;
+  }
+  schedule(renderNetworkPresence);
+};
 const syncLyric=()=>{
   if(!lyric)return;
   const active=document.querySelector('.lyrics-line.active');
@@ -98,7 +139,7 @@ const syncMiniTransport=()=>window.LXPlayerControls?.refresh?.();
 const reconcileForeground=()=>{
   if(document.hidden)return;
   for(const work of [syncActiveView,syncStatus,syncSource,syncLyric,
-                     updateNowPlaying,syncMiniTransport])schedule(work);
+                     updateNowPlaying,syncMiniTransport,renderNetworkPresence])schedule(work);
 };
 document.addEventListener('visibilitychange',reconcileForeground);
 window.addEventListener('pageshow',reconcileForeground);
@@ -106,7 +147,14 @@ if(audio){
   for(const event of ['playing','pause','ended','waiting','canplay','error','emptied']){
     audio.addEventListener(event,()=>schedule(updateNowPlaying),{passive:true});
   }
+  for(const event of ['waiting','stalled','playing','canplay',
+                       'canplaythrough','seeked','pause','ended','error',
+                       'emptied','abort','timeupdate']){
+    audio.addEventListener(event,observeNetworkEvent,{passive:true});
+  }
 }
+window.addEventListener('offline',()=>schedule(renderNetworkPresence));
+window.addEventListener('online',()=>schedule(renderNetworkPresence));
 if(input&&searchBtn){
   input.addEventListener('keydown',ev=>{
     // The existing app navigation already handles Enter once. Do not
@@ -302,3 +350,4 @@ document.querySelectorAll('[data-suggest-query]').forEach(button=>{
 
 syncStatus();
 updateNowPlaying();
+renderNetworkPresence();
