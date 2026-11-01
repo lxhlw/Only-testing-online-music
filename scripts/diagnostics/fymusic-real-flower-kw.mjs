@@ -101,7 +101,7 @@ try {
           const winner = String(response.headers()['x-fymusic-flower-route'] || '');
           const allowedRouteNames = new Set(['ts-short', 'tm-short', 'ts-full',
             'tm-full', 'sslip-short', 'nip-short', 'sslip-full',
-            'nip-full', 'canonical-socket']);
+            'nip-full', 'canonical-socket', 'canonical-short-socket']);
           const successfulRoute = response.ok() && allowedRouteNames.has(winner)
             ? winner : null;
           if (response.status() >= 400) {
@@ -112,7 +112,7 @@ try {
             // Allow-list routes/status labels; never persist a URL or response.
             const names = new Set(['ts-short', 'tm-short', 'ts-full',
               'tm-full', 'sslip-short', 'nip-short', 'sslip-full',
-              'nip-full', 'canonical-socket']);
+              'nip-full', 'canonical-socket', 'canonical-short-socket']);
             if (Array.isArray(body?.attempts)) {
               routeOutcomes = body.attempts.slice(0,9).filter(item =>
                 item && names.has(item.route) &&
