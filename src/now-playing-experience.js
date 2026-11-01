@@ -340,6 +340,9 @@ function closeScreen(){
   document.documentElement.classList.remove('lyrics-open');
   coverButton?.setAttribute('aria-expanded','false');
   const target=lastFocused?.isConnected?lastFocused:coverButton;
+  // A removed playlist/search row must not be retained for the entire next
+  // listening session just because it opened this modal once.
+  lastFocused=null;
   target?.focus?.({preventScroll:true});
 }
 coverButton?.addEventListener('click',()=>isOpen()?closeScreen():openScreen());
