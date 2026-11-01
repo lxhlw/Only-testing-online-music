@@ -54,7 +54,7 @@ try{
    for(const time of times){
      reads=0;
      const result=raw.getActiveLine(lines,time);
-     const expected=Math.min(65535,Math.max(-1,Math.floor(time/.25)));
+     const expected=Math.min(65535,Math.max(0,Math.floor(time/.25)));
      if(result!==expected)return {error:'wrong timestamp result',time,result,expected};
      maxReads=Math.max(maxReads,reads);
    }
