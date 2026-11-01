@@ -132,6 +132,7 @@ document.addEventListener('keydown',ev=>{
 });
 // Animate only the newly appended rows, not a scan of the first rows in
 // an ever-growing list. Each mutation burst is capped at twelve entries.
+const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
 const animateAdded=(container,entries)=>{
   if(!container)return;
   let count=0;
@@ -140,12 +141,20 @@ const animateAdded=(container,entries)=>{
     if(el.nodeType!==1||el.parentElement!==container||
       el.dataset.motionSeen==='1')continue;
     el.dataset.motionSeen='1';
-    el.classList.add('reveal-item');
-    el.style.animationDelay=(count*20)+'ms';
-    el.addEventListener('animationend',()=>{
-      el.classList.remove('reveal-item');
-      el.style.animationDelay='';
-    },{once:true});
+    // Browsers can skip animationend when motion is reduced. Do not
+    // accumulate inert listener closures or stale inline animation styles.
+    if(!reduceMotion.matches){
+      el.classList.add('reveal-item');
+      el.style.animationDelay=(count*20)+'ms';
+      const cleanup=()=>{
+        el.classList.remove('reveal-item');
+        el.style.animationDelay='';
+        el.removeEventListener('animationend',cleanup);
+        el.removeEventListener('animationcancel',cleanup);
+      };
+      el.addEventListener('animationend',cleanup);
+      el.addEventListener('animationcancel',cleanup);
+    }
     count++;
   }
 };
