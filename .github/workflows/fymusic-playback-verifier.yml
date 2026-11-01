@@ -13,6 +13,8 @@ on:
       - 'src/mobile-shell.css'
       - 'scripts/test-fymusic-modern-mobile-a11y.mjs'
       - 'src/now-playing-experience.js'
+      - 'src/player-controls.js'
+      - 'scripts/test-fymusic-immersive-mobile-seek.mjs'
       - 'src/music-lyrics.js'
       - 'scripts/test-fymusic-long-list-lyrics-browser.mjs'
       - 'scripts/test-fymusic-playlist-incremental-browser.mjs'
@@ -49,6 +51,8 @@ jobs:
           node --check src/mobile-shell.js
           node --check scripts/test-fymusic-modern-mobile-a11y.mjs
           node --check src/now-playing-experience.js
+          node --check src/player-controls.js
+          node --check scripts/test-fymusic-immersive-mobile-seek.mjs
           node --check src/music-lyrics.js
           node --check scripts/test-fymusic-long-list-lyrics-browser.mjs
           node --check scripts/test-fymusic-playlist-incremental-browser.mjs
@@ -103,6 +107,10 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-fymusic-modern-mobile-a11y.mjs
+      - name: Verify mobile immersive seek, cancelled dragging and rotation
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-fymusic-immersive-mobile-seek.mjs
       - name: Show site logs on failure
         if: failure()
         run: cat /tmp/fymusic-pages.log || true
