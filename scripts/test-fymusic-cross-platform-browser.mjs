@@ -76,6 +76,32 @@ try{
     source==='kw' && new URL(url).pathname==='/fymusic-alternate-calibration.wav';
  });
  await page.locator('#channel-list .channel-button[title="KG"]').click();
+ const qualityStatus=page.locator('#quality-summary');
+ assert.match(await qualityStatus.innerText(),/flac24bit/,
+   'supported FLAC24 must remain selectable');
+ assert.match(await qualityStatus.getAttribute('title'),/不是实际媒体码率/,
+   'source capability must not be reported as actual media encoding');
+ // The source-only 128k case must be clearly attributed to the source,
+ // not silently presented as a global FyMusic quality cap.
+ await page.evaluate(()=>{
+   window.LXSourceManager.getActive().sources.kg.qualitys=['128k'];
+ });
+ await page.locator('#channel-list .channel-button[title="KG"]').click();
+ assert.match(await qualityStatus.innerText(),/flac24bit.*音源未声明支持.*不自动降级/,
+   'unsupported fixed lossless without consent must not be reduced to 128k');
+ await page.evaluate(()=>window.LXPlaySettings.save({
+   qualityMode:'fixed',fixedQuality:'flac24bit',autoFallback:true
+ }));
+ await page.locator('#channel-list .channel-button[title="KG"]').click();
+ assert.match(await qualityStatus.innerText(),/flac24bit.*音源未声明支持.*已允许降级至 128k/,
+   'an explicitly allowed downgrade must be visible');
+ await page.evaluate(()=>{
+   window.LXPlaySettings.save({
+     qualityMode:'fixed',fixedQuality:'flac24bit',autoFallback:false
+   });
+   window.LXSourceManager.getActive().sources.kg.qualitys=['flac24bit','128k'];
+ });
+ await page.locator('#channel-list .channel-button[title="KG"]').click();
  await page.locator('#global-search-input').fill('安全备用校准');
  await page.locator('#global-search-btn').click();
  await page.locator('.search-song-row .search-song-main').first().click();
@@ -202,6 +228,6 @@ try{
   searches:stats.kwSearch,confirmedResolvers:stats.kwResolvers,
   quality:stats.qualities[0],actualAudio:true,
   unsupportedQualityProtected:true,staleCallbackIgnored:true,
-  explicitKwRetryPreserved:true
+  explicitKwRetryPreserved:true,sourceQualityProvenanceVisible:true
  }));
 }finally{await browser.close();}
