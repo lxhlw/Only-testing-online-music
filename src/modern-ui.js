@@ -26,14 +26,34 @@ const source=$('top-source-label');
 const results=$('search-results');
 const lyric=$('player-lyric');
 
+// Coalesce repeated work by identity, but never discard *different* updates
+// arriving in the same frame (status, source, lyric, navigation, media art).
+// The previous one-slot frame guard silently lost all but the first task.
+const pendingUpdates=new Set();
 let animationFrame=0;
-const schedule=work=>{
-  if(animationFrame)return;
-  animationFrame=requestAnimationFrame(()=>{
-    animationFrame=0;
-    if(!document.hidden)work();
-  });
+const flushUpdates=()=>{
+  animationFrame=0;
+  if(document.hidden)return;
+  const batch=[...pendingUpdates];
+  pendingUpdates.clear();
+  let firstError=null;
+  for(const work of batch){
+    try{work()}catch(error){if(!firstError)firstError=error;}
+  }
+  // A work callback may schedule more work; keep it for the following frame
+  // instead of re-entering DOM changes in this same paint.
+  if(pendingUpdates.size)animationFrame=requestAnimationFrame(flushUpdates);
+  if(firstError)throw firstError;
 };
+const schedule=work=>{
+  pendingUpdates.add(work);
+  if(!document.hidden&&!animationFrame)
+    animationFrame=requestAnimationFrame(flushUpdates);
+};
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden&&pendingUpdates.size&&!animationFrame)
+    animationFrame=requestAnimationFrame(flushUpdates);
+});
 const syncStatus=()=>{
   if(!status)return;
   const value=(status.textContent||'').toLowerCase();
@@ -57,12 +77,14 @@ const syncLyric=()=>{
 };
 if(status)new MutationObserver(()=>schedule(syncStatus))
   .observe(status,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']});
-if(source)new MutationObserver(()=>schedule(()=>{
+const syncSource=()=>{
   const active=window.LXSourceManager?.getActive?.();
   const name=active?.name||'正在准备';
   const label='当前音源：'+name;
   if(source.textContent!==label)source.textContent=label;
-})).observe(source,{childList:true,characterData:true});
+};
+if(source)new MutationObserver(()=>schedule(syncSource))
+  .observe(source,{childList:true,characterData:true});
 const lyrics=$('lyrics-lines');
 if(lyrics)new MutationObserver(()=>schedule(syncLyric))
   .observe(lyrics,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
@@ -112,8 +134,11 @@ const animateAdded=container=>{
 };
 for(const id of ['search-results','playlist-results','playlist-featured','ranking-songs','playlist-detail-songs']){
   const node=$(id);
-  if(node)new MutationObserver(()=>schedule(()=>animateAdded(node)))
-    .observe(node,{childList:true});
+  if(node){
+    const updateListMotion=()=>animateAdded(node);
+    new MutationObserver(()=>schedule(updateListMotion))
+      .observe(node,{childList:true});
+  }
 }
 const modernClick=ev=>{
   if(ev.target.closest('.search-actions button:first-child,.playlist-song-play,.playlist-card-actions button')){
