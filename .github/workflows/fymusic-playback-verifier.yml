@@ -26,6 +26,7 @@ on:
       - 'scripts/test-fymusic-throttled-buffering-browser.mjs'
       - 'scripts/test-fymusic-mse-starvation-browser.mjs'
       - 'scripts/test-fymusic-direct-progressive-browser.mjs'
+      - 'scripts/test-fymusic-primed-direct-browser.mjs'
       - 'functions/api/fymusic-range-selftest.js'
       - 'functions/api/fymusic-throttle-selftest.js'
       - 'src/music-lyrics.js'
@@ -77,6 +78,7 @@ jobs:
           node --check scripts/test-fymusic-throttled-buffering-browser.mjs
           node --check scripts/test-fymusic-mse-starvation-browser.mjs
           node --check scripts/test-fymusic-direct-progressive-browser.mjs
+          node --check scripts/test-fymusic-primed-direct-browser.mjs
           node --check functions/api/fymusic-range-selftest.js
           node --check functions/api/fymusic-throttle-selftest.js
           node --check src/music-lyrics.js
@@ -181,6 +183,10 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-fymusic-direct-progressive-browser.mjs
+      - name: Verify primed MP3 direct audio native early startup and mid-playback gaps
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-fymusic-primed-direct-browser.mjs
       - name: Show site logs on failure
         if: failure()
         run: cat /tmp/fymusic-pages.log || true

@@ -3,6 +3,7 @@
 // used by the player itself, and does not proxy or resolve third-party audio.
 const RATE=8000,SECONDS=14,HEADER=44,FRAME_BYTES=2;
 const CHUNK_BYTES=16384,STALL_AT=HEADER+RATE*FRAME_BYTES*3;
+const PRIMED_MP3_FRAMES=460,PRIMED_GAP_MS=16000;
 const FRAME_BASE64='//tSxAABSs0bAAt8qAlvo2Alb5UB3UpgMLsSE27PLxKs7qjlmoZClrtT01utubLZ1deyJS8usxzLRZHRNUe7TO6tY9OxldZQo1VeUtm6uz7Qi4uQR84+fFz/b4qrTM7qPnvU/vPd3Q6d931wASAqy1uBhciSg/R5eBVlZFY0tSqY1N0XMQr0Zkvy5rsjJ3Va2m0lIVKpOyrorWeVmR7kr3KjJMFlojTGu/RnbeEmGTj/kESZPd7HVlqpX8Sd9y/877+bEyOs6hMQU1FMy4xMDAA=',FRAME_SIZE=209,MP3_FRAMES=1600,MP3_STALL_AT=FRAME_SIZE*136;
 let stored=null,mp3Stored=null;
 function fixture(format='wav'){
@@ -39,14 +40,15 @@ export async function onRequest({request}){
   if(request.method!=='GET'&&request.method!=='HEAD')
     return new Response(null,{status:405,headers:{Allow:'GET, HEAD'}});
   const mode=new URL(request.url).searchParams.get('mode')||'normal';
-  if(!['normal','gap','cut','progressive'].includes(mode))
+  if(!['normal','gap','cut','progressive','primed'].includes(mode))
     return new Response('Unsupported test mode',{status:400});
   const format=new URL(request.url).searchParams.get('format')||'wav';
   if(!['wav','mp3'].includes(format))return new Response('Invalid format',{status:400});
-  if(mode==='progressive'&&format!=='mp3')
+  if((mode==='progressive'||mode==='primed')&&format!=='mp3')
     return new Response('Progressive mode requires MP3',{status:400});
   const data=fixture(format),total=data.length;
-  const split=format==='mp3'?MP3_STALL_AT:STALL_AT;
+  const split=mode==='primed'?FRAME_SIZE*PRIMED_MP3_FRAMES:
+    (format==='mp3'?MP3_STALL_AT:STALL_AT);
   const headers=new Headers({
     'Content-Type':format==='mp3'?'audio/mpeg':'audio/wav',
     'Accept-Ranges':'bytes',
@@ -57,7 +59,7 @@ export async function onRequest({request}){
   // QA-only progressive MP3 intentionally has neither declared length nor
   // RFC 7233 serving: an unknown-length HTTP 200 byte stream is legal.
   // This isolates Chromium's known-length/Range prebuffering from HTTP timing.
-  const progressive=mode==='progressive';
+  const progressive=mode==='progressive'||mode==='primed';
   if(progressive)headers.set('Accept-Ranges','none');
   let first=0,last=total-1,status=200;
   const range=progressive?null:request.headers.get('range');
@@ -78,7 +80,7 @@ export async function onRequest({request}){
     status=206;
     headers.set('Content-Range',`bytes ${first}-${last}/${total}`);
   }
-  if(!progressive)headers.set('Content-Length',String(last-first+1));
+  if(mode!=='progressive')headers.set('Content-Length',String(last-first+1));
   if(request.method==='HEAD')return new Response(null,{status,headers});
 
   // A real streaming Response: send ~3 s of playable WAV data, then
@@ -95,9 +97,11 @@ export async function onRequest({request}){
           controller.error(new Error('Synthetic transport cut after 3s'));
           return;
         }
-        if((mode==='gap'||mode==='progressive')&&!delayed){
+        if((mode==='gap'||mode==='progressive'||mode==='primed')&&!delayed){
           delayed=true;
-          await new Promise(resolve=>setTimeout(resolve,format==='mp3'?5500:3800));
+          await new Promise(resolve=>setTimeout(resolve,
+            mode==='primed'?PRIMED_GAP_MS:(format==='mp3'?5500:3800)));
+
         }
       }
       let end=Math.min(last+1,offset+CHUNK_BYTES);
