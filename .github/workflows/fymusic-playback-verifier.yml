@@ -27,6 +27,8 @@ on:
       - 'scripts/test-fymusic-mse-starvation-browser.mjs'
       - 'scripts/test-fymusic-direct-progressive-browser.mjs'
       - 'scripts/test-fymusic-primed-direct-browser.mjs'
+      - 'scripts/test-fymusic-phase22-lead-browser.mjs'
+      - 'src/fymusic-media-evidence.js'
       - 'functions/api/fymusic-range-selftest.js'
       - 'functions/api/fymusic-throttle-selftest.js'
       - 'src/music-lyrics.js'
@@ -79,6 +81,8 @@ jobs:
           node --check scripts/test-fymusic-mse-starvation-browser.mjs
           node --check scripts/test-fymusic-direct-progressive-browser.mjs
           node --check scripts/test-fymusic-primed-direct-browser.mjs
+          node --check scripts/test-fymusic-phase22-lead-browser.mjs
+          node --check src/fymusic-media-evidence.js
           node --check functions/api/fymusic-range-selftest.js
           node --check functions/api/fymusic-throttle-selftest.js
           node --check src/music-lyrics.js
@@ -187,6 +191,10 @@ jobs:
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
         run: node scripts/test-fymusic-primed-direct-browser.mjs
+      - name: Compare bounded event-only MP3 startup metrics across 3 network lead variants
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-fymusic-phase22-lead-browser.mjs
       - name: Show site logs on failure
         if: failure()
         run: cat /tmp/fymusic-pages.log || true

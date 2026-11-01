@@ -39,15 +39,21 @@ const invalidRange=(headers,total)=>{
 export async function onRequest({request}){
   if(request.method!=='GET'&&request.method!=='HEAD')
     return new Response(null,{status:405,headers:{Allow:'GET, HEAD'}});
-  const mode=new URL(request.url).searchParams.get('mode')||'normal';
+  const params=new URL(request.url).searchParams;
+  const mode=params.get('mode')||'normal';
   if(!['normal','gap','cut','progressive','primed'].includes(mode))
     return new Response('Unsupported test mode',{status:400});
-  const format=new URL(request.url).searchParams.get('format')||'wav';
+  const format=params.get('format')||'wav';
   if(!['wav','mp3'].includes(format))return new Response('Invalid format',{status:400});
   if((mode==='progressive'||mode==='primed')&&format!=='mp3')
     return new Response('Progressive mode requires MP3',{status:400});
+  // Explicit bounded QA-only variants; defaults preserve Phase 21 behavior.
+  const leadFrames=mode==='primed'?Number(params.get('leadFrames')||PRIMED_MP3_FRAMES):PRIMED_MP3_FRAMES;
+  const gapMs=mode==='primed'?Number(params.get('gapMs')||PRIMED_GAP_MS):PRIMED_GAP_MS;
+  if(mode==='primed'&&(![136,280,460].includes(leadFrames)||![11000,16000].includes(gapMs)))
+    return new Response('Unsupported QA lead/gap',{status:400});
   const data=fixture(format),total=data.length;
-  const split=mode==='primed'?FRAME_SIZE*PRIMED_MP3_FRAMES:
+  const split=mode==='primed'?FRAME_SIZE*leadFrames:
     (format==='mp3'?MP3_STALL_AT:STALL_AT);
   const headers=new Headers({
     'Content-Type':format==='mp3'?'audio/mpeg':'audio/wav',
@@ -100,7 +106,7 @@ export async function onRequest({request}){
         if((mode==='gap'||mode==='progressive'||mode==='primed')&&!delayed){
           delayed=true;
           await new Promise(resolve=>setTimeout(resolve,
-            mode==='primed'?PRIMED_GAP_MS:(format==='mp3'?5500:3800)));
+            mode==='primed'?gapMs:(format==='mp3'?5500:3800)));
 
         }
       }
