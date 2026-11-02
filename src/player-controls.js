@@ -122,6 +122,13 @@
     if (pointerHeld) ignoreOldPointerCommit = true;
     if (dragging) cancelSeek();
   }
+  function invalidateForPageLoss() {
+    // Browser focus loss may swallow pointerup entirely. Do not retain a
+    // permanently held pointer that would block a future keyboard seek.
+    // Still discard any late native "change" from the abandoned drag.
+    invalidateCurrentGesture();
+    pointerHeld = false;
+  }
   function commitSeek(event) {
     if (!seek || !audio) return;
     // A real Chrome tab switch can emit the native range "change" *before*
@@ -130,6 +137,7 @@
     // Programmatic OS seek events remain valid through the existing gate.
     if (event && event.isTrusted && !document.hasFocus()) {
       if (pointerHeld) ignoreOldPointerCommit = true;
+      pointerHeld = false;
       cancelSeek();
       return;
     }
@@ -249,11 +257,11 @@
     // Lifecycle events also clear an unfinished preview even if a browser
     // does not send a native "change". The focus guard above handles Chrome's
     // earlier change-before-blur ordering.
-    global.addEventListener('blur', invalidateCurrentGesture, false);
+    global.addEventListener('blur', invalidateForPageLoss, false);
     document.addEventListener('visibilitychange', function () {
-      if (document.hidden) invalidateCurrentGesture();
+      if (document.hidden) invalidateForPageLoss();
     }, false);
-    global.addEventListener('pagehide', invalidateCurrentGesture, false);
+    global.addEventListener('pagehide', invalidateForPageLoss, false);
     // Android 4.4 does not reliably dispatch input on all range taps,
     // but change on release reliably commits the selected position.
     audio.addEventListener('timeupdate', refresh, false);
