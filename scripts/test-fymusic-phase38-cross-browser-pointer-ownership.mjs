@@ -224,12 +224,31 @@ try{
     ({id:x.id,quality:x.quality})));
   assert.deepEqual(chosen,[{id:'3201',quality:'320k'},
     {id:'3202',quality:'320k'}]);
-  assert.ok(network.some(x=>x.id==='3201'&&x.status===206));
-  assert.ok(network.some(x=>x.id==='3202'&&x.status===206));
+  // Media engines may request an MP3 differently: Firefox commonly sends
+  // Range and gets 206; WebKit can request the full resource and get 200.
+  // Verify each *actual* request was successful, and independently verify
+  // the same server's byte-range contract instead of forcing both engines
+  // to choose the same transport strategy.
+  console.log('FYMUSIC_PHASE38_MEDIA_HTTP_'+ENGINE+' '+
+    JSON.stringify(network));
+  for(const id of ['3201','3202']){
+    const matches=network.filter(x=>x.id===id);
+    assert.ok(matches.length>0,
+      ENGINE+' must request real original media for '+id);
+    assert.ok(matches.some(x=>x.status===200||x.status===206),
+      ENGINE+' must load successful real media for '+id);
+    const probe=await page.request.get(BASE+
+      '/api/fymusic-codec-selftest?format=mp3&mode=normal&phase32='+id,
+      {headers:{Range:'bytes=0-31'}});
+    assert.equal(probe.status(),206,
+      'fixture server must independently support RFC7233 HTTP 206');
+    assert.equal((await probe.body()).byteLength,32);
+  }
   assert.deepEqual(errors,[]);
   report.nativeMedia=true;
   report.originalMP3Fixture=true;
-  report.range206=true;
+  report.range206ServerVerified=true;
+  report.nativeMediaStatus=network.map(({id,status})=>({id,status}));
   report.oneAudio=true;
   console.log('FYMUSIC_PHASE38_CROSS_BROWSER_PASS_'+ENGINE+' '+
     JSON.stringify(report));
