@@ -145,8 +145,13 @@ try{
       preview:!document.querySelector('#player-seek-preview').classList.contains('hidden'),
       trustedInput:window.__phase36.events.some(e=>e.type==='input'&&e.trusted),
       pointerdown:window.__phase36.events.some(e=>e.type==='pointerdown'&&e.trusted),
-      time:document.querySelector('#audio').currentTime
+      time:document.querySelector('#audio').currentTime,
+      fullDisabled:document.querySelector('#detail-seek').disabled,
+      baseDisabled:document.querySelector('#player-seek').disabled,
+      overlay:document.querySelector('#lyrics-overlay').getAttribute('aria-hidden'),
+      tail:window.__phase36.events.slice(-8)
     }));
+    console.log('FYMUSIC_PHASE36_TOUCH_BEGIN '+JSON.stringify({id,state}));
     assert.ok(state.preview&&state.trustedInput&&state.pointerdown,
       'real native touch must enter immersive seek preview');
     return {id,b,y};
