@@ -33,6 +33,30 @@ try{
    audio.load=()=>{calls.load++};
    window.__fymusicSetTime=value=>{current=value};
    window.__fymusicSetPaused=value=>{paused=value};
+   // Phase41 bounded lifecycle diagnostics; no mutation of player behavior.
+   const trace=[];window.__phase41ForegroundTrace=trace;
+   const record=event=>{
+     const status=document.querySelector('#status');
+     const a=document.querySelector('#audio');
+     trace.push({event,at:Math.round(performance.now()*10)/10,
+       hidden:document.hidden,hasFocus:document.hasFocus(),
+       status:(status?.textContent||'').slice(0,100),
+       isResolving:document.documentElement.classList.contains('is-resolving'),
+       isPlaying:document.documentElement.classList.contains('is-playing'),
+       currentTime:a?.currentTime,paused:a?.paused});
+     if(trace.length>90)trace.shift();
+   };
+   window.__phase41Record=record;
+   const status=document.querySelector('#status');
+   if(status)new MutationObserver(()=>record('status-mutation'))
+     .observe(status,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']});
+   new MutationObserver(()=>record('root-class'))
+     .observe(document.documentElement,{attributes:true,attributeFilter:['class']});
+   for(const event of ['visibilitychange','timeupdate'])
+     document.addEventListener(event,()=>record('document-'+event),{passive:true});
+   for(const event of ['pagehide','pageshow'])
+     window.addEventListener(event,()=>record('window-'+event),{passive:true});
+   record('fixture-ready');
  });
  const frame=()=>page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>
    requestAnimationFrame(done))));
@@ -76,14 +100,19 @@ try{
  assert.equal(hidden.calls.play,0);
  assert.equal(hidden.calls.load,0);
  await page.evaluate(()=>{
+   window.__phase41Record('before-visible-dispatch');
    window.__fymusicHidden=false;
    document.dispatchEvent(new Event('visibilitychange'));
    window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));
+   window.__phase41Record('after-visible-dispatch');
  });
  await frame();
  const visible=await page.evaluate(()=>{
    const root=document.documentElement;
    return {
+     status:document.querySelector('#status')?.textContent,
+     statusClass:document.querySelector('#status')?.className,
+     trace:window.__phase41ForegroundTrace.slice(-70),
      resolving:root.classList.contains('is-resolving'),
      playing:root.classList.contains('is-playing'),
      footer:document.querySelector('#bottom-play-status')?.textContent,
@@ -96,6 +125,7 @@ try{
      calls:{...window.__fymusicLifecycleCalls}
    };
  });
+ console.log('FYMUSIC_PHASE41_FOREGROUND_DIAGNOSTIC '+JSON.stringify(visible));
  assert.equal(visible.resolving,true,'foreground should restore status class');
  assert.equal(visible.playing,true,'foreground must resync audio playing indicator');
  assert.match(visible.footer,/正在准备/);
