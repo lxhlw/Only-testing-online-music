@@ -1,0 +1,263 @@
+import assert from 'node:assert/strict';
+import {spawn} from 'node:child_process';
+import {mkdtemp,readFile,rm} from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import {chromium} from 'playwright';
+
+// RAW DevTools Protocol, not Playwright-managed pages: Playwright forces
+// pages focused and can suppress real hidden/visible transitions.
+// Requires headed Chromium under Xvfb (not a real phone lockscreen).
+const BASE=process.env.TEST_BASE_URL||'http://127.0.0.1:8788';
+const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+class CDP{
+  constructor(ws){
+    this.ws=ws;this.id=0;this.pending=new Map();this.listeners=new Map();
+    ws.addEventListener('message',event=>{
+      let msg;try{msg=JSON.parse(String(event.data))}catch{return}
+      if(msg.id){
+        const p=this.pending.get(msg.id);if(!p)return;
+        clearTimeout(p.timer);this.pending.delete(msg.id);
+        if(msg.error)p.reject(Error(msg.error.message));
+        else p.resolve(msg.result||{});
+      }else if(msg.method)for(const fn of this.listeners.get(msg.method)||[])fn(msg.params||{});
+    });
+  }
+  static async open(url){
+    const ws=new WebSocket(url);
+    await new Promise((resolve,reject)=>{
+      const timer=setTimeout(()=>reject(Error('CDP websocket connect timeout')),7000);
+      ws.addEventListener('open',()=>{clearTimeout(timer);resolve()},{once:true});
+      ws.addEventListener('error',()=>{clearTimeout(timer);reject(Error('CDP websocket error'))},{once:true});
+    });
+    return new CDP(ws);
+  }
+  send(method,params={},ms=12000){
+    const id=++this.id;
+    return new Promise((resolve,reject)=>{
+      const timer=setTimeout(()=>{this.pending.delete(id);
+        reject(Error('CDP timeout '+method))},ms);
+      this.pending.set(id,{resolve,reject,timer});
+      this.ws.send(JSON.stringify({id,method,params}));
+    });
+  }
+  on(method,fn){
+    const list=this.listeners.get(method)||[];
+    list.push(fn);this.listeners.set(method,list);
+  }
+  close(){try{this.ws.close()}catch{}}
+}
+async function waitFor(fn,label,ms=12000){
+  const start=Date.now();let last;
+  while(Date.now()-start<ms){
+    try{const result=await fn();if(result)return result}
+    catch(e){last=e}
+    await delay(100);
+  }
+  throw Error('Timed out waiting for '+label+(last?' : '+last.message:''));
+}
+assert.ok(process.env.DISPLAY,'Headed Xvfb is mandatory for genuine visibility test');
+const profile=await mkdtemp(path.join(os.tmpdir(),'fymusic-phase30-'));
+let processChrome,browser,page;
+const http=[],errors=[];
+try{
+  processChrome=spawn(chromium.executablePath(),[
+    '--no-sandbox','--disable-dev-shm-usage',
+    '--no-first-run','--no-default-browser-check',
+    '--remote-allow-origins=*','--remote-debugging-port=0',
+    '--user-data-dir='+profile,
+    '--autoplay-policy=no-user-gesture-required',
+    '--window-size=1366,900','about:blank'
+  ],{stdio:'ignore'});
+  processChrome.on('error',error=>errors.push(error.message));
+  const port=await waitFor(async()=>{
+    const raw=await readFile(path.join(profile,'DevToolsActivePort'),'utf8');
+    return Number(raw.split('\n')[0])||null;
+  },'Chrome DevToolsActivePort',16000);
+  const version=await (await fetch('http://127.0.0.1:'+port+'/json/version')).json();
+  browser=await CDP.open(version.webSocketDebuggerUrl);
+  const id=(await browser.send('Target.createTarget',{url:'about:blank'})).targetId;
+  assert.ok(id);
+  page=await CDP.open('ws://127.0.0.1:'+port+'/devtools/page/'+id);
+  await page.send('Page.enable');
+  await page.send('Runtime.enable');
+  await page.send('Network.enable');
+  page.on('Runtime.exceptionThrown',ev=>{
+    if(errors.length<8)errors.push(String(ev.exceptionDetails?.text||'exception'));
+  });
+  page.on('Network.responseReceived',ev=>{
+    if(!ev.response?.url?.includes('/api/fymusic-codec-selftest?'))return;
+    const url=new URL(ev.response.url);
+    http.push({format:url.searchParams.get('format'),status:ev.response.status});
+  });
+  await page.send('Page.addScriptToEvaluateOnNewDocument',{source:String.raw`
+    (() => {
+      window.__phase30={visibility:[],resolver:[],tracks:[]};
+      document.addEventListener('visibilitychange',()=>{
+        window.__phase30.visibility.push(document.visibilityState);
+      });
+      const os={handlers:{},metadata:null,states:[],
+        setActionHandler(n,f){this.handlers[n]=f},
+        setPositionState(){},
+        set playbackState(s){this.states.push(s)},
+        get playbackState(){return this.states.at(-1)||'none'}
+      };
+      Object.defineProperty(navigator,'mediaSession',{configurable:true,value:os});
+      window.MediaMetadata=class{constructor(v){Object.assign(this,v)}};
+      window.__phase30OS=os;
+      const originalFetch=window.fetch.bind(window);
+      window.fetch=(url,options)=>{
+        const value=String(url instanceof Request?url.url:url);
+        if(value.startsWith('/api/netease-song-meta?')){
+          const id=new URL(value,location.href).searchParams.get('id');
+          return Promise.resolve(new Response(JSON.stringify({id}),
+            {status:200,headers:{'content-type':'application/json'}}));
+        }
+        return originalFetch(url,options);
+      };
+    })();
+  `});
+  await page.send('Page.navigate',{url:BASE});
+  async function evaluate(expr){
+    const response=await page.send('Runtime.evaluate',{
+      expression:expr,returnByValue:true,awaitPromise:true
+    });
+    if(response.exceptionDetails)throw Error('Page JS '+(response.exceptionDetails.exception?.description||response.exceptionDetails.text));
+    return response.result?.value;
+  }
+  const snapshot=()=>evaluate(String.raw`(()=>{
+    const a=document.querySelector('#audio'),q=window.__phase30||{};
+    return {visibility:document.visibilityState,hidden:document.hidden,
+      events:q.visibility||[],seconds:Number(a?.currentTime||0),
+      paused:Boolean(a?.paused),src:a?.currentSrc||'',ready:a?.readyState||0,
+      mediaError:a?.error?.code||0,
+      title:window.__LXNowPlayingTrack?.name||'',
+      osTitle:window.__phase30OS?.metadata?.title||'',
+      audioElements:document.querySelectorAll('audio').length,
+      overlay:document.querySelector('#lyrics-overlay')?.getAttribute('aria-hidden'),
+      seekHidden:document.querySelector('#player-seek-preview')?.classList.contains('hidden')
+    }
+  })()`);
+  await waitFor(()=>evaluate(String.raw`Boolean(
+    window.LXSourceManager?.getActive&&window.LXPlaySettings?.save&&
+    window.LXMusicSearch?.search&&window.LXPlayerControls?.refresh&&
+    window.__phase30OS?.handlers?.pause&&document.querySelector('#audio')
+  )`),'live FyMusic application',22000);
+  const selected=await evaluate(String.raw`(()=>{
+    window.LXPlaySettings.save({
+      qualityMode:'fixed',fixedQuality:'flac24bit',autoFallback:false
+    });
+    const active={id:'phase30-original',name:'Phase30 Controlled',
+      inited:true,runtime:{},
+      sources:{wy:{name:'网易云音乐',actions:['musicUrl'],
+        qualitys:['flac24bit','320k','128k']}}
+    };
+    window.LXSourceManager.getActive=()=>active;
+    window.LXSourceManager.requestAction=(source,action,info,cb)=>{
+      window.__phase30.resolver.push({
+        source,quality:info.type,id:String(info.musicInfo?.id||'')
+      });
+      if(source!=='wy'||action!=='musicUrl')throw Error('wrong provider');
+      cb(null,{url:location.origin+
+        '/api/fymusic-codec-selftest?format=flac24&mode=normal'});
+    };
+    window.LXMusicSearch.search=(source,keyword,pg,limit,cb)=>cb(null,{
+      list:[{id:'930',source:'wy',name:'Original Real Hidden FLAC',
+        singer:'FyMusic QA',albumName:'Original Album',interval:'00:12'}],
+      searchProvider:'netease-native'
+    });
+    window.LXMusicSearch.isPlayableUrlForSource=(source,url)=>
+      source==='wy'&&new URL(url).pathname==='/api/fymusic-codec-selftest';
+    const channel=document.querySelector('#channel-list .channel-button[title="WY"]');
+    if(!channel)throw Error('WY channel button unavailable');
+    channel.click();
+    document.querySelector('#global-search-input').value='Original Real Hidden FLAC';
+    document.querySelector('#global-search-btn').click();
+    const row=document.querySelector('.search-song-row .search-song-main');
+    if(!row)throw Error('search row not rendered');
+    row.click();
+    return window.__phase30.resolver;
+  })()`);
+  assert.deepEqual(selected,[{source:'wy',quality:'flac24bit',id:'930'}]);
+  const started=await waitFor(async()=>{
+    const s=await snapshot();
+    return s.seconds>.6&&s.src.includes('format=flac24')&&
+      s.ready>=2&&!s.paused?s:null;
+  },'real FLAC audio playback',15000);
+  assert.equal(started.visibility,'visible');
+  assert.equal(started.title,'Original Real Hidden FLAC');
+  assert.equal(started.osTitle,'Original Real Hidden FLAC');
+  assert.equal(started.audioElements,1);
+  assert.equal(started.mediaError,0);
+  assert.ok(http.some(x=>x.format==='flac24'&&x.status===206));
+  // A decoded, confirmed track must make its real seek UI available.
+  // Do not silently skip the cancellation assertion on a slow CI run.
+  await waitFor(()=>evaluate(String.raw`(()=>{
+    const a=document.querySelector('#audio');
+    return Boolean(a&&a.duration>0&&!a.paused&&
+      !document.querySelector('#player-seek')?.disabled);
+  })()`),'real seek enabled after playing confirmation',4000);
+
+  // Real Chromium background via new tab. No Playwright-managed focus or
+  // synthetic visibilitychange notifications.
+  await evaluate('window.__phase30OS.handlers.pause();true');
+  await waitFor(async()=>{const s=await snapshot();return s.paused?s:null},
+    'confirmed paused native media',4500);
+  await evaluate("(()=>{\n  window.__phase34={events:[],writes:[]};\n  const slider=document.querySelector('#player-seek');\n  const native=Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype,'currentTime');\n  const audio=document.querySelector('#audio');\n  Object.defineProperty(audio,'currentTime',{configurable:true,\n    get(){return native.get.call(this)},\n    set(v){window.__phase34.writes.push(Number(v));return native.set.call(this,v)}\n  });\n  for(const type of ['pointerdown','pointermove','pointerup','pointercancel','input','change']){\n    slider.addEventListener(type,e=>window.__phase34.events.push({\n      type,trusted:e.isTrusted,value:slider.value}));\n  }\n  return true;\n})()");
+  const rect=await evaluate("(()=>{\n  const s=document.querySelector('#player-seek'),r=s.getBoundingClientRect();\n  return {x:r.x,y:r.y,w:r.width,h:r.height,disabled:s.disabled};\n})()");
+  assert.ok(!rect.disabled&&rect.w>120&&rect.h>=3,'real base slider geometry');
+  const x=rect.x+rect.w*.18,y=rect.y+rect.h/2;
+  await page.send('Input.dispatchMouseEvent',{type:'mouseMoved',x,y,button:'none'});
+  await page.send('Input.dispatchMouseEvent',{type:'mousePressed',x,y,
+    button:'left',buttons:1,clickCount:1});
+  for(let i=1;i<=7;i++){
+    await page.send('Input.dispatchMouseEvent',{type:'mouseMoved',
+      x:x+(rect.x+rect.w*.88-x)*i/7,y,button:'left',buttons:1});
+  }
+  const heldPreview=await evaluate("(()=>{\n const s=document.querySelector('#player-seek');\n return {value:s.value,previewHidden:document.querySelector('#player-seek-preview')?.classList.contains('hidden'),\n  trace:window.__phase34.events.slice(-17),seconds:document.querySelector('#audio').currentTime};\n})()");
+  console.log('FYMUSIC_PHASE34_HELD_BEFORE_HIDDEN '+JSON.stringify(heldPreview));
+  assert.ok(heldPreview.trace.some(e=>e.type==='pointerdown'&&e.trusted));
+  assert.ok(heldPreview.trace.some(e=>e.type==='input'&&e.trusted));
+  assert.equal(heldPreview.previewHidden,false);
+  // New native Chromium target puts original page into document.hidden=true.
+  const spare=(await browser.send('Target.createTarget',{url:'about:blank'})).targetId;
+  await waitFor(async()=>{const s=await snapshot();return s.hidden&&
+    s.visibility==='hidden'&&s.events.includes('hidden')?s:null;},
+    'actual hidden tab after native target switch',6500);
+  const hidden=await evaluate("(()=>{\n const a=document.querySelector('#audio'),s=document.querySelector('#player-seek');\n return {hidden:document.hidden,visibility:document.visibilityState,\n  seconds:a.currentTime,paused:a.paused,writes:window.__phase34.writes.slice(),\n  previewHidden:document.querySelector('#player-seek-preview')?.classList.contains('hidden'),\n  value:s.value,trace:window.__phase34.events.slice(-17),\n  audioCount:document.querySelectorAll('audio').length,\n  osTitle:window.__phase30OS?.metadata?.title,\n  title:window.__LXNowPlayingTrack?.name};\n})()");
+  console.log('FYMUSIC_PHASE34_TRUE_HIDDEN_HELD_SEEK '+JSON.stringify(hidden));
+  assert.equal(hidden.previewHidden,true,
+    'real background must discard the base seek preview without committing');
+  assert.deepEqual(hidden.writes,[],'hidden must not write currentTime');
+  await browser.send('Target.activateTarget',{targetId:id});
+  await waitFor(async()=>{const s=await snapshot();return !s.hidden&&
+    s.visibility==='visible'&&s.events.includes('visible')?s:null},
+    'real browser foreground restored',6500);
+  await page.send('Input.dispatchMouseEvent',{type:'mouseReleased',
+    x:rect.x+rect.w*.85,y,button:'left',buttons:0,clickCount:1});
+  const final=await evaluate("(()=>{\n const a=document.querySelector('#audio'),s=document.querySelector('#player-seek');\n return {hidden:document.hidden,visibility:document.visibilityState,\n  seconds:a.currentTime,paused:a.paused,writes:window.__phase34.writes.slice(),\n  previewHidden:document.querySelector('#player-seek-preview')?.classList.contains('hidden'),\n  value:s.value,trace:window.__phase34.events.slice(-17),\n  audioCount:document.querySelectorAll('audio').length,\n  osTitle:window.__phase30OS?.metadata?.title,\n  title:window.__LXNowPlayingTrack?.name};\n})()");
+  console.log('FYMUSIC_PHASE34_RETURN_AND_RELEASE '+JSON.stringify(final));
+  assert.deepEqual(final.writes,[],
+    'old pointer release after native visibility return cannot seek');
+  assert.ok(Math.abs(final.seconds-hidden.seconds)<.2);
+  assert.equal(final.previewHidden,true);
+  assert.equal(final.paused,true);
+  assert.equal(final.audioCount,1);
+  assert.equal(final.title,'Original Real Hidden FLAC');
+  assert.equal(final.osTitle,'Original Real Hidden FLAC');
+  assert.equal(http.filter(x=>x.format==='flac24').length,1);
+  assert.deepEqual(errors,[]);
+  console.log('FYMUSIC_PHASE34_TRUE_BACKGROUND_GESTURE_PASS '+
+    JSON.stringify({actualHidden:true,actualVisible:true,
+      trustedPointerInput:true,originalFlacHttp206:true,
+      noStaleSeek:true,oneAudio:true,noDuplicateRequests:true,
+      explicitPausePreserved:true,noPhysicalLockscreenClaim:true}));
+}finally{
+  page?.close();browser?.close();
+  if(processChrome){
+    processChrome.kill('SIGTERM');
+    await Promise.race([new Promise(ok=>processChrome.once('exit',ok)),delay(900)]);
+    if(processChrome.exitCode===null)processChrome.kill('SIGKILL');
+  }
+  await rm(profile,{recursive:true,force:true,maxRetries:3,retryDelay:100});
+}
