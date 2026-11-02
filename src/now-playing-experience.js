@@ -20,6 +20,9 @@ const cachePut=(cache,key,value,maxEntries)=>{
 };
 let track=null,sequence=0,metaAbort=null,commentAbort=null,activeTab='lyrics',lastFocused=null;
 let seekPreview=false,ignoreCancelledSeekChange=false;
+// Keep keyboard ownership after a committed range change so repeated keys
+// can continue; pointer commits still return focus as before.
+let seekInputFromKeyboard=false;
 // A held finger can outlive a native tab hide: Chrome may deliver new
 // trusted touchmove/input/change after foreground with NO new pointerdown.
 // Only a newly started pointer (or deliberate keyboard action) can rearm it.
@@ -445,6 +448,7 @@ fullSeek?.addEventListener('pointerdown',()=>{
   // after tab restoration. A genuine new pointerdown starts a new gesture.
   abandonedTouchGesture=false;
   ignoreCancelledSeekChange=false;
+  seekInputFromKeyboard=false;
 });
 fullSeek?.addEventListener('input',event=>{
   if(rejectStaleNativeSeek(event))return;
@@ -470,16 +474,21 @@ fullSeek?.addEventListener('change',event=>{
   seekPreview=false;
   baseSeek.value=fullSeek.value;
   baseSeek.dispatchEvent(new Event('change',{bubbles:true}));
-  fullSeek.blur();
+  // Native range change fires for both pointer and keyboard. Blurring after
+  // a keyboard step steals focus and drops the remaining held/repeated keys.
+  if(!seekInputFromKeyboard)fullSeek.blur();
   updateTransport();
 });
 fullSeek?.addEventListener('pointercancel',()=>{
+  seekInputFromKeyboard=false;
   abandonedTouchGesture=true;
   ignoreCancelledSeekChange=true;
   cancelSeekPreview();
 });
 fullSeek?.addEventListener('keydown',event=>{
   if(event.isTrusted&&event.key!=='Escape'&&document.hasFocus()){
+    seekInputFromKeyboard=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',
+      'PageUp','PageDown','Home','End'].includes(event.key);
     // A cancelled physical drag may have changed the native range thumb
     // without committing the audio. Restore the *real* currentTime before
     // the browser applies this new keyboard step, or ArrowRight would jump
@@ -489,6 +498,7 @@ fullSeek?.addEventListener('keydown',event=>{
     ignoreCancelledSeekChange=false;
   }
   if(event.key==='Escape'&&seekPreview){
+    seekInputFromKeyboard=false;
     event.preventDefault();event.stopPropagation();
     abandonedTouchGesture=true;
     ignoreCancelledSeekChange=true;
