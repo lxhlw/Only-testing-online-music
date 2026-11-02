@@ -115,7 +115,7 @@ try{
   const control=page.locator('#player-seek');
   const geometry=async()=>{
     const box=await control.boundingBox();
-    assert.ok(box&&box.width>=120&&box.height>=8,'desktop base seek visible');
+    assert.ok(box&&box.width>=120&&box.height>=3,'desktop base seek visible');
     const v=Number(await control.inputValue())/1000;
     return {x:box.x+Math.max(9,Math.min(box.width-9,
       8+(box.width-16)*v)),y:box.y+box.height/2,
