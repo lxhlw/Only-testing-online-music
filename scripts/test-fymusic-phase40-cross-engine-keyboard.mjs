@@ -143,6 +143,12 @@ try{
     const a=document.querySelector('#audio'),z=window.__phase36;
     return {seconds:a.currentTime,writes:z.writes.slice(),
       changes:z.baseChanges,paused:a.paused,
+      sliderValue:document.querySelector('#detail-seek')?.value,
+      sliderDisabled:document.querySelector('#detail-seek')?.disabled,
+      baseValue:document.querySelector('#player-seek')?.value,
+      baseDisabled:document.querySelector('#player-seek')?.disabled,
+      focused:document.activeElement===document.querySelector('#detail-seek'),
+      isOpen:!document.querySelector('#lyrics-overlay')?.classList.contains('hidden'),
       title:window.__LXNowPlayingTrack?.name,
       osTitle:window.__phase32OS?.metadata?.title,
       previewHidden:document.querySelector('#player-seek-preview')?.classList.contains('hidden'),
@@ -232,6 +238,11 @@ try{
     await page.keyboard.press(spec.key);
     const afterKey=await snapshot();
     const expected=native.after/1000*duration;
+    if(Math.abs(afterKey.seconds-expected)>=.36){
+      console.log('FYMUSIC_PHASE41_KEYBOARD_RACE_'+ENGINE+' '+
+        JSON.stringify({i,spec,expected,native,
+          beforeOS,atOS,oldFinished,beforeKey,afterKey}));
+    }
     if(native.supported){
       assert.equal(afterKey.writes.length,beforeKey.writes.length+1,
         ENGINE+' supported key must commit exactly once '+spec.key);
