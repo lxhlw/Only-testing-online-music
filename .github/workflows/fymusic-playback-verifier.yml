@@ -40,6 +40,7 @@ on:
       - 'scripts/test-fymusic-phase32-real-seek-ownership-browser.mjs'
       - 'scripts/test-fymusic-phase33-native-touch-seek-browser.mjs'
       - 'scripts/test-fymusic-phase34-raw-cdp-background-gesture.mjs'
+      - 'scripts/test-fymusic-phase35-raw-cdp-mobile-background-touch.mjs'
       - 'scripts/test-fymusic-phase33-native-mouse-seek-browser.mjs'
       - 'scripts/generate-fymusic-phase26-fixtures.mjs'
       - 'scripts/generate-fymusic-phase25-fixtures.mjs'
@@ -110,6 +111,7 @@ jobs:
           node --check scripts/test-fymusic-phase32-real-seek-ownership-browser.mjs
           node --check scripts/test-fymusic-phase33-native-touch-seek-browser.mjs
           node --check scripts/test-fymusic-phase34-raw-cdp-background-gesture.mjs
+          node --check scripts/test-fymusic-phase35-raw-cdp-mobile-background-touch.mjs
           node --check scripts/test-fymusic-phase33-native-mouse-seek-browser.mjs
           node --check scripts/generate-fymusic-phase26-fixtures.mjs
           node --check scripts/generate-fymusic-phase25-fixtures.mjs
@@ -148,6 +150,10 @@ jobs:
           done
           cat /tmp/fymusic-pages.log
           exit 1
+      - name: Verify Phase35 true hidden immersive mobile touch gesture
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: xvfb-run -a -s "-screen 0 1440x900x24" node scripts/test-fymusic-phase35-raw-cdp-mobile-background-touch.mjs
       - name: Verify Phase34 true hidden held native mouse gesture
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
