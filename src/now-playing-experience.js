@@ -480,8 +480,11 @@ fullSeek?.addEventListener('pointercancel',()=>{
 });
 fullSeek?.addEventListener('keydown',event=>{
   if(event.isTrusted&&event.key!=='Escape'&&document.hasFocus()){
-    // Keyboard input is a distinct intentional interaction, even if the
-    // browser swallowed an earlier touchend during tab suspension.
+    // A cancelled physical drag may have changed the native range thumb
+    // without committing the audio. Restore the *real* currentTime before
+    // the browser applies this new keyboard step, or ArrowRight would jump
+    // from the abandoned thumb instead of the OS's latest seek position.
+    if(abandonedTouchGesture)updateTransport();
     abandonedTouchGesture=false;
     ignoreCancelledSeekChange=false;
   }
