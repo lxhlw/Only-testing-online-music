@@ -242,6 +242,9 @@ try{
   await waitFor(async()=>{const s=await snapshot();
     return !s.hidden&&s.visibility==='visible'&&s.events.includes('visible')?s:null;},
     'native foreground after touch interruption',7000);
+  // After foreground, a stale finger can still move before release.
+  // This must not re-arm a cancelled seek preview on the old gesture.
+  await touch('touchMove',[{x:rect.x+rect.w*.94,y,id:11}]);
   await touch('touchEnd',[]);
   const after=await evaluate("(()=>{\n const a=document.querySelector('#audio'),s=document.querySelector('#detail-seek');\n const z=window.__phase35;\n return {hidden:document.hidden,focused:document.hasFocus(),\n  visibility:document.visibilityState,seconds:a.currentTime,paused:a.paused,\n  writes:z.writes.slice(),value:s.value,trace:z.events.slice(-34),\n  previewHidden:document.querySelector('#player-seek-preview')?.classList.contains('hidden'),\n  overlay:document.querySelector('#lyrics-overlay')?.getAttribute('aria-hidden'),\n  audioCount:document.querySelectorAll('audio').length,\n  title:window.__LXNowPlayingTrack?.name,\n  osTitle:window.__phase30OS?.metadata?.title};\n})()");
   console.log('FYMUSIC_PHASE35_RETURN_AND_TOUCH_END '+JSON.stringify(after));
