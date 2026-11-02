@@ -278,6 +278,30 @@ try{
       writesDelta:repeatAfter.writes.length-repeatBefore.writes.length}));
   report.repeatKeyRecovery=true;
 
+  // Consecutive *separate* trusted key presses must keep focus on the
+  // range and continue seeking; native range controls do not blur on change.
+  // This also distinguishes a Playwright keydown repeat limitation from
+  // an application handler that inappropriately steals keyboard focus.
+  await slider.focus();
+  const consecutive=[];
+  for(let i=0;i<4;i++){
+    const prior=await snapshot();
+    await page.keyboard.press('ArrowRight');
+    const next=await snapshot();
+    const focused=await slider.evaluate(el=>document.activeElement===el);
+    consecutive.push({i,from:prior.seconds,to:next.seconds,
+      writesDelta:next.writes.length-prior.writes.length,focused});
+    console.log('FYMUSIC_PHASE40_CONSECUTIVE_KEY_'+ENGINE+' '+
+      JSON.stringify(consecutive.at(-1)));
+    assert.equal(next.writes.length,prior.writes.length+1,
+      ENGINE+' each consecutive ArrowRight must write exactly once '+i);
+    assert.ok(next.seconds>prior.seconds&&next.seconds<prior.seconds+.5,
+      ENGINE+' consecutive keyboard must follow current native media time');
+    assert.equal(focused,true,
+      ENGINE+' native seek slider must retain keyboard focus after change');
+  }
+  report.consecutiveKeyboard=consecutive.length;
+
   // Old A pointer must never commit to B. More importantly, the first
   // keyboard action on B must start from B's media time, not A's old thumb.
   const oldA=await held(.86);
