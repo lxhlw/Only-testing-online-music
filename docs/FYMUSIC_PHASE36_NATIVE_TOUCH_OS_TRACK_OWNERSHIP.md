@@ -19,7 +19,7 @@
 5. B 曲确认开始播放后被正式 Media Session pause，旧手指再移动、松开；
 6. B 曲新手指再次合法 seek。
 
-检测真实浏览器 `touchstart/touchmove/touchend/pointerdown/pointerup/input/change` 及实际 `audio.currentTime` **原生写入**，不仅检查滑块事件次数。两首曲都保持原始请求的 `flac24bit` 画质 [更正：音质]，都通过原创受控 FLAC 的真实 HTTP 206 响应，只有一个原生 audio。
+检测真实浏览器 `touchstart/touchmove/touchend/pointerdown/pointerup/input/change` 及实际 `audio.currentTime` **原生写入**，不仅检查滑块事件次数。两首曲都保持原始请求的 `flac24bit` 音质，都通过原创受控 FLAC 的真实 HTTP 206 响应，只有一个原生 audio。
 
 ## 2. 故障复现与根因
 
