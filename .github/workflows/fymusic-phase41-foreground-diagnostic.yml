@@ -1,0 +1,52 @@
+name: FyMusic Phase41 - Foreground Status Coherence
+on:
+  push:
+    branches: [feature/fymusic-playback-verifier]
+    paths: ['.github/workflows/fymusic-phase41-foreground-diagnostic.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  foreground-edge-diagnostic:
+    if: github.ref == 'refs/heads/feature/fymusic-playback-verifier'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Existing isolated Edge Preview, same player/modern UI source as Phase41.
+      TEST_BASE_URL: https://66080e8c.only-testing-online-music.pages.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify nonproduction Preview has identical app source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$TEST_BASE_URL" != "https://only-testing-online-music.pages.dev"
+          for file in modern-ui.js now-playing-experience.js; do
+            curl -fsSL --retry 2 --max-time 25 "$TEST_BASE_URL/src/$file" \
+              -o "/tmp/phase41-$file"
+            cmp "src/$file" "/tmp/phase41-$file"
+          done
+          echo FYMUSIC_PHASE41_FOREGROUND_CODE_PARITY_PASS
+      - name: Install existing browser testing dependencies
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Twenty independent foreground restore cases on real Edge Preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/fymusic-phase41-foreground.log
+          for trial in {1..20}; do
+            echo "FYMUSIC_PHASE41_EDGE_FOREGROUND_TRIAL=$trial"
+            node scripts/test-fymusic-foreground-lifecycle-browser.mjs \
+              | tee -a /tmp/fymusic-phase41-foreground.log
+          done
+          count=$(grep -c FYMUSIC_FOREGROUND_LIFECYCLE_PASS \
+            /tmp/fymusic-phase41-foreground.log)
+          test "$count" -eq 20
+          echo "FYMUSIC_PHASE41_EDGE_FOREGROUND_20_PASS count=$count"
