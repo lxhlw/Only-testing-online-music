@@ -246,6 +246,18 @@ try{
   assert.equal(final.title,'Original Real Hidden FLAC');
   assert.equal(final.osTitle,'Original Real Hidden FLAC');
   assert.equal(http.filter(x=>x.format==='flac24').length,1);
+  // A future user-initiated keyboard seek must work, even if Chromium
+  // swallowed the previous mouse pointerup during the tab switch.
+  await evaluate('document.querySelector("#player-seek").focus();true');
+  await page.send('Input.dispatchKeyEvent',{type:'rawKeyDown',key:'ArrowRight',
+    code:'ArrowRight',windowsVirtualKeyCode:39});
+  await page.send('Input.dispatchKeyEvent',{type:'keyUp',key:'ArrowRight',
+    code:'ArrowRight',windowsVirtualKeyCode:39});
+  const keyboard=await evaluate("(()=>({writes:window.__phase34.writes.slice(),seconds:document.querySelector('#audio').currentTime,focused:document.hasFocus()}))()");
+  console.log('FYMUSIC_PHASE34_FRESH_KEYBOARD_SEEK '+JSON.stringify(keyboard));
+  assert.ok(keyboard.focused,'foreground page must own focus again');
+  assert.equal(keyboard.writes.length,1,'fresh keyboard user seek must not remain blocked');
+  assert.ok(keyboard.seconds>final.seconds,'fresh keyboard seek must move real media');
   assert.deepEqual(errors,[]);
   console.log('FYMUSIC_PHASE34_TRUE_BACKGROUND_GESTURE_PASS '+
     JSON.stringify({actualHidden:true,actualVisible:true,
