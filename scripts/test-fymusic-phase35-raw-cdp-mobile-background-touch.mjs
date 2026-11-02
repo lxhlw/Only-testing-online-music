@@ -222,12 +222,12 @@ try{
   for(let i=1;i<=7;i++){
     await touch('touchMove',[{x:x+(rect.x+rect.w*.90-x)*i/7,y,id:11}]);
   }
-  const started=await evaluate("(()=>{\n const a=document.querySelector('#audio'),s=document.querySelector('#detail-seek');\n const z=window.__phase35;\n return {hidden:document.hidden,focused:document.hasFocus(),\n  visibility:document.visibilityState,seconds:a.currentTime,paused:a.paused,\n  writes:z.writes.slice(),value:s.value,trace:z.events.slice(-34),\n  previewHidden:document.querySelector('#player-seek-preview')?.classList.contains('hidden'),\n  overlay:document.querySelector('#lyrics-overlay')?.getAttribute('aria-hidden'),\n  audioCount:document.querySelectorAll('audio').length,\n  title:window.__LXNowPlayingTrack?.name,\n  osTitle:window.__phase30OS?.metadata?.title};\n})()");
-  console.log('FYMUSIC_PHASE35_TOUCH_HELD '+JSON.stringify(started));
-  assert.ok(started.trace.some(e=>e.type==='touchstart'&&e.trusted));
-  assert.ok(started.trace.some(e=>e.type==='input'&&e.trusted));
-  assert.equal(started.previewHidden,false);
-  assert.deepEqual(started.writes,[]);
+  const held=await evaluate("(()=>{\n const a=document.querySelector('#audio'),s=document.querySelector('#detail-seek');\n const z=window.__phase35;\n return {hidden:document.hidden,focused:document.hasFocus(),\n  visibility:document.visibilityState,seconds:a.currentTime,paused:a.paused,\n  writes:z.writes.slice(),value:s.value,trace:z.events.slice(-34),\n  previewHidden:document.querySelector('#player-seek-preview')?.classList.contains('hidden'),\n  overlay:document.querySelector('#lyrics-overlay')?.getAttribute('aria-hidden'),\n  audioCount:document.querySelectorAll('audio').length,\n  title:window.__LXNowPlayingTrack?.name,\n  osTitle:window.__phase30OS?.metadata?.title};\n})()");
+  console.log('FYMUSIC_PHASE35_TOUCH_HELD '+JSON.stringify(held));
+  assert.ok(held.trace.some(e=>e.type==='touchstart'&&e.trusted));
+  assert.ok(held.trace.some(e=>e.type==='input'&&e.trusted));
+  assert.equal(held.previewHidden,false);
+  assert.deepEqual(held.writes,[]);
   const spare=(await browser.send('Target.createTarget',{url:'about:blank'})).targetId;
   await waitFor(async()=>{const s=await snapshot();
     return s.hidden&&s.visibility==='hidden'&&s.events.includes('hidden')?s:null;},
@@ -237,7 +237,7 @@ try{
   assert.equal(background.previewHidden,true,'native hidden cancels immersive preview');
   assert.deepEqual(background.writes,[],
     'unfinished touch must not seek during native background transition');
-  assert.ok(Math.abs(background.seconds-started.seconds)<.2);
+  assert.ok(Math.abs(background.seconds-held.seconds)<.2);
   await browser.send('Target.activateTarget',{targetId:id});
   await waitFor(async()=>{const s=await snapshot();
     return !s.hidden&&s.visibility==='visible'&&s.events.includes('visible')?s:null;},
