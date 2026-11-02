@@ -258,7 +258,11 @@ jobs:
       - name: Verify foreground and BFCache media UI without automatic playback
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
-        run: node scripts/test-fymusic-foreground-lifecycle-browser.mjs
+        run: |
+          for trial in {1..10}; do
+            echo "FYMUSIC_PHASE41_FOREGROUND_TRIAL=$trial"
+            node scripts/test-fymusic-foreground-lifecycle-browser.mjs
+          done
       - name: Verify OS Media Session actions and position state
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
