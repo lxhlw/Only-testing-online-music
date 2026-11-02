@@ -35,6 +35,7 @@ on:
       - 'scripts/test-fymusic-phase31-seek-state-browser.mjs'
       - 'scripts/test-fymusic-phase32-real-seek-ownership-browser.mjs'
       - 'scripts/test-fymusic-phase33-native-touch-seek-browser.mjs'
+      - 'scripts/test-fymusic-phase33-native-mouse-seek-browser.mjs'
       - 'scripts/generate-fymusic-phase26-fixtures.mjs'
       - 'scripts/generate-fymusic-phase25-fixtures.mjs'
       - 'functions/api/fymusic-codec-selftest.js'
@@ -132,6 +133,7 @@ jobs:
           node --check scripts/test-fymusic-phase31-seek-state-browser.mjs
           node --check scripts/test-fymusic-phase32-real-seek-ownership-browser.mjs
           node --check scripts/test-fymusic-phase33-native-touch-seek-browser.mjs
+          node --check scripts/test-fymusic-phase33-native-mouse-seek-browser.mjs
           node --check scripts/generate-fymusic-phase26-fixtures.mjs
           node --check scripts/generate-fymusic-phase25-fixtures.mjs
           node --check functions/api/fymusic-codec-selftest.js
@@ -197,6 +199,10 @@ jobs:
           echo 'FYMUSIC_REAL_EDGE_PREVIEW_UI_ASSET_PASS'
       - name: Install Chromium for responsive UI browser tests
         run: npx playwright install --with-deps chromium
+      - name: Verify Phase33 native mouse gesture seek ownership
+        env:
+          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: node scripts/test-fymusic-phase33-native-mouse-seek-browser.mjs
       - name: Verify Phase33 native touch gesture seek ownership
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
