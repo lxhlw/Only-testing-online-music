@@ -37,6 +37,7 @@ on:
       - 'scripts/test-fymusic-phase33-native-touch-seek-browser.mjs'
       - 'scripts/test-fymusic-phase34-raw-cdp-background-gesture.mjs'
       - 'scripts/test-fymusic-phase35-raw-cdp-mobile-background-touch.mjs'
+      - 'scripts/test-fymusic-phase36-native-touch-os-track-browser.mjs'
       - 'scripts/test-fymusic-phase33-native-mouse-seek-browser.mjs'
       - 'scripts/generate-fymusic-phase26-fixtures.mjs'
       - 'scripts/generate-fymusic-phase25-fixtures.mjs'
@@ -137,6 +138,7 @@ jobs:
           node --check scripts/test-fymusic-phase33-native-touch-seek-browser.mjs
           node --check scripts/test-fymusic-phase34-raw-cdp-background-gesture.mjs
           node --check scripts/test-fymusic-phase35-raw-cdp-mobile-background-touch.mjs
+          node --check scripts/test-fymusic-phase36-native-touch-os-track-browser.mjs
           node --check scripts/test-fymusic-phase33-native-mouse-seek-browser.mjs
           node --check scripts/generate-fymusic-phase26-fixtures.mjs
           node --check scripts/generate-fymusic-phase25-fixtures.mjs
@@ -203,6 +205,10 @@ jobs:
           echo 'FYMUSIC_REAL_EDGE_PREVIEW_UI_ASSET_PASS'
       - name: Install Chromium for responsive UI browser tests
         run: npx playwright install --with-deps chromium
+      - name: Verify Phase36 native touch conflicts with OS seek and rapid track switch
+        env:
+          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: node scripts/test-fymusic-phase36-native-touch-os-track-browser.mjs
       - name: Verify Phase35 true hidden immersive mobile touch gesture
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
