@@ -418,8 +418,10 @@ function cancelSeekPreview(){
 }
 function invalidateSeekPreview(){
   if(!seekPreview)return;
-  // The old browser gesture may dispatch "change" *after* another actor
-  // seeks or selects a different track. Ignore that one pending commit.
+  // OS seek and track replacement also invalidate an already held finger.
+  // Chrome can continue emitting trusted touchmove/input after this event;
+  // do not let that old input rearm a commit on the new media owner.
+  abandonedTouchGesture=true;
   ignoreCancelledSeekChange=true;
   cancelSeekPreview();
 }
