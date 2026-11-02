@@ -100,7 +100,20 @@ try{
   await page.waitForFunction(()=>document.querySelector('#audio').paused);
   await page.evaluate(()=>{
     const seek=document.querySelector('#player-seek');
-    window.__phase33Mouse={events:[],changes:0};
+    window.__phase33Mouse={events:[],changes:0,writes:[]};
+    // Observe writes while forwarding to the native accessor unchanged.
+    // This does not mock the media clock, decoding or seek behavior.
+    const audio=document.querySelector('#audio');
+    const native=Object.getOwnPropertyDescriptor(
+      HTMLMediaElement.prototype,'currentTime');
+    if(!native?.get||!native?.set)throw Error('native media accessor missing');
+    Object.defineProperty(audio,'currentTime',{configurable:true,
+      get(){return native.get.call(this)},
+      set(value){
+        window.__phase33Mouse.writes.push(Number(value));
+        return native.set.call(this,value);
+      }
+    });
     for(const kind of ['pointerdown','pointermove','pointerup',
       'mousedown','mousemove','mouseup','input','change']){
       seek.addEventListener(kind,event=>{
@@ -141,7 +154,7 @@ try{
     return p;
   };
   const ptr=await beginMouse();
-  const beforeOS=await page.evaluate(()=>window.__phase33Mouse.changes);
+  const beforeOS=await page.evaluate(()=>window.__phase33Mouse.writes.length);
   await page.evaluate(()=>window.__phase32OS.handlers.seekto({seekTime:3}));
   // Browser is still holding the real mouse button: this movement is the
   // potential late native input that can reapply a superseded gesture.
@@ -149,7 +162,9 @@ try{
   await page.mouse.up();
   const result=await page.evaluate(()=>({
     current:document.querySelector('#audio').currentTime,
-    commits:window.__phase33Mouse.changes,
+    commits:window.__phase33Mouse.writes.length,
+    rawChanges:window.__phase33Mouse.changes,
+    writes:window.__phase33Mouse.writes.slice(-5),
     previewHidden:document.querySelector('#player-seek-preview')?.
       classList.contains('hidden'),
     recent:window.__phase33Mouse.events.slice(-16)}));
@@ -169,12 +184,12 @@ try{
   await page.waitForFunction(()=>document.querySelector('#audio').paused);
   const beforeTrack=await page.evaluate(()=>({
     time:document.querySelector('#audio').currentTime,
-    commits:window.__phase33Mouse.changes}));
+    commits:window.__phase33Mouse.writes.length}));
   await page.mouse.move(newPtr.end-30,newPtr.y,{steps:3});
   await page.mouse.up();
   const afterTrack=await page.evaluate(()=>({
     time:document.querySelector('#audio').currentTime,
-    commits:window.__phase33Mouse.changes,
+    commits:window.__phase33Mouse.writes.length,
     title:window.__LXNowPlayingTrack?.name,
     osTitle:window.__phase32OS.metadata?.title,
     count:document.querySelectorAll('audio').length}));
