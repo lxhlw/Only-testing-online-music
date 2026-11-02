@@ -199,7 +199,9 @@ try{
   const beforeTrack=await snapshot();
   await page.evaluate(()=>document.querySelectorAll('.search-song-row .search-song-main')[1].click());
   await ready('3202');
-  await page.locator('#detail-toggle-btn').tap();
+  // Preserve the held touch across track change: Playwright tap() would
+  // introduce another physical finger and could cancel the old CDP gesture.
+  await page.evaluate(()=>window.__phase32OS.handlers.pause());
   await page.waitForFunction(()=>document.querySelector('#audio').paused);
   const trackB=await snapshot();
   const beforeReleaseWrites=trackB.writes.length;
