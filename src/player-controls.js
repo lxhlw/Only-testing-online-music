@@ -124,6 +124,15 @@
   }
   function commitSeek(event) {
     if (!seek || !audio) return;
+    // A real Chrome tab switch can emit the native range "change" *before*
+    // window.blur and visibilitychange, while document.hidden is still false.
+    // Focus ownership is already lost at that point: never commit the drag.
+    // Programmatic OS seek events remain valid through the existing gate.
+    if (event && event.isTrusted && !document.hasFocus()) {
+      if (pointerHeld) ignoreOldPointerCommit = true;
+      cancelSeek();
+      return;
+    }
     if (ignoreOldPointerCommit && event && event.isTrusted) {
       ignoreOldPointerCommit = false;
       cancelSeek();
@@ -237,6 +246,14 @@
     seek.onchange = commitSeek;
     global.addEventListener('fymusic:external-seek', invalidateCurrentGesture, false);
     global.addEventListener('lx:trackchange', invalidateCurrentGesture, false);
+    // Lifecycle events also clear an unfinished preview even if a browser
+    // does not send a native "change". The focus guard above handles Chrome's
+    // earlier change-before-blur ordering.
+    global.addEventListener('blur', invalidateCurrentGesture, false);
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) invalidateCurrentGesture();
+    }, false);
+    global.addEventListener('pagehide', invalidateCurrentGesture, false);
     // Android 4.4 does not reliably dispatch input on all range taps,
     // but change on release reliably commits the selected position.
     audio.addEventListener('timeupdate', refresh, false);
