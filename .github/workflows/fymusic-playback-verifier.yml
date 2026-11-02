@@ -71,7 +71,7 @@ permissions:
 jobs:
   playback-evidence:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 22
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

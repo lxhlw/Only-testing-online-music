@@ -69,7 +69,7 @@ jobs:
   ui-preview:
     if: github.ref == 'refs/heads/feature/fymusic-playback-verifier'
     runs-on: ubuntu-latest
-    timeout-minutes: 16
+    timeout-minutes: 26
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
