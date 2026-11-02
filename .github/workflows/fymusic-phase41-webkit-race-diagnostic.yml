@@ -1,0 +1,46 @@
+name: FyMusic Phase41 - Isolated WebKit Native Seek Diagnostic
+on:
+  push:
+    branches: [feature/fymusic-playback-verifier]
+    paths: ['.github/workflows/fymusic-phase41-webkit-race-diagnostic.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  webkit-seek-diagnostic:
+    if: github.ref == 'refs/heads/feature/fymusic-playback-verifier'
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    env:
+      # Historical non-production Preview from this exact player-code version.
+      # Phase41 changes to this point only alter tests and CI, not playback JS.
+      TEST_BASE_URL: https://66080e8c.only-testing-online-music.pages.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm separate Preview and identical player code
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$TEST_BASE_URL" != "https://only-testing-online-music.pages.dev"
+          curl -fsSL --retry 2 --max-time 25 \
+            "$TEST_BASE_URL/src/now-playing-experience.js" \
+            -o /tmp/fymusic-phase41-edge-player.js
+          cmp /tmp/fymusic-phase41-edge-player.js src/now-playing-experience.js
+          echo FYMUSIC_PHASE41_EDGE_CODE_PARITY_PASS
+      - name: Install existing deps and true Playwright WebKit
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps webkit
+      - name: Strict WebKit repeated native OS seek stale-thumb reproduction
+        shell: bash
+        run: |
+          set -euo pipefail
+          for trial in {1..8}; do
+            echo "FYMUSIC_PHASE41_WEBKIT_TRIAL=$trial"
+            BROWSER_ENGINE=webkit node scripts/test-fymusic-phase40-cross-engine-keyboard.mjs
+          done
