@@ -135,6 +135,9 @@ try{
       end:box.x+box.width*.88};
   };
   const beginMouse=async()=>{
+    // Limit trusted-input assertions to this physical gesture; previous
+    // Media Session commands intentionally produce untrusted synthetic events.
+    await page.evaluate(()=>{window.__phase33Mouse.events=[]});
     const p=await geometry();
     await page.mouse.move(p.x,p.y);
     await page.mouse.down();
