@@ -341,5 +341,5 @@ try{
   report.range206ServerVerified=true;
   report.controlledFixtureRequestsVerified=true;
   console.log('FYMUSIC_PHASE40_CROSS_BROWSER_KEYBOARD_PASS_'+ENGINE+' '+
-    JSON.stringify({report,resourcesBefore,resourcesAfter,network}));
+    JSON.stringify({report,resourceBefore,resourcesAfter:resourcesAfter,network}));
 } finally {await browser.close()}
