@@ -20,6 +20,10 @@ const cachePut=(cache,key,value,maxEntries)=>{
 };
 let track=null,sequence=0,metaAbort=null,commentAbort=null,activeTab='lyrics',lastFocused=null;
 let seekPreview=false,ignoreCancelledSeekChange=false;
+// A held finger can outlive a native tab hide: Chrome may deliver new
+// trusted touchmove/input/change after foreground with NO new pointerdown.
+// Only a newly started pointer (or deliberate keyboard action) can rearm it.
+let abandonedTouchGesture=false;
 const isOpen=()=>overlay&&!overlay.classList.contains('hidden');
 const sourceNames={wy:'网易云音乐',kw:'酷我音乐',tx:'QQ音乐',kg:'酷狗音乐',mg:'咪咕音乐'};
 const formatSeconds=value=>{
@@ -419,8 +423,29 @@ function invalidateSeekPreview(){
   ignoreCancelledSeekChange=true;
   cancelSeekPreview();
 }
+function abandonNativeTouchGesture(){
+  if(!seekPreview)return;
+  abandonedTouchGesture=true;
+  invalidateSeekPreview();
+}
+function rejectStaleNativeSeek(event){
+  if(event?.isTrusted && (!document.hasFocus()||abandonedTouchGesture)){
+    abandonedTouchGesture=true;
+    ignoreCancelledSeekChange=true;
+    cancelSeekPreview();
+    return true;
+  }
+  return false;
+}
 window.addEventListener('fymusic:external-seek',invalidateSeekPreview);
-fullSeek?.addEventListener('input',()=>{
+fullSeek?.addEventListener('pointerdown',()=>{
+  // Chrome dispatches pointermove, but not pointerdown, for an old finger
+  // after tab restoration. A genuine new pointerdown starts a new gesture.
+  abandonedTouchGesture=false;
+  ignoreCancelledSeekChange=false;
+});
+fullSeek?.addEventListener('input',event=>{
+  if(rejectStaleNativeSeek(event))return;
   if(!isOpen()||!baseSeek||baseSeek.disabled)return;
   ignoreCancelledSeekChange=false;
   seekPreview=true;
@@ -430,7 +455,8 @@ fullSeek?.addEventListener('input',()=>{
   $('detail-current-time').textContent=formatSeconds(value);
   fullSeek.setAttribute('aria-valuetext',formatSeconds(value)+' / '+formatSeconds(audio?.duration));
 });
-fullSeek?.addEventListener('change',()=>{
+fullSeek?.addEventListener('change',event=>{
+  if(rejectStaleNativeSeek(event))return;
   if(ignoreCancelledSeekChange){
     ignoreCancelledSeekChange=false;
     cancelSeekPreview();
@@ -446,12 +472,20 @@ fullSeek?.addEventListener('change',()=>{
   updateTransport();
 });
 fullSeek?.addEventListener('pointercancel',()=>{
+  abandonedTouchGesture=true;
   ignoreCancelledSeekChange=true;
   cancelSeekPreview();
 });
 fullSeek?.addEventListener('keydown',event=>{
+  if(event.isTrusted&&event.key!=='Escape'&&document.hasFocus()){
+    // Keyboard input is a distinct intentional interaction, even if the
+    // browser swallowed an earlier touchend during tab suspension.
+    abandonedTouchGesture=false;
+    ignoreCancelledSeekChange=false;
+  }
   if(event.key==='Escape'&&seekPreview){
     event.preventDefault();event.stopPropagation();
+    abandonedTouchGesture=true;
     ignoreCancelledSeekChange=true;
     cancelSeekPreview();
     // The base player may disable the seek control after cancellation.
@@ -471,11 +505,9 @@ window.visualViewport?.addEventListener('resize',()=>{
 // currentTime when the OS sends the tab to the background.
 const suspendImmersive=()=>{
   cancelLyricCenter();
-  if(seekPreview){
-    ignoreCancelledSeekChange=true;
-    cancelSeekPreview();
-  }
+  abandonNativeTouchGesture();
 };
+window.addEventListener('blur',suspendImmersive);
 const resumeImmersive=()=>{
   if(document.hidden||!isOpen())return;
   updateTransport();
