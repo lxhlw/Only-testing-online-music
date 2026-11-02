@@ -19,6 +19,11 @@
   var audio = null;
   var seek = null;
   var dragging = false;
+  // A native pointer may remain held while OS Media Session or a new track
+  // takes ownership. Its later trusted input/change must not overwrite that
+  // newer media position. Programmatic OS events remain valid.
+  var pointerHeld = false;
+  var ignoreOldPointerCommit = false;
   var settings = {};
 
   function get(id) { return document.getElementById(id); }
@@ -113,8 +118,17 @@
     hide(get('player-seek-preview'));
     refresh();
   }
-  function commitSeek() {
+  function invalidateCurrentGesture() {
+    if (pointerHeld) ignoreOldPointerCommit = true;
+    if (dragging) cancelSeek();
+  }
+  function commitSeek(event) {
     if (!seek || !audio) return;
+    if (ignoreOldPointerCommit && event && event.isTrusted) {
+      ignoreOldPointerCommit = false;
+      cancelSeek();
+      return;
+    }
     var state = playableState();
     var total = duration();
     var target = total * Number(seek.value || 0) / 1000;
@@ -198,10 +212,31 @@
       }
     };
 
-    seek.oninput = function () {
+    seek.addEventListener('pointerdown', function () {
+      pointerHeld = true;
+      ignoreOldPointerCommit = false;
+    }, false);
+    seek.addEventListener('pointerup', function () {
+      // Keep the old gesture invalid until its trailing native change event;
+      // the browser dispatches that event *after* pointerup on many devices.
+      pointerHeld = false;
+    }, false);
+    seek.addEventListener('pointercancel', function () {
+      pointerHeld = false;
+      ignoreOldPointerCommit = true;
+      cancelSeek();
+    }, false);
+    seek.addEventListener('keydown', function () {
+      // A subsequent keyboard seek is a fresh deliberate user action.
+      if (!pointerHeld) ignoreOldPointerCommit = false;
+    }, false);
+    seek.oninput = function (event) {
+      if (ignoreOldPointerCommit && event && event.isTrusted) return;
       if (!seek.disabled) previewSeek();
     };
     seek.onchange = commitSeek;
+    global.addEventListener('fymusic:external-seek', invalidateCurrentGesture, false);
+    global.addEventListener('lx:trackchange', invalidateCurrentGesture, false);
     // Android 4.4 does not reliably dispatch input on all range taps,
     // but change on release reliably commits the selected position.
     audio.addEventListener('timeupdate', refresh, false);
