@@ -39,6 +39,7 @@ on:
       - 'scripts/test-fymusic-phase35-raw-cdp-mobile-background-touch.mjs'
       - 'scripts/test-fymusic-phase36-native-touch-os-track-browser.mjs'
       - 'scripts/test-fymusic-phase37-interleaved-owners-browser.mjs'
+      - 'scripts/test-fymusic-phase38-cross-browser-pointer-ownership.mjs'
       - 'scripts/test-fymusic-phase33-native-mouse-seek-browser.mjs'
       - 'scripts/generate-fymusic-phase26-fixtures.mjs'
       - 'scripts/generate-fymusic-phase25-fixtures.mjs'
@@ -141,6 +142,7 @@ jobs:
           node --check scripts/test-fymusic-phase35-raw-cdp-mobile-background-touch.mjs
           node --check scripts/test-fymusic-phase36-native-touch-os-track-browser.mjs
           node --check scripts/test-fymusic-phase37-interleaved-owners-browser.mjs
+          node --check scripts/test-fymusic-phase38-cross-browser-pointer-ownership.mjs
           node --check scripts/test-fymusic-phase33-native-mouse-seek-browser.mjs
           node --check scripts/generate-fymusic-phase26-fixtures.mjs
           node --check scripts/generate-fymusic-phase25-fixtures.mjs
@@ -206,7 +208,13 @@ jobs:
           grep -Fq 'pendingUpdates=new Set()' /tmp/fymusic-edge-ui.js
           echo 'FYMUSIC_REAL_EDGE_PREVIEW_UI_ASSET_PASS'
       - name: Install Chromium for responsive UI browser tests
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium firefox webkit
+      - name: Verify Phase38 real Firefox and WebKit pointer and keyboard seek ownership
+        env:
+          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: |
+          BROWSER_ENGINE=firefox node scripts/test-fymusic-phase38-cross-browser-pointer-ownership.mjs
+          BROWSER_ENGINE=webkit node scripts/test-fymusic-phase38-cross-browser-pointer-ownership.mjs
       - name: Verify Phase37 interleaved OS seek touch cancel keyboard and rapid gestures
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
