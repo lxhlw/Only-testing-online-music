@@ -40,7 +40,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for trial in {1..8}; do
+          for trial in {1..24}; do
             echo "FYMUSIC_PHASE41_WEBKIT_TRIAL=$trial"
             BROWSER_ENGINE=webkit node scripts/test-fymusic-phase40-cross-engine-keyboard.mjs
           done
