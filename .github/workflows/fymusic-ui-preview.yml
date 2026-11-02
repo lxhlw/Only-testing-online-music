@@ -41,6 +41,7 @@ on:
       - 'scripts/test-fymusic-phase37-interleaved-owners-browser.mjs'
       - 'scripts/test-fymusic-phase38-cross-browser-pointer-ownership.mjs'
       - 'scripts/test-fymusic-phase39-cross-engine-stress.mjs'
+      - 'scripts/test-fymusic-phase40-cross-engine-keyboard.mjs'
       - 'scripts/test-fymusic-phase33-native-mouse-seek-browser.mjs'
       - 'scripts/generate-fymusic-phase26-fixtures.mjs'
       - 'scripts/generate-fymusic-phase25-fixtures.mjs'
@@ -145,6 +146,7 @@ jobs:
           node --check scripts/test-fymusic-phase37-interleaved-owners-browser.mjs
           node --check scripts/test-fymusic-phase38-cross-browser-pointer-ownership.mjs
           node --check scripts/test-fymusic-phase39-cross-engine-stress.mjs
+          node --check scripts/test-fymusic-phase40-cross-engine-keyboard.mjs
           node --check scripts/test-fymusic-phase33-native-mouse-seek-browser.mjs
           node --check scripts/generate-fymusic-phase26-fixtures.mjs
           node --check scripts/generate-fymusic-phase25-fixtures.mjs
@@ -211,6 +213,12 @@ jobs:
           echo 'FYMUSIC_REAL_EDGE_PREVIEW_UI_ASSET_PASS'
       - name: Install Chromium for responsive UI browser tests
         run: npx playwright install --with-deps chromium firefox webkit
+      - name: Verify Phase40 real Firefox and WebKit calibrated keyboard seek ownership
+        env:
+          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: |
+          BROWSER_ENGINE=firefox node scripts/test-fymusic-phase40-cross-engine-keyboard.mjs
+          BROWSER_ENGINE=webkit node scripts/test-fymusic-phase40-cross-engine-keyboard.mjs
       - name: Verify Phase39 Firefox and WebKit long interleaved pointer OS keyboard stress
         env:
           TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
