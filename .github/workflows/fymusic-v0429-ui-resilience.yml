@@ -1,0 +1,66 @@
+name: FyMusic v0.4.29 UI Resilience Preview (nonproduction)
+on:
+  push:
+    branches: [feature/fymusic-v0429-ui-resilience]
+  pull_request:
+    paths:
+      - 'src/now-playing-experience.js'
+      - 'src/app.js'
+      - 'index.html'
+      - 'scripts/test-modern-web-browser.mjs'
+      - 'scripts/test-v0429-webkit-ux-profile.mjs'
+      - '.github/workflows/fymusic-v0429-ui-resilience.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fymusic-v0429-ui-resilience-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ui-resilience:
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check source and test scripts
+        run: |
+          set -euo pipefail
+          test "$(node -p "require('./package.json').version")" = '0.4.28'
+          node --check src/now-playing-experience.js
+          node --check src/app.js
+          node --check scripts/test-v0429-webkit-ux-profile.mjs
+          node --check scripts/test-modern-web-browser.mjs
+      - name: Install runtime and browser test dependencies
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium webkit
+      - name: Build only published runtime assets
+        run: |
+          npm run build:pages
+          npm run test:pages
+      - name: Start isolated local Pages emulator
+        run: |
+          set -euo pipefail
+          npx wrangler pages dev dist --ip 127.0.0.1 --port 8788 > /tmp/fymusic-v0429-ui-pages.log 2>&1 &
+          for i in {1..35}; do
+            if curl -fsS http://127.0.0.1:8788/version.json > /tmp/v0429-version.json; then break; fi
+            sleep 1
+          done
+          node -e "const p=require('/tmp/v0429-version.json');if(p.version!=='0.4.28')process.exit(1)"
+      - name: Browser regression for comments, quality, selected-song metadata
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: |
+          node scripts/test-modern-web-browser.mjs
+          echo FYMUSIC_V0429_UI_COMMENT_QUALITY_METADATA_PASS
+      - name: Actual WebKit and Chromium list mutation and RAF observation
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-v0429-webkit-ux-profile.mjs
+      - name: No production deployment
+        run: echo FYMUSIC_V0429_READ_ONLY_PRODUCTION_UNTOUCHED
