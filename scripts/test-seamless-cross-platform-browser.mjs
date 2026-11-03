@@ -35,7 +35,7 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
  const browser=await adapter.launch({headless:true,
    ...(engine==='chromium'?{args:['--autoplay-policy=no-user-gesture-required']}:{})});
  try{
-  for(const scenario of ['missing-lyrics','kugou-media-failure']){
+  for(const scenario of ['missing-lyrics','kugou-media-failure','native-after-both-flower-fail']){
    const page=await browser.newPage({viewport:{width:engine==='webkit'?390:1360,height:860}});
    const errors=[],media=[];
    page.on('pageerror',e=>errors.push(String(e.message).slice(0,180)));
@@ -80,6 +80,11 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
    await page.evaluate(({scenario,equivalent,wrong})=>{
     window.__seamlessRequested=[];
     window.__seamlessSearch=[];
+    window.__nativeSources=[];
+    window.LXMusicSearch.resolveMusicUrlFast=(source,info,quality,done)=>{
+      window.__nativeSources.push(source);
+      done(null,{url:'https://media.example.test/kuwo.wav?id=440613',provider:'kuwo-native'});
+    };
     window.__seamlessAudioErrors=[];
     document.getElementById('audio')?.addEventListener('error',function(){
       const a=this;window.__seamlessAudioErrors.push({code:a.error?.code||null,
@@ -91,8 +96,10 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
     };
     window.LXSourceManager.requestAction=(source,action,args,done)=>{
       window.__seamlessRequested.push({source,action,quality:args.type||null});
-      if(action==='musicUrl'&&source==='kg'&&scenario==='kugou-media-failure')
+      if(action==='musicUrl'&&source==='kg'&&scenario!=='missing-lyrics')
        return done(new Error('Kugou Flower upstream HTTP 502'));
+      if(action==='musicUrl'&&source==='kw'&&scenario==='native-after-both-flower-fail')
+       return done(new Error('Matched Kuwo Flower upstream HTTP 502'));
       if(action==='musicUrl')return done(null,{url:'https://media.example.test/kuwo.wav?id=440613'});
       return done(new Error('Unsupported action'));
     };
@@ -126,6 +133,7 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
        time:document.getElementById('audio')?.currentTime,
        srcPresent:!!document.getElementById('audio')?.src},
      track:window.__LXNowPlayingTrack?.source,
+     nativeSources:window.__nativeSources,
      audioErrors:window.__seamlessAudioErrors
     }));
     throw new Error('Fallback timeout '+engine+'/'+scenario+' '+JSON.stringify(diagnostic)+
@@ -141,6 +149,7 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
       requests:window.__seamlessRequested,
       title:document.getElementById('player-title')?.textContent,
       sourceState:window.__LXNowPlayingTrack?.source,
+      nativeSources:window.__nativeSources,
       manualButtons:document.querySelectorAll('.fymusic-alternate-search').length
     };
    });
@@ -157,11 +166,14 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
    }else{
     assert.ok(result.requests.some(x=>x.source==='kw'&&x.action==='musicUrl'));
     assert.equal(result.sourceState,'kw');
+    if(scenario==='native-after-both-flower-fail')
+     assert.ok(result.nativeSources.includes('kw'),
+      'Matched platform must try its native resolver before switching again');
    }
    assert.deepEqual(errors,[]);
    results.push({engine,scenario,audioPlaying:result.audioPlaying,
     lyricLines:result.lyrics,requestedSources:[...new Set(result.requests.map(x=>x.source))],
-    lyricStatus:result.lyricStatus});
+    lyricStatus:result.lyricStatus,nativeSources:result.nativeSources});
    await page.close();
   }
  }finally{await browser.close()}
