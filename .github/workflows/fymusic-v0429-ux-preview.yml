@@ -66,6 +66,10 @@ jobs:
           s=$(curl -sSL -o /dev/null -w '%{http_code}' "$TEST_BASE_URL/api/proxy")
           test "$s" = 400
           echo FYMUSIC_V0429_PREVIEW_SECURITY_SCOPE_PASS
+      - name: Temporary fixed-host Kuwo Cloudflare egress diagnosis
+        run: |
+          curl -fsSL --max-time 60 "$TEST_BASE_URL/api/kuwo-edge-probe" -o /tmp/fymusic-kw-edge.json
+          node --input-type=module -e "import fs from 'node:fs';let p=JSON.parse(fs.readFileSync('/tmp/fymusic-kw-edge.json','utf8'));console.log('FYMUSIC_KW_EDGE_DIAG',JSON.stringify(p))"
       - name: Kuwo numeric-ID security, real cover image and timed LRC at this exact Preview
         run: |
           set -euo pipefail
