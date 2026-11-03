@@ -1579,12 +1579,7 @@
             // The original queue item remains untouched. Only the currently
             // playing recording changes, with an unobtrusive accurate label.
             state.crossRecoveryPending=false;
-            startPlayback(match,target);
-            if(playbackState&&playbackState.source===target){
-              playbackState.autoOriginalMusic=original;
-              playbackState.autoTriedSources=attempted.slice();
-              playbackState.automaticAlternativeOrigin='kg';
-            }
+            startPlayback(match,target,{original:original,tried:attempted.slice()});
           });
       }catch(error){global.clearTimeout(timer);if(!finished){finished=true;next();}}
     }
@@ -2070,7 +2065,7 @@
     );
   }
 
-  function startPlayback(music, source) {
+  function startPlayback(music, source, seamlessRecovery) {
     lastRequestedPlayback = {music: music, source: source};
     var active = global.LXSourceManager.getActive();
     // The platform search and its fallback resolver work independently of
@@ -2208,6 +2203,11 @@
       forceFullResolve: legacyFullResolveNext
     };
     legacyFullResolveNext = false;
+    if(seamlessRecovery&&seamlessRecovery.original){
+      playbackState.autoOriginalMusic=seamlessRecovery.original;
+      playbackState.autoTriedSources=seamlessRecovery.tried||[source];
+      playbackState.automaticAlternativeOrigin='kg';
+    }
 
     armMiguPlaybackDeadline(playbackState);
     if(missingFixed&&qualityChoice.autoFallback&&plan.length){
