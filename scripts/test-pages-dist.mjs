@@ -35,6 +35,11 @@ for(const name of paths.filter(p=>p!=='404.html')){
  const a=await readFile(join(root,name)),b=await readFile(join(dist,name));
  assert.ok(a.equals(b),'Unexpected static content rewrite: '+name);
 }
+assert.ok(!html.includes('id="search-input" type="hidden" value="成都"'),
+ 'Obsolete legacy default-search target is present');
+const modernMeta=await readFile(join(dist,'src/modern-ui.js'),'utf8');
+assert.ok(!modernMeta.includes("album:'LX Music Web'"),
+ 'Old media session application label still included');
 const mobileSource=await readFile(join(dist,'src/mobile-shell.js'),'utf8');
 assert.ok(mobileSource.includes("drawerName.textContent='FyMusic'"),
  'FyMusic mobile drawer brand was not updated');
