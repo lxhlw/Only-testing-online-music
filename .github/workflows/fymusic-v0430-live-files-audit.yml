@@ -1,0 +1,19 @@
+name: FyMusic v0.4.30 · Read-only Production Public Files Audit
+on:
+  push:
+    branches: [audit/fymusic-v0430-live-security-20261103]
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Inspect production public file paths without changing deployment
+        run: node scripts/diagnose-v0430-live-public-files.mjs
+      - name: No deployment
+        run: echo FYMUSIC_PRODUCTION_AUDIT_READ_ONLY
