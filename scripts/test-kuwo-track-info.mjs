@@ -36,6 +36,12 @@ try{
  const invalidArt=await (await onRequestGet({request:request('440613')})).json();
  assert.equal(invalidArt.image,'');
  globalThis.fetch=async()=>new Response(JSON.stringify({data:{
+  songinfo:{musicId:'440613',pic:'http://img1.kwcdn.kuwo.cn/album.jpg'},
+  lrclist:[{time:1,lineLyric:'版权安全测试'}]
+ }}));
+ const cdn=await (await onRequestGet({request:request('440613')})).json();
+ assert.equal(cdn.image,'https://img1.kwcdn.kuwo.cn/album.jpg');
+ globalThis.fetch=async()=>new Response(JSON.stringify({data:{
   songinfo:{musicId:'1',pic:'https://img1.kuwo.cn/safe.jpg'},
   lrclist:[{time:0,lineLyric:'不能混合'}]
  }}));
@@ -45,9 +51,8 @@ try{
  });
  assert.equal((await onRequestGet({request:request('440613')})).status,502);
  globalThis.fetch=async()=>new Response(JSON.stringify({data:{songinfo:{musicId:'440613'},lrclist:[]}}));
- const empty=await (await onRequestGet({request:request('440613')})).json();
- assert.equal(empty.available,false);
- assert.equal(empty.lyric,'');
+ const empty=await onRequestGet({request:request('440613')});
+ assert.equal(empty.status,502,'Empty source response must not appear as fetched lyrics');
  console.log('FYMUSIC_KUWO_ENRICHMENT_UNIT_PASS',JSON.stringify({strictId:true,hostLocked:true,
   validImage:true,threeLines:true,mismatchedIdRejected:true,invalidImageRejected:true}));
 }finally{globalThis.fetch=originalFetch}
