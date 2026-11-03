@@ -1,0 +1,61 @@
+name: FyMusic Phase42 - Native OS Seek Ownership Stress
+on:
+  push:
+    branches: [feature/fymusic-playback-verifier]
+    paths:
+      - '.github/workflows/fymusic-phase42-native-seek-ownership.yml'
+      - 'src/modern-ui.js'
+      - 'src/now-playing-experience.js'
+      - 'scripts/test-fymusic-phase40-cross-engine-keyboard.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-real-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate real event-driven source syntax
+        run: |
+          node --check src/modern-ui.js
+          node --check src/now-playing-experience.js
+          node --check scripts/test-fymusic-phase40-cross-engine-keyboard.mjs
+      - name: Install test dependencies and native browser engines
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps firefox webkit
+      - name: Generate real original MP3 for native audio seek
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          node scripts/generate-fymusic-phase25-fixtures.mjs
+      - name: Boot isolated local Cloudflare Pages
+        shell: bash
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/fymusic-phase42-pages.log 2>&1 &
+          for i in {1..40}; do
+            if curl -fsSL http://127.0.0.1:8788/api/audio-selftest > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/fymusic-phase42-pages.log
+          exit 1
+      - name: Verify genuine Firefox OS seek and keyboard ownership
+        run: BROWSER_ENGINE=firefox node scripts/test-fymusic-phase40-cross-engine-keyboard.mjs
+      - name: Verify WebKit 24 independent original MP3 seek cycles
+        shell: bash
+        run: |
+          set -euo pipefail
+          for trial in {1..24}; do
+            echo "FYMUSIC_PHASE42_WEBKIT_TRIAL=$trial"
+            BROWSER_ENGINE=webkit node scripts/test-fymusic-phase40-cross-engine-keyboard.mjs
+          done
+          echo "FYMUSIC_PHASE42_24_WEBKIT_SESSIONS_PASS"
+      - name: Diagnostic local server trace only upon failure
+        if: failure()
+        run: cat /tmp/fymusic-phase42-pages.log || true
