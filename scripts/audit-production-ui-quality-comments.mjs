@@ -50,13 +50,16 @@ try{
  const row=page.locator('#search-results .search-song-row').filter({hasText:'孙燕姿'}).first();
  await row.waitFor({state:'visible',timeout:30000});
  await row.locator('.song-action-play').click();
- await page.waitForFunction(()=>document.getElementById('player-title')?.textContent.includes('开始懂了'),null,{timeout:12000});
+ try{await page.waitForFunction(()=>document.getElementById('player-title')?.textContent.includes('开始懂了'),null,{timeout:15000});
+  results.playerTitleConfirmed=true;
+ }catch{results.playerTitleConfirmed=false;}
  try{await page.waitForFunction(()=>{
   const a=document.getElementById('audio');
   const s=document.getElementById('status')?.textContent||'';
   return (a?.currentTime>1&&!a.paused)||/失败|无法|不支持|播放错误/.test(s);
  },null,{timeout:30000});}catch{}
  results.fixed320=await scrape();
+ results.sourceState=await page.evaluate(()=>{const s=window.LXSourceManager?.getActive?.();return {name:s?.name||'',inited:!!s?.inited,error:String(s?.error||'').slice(0,150)};});
  await page.screenshot({path:out+'/fixed320-live-song.png'});
  if(results.fixed320.time>1&&!results.fixed320.paused){
   results.fixed320.playable=true;
