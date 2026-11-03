@@ -1,0 +1,23 @@
+name: FyMusic · Migu lyric fixed-host diagnostic (no deployment)
+on:
+  push:
+    branches: [fix/fymusic-migu-lyrics-20261103]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Read-only official Migu track and lyric endpoint checks
+        run: node scripts/diagnose-migu-song-lyrics.mjs
+      - name: Confirm production remains at v0.4.29
+        run: |
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = 3249ab8471e81910fd0ef867294ecd84843c158c
+          echo FYMUSIC_MIGU_DIAGNOSTIC_PRODUCTION_UNCHANGED
