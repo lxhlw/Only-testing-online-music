@@ -1,0 +1,43 @@
+name: FyMusic Production Full Audit - Read Only 0.4.27
+on:
+  push:
+    branches: [feature/fymusic-playback-verifier]
+    paths:
+      - '.github/workflows/fymusic-v0427-production-full-readonly-audit.yml'
+      - 'scripts/fymusic-production-full-readonly-audit.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fymusic-v0427-read-only-prod-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    if: github.ref == 'refs/heads/feature/fymusic-playback-verifier'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      TEST_BASE_URL: https://only-testing-online-music.pages.dev
+      MAIN_SHA: 586f592dc994b0868886bcb42b1213c3580f278b
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify audited production branch and immutable release
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/feature/fymusic-playback-verifier'
+          test "$TEST_BASE_URL" = 'https://only-testing-online-music.pages.dev'
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$MAIN_SHA"
+          test "$(git rev-parse origin/main)" = "$MAIN_SHA"
+          node --check scripts/fymusic-production-full-readonly-audit.mjs
+      - name: Read-only actual Edge HTTP, static parity and safe rejection probes
+        run: node scripts/fymusic-production-full-readonly-audit.mjs
+      - name: No publishing, production source modification or secret reads
+        run: echo 'FYMUSIC_FULL_READONLY_AUDIT_COMPLETE; production untouched.'
