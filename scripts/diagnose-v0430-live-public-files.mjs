@@ -15,7 +15,7 @@ for(let round=0;round<3;round++){
     realReadme:/^# FyMusic\s/m.test(raw),
     repoPackage:raw.includes('"name": "only-testing-online-music"'),
     generic404:raw.includes('404 · Not found'),
-    pageVersion:raw.includes('0.4.30'),cache:response.headers.get('cf-cache-status')};
+    pageVersion:raw.includes('0.4.31'),cache:response.headers.get('cf-cache-status')};
    console.log('FYMUSIC_0430_PUBLIC_FILE_AUDIT',JSON.stringify(finding));
   }catch(error){console.log('FYMUSIC_0430_PUBLIC_FILE_AUDIT',JSON.stringify({
    round,path,error:String(error.name||'error').slice(0,60)
