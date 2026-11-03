@@ -31,6 +31,9 @@ let abandonedTouchGesture=false;
 // is still settling. Only a superseded native drag needs an explicit OS
 // target for its next trusted keyboard action.
 let supersedingOsSeek=null;
+// Keep the last explicitly committed target until native seeked confirms it.
+// WebKit's currentTime getter can lag a rapid sequence of real setter writes.
+let pendingNativeSeek=null;
 const isOpen=()=>overlay&&!overlay.classList.contains('hidden');
 const sourceNames={wy:'网易云音乐',kw:'酷我音乐',tx:'QQ音乐',kg:'酷狗音乐',mg:'咪咕音乐'};
 const formatSeconds=value=>{
@@ -260,6 +263,7 @@ function setTrack(next){
   const key=source+':'+id;
   sequence++;
   supersedingOsSeek=null;
+  pendingNativeSeek=null;
   // A track change invalidates old lyric scroll and uncommitted seek preview.
   cancelLyricCenter();
   invalidateSeekPreview();
@@ -282,11 +286,14 @@ function updateTransport(){
   // timeupdate. openScreen() refreshes them synchronously before display.
   if(!audio||!isOpen())return;
   const valid=Number.isFinite(audio.duration)&&audio.duration>0;
-  const progress=valid?Math.max(0,Math.min(1000,Math.round(audio.currentTime/audio.duration*1000))):0;
+  const pending=pendingNativeSeek&&pendingNativeSeek.source===audio.currentSrc&&
+    pendingNativeSeek.trackSequence===sequence?pendingNativeSeek:null;
+  const shownPosition=pending?pending.seconds:audio.currentTime;
+  const progress=valid?Math.max(0,Math.min(1000,Math.round(shownPosition/audio.duration*1000))):0;
   fullSeek.disabled=Boolean(baseSeek?.disabled)||!valid;
   if(fullSeek.disabled&&seekPreview)cancelSeekPreview();
   if(!seekPreview)fullSeek.value=String(progress);
-  const shownSeconds=seekPreview&&valid?Number(fullSeek.value)/1000*audio.duration:audio.currentTime;
+  const shownSeconds=seekPreview&&valid?Number(fullSeek.value)/1000*audio.duration:shownPosition;
   fullSeek.setAttribute('aria-valuetext',formatSeconds(shownSeconds)+' / '+formatSeconds(valid?audio.duration:0));
   $('detail-current-time').textContent=formatSeconds(shownSeconds);
   $('detail-duration').textContent=formatSeconds(valid?audio.duration:0);
@@ -428,6 +435,9 @@ function invalidateSeekPreview(event){
   if(event?.type==='fymusic:external-seek'){
     const seconds=event.detail?.seconds;
     const duration=Number(audio?.duration);
+    if(Number.isFinite(seconds)&&Number.isFinite(duration)&&duration>0&&audio?.currentSrc)
+      pendingNativeSeek={seconds:Math.max(0,Math.min(duration,seconds)),
+        source:audio.currentSrc,trackSequence:sequence};
     if((seekPreview||abandonedTouchGesture)&&Number.isFinite(seconds)&&
        Number.isFinite(duration)&&duration>0&&audio?.currentSrc){
       supersedingOsSeek={seconds:Math.max(0,Math.min(duration,seconds)),
@@ -458,6 +468,7 @@ function rejectStaleNativeSeek(event){
 }
 window.addEventListener('fymusic:external-seek',invalidateSeekPreview);
 fullSeek?.addEventListener('pointerdown',()=>{
+  pendingNativeSeek=null;
   supersedingOsSeek=null;
   // Chrome dispatches pointermove, but not pointerdown, for an old finger
   // after tab restoration. A genuine new pointerdown starts a new gesture.
@@ -488,6 +499,10 @@ fullSeek?.addEventListener('change',event=>{
   }
   seekPreview=false;
   supersedingOsSeek=null;
+  const duration=Number(audio?.duration);
+  if(Number.isFinite(duration)&&duration>0&&audio?.currentSrc)
+    pendingNativeSeek={seconds:Number(fullSeek.value)/1000*duration,
+      source:audio.currentSrc,trackSequence:sequence};
   baseSeek.value=fullSeek.value;
   baseSeek.dispatchEvent(new Event('change',{bubbles:true}));
   // Native range change fires for both pointer and keyboard. Blurring after
@@ -567,6 +582,13 @@ window.addEventListener('pageshow',resumeImmersive);
 // A completed native seek can retire OS intent once the target is actually
 // reached. Do not use timeupdate here: WebKit may report the old position.
 audio?.addEventListener('seeked',()=>{
+  const committed=pendingNativeSeek;
+  if(committed){
+    if(committed.source!==audio.currentSrc||committed.trackSequence!==sequence)
+      pendingNativeSeek=null;
+    else if(!audio.seeking&&Math.abs(audio.currentTime-committed.seconds)<.35)
+      pendingNativeSeek=null;
+  }
   const intent=supersedingOsSeek;
   if(!intent)return;
   if(intent.source!==audio.currentSrc||intent.trackSequence!==sequence){
