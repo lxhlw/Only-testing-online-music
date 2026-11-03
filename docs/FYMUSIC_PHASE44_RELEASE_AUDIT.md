@@ -62,7 +62,7 @@ Phase44：
 - 选择性运行时本地候选版的完整浏览器/Security/Privacy 测试：https://github.com/lxhlw/Only-testing-online-music/actions/runs/41572540383 ，**completed/success**，16 个成功步骤、1 个故障诊断按预期跳过。
 - 覆盖：原有现代 Web 全套浏览器回归、Flower 代理安全、签名请求敏感值不滞留、Chromium/Firefox/WebKit 真实界面渲染和交互。
 - Chromium p95≈16.7ms、Firefox p95≈17.1ms；WebKit p95≈17ms，但**单轮最大帧间隔曾到 3509ms**。未证明是站点代码还是 CI 浏览器/操作系统调度造成，必须单独分析。
-- 针对 WebKit 冷帧补充了 `scripts/diagnostics/fymusic-phase44-webkit-cold-frame.mjs`，区分同步 DOM 更新耗时与等待下一 RAF 的时间。后续 CI：https://github.com/lxhlw/Only-testing-online-music/actions/runs/41572871709 。**本文件初次提交时该跑次仍未结束，最终状态和数据需再更新，不得伪报成功。**
+- 针对 WebKit 冷帧补充了 `scripts/diagnostics/fymusic-phase44-webkit-cold-frame.mjs`，区分同步 DOM 更新耗时与等待下一 RAF 的时间。最新 CI：https://github.com/lxhlw/Only-testing-online-music/actions/runs/41572871709 **completed/success**，17 个步骤成功、1 个日志诊断步骤按预期跳过。四个独立 WebKit 真实浏览器冷启动会话全部完成，p95 分别为 17、17、17、23ms，最大帧间隔分别为 **102、43、123、34ms**；两轮大于 100ms 的长帧都发生在首次列表更新（cycle 0）。对应同步 JS DOM 工作最长只有 **2ms**，长帧的等待下一 requestAnimationFrame 时间为 **100ms、121ms**。这表明这两次延迟主要出现在更新代码返回后的渲染/调度等待阶段，但不证明调度、布局或硬件哪一个是根因，也不能排除此前独立 CI 捕获的 3509ms 极端异常。详见 Actions 上传的候选版哈希清单与 WebKit 冷帧 JSON 证据。
 
 ## 4. 发布阻断项（不等于本阶段自动化失败）
 
@@ -81,6 +81,6 @@ Phase44：
 
 ## 6. 下一步结论
 
-Phase44 的**代码候选版筛选/安全检查/自动化浏览器验收**已完成，最终的冷帧辅助证据仍需核实。在无实机测试及明确发布授权前，生产发布状态是 **HOLD** 而非已上线。
+Phase44 的**代码候选版筛选/安全检查/自动化浏览器验收/独立冷帧采样**现已全部执行并归档。由于 WebKit 首帧长帧尚未在真实硬件上复核，以及版本和上线权限未满足，生产发布状态是 **HOLD** 而非已上线。后续属于真实设备发布验收与受控上线决策，不应虚称 44 阶段全部部署完成。
 
 本记录专供新对话续接，下一次“下一步”先核验最新 Phase44 CI 与 Issue #106，再决定是解决 WebKit 真实可见问题，还是准备经过授权的 release PR。
