@@ -27,7 +27,7 @@ function wav(seconds=14,rate=8000){
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a8X0AAAAASUVORK5CYII=','base64');
 const results=[];
 for(const [engine,adapter] of Object.entries({chromium,webkit})){
- const browser=await adapter.launch({headless:true,args:['--autoplay-policy=no-user-gesture-required']});
+ const browser=await adapter.launch({headless:true,...(engine==='chromium'?{args:['--autoplay-policy=no-user-gesture-required']}:{})});
  try{
   const page=await browser.newPage({viewport:{width:engine==='webkit'?390:1440,
     height:engine==='webkit'?844:900},hasTouch:engine==='webkit'});
@@ -58,10 +58,19 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
   await page.goto(base,{waitUntil:'domcontentloaded',timeout:40000});
   await page.waitForFunction(()=>window.LXSourceManager?.getActive()?.inited&&
     Boolean(window.OnlyTestingMusicApp?.playMusic),null,{timeout:18000});
-  await page.evaluate(()=>window.OnlyTestingMusicApp.playMusic({
-   id:'440613',songmid:'440613',name:'稻香',singer:'周杰伦',
-   albumName:'魔杰座',source:'kw',interval:14
-  }));
+  // Real user activation is required by Safari/WebKit autoplay policy.
+  // Exercise the application through a gesture rather than bypassing it.
+  await page.evaluate(()=>{
+   const launch=document.createElement('button');
+   launch.type='button'; launch.id='kuwo-real-click-gesture';
+   launch.textContent='测试用户点击播放';
+   launch.addEventListener('click',()=>window.OnlyTestingMusicApp.playMusic({
+     id:'440613',songmid:'440613',name:'稻香',singer:'周杰伦',
+     albumName:'魔杰座',source:'kw',interval:14
+   }));
+   document.body.appendChild(launch);
+  });
+  await page.locator('#kuwo-real-click-gesture').click();
   await page.waitForFunction(()=>{
    const a=document.getElementById('audio');
    return a&&a.readyState>=2&&!a.paused&&a.currentTime>.45;
