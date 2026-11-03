@@ -48,9 +48,24 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
     }]));
     localStorage.setItem('only-testing-online-music.active-source-id','seamless-test-source');
    },{fixture});
-   await page.route('https://media.example.test/**',route=>route.fulfill({
-    status:200,contentType:'audio/wav',body:wav()
-   }));
+   const audioBytes=wav();
+   await page.route('https://media.example.test/**',route=>{
+    const range=route.request().headers().range||'';
+    const match=/^bytes=(\d+)-(\d*)$/.exec(range);
+    if(match){
+      const start=Number(match[1]),end=match[2]?Math.min(Number(match[2]),audioBytes.length-1):audioBytes.length-1;
+      if(start<audioBytes.length&&end>=start)
+        return route.fulfill({status:206,body:audioBytes.subarray(start,end+1),headers:{
+          'Content-Type':'audio/wav','Accept-Ranges':'bytes',
+          'Content-Range':'bytes '+start+'-'+end+'/'+audioBytes.length,
+          'Content-Length':String(end-start+1)
+        }});
+    }
+    return route.fulfill({status:200,body:audioBytes,headers:{
+      'Content-Type':'audio/wav','Accept-Ranges':'bytes',
+      'Content-Length':String(audioBytes.length)
+    }});
+   });
    await page.route('**/api/kuwo-song-meta?*',route=>{
     const id=new URL(route.request().url()).searchParams.get('id');
     return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
