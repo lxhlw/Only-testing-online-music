@@ -1,7 +1,7 @@
 (function(global) {
  'use strict';
- // Conservative catalog gate for explicitly user-approved KG -> KW retries.
- // Catalog metadata is not an audio fingerprint: keep confirmation mandatory.
+ // Conservative identity gate for user-approved automatic cross-platform fallback.
+ // Catalog metadata is not an audio fingerprint: reject ambiguous matches.
  function normalize(value) {
   return String(value == null ? '' : value).normalize('NFKC').toLowerCase()
    .replace(/[\s\u00b7·._'"‘’“”–—,，:：!?！？()（）\[\]【】]+/g,'');
@@ -67,7 +67,35 @@
   }
   return result;
  }
+ // User-enabled seamless fallback still requires high-confidence same-song
+ // metadata. A title/artist coincidence alone is never a safe recording match.
+ // Timed lyrics may tolerate one missing duration only with a matching album;
+ // audio substitutions always require two close durations.
+ function equivalent(original,candidate,kind) {
+  if(!original||!candidate)return {accepted:false,reason:'missing_track'};
+  var from=String(original.source||'').toLowerCase();
+  var to=String(candidate.source||'').toLowerCase();
+  if(!from||!to||from===to||!['kw','kg','mg','wy','tx'].includes(to))
+   return {accepted:false,reason:'platform'};
+  var title=normalize(original.name),otherTitle=normalize(candidate.name);
+  if(!title||title!==otherTitle)return {accepted:false,reason:'title'};
+  var singer=normalize(original.singer),otherSinger=normalize(candidate.singer);
+  if(!singer||singer!==otherSinger)return {accepted:false,reason:'singer'};
+  var album=normalize(original.albumName||original.album);
+  var otherAlbum=normalize(candidate.albumName||candidate.album);
+  if(album&&otherAlbum&&album!==otherAlbum)
+   return {accepted:false,reason:'album'};
+  var left=durationSeconds(original),right=durationSeconds(candidate);
+  if(left!==null&&right!==null&&Math.abs(left-right)>3)
+   return {accepted:false,reason:'duration'};
+  if((left===null||right===null)&&
+     (kind==='audio'||!album||!otherAlbum||album!==otherAlbum))
+   return {accepted:false,reason:'insufficient_identity'};
+  return {accepted:true,reason:'metadata_only',
+   durationDiff:left!==null&&right!==null?Math.abs(left-right):null};
+ }
  global.FyMusicCrossPlatformMatch=Object.freeze({
-  inspect:inspect,choices:choices,durationSeconds:durationSeconds
+  inspect:inspect,choices:choices,durationSeconds:durationSeconds,
+  equivalent:equivalent
  });
 })(window);

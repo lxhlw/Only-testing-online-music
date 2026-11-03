@@ -426,6 +426,99 @@
     if (lyricsLinesEl) lyricsLinesEl.innerHTML='<div class="lyrics-empty">正在获取歌词…</div>';
     lyricsActiveIndex=-1;
     setLyricsStatus('正在获取歌词…');
+    // Cross-catalog LRC recovery runs only after the selected platform has
+    // failed. Search metadata is checked before using another platform's
+    // LRC; never put a different recording's words under this song.
+    var crossLyricsStarted=false;
+    function crossLyrics(){
+      if(crossLyricsStarted||!valid())return;
+      crossLyricsStarted=true;
+      var gate=global.FyMusicCrossPlatformMatch;
+      var catalog=global.LXMusicSearch;
+      var options=['kw','mg','wy'].filter(function(source){return source!==state.source;});
+      function unavailable(){
+        if(!valid())return;
+        if(lyricsLinesEl)lyricsLinesEl.innerHTML=
+          '<div class="lyrics-empty">当前歌曲暂时找不到匹配歌词</div>';
+        setLyricsStatus('暂未找到匹配版本歌词，可稍后刷新','warn');
+      }
+      if(!gate||!gate.equivalent||!catalog||!catalog.search||
+         !global.LXMusicLyrics||!options.length){unavailable();return;}
+      var complete=false,pending=options.length;
+      var timeout=global.setTimeout(function(){
+        if(complete)return;complete=true;unavailable();
+      },13000);
+      function finishOne(){
+        if(complete||!valid())return;
+        pending--;
+        if(pending<=0){
+          complete=true;global.clearTimeout(timeout);unavailable();
+        }
+      }
+      var query=String(track.name||'')+' '+String(track.singer||'');
+      setLyricsStatus('正在匹配可用歌词…');
+      options.forEach(function(source){
+        var callbackHandled=false;
+        var searchTimer=global.setTimeout(function(){
+          if(callbackHandled)return;callbackHandled=true;finishOne();
+        },8000);
+        try{
+          catalog.search(source,query,1,25,function(err,response){
+            if(callbackHandled)return;
+            callbackHandled=true;global.clearTimeout(searchTimer);
+            if(complete||!valid())return;
+            var rows=response&&Array.isArray(response.list)?response.list:[];
+            var candidate=null;
+            if(!err)for(var i=0;i<rows.length;i++){
+              if(gate.equivalent(track,rows[i],'lyrics').accepted){
+                candidate=rows[i];break;
+              }
+            }
+            if(!candidate){finishOne();return;}
+            var id='',endpoint='';
+            if(source==='kw'){
+              id=String(candidate.id||candidate.songmid||'');
+              if(/^\d{1,20}$/.test(id))
+                endpoint='/api/kuwo-song-meta?id='+encodeURIComponent(id);
+            }else if(source==='mg'){
+              id=String(candidate.copyrightId||candidate.id||'');
+              var lrc=String(candidate.lyricId||
+                candidate.raw&&(candidate.raw.lrcUrl||candidate.raw.lyricUrl)||'');
+              if(/^[A-Za-z0-9_-]{1,80}$/.test(id)&&lrc)
+                endpoint='/api/migu-lyrics?id='+encodeURIComponent(id)+
+                  '&url='+encodeURIComponent(lrc);
+            }else if(source==='wy'){
+              id=String(candidate.lyricId||candidate.id||'');
+              if(/^\d{1,20}$/.test(id))
+                endpoint='/api/netease-lyrics?id='+encodeURIComponent(id);
+            }
+            if(!endpoint){finishOne();return;}
+            var controller=new AbortController();
+            var fetchTimer=global.setTimeout(function(){controller.abort();},7500);
+            global.fetch(endpoint,{signal:controller.signal})
+              .then(function(res){if(!res.ok)throw Error('No LRC');return res.json();})
+              .then(function(data){
+                if(complete||!valid())return;
+                if(source!=='wy'&&(data.source!==source||String(data.id)!==id))
+                  throw Error('Lyric source mismatch');
+                var lyric=global.LXMusicLyrics.normalize(data).lyric;
+                if(global.LXMusicLyrics.parseLrc(lyric).length<2)
+                  throw Error('No timed lyric');
+                complete=true;global.clearTimeout(timeout);
+                renderLyricsResult(track,{lyric:lyric});
+                setLyricsStatus('已自动匹配'+
+                  (CHANNEL_NAMES[source]||source.toUpperCase())+
+                  '版本的同步歌词','ready');
+              })
+              .catch(function(){finishOne();})
+              .finally(function(){global.clearTimeout(fetchTimer);});
+          });
+        }catch(error){
+          global.clearTimeout(searchTimer);
+          if(!callbackHandled){callbackHandled=true;finishOne();}
+        }
+      });
+    }
     var fallback=function(previousError){
       if(!valid())return;
       // Fall back to a fixed-host API for *this song's own platform* only.
@@ -449,7 +542,7 @@
         /^[0-9]{1,20}$/.test(id);
       if(!endpoint||!validId||(isMigu&&!miguLrc)){
         if(lyricsLinesEl)lyricsLinesEl.innerHTML='<div class="lyrics-empty">这首歌曲暂时没有可获取的歌词</div>';
-        setLyricsStatus('当前歌曲暂无可用歌词','warn');return;
+        crossLyrics();return;
       }
       var requestUrl=endpoint+encodeURIComponent(id)+
         (isMigu?'&url='+encodeURIComponent(miguLrc):'');
@@ -464,12 +557,13 @@
              (isMigu&&(data.source!=='mg'||String(data.id)!==id))){
             throw new Error('Platform lyric identity mismatch');
           }
+          if(!global.LXMusicLyrics.normalize(data).lyric){
+            crossLyrics();return;
+          }
           renderLyricsResult(track,data);
         })
         .catch(function(){
-          if(!valid())return;
-          if(lyricsLinesEl)lyricsLinesEl.innerHTML='<div class="lyrics-empty">当前歌词暂不可用，你仍可以正常听歌</div>';
-          setLyricsStatus('暂时无法取得歌词，可点击「刷新歌词」重试','warn');
+          if(valid())crossLyrics();
         })
         .finally(function(){global.clearTimeout(timer);});
     };
@@ -1423,7 +1517,128 @@
   }
 
 
-  // Optional KG -> KW recovery requires TWO explicit user interactions.
+  // During a user-authorized cross-platform recovery, Flower can also fail
+  // for the matched substitute. Reuse existing same-platform trusted resolver
+  // adapters before abandoning that candidate. No new script or freeform
+  // target is loaded; the original song/artist/duration gate already passed.
+  function tryMatchedPlatformResolver(music,source,token) {
+    var state=playbackState;
+    if(!MODERN_WEB||!state||state.token!==token||token!==playbackToken||
+       !state.automaticAlternativeOrigin||state.nativeRecoveryAttempted||
+       !global.LXMusicSearch||!global.LXMusicSearch.resolveMusicUrlFast)return false;
+    state.nativeRecoveryAttempted=true;
+    var attemptId=state.resolveAttemptId;
+    var active=global.LXSourceManager.getActive();
+    var activeId=String(active&&(active.id||active.url)||'');
+    var done=false;
+    var quality=state.quality||state.plan&&state.plan[0]||'128k';
+    var timer=global.setTimeout(function(){finish(null,null);},10000);
+    function current(){
+      var now=global.LXSourceManager.getActive();
+      return playbackState===state&&token===playbackToken&&
+        state.resolveAttemptId===attemptId&&
+        String(now&&(now.id||now.url)||'')===activeId;
+    }
+    function finish(err,result){
+      if(done)return;done=true;global.clearTimeout(timer);
+      if(!current())return;
+      var url=result&&typeof result.url==='string'?result.url:'';
+      if(!err&&/^https?:\/\//i.test(url)&&
+         global.LXMusicSearch.isPlayableUrlForSource(source,url)){
+        var label='同平台备用线路';
+        var provider=String(result.provider||'native-fallback');
+        return useResolvedUrl(url,quality,token,music,source,
+          buildMusicInfo(music,source),getPlaySettings(),label,provider);
+      }
+      if(!recoverCrossPlatformPlayback(music,source,token))
+        setStatus('已尝试匹配的其他平台，目前没有可用的播放地址。','fail');
+    }
+    setStatus('正在尝试匹配版本的备用播放线路…','warn');
+    try{
+      global.LXMusicSearch.resolveMusicUrlFast(source,
+        buildMusicInfo(music,source),quality,finish);
+    }catch(error){finish(error);}
+    return true;
+  }
+
+  // User-enabled, bounded recovery of a failed Kugou recording. This
+  // searches OTHER CATALOGS, but resolves media through the installed LX
+  // source for the selected alternate platform. No third-party resolver script,
+  // no signed URLs in events/logs and no popup or extra user gesture.
+  function recoverCrossPlatformPlayback(music,source,token) {
+    if(!MODERN_WEB||token!==playbackToken||!playbackState||
+       playbackState.token!==token||!global.FyMusicCrossPlatformMatch||
+       !global.LXMusicSearch||!global.LXMusicSearch.search)return false;
+    var state=playbackState;
+    var original=state.autoOriginalMusic||(source==='kg'?music:null);
+    if(!original||String(original.source||'kg').toLowerCase()!=='kg')return false;
+    if(state.crossRecoveryPending)return true;
+    var active=global.LXSourceManager.getActive();
+    var activeId=String(active&&(active.id||active.url)||'');
+    var attempted=Array.isArray(state.autoTriedSources)?state.autoTriedSources.slice():['kg'];
+    var order=['kw','mg','wy'];
+    var targets=order.filter(function(target){
+      var entry=active&&active.sources&&active.sources[target];
+      return attempted.indexOf(target)<0&&entry&&
+        Array.isArray(entry.actions)&&entry.actions.indexOf('musicUrl')>=0;
+    });
+    if(!targets.length){
+      if(state.automaticAlternativeOrigin){
+        setStatus('已尝试匹配的其他平台，当前均无法取得可用播放地址。','fail');
+        return true;
+      }
+      return false;
+    }
+    state.crossRecoveryPending=true;
+    var index=0;
+    function isCurrent(){
+      var now=global.LXSourceManager.getActive();
+      return token===playbackToken&&playbackState===state&&
+        String(now&&(now.id||now.url)||'')===activeId;
+    }
+    function next(){
+      if(!isCurrent())return;
+      if(index>=targets.length){
+        state.crossRecoveryPending=false;
+        setStatus('当前歌曲和匹配的备用版本暂时都无法播放，请稍后重试。','fail');
+        return;
+      }
+      var target=targets[index++];
+      attempted.push(target);
+      var finished=false;
+      var timer=global.setTimeout(function(){
+        if(finished)return;
+        finished=true;
+        next();
+      },8000);
+      try{
+        global.LXMusicSearch.search(target,
+          String(original.name||'')+' '+String(original.singer||''),1,25,
+          function(error,response){
+            if(finished)return;
+            finished=true;global.clearTimeout(timer);
+            if(!isCurrent())return;
+            var list=response&&Array.isArray(response.list)?response.list:[];
+            var match=null;
+            if(!error)for(var i=0;i<list.length;i++){
+              if(global.FyMusicCrossPlatformMatch.equivalent(original,list[i],'audio').accepted){
+                match=list[i];break;
+              }
+            }
+            if(!match)return next();
+            // The original queue item remains untouched. Only the currently
+            // playing recording changes, with an unobtrusive accurate label.
+            state.crossRecoveryPending=false;
+            startPlayback(match,target,{original:original,tried:attempted.slice()});
+          });
+      }catch(error){global.clearTimeout(timer);if(!finished){finished=true;next();}}
+    }
+    setStatus('正在自动寻找可播放的同曲版本…','warn');
+    next();
+    return true;
+  }
+
+  // Optional manual selection stays available if automatic recovery cannot locate a match.
   // No background cross-platform search or automatic playback substitution.
   function offerCrossPlatformAlternative(original,source,token){
     if(!MODERN_WEB||source!=='kg'||token!==playbackToken||
@@ -1438,7 +1653,7 @@
     var box=document.createElement('div');box.className='fymusic-alternate-offer';
     var description=document.createElement('p');
     description.className='fymusic-alternate-explanation';
-    description.textContent='酷狗解析未成功。可手动查找酷我同曲版本；不会自动换平台。' +
+    description.textContent='自动匹配暂不可用，也可以手动查找酷我同曲版本。' +
       '候选须匹配歌名、歌手、时长及可核对的专辑，仍不能保证录音内容相同。';
     var button=document.createElement('button');
     button.type='button';button.className='secondary fymusic-alternate-search';
@@ -1627,11 +1842,13 @@
           escapeHtml(plan[index+1])+'。原因：'+escapeHtml(playbackState.qualityFallbackReason),'warn');
         return requestQuality(music,source,musicInfo,plan,index+1,token);
       }
+      if (MODERN_WEB && tryMatchedPlatformResolver(music,source,token))return;
+      if (MODERN_WEB && recoverCrossPlatformPlayback(music,source,token))return;
       if (NATIVE_COMPANION || MODERN_WEB) {
         setStatus(sourceUnavailable
-          ? '野花音源服务器当前无法返回播放地址（HTTP 502）。歌曲搜索仍可使用；本次已停止解析，不会擅自换用其他音源。'
+          ? '野花音源暂时无法提供播放地址，请稍后重试。'
           : '当前歌曲暂未取得播放地址：' + escapeHtml(reason || '解析失败') +
-            (MODERN_WEB ? '。仅使用选中的 LX 音源“'+escapeHtml(activeSourceName)+'”，未自动切换其他播放源。' : '。'), 'fail');
+            (MODERN_WEB ? '。已尝试当前可用的播放线路。' : '。'), 'fail');
         if (MODERN_WEB) {
           var retry = document.createElement('button');
           retry.type = 'button';
@@ -1899,7 +2116,7 @@
     );
   }
 
-  function startPlayback(music, source) {
+  function startPlayback(music, source, seamlessRecovery) {
     lastRequestedPlayback = {music: music, source: source};
     var active = global.LXSourceManager.getActive();
     // The platform search and its fallback resolver work independently of
@@ -2037,6 +2254,11 @@
       forceFullResolve: legacyFullResolveNext
     };
     legacyFullResolveNext = false;
+    if(seamlessRecovery&&seamlessRecovery.original){
+      playbackState.autoOriginalMusic=seamlessRecovery.original;
+      playbackState.autoTriedSources=seamlessRecovery.tried||[source];
+      playbackState.automaticAlternativeOrigin='kg';
+    }
 
     armMiguPlaybackDeadline(playbackState);
     if(missingFixed&&qualityChoice.autoFallback&&plan.length){
@@ -2046,7 +2268,8 @@
     // Unsupported fixed KG quality is not silently reduced to 128k.
     // Offer only the same explicitly approved alternate catalog flow.
     if(qualityUnsupported){
-      offerCrossPlatformAlternative(music,source,token);
+      if(!recoverCrossPlatformPlayback(music,source,token))
+        offerCrossPlatformAlternative(music,source,token);
       return;
     }
     requestQuality(music, source, buildMusicInfo(music, source), plan, 0, token);
@@ -2091,7 +2314,8 @@
     var qualityMessage='请求 '+state.quality+
       (downgraded?'（由 '+state.initialQuality+' 降级；'+(state.qualityFallbackReason||'高音质不可用')+'）':'')+
       ' · 实际码率未经检测';
-    setStatus((state.manualAlternativeOrigin==='kg' ? '已手动确认的酷我备用版本' :
+    setStatus((state.automaticAlternativeOrigin==='kg' ? '已自动匹配的'+(CHANNEL_NAMES[state.source]||state.source.toUpperCase())+'备用版本' :
+      state.manualAlternativeOrigin==='kg' ? '已手动确认的酷我备用版本' :
       (CHANNEL_NAMES[state.source]||state.source.toUpperCase()))+
       ' 正在播放 · '+escapeHtml(qualityMessage),'ready');
     var playbackQualityNode=document.getElementById('inline-current-quality');
@@ -2193,6 +2417,8 @@
       return requestQuality(state.music,state.source,buildMusicInfo(state.music,state.source),
         state.plan,state.index+1,state.token);
     }
+    if (MODERN_WEB && tryMatchedPlatformResolver(state.music,state.source,state.token))return;
+    if (MODERN_WEB && recoverCrossPlatformPlayback(state.music,state.source,state.token))return;
     if (NATIVE_COMPANION || MODERN_WEB) {
       setStatus(MODERN_WEB ? '音频播放连接失败。请重新点选歌曲。' :
         '野花已返回地址，但原生播放失败。', 'fail');

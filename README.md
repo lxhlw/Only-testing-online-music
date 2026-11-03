@@ -47,12 +47,20 @@ For real-provider acceptance, search **孙燕姿《开始懂了》** and confirm
 
 The default quality selection prefers the highest available, with explicit compatibility-aware fallbacks. Sources and providers may be region-restricted or temporarily unavailable.
 
+## Seamless, confidence-gated listening
+
+If a Kugou recording cannot play, FyMusic searches for high-confidence matching recordings on Kuwo, Migu and NetEase. It also tries the matched platform's own existing trusted resolver if the imported LX source is temporarily unavailable. This runs automatically without a modal, while the playing source is still accurately reflected in the player.
+
+Missing LRC lyrics can be matched against those platforms **without changing a working audio stream**. Matches require exact normalized song and artist, duration within three seconds and no known album conflict. Audio needs both durations; lyrics with a missing duration require a matching album. Metadata is not an audio fingerprint, so unequal recordings are never guaranteed equivalent. Signed media URLs are not stored in logs or the queue, and the quality choice remains user-configurable, not hard-capped to 128k.
+
+Regression tests: `scripts/test-seamless-cross-platform-match.mjs`, `scripts/test-seamless-cross-platform-browser.mjs`, and the read-only live browser probe `scripts/test-seamless-live-sunyanzi-preview.mjs`.
+
 ## Privacy and storage
 
 Queue, favorites, history and imported LX sources are stored in the current browser's localStorage; clearing local site data can delete them. Custom LX source scripts execute code inside the Web page and should be imported only from trusted providers. The same-origin media proxy validates target URLs, rejects private network IPs and validates redirect hops, but is not a public open proxy service.
 
 ## Release status
 
-**v0.4.28** is the minimal-asset publication and retired Android 4.4 cleanup release. The previous production baseline was v0.4.27 at commit `586f592dc994b0868886bcb42b1213c3580f278b`. Release v0.4.28 only after immutable preview acceptance and production workflow verification. Keep the v0.4.27 immutable Pages deployment available as the immediate rollback reference.
+**v0.4.31 (2026-11-03)** adds user-approved metadata-verified automatic cross-platform lyrics and Kugou audio recovery. The independent Cloudflare Preview validated real Sun Yanzi 《开始懂了》 playback, album art and 56 timed lyrics after a controlled Kugou resolver failure. Preserve stable previous production v0.4.30 for rollback.
 
-For historical audit evidence, see the developer-branch document `docs/FYMUSIC_V0427_FULL_PRODUCTION_AUDIT_2026-11-03.md` in `feature/fymusic-playback-verifier`.
+Releases must pass the minimum Pages asset allowlist, proxy/SSRF security tests, dual-engine browser regressions, CI and production deployment verification. Real third-party music availability is variable, so real-media diagnostics are reported separately and do not justify claiming a permanent music availability guarantee.

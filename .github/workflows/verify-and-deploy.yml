@@ -55,6 +55,10 @@ jobs:
       - name: Modern JS parse checks
         run: |
           node --check src/app.js
+          node --check src/fymusic-cross-platform-match.js
+          node --check scripts/test-seamless-cross-platform-match.mjs
+          node --check scripts/test-seamless-cross-platform-browser.mjs
+          node --check scripts/test-seamless-live-sunyanzi-preview.mjs
           node --check src/source-manager.js
           node --check src/source-transpiler-modern.js
           node --check src/modern-ui.js
@@ -118,6 +122,7 @@ jobs:
           node scripts/test-netease-lyrics.mjs
           node scripts/test-now-playing-apis.mjs
           node scripts/test-migu-lyrics-endpoint.mjs
+          node scripts/test-seamless-cross-platform-match.mjs
           node scripts/test-kuwo-track-info.mjs
           node scripts/test-chart-catalog.mjs
       - name: Compare original LX Desktop NetEase EAPI search with Web (diagnostic)
@@ -137,6 +142,7 @@ jobs:
           if [ "$READY" != "1" ]; then cat /tmp/lx-modern-pages.log; exit 1; fi
           node scripts/test-modern-web-browser.mjs
           node scripts/test-now-playing-kuwo-browser.mjs
+          node scripts/test-seamless-cross-platform-browser.mjs
           node scripts/test-playlist-infinite-browser.mjs
           node scripts/test-mobile-interaction-qa-browser.mjs
           node scripts/test-web-source-selection-browser.mjs
@@ -223,6 +229,7 @@ jobs:
           set -euo pipefail
           node scripts/test-modern-web-browser.mjs
           node scripts/test-now-playing-kuwo-browser.mjs
+          node scripts/test-seamless-cross-platform-browser.mjs
           node scripts/test-playlist-infinite-browser.mjs
           node scripts/test-mobile-interaction-qa-browser.mjs
       - name: Real Kuwo cover metadata and timed lyrics against the deployed website
@@ -230,6 +237,13 @@ jobs:
           TEST_BASE_URL: https://only-testing-online-music.pages.dev
           FYMUSIC_ACCEPT_PRODUCTION: '1'
         run: node scripts/test-kuwo-preview-live.mjs
+      - name: Real Kugou-failure cross-platform recovery with Sun Yanzi (informational)
+        continue-on-error: true
+        timeout-minutes: 4
+        env:
+          TEST_BASE_URL: https://only-testing-online-music.pages.dev
+          FYMUSIC_ACCEPT_PRODUCTION: '1'
+        run: node scripts/test-seamless-live-sunyanzi-preview.mjs
       - name: Real Migu Sun Yanzi song playback, artwork, timed lyric, pause and resume
         timeout-minutes: 4
         env:

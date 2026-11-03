@@ -289,7 +289,7 @@ try {
       source:'wy',interval:8
     });
   });
-  await page.waitForFunction(()=>document.querySelector('#status')?.textContent.includes('野花音源服务器当前无法返回播放地址'),{timeout:5000});
+  await page.waitForFunction(()=>document.querySelector('#status')?.textContent.includes('野花音源暂时无法提供播放地址'),{timeout:5000});
   assert.equal(await page.evaluate(()=>window.__fallbackCalls),0,
     'Flower-only mode must never call another provider');
   assert.deepEqual(await page.evaluate(()=>window.__outageQualityRequests),['320k'],
