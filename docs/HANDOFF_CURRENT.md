@@ -19,7 +19,17 @@
 | Official site | `https://only-testing-online-music.pages.dev/` |
 | Main CI status | Prior production #41670345575 SUCCESS; latest docs-only #41673691537 FAILED at real Migu playback timeout; browser/security tests passed |
 | UI 2.0 development | Phases 1–3 implemented on draft PR #116; stage 3 baseline verified in isolated preview, polish retest pending; NOT production |
-| Next execution priority | Complete phase 3 polish retest, then accessible UI2 light theme and real-device review; separately diagnose upstream source instability |
+| Next execution priority | Validate UI2 Stage 4 light-theme CI and screenshots; after Stage 4, tackle upstream source reliability, then final sign-off/rollout |
+
+### Stage 4: optional accessible light theme — implementation committed, CI pending (2026-11-04)
+
+- **Stage 3 now closed:** The final stage-3 polish verification [#41681958521](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41681958521) finished **SUCCESS** at `5de9af04`. Main v0.4.33 remains visually unchanged.
+- **Stage 4 feature branch:** `feature/fymusic-ui2-desktop-preview-20261104`, [DRAFT PR #116](https://github.com/lxhlw/Only-testing-online-music/pull/116), latest feature commit `d1f6f58c7cc4158fd9343d0cdf1e4fe88940cb90`. No main merge, no production UI 2.0 release.
+- **Implemented:** opt-in `?ui2=1&theme=light` daylight palette for search/playlist/ranking/library/settings, desktop/tablet/mobile and immersive Now Playing. Topbar and Settings theme controls are accessible buttons with keyboard/ARIA pressed-state. Preference saved locally and retained after reload, theme query and browser meta color updated. Playback/source/seek/lyric business logic is not modified.
+- **Tests added:** `scripts/test-ui2-theme-browser.mjs` runs Chromium+WebKit at 1440/820/390/320px, checks daylight colors and heading contrast >= 4.5, theme change via keyboard and Settings page, persisted selection, reduced motion, no overflow, no additional audio and legacy-page isolation. Screenshot artifacts contain only synthetic clean-browser state.
+- **Verification:** [stage-4 preview #41684255301](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41684255301), [browser/security #41684265856](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41684265856), [playlist #41684265845](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41684265845), [privacy #41684265860](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41684265860). At checkpoint, only playlist/privacy have **SUCCESS**, preview and full browser CI **PENDING**. Do not claim stage 4 completed.
+- **Unrelated main CI:** Production documentation release [#41682617224](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41682617224) finished **FAILURE**, despite a prior browser/security success; inspect the failed step in the next source reliability task, do not mislabel UI2 regression.
+- **Next:** Inspect stage-4 screenshots and test results; fix any failures on PR #116 and update this main checkpoint with exact verified SHA. When stage 4 has passed, **two macro-stages remain**: upstream source reliability and final user-reviewed rollout. Physical-device FPS and manual screen-reader review cannot be claimed from CI.
 
 ### Stage 3: tablet continuity and visual/performance evidence (2026-11-04)
 
@@ -76,7 +86,7 @@
 - **UI 2.0 remains draft preview only**: phases 1–2 desktop and mobile CSS are implemented and verified on PR #116, but not released. Human visual approval, measured FPS/memory, tablet 741–980px behavior and complete light-theme rollout remain unfinished.
 - The public GitHub handoff is intentionally restricted to public-safe technical facts. No private conversational memory is stored; full confidential backups require a separate PRIVATE GitHub repository.
 
-## Next goal: 3 remaining macro-stages to eventual UI 2.0 release
+## Next goal: Stage 4 completion, then 2 remaining macro-stages to release
 
 1. **Light theme + human design/performance acceptance:** Complete an accessible optional UI2 light mode, review desktop/tablet/mobile screenshots, test keyboard/screen-reader interactions and measure FPS/CPU/memory on real devices (CI rAF is not a device benchmark).
 2. **Source reliability diagnostics:** Keep `稻香` Kugou→Kuwo and real Migu cases strict. Investigate upstream musicUrl failures and add reliable diagnostics/appropriate bounded recovery without falsely asserting playback or weakening acceptance tests.
