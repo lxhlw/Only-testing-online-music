@@ -1,0 +1,1281 @@
+/*
+ * FyMusic UI 2.0 — isolated desktop preview. Query switch: ?ui2=1.
+ * The playback engine, DOM identities, mobile shell, and source logic stay unchanged.
+ * No remote fonts, no infinite animations, no canvas polling.
+ */
+@media (min-width: 741px) {
+  html.modern-web.fy-ui2 {
+    color-scheme: dark;
+    --bg:#091218;--panel:#12212b;--surface:#162630;--surface2:#1b3038;
+    --mint:#73edb5;--mint2:#61dcb6;--text:#eafaf2;--muted:#98afb2;
+    --stroke:rgba(170,225,207,.14);
+    --secondary:#b6d1cb;--light-mint:#1b4539;--soft-green:#102922;
+    --shadow:0 18px 45px rgba(0,0,0,.18);
+    background:#091218;
+  }
+  html.modern-web.fy-ui2 body,
+  html.modern-web.fy-ui2 #app,
+  html.modern-web.fy-ui2 .lx-layout,
+  html.modern-web.fy-ui2 .main-stage,
+  html.modern-web.fy-ui2 .view-container {background:#091218;color:#ecf7f4}
+  html.modern-web.fy-ui2 .main-stage {
+    background:radial-gradient(ellipse 65% 43% at 85% 5%,rgba(27,109,93,.17),transparent 75%),#091218;
+  }
+  html.modern-web.fy-ui2 .topbar {
+    height:76px;background:rgba(12,24,30,.985);border-bottom:1px solid rgba(150,214,193,.13);
+    box-shadow:none;color:#f0fbf7;
+  }
+  html.modern-web.fy-ui2 .brand{color:#e9fff5;font-size:22px;letter-spacing:-.8px}
+  html.modern-web.fy-ui2 .brand-block::before{background:linear-gradient(135deg,#82f0c2,#2b997e);color:#09241e}
+  html.modern-web.fy-ui2 .subtitle{color:#8ca9a7}
+  html.modern-web.fy-ui2 .topbar-chip{background:#162c2d;border-color:#2c5149;color:#bce1d4}
+  html.modern-web.fy-ui2 .top-source-indicator{background:#143a31;color:#83efbc}
+  html.modern-web.fy-ui2 .nav-rail{
+    top:76px;height:calc(100vh - 76px);background:linear-gradient(180deg,#0e1c25,#0c1921);
+    border-color:#223438;padding-top:27px;
+  }
+  html.modern-web.fy-ui2 .nav-brand{color:#6dc7a8;font-weight:800}
+  html.modern-web.fy-ui2 .nav-item{color:#a0b9b4;transition:background-color .2s,color .2s,transform .2s}
+  html.modern-web.fy-ui2 .nav-item:hover{background:#1e3537;color:#e7fff7;transform:translateX(2px)}
+  html.modern-web.fy-ui2 .nav-item.active,
+  html.modern-web.fy-ui2 .nav-item.active:hover{
+    background:#1d4036;color:#bdfddc;border-color:#386852;
+    box-shadow:inset 3px 0 #76f4b9;
+  }
+  html.modern-web.fy-ui2 .persistent-top-stack{
+    top:76px;background:rgba(9,18,24,.97);border-color:#1c3636;box-shadow:none;
+  }
+  html.modern-web.fy-ui2 .global-search {
+    background:#172a33;border-color:#2c4747;
+    box-shadow:0 8px 20px rgba(0,0,0,.11);
+    border-radius:17px;height:56px
+  }
+  html.modern-web.fy-ui2 .global-search:focus-within{border-color:#6adeb1;box-shadow:0 0 0 3px rgba(111,238,180,.14)}
+  html.modern-web.fy-ui2 .global-search input{background:transparent;color:#f0fff9}
+  html.modern-web.fy-ui2 .global-search input::placeholder{color:#90a9ab}
+  html.modern-web.fy-ui2 .global-search button{background:linear-gradient(125deg,#67e5b0,#35c0a0);color:#082b26}
+  html.modern-web.fy-ui2 .global-status{
+    background:#162b2d;color:#adcac2;border-color:#2d4a45;
+    padding:7px 12px;font-size:12px;
+  }
+  html.modern-web.fy-ui2 .global-status.warn{background:#3d3024;color:#ffe1a9;border-color:#796047}
+  html.modern-web.fy-ui2 .global-status.fail{background:#492b30;color:#ffc7c8;border-color:#805254}
+  html.modern-web.fy-ui2 .view-header h1,
+  html.modern-web.fy-ui2 .view-header .panel-kicker{color:#e9fff4}
+  html.modern-web.fy-ui2 .view-header .panel-kicker{color:#69dfb2}
+  html.modern-web.fy-ui2 .results-head,
+  html.modern-web.fy-ui2 .search-song-main,
+  html.modern-web.fy-ui2 .song-title{color:#effbf7}
+  html.modern-web.fy-ui2 .sub-toolbar,
+  html.modern-web.fy-ui2 .category-row,
+  html.modern-web.fy-ui2 .search-row,
+  html.modern-web.fy-ui2 .search-song-row,
+  html.modern-web.fy-ui2 .playlist-song-row,
+  html.modern-web.fy-ui2 .view-tab,
+  html.modern-web.fy-ui2 .channel-button,
+  html.modern-web.fy-ui2 .platform-pill,
+  html.modern-web.fy-ui2 .category-pill{
+    background:#16262e;border-color:#2a4241;color:#a9c6bd;
+  }
+  html.modern-web.fy-ui2 .view-tab.active,
+  html.modern-web.fy-ui2 .channel-button.active,
+  html.modern-web.fy-ui2 .platform-pill.active{background:#244f41;color:#d1ffe5;border-color:#3c745f}
+  html.modern-web.fy-ui2 .search-song-row:hover{border-color:#49826c;background:#1d3537}
+  /* Floating Dock: same audio/seek/buttons, only a new presentation. */
+  html.modern-web.fy-ui2 .player-bar {
+    left:calc(206px + 26px);right:26px;bottom:16px;
+    width:auto;height:93px;min-height:93px;max-height:93px;
+    padding:14px 22px;gap:17px;border:1px solid rgba(152,231,199,.21);
+    border-radius:23px;background:rgba(25,43,52,.975);color:#edfdf5;
+    box-shadow:0 21px 45px rgba(0,0,0,.29),0 0 0 1px rgba(255,255,255,.03) inset;
+    z-index:80;transition:box-shadow .26s,border-color .26s;
+  }
+  html.modern-web.fy-ui2.is-playing .player-bar{border-color:rgba(122,236,185,.39)}
+  html.modern-web.fy-ui2 .player-song{flex:0 1 230px;width:230px}
+  html.modern-web.fy-ui2 .player-art{width:61px;min-width:61px;height:61px;flex-basis:61px;border-radius:13px;
+    box-shadow:0 7px 18px rgba(0,0,0,.28)}
+  html.modern-web.fy-ui2 .player-art:hover{box-shadow:0 0 0 2px rgba(115,237,181,.65)}
+  html.modern-web.fy-ui2 #player-title{color:#f0fff9;font-size:15px;font-weight:760}
+  html.modern-web.fy-ui2 #player-artist{color:#a3bdbb;font-size:12px}
+  html.modern-web.fy-ui2 #player-network-hint{color:#f6cb89}
+  html.modern-web.fy-ui2 .player-center{gap:4px}
+  html.modern-web.fy-ui2 .player-icon-btn{
+    color:#c0d7d3!important;background:transparent!important;
+    transition:background-color .18s,color .18s,transform .18s;
+  }
+  html.modern-web.fy-ui2 .player-icon-btn:hover{color:#e7fff6!important;background:#294740!important;transform:translateY(-1px)}
+  html.modern-web.fy-ui2 .player-main-toggle,
+  html.modern-web.fy-ui2 .player-main-toggle:hover{
+    background:#77efb8!important;color:#10352b!important;
+    width:49px;min-width:49px;height:49px;min-height:49px;
+    box-shadow:0 4px 19px rgba(92,228,165,.24)!important;
+  }
+  html.modern-web.fy-ui2 .player-timeline,
+  html.modern-web.fy-ui2 .player-time{color:#96b8af}
+  html.modern-web.fy-ui2 #player-seek{
+    background:#416059;border-radius:99px;accent-color:#7cf0bc;
+  }
+  html.modern-web.fy-ui2 #player-seek::-webkit-slider-thumb{background:#7cf0bc}
+  html.modern-web.fy-ui2 .player-extras{flex-basis:190px}
+  html.modern-web.fy-ui2 #player-volume{accent-color:#79ecb7}
+  html.modern-web.fy-ui2 .player-lyric{color:#a6c4be}
+  html.modern-web.fy-ui2 .player-mode-menu{
+    background:#20323a;border-color:#41635b;color:#eefdf7;
+  }
+  html.modern-web.fy-ui2 .player-mode-menu button{
+    background:#223740!important;color:#e5fff2!important;
+  }
+  html.modern-web.fy-ui2 .player-mode-menu button:hover,
+  html.modern-web.fy-ui2 .player-mode-menu button.is-selected{
+    background:#345a4d!important;color:#9cf3c8!important;
+  }
+  /* Immersive screen with cover-colored ambient still image. */
+  html.modern-web.fy-ui2 .lyrics-overlay{background:#071117}
+  html.modern-web.fy-ui2 .lyrics-sheet.now-playing-screen {
+    isolation:isolate;
+    background:radial-gradient(ellipse 63% 85% at 25% 40%,#143e3c 0%,transparent 72%),
+               linear-gradient(120deg,#0b1720 0%,#0c1823 58%,#151823 100%);
+    color:#f2fff9;
+  }
+  html.modern-web.fy-ui2 .ui2-artwork-ambient{
+    position:absolute;pointer-events:none;inset:-9%;z-index:0;opacity:0;
+    background-position:22% 42%;background-size:cover;
+    filter:blur(58px) saturate(1.12);
+    transform:scale(1.08);
+    transition:opacity .35s ease;
+  }
+  html.modern-web.fy-ui2 .ui2-artwork-ambient.has-art{opacity:.27}
+  html.modern-web.fy-ui2 .lyrics-sheet.now-playing-screen > :not(.ui2-artwork-ambient){
+    position:relative;z-index:1;
+  }
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-sheet-header {
+    flex-basis:79px;min-height:79px;padding:13px clamp(27px,3.6vw,62px);
+    background:rgba(13,26,34,.87);border-color:rgba(164,230,201,.13);
+  }
+  html.modern-web.fy-ui2 .now-playing-brand-mark{
+    background:linear-gradient(145deg,#19483b,#2c735b);color:#a8ffd3;
+    box-shadow:0 0 0 1px rgba(137,241,183,.23) inset;
+  }
+  html.modern-web.fy-ui2 .now-playing-screen .panel-kicker{color:#78ebba}
+  html.modern-web.fy-ui2 .now-playing-screen h2{color:#f0fff7;font-size:19px;font-weight:730}
+  html.modern-web.fy-ui2 .lyrics-sheet-actions button,
+  html.modern-web.fy-ui2 #lyrics-close-btn{
+    background:#21323a!important;border:1px solid #38544d!important;
+    color:#d9f3e7!important;border-radius:12px;
+  }
+  html.modern-web.fy-ui2 #lyrics-close-btn:hover,
+  html.modern-web.fy-ui2 .lyrics-sheet-actions button:hover{background:#2d4c45!important;color:#fff!important}
+  html.modern-web.fy-ui2 .now-playing-body{
+    grid-template-columns:minmax(340px,44%) minmax(0,56%);
+    gap:0;
+  }
+  html.modern-web.fy-ui2 .now-playing-album-column{
+    gap:20px;padding:36px clamp(30px,4.7vw,80px);
+    border:0;background:linear-gradient(110deg,rgba(35,100,83,.18),rgba(11,28,35,.11));
+    scrollbar-width:thin;scrollbar-color:#365e56 transparent;
+  }
+  html.modern-web.fy-ui2 .now-playing-cover-box{
+    width:min(100%,460px,52vh);max-height:460px;border-radius:22px;
+    box-shadow:0 28px 68px rgba(0,0,0,.38),0 0 0 1px rgba(204,255,231,.1);
+    background:linear-gradient(135deg,#2c6657,#143443);
+    transition:transform .32s ease,box-shadow .32s ease;
+  }
+  html.modern-web.fy-ui2 .now-playing-cover-box img{
+    background:#1a393f;
+    transition:opacity .32s ease;
+  }
+  html.modern-web.fy-ui2 .now-playing-cover-fallback{color:#a0edca}
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-song-meta{
+    width:min(100%,460px);text-align:left;padding:4px 0 0;
+  }
+  html.modern-web.fy-ui2 .now-playing-screen #lyrics-title{
+    color:#f1fff9;font-size:clamp(31px,3vw,47px);letter-spacing:-.8px;
+    line-height:1.2;font-weight:820;
+  }
+  html.modern-web.fy-ui2 #now-playing-artist{color:#c7e9db;font-size:17px;margin-top:10px}
+  html.modern-web.fy-ui2 #now-playing-album,
+  html.modern-web.fy-ui2 #now-playing-platform{color:#91adae;font-size:12px}
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-status{color:#9fcbbd;font-size:12px}
+  html.modern-web.fy-ui2 .now-playing-detail-column{
+    padding:0 clamp(24px,4vw,74px) 0 clamp(14px,2.3vw,40px);
+    background:linear-gradient(115deg,transparent,rgba(11,25,33,.28));
+  }
+  html.modern-web.fy-ui2 .now-playing-tabs{
+    height:78px;justify-content:flex-start;gap:12px;
+    border-color:rgba(171,228,205,.15);
+  }
+  html.modern-web.fy-ui2 .now-playing-tab{
+    color:#a4bebc;background:transparent;border-color:transparent;
+    min-height:40px;border-radius:12px;
+  }
+  html.modern-web.fy-ui2 .now-playing-tab.active{
+    color:#b8ffdb;background:#1e4037;border-color:#33634e;
+  }
+  html.modern-web.fy-ui2 .now-playing-tab:hover{background:#29443e;color:#fff}
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-scroll{scrollbar-color:#386258 transparent}
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-line{
+    color:#92afb0;text-align:left;
+    font-size:clamp(16px,1.48vw,20px);
+    line-height:1.55;padding:12px 13px;
+    transform:translateX(0);
+    transition:color .28s ease,background-color .28s ease,transform .28s ease;
+  }
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-line.active{
+    color:#f6fffb;background:linear-gradient(90deg,rgba(80,193,147,.18),transparent 85%);
+    transform:translateX(5px);font-size:clamp(20px,1.85vw,27px);
+    box-shadow:inset 3px 0 #79f2b9;
+  }
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-empty{color:#9bb8b3}
+  html.modern-web.fy-ui2 .now-playing-transport{
+    flex-basis:114px;min-height:114px;background:rgba(15,29,37,.94);
+    border-color:rgba(170,229,202,.13);gap:8px;
+  }
+  html.modern-web.fy-ui2 .now-playing-transport-buttons button{
+    color:#b9d5ce;transition:background .18s,color .18s,transform .18s;
+  }
+  html.modern-web.fy-ui2 .now-playing-transport-buttons button:hover{
+    color:#f8fff9;background:#27463e;transform:translateY(-1px);
+  }
+  html.modern-web.fy-ui2 .now-playing-transport-buttons .detail-main-toggle,
+  html.modern-web.fy-ui2 .now-playing-transport-buttons .detail-main-toggle:hover{
+    width:54px;height:54px;min-height:54px;background:#77ecb7;color:#11372d;
+    box-shadow:0 3px 16px rgba(98,228,165,.25);
+  }
+  html.modern-web.fy-ui2 .now-playing-timeline{color:#a5c6bb;width:min(740px,100%)}
+  html.modern-web.fy-ui2 .now-playing-timeline input,
+  html.modern-web.fy-ui2 .now-playing-volume input{accent-color:#77edb7}
+  html.modern-web.fy-ui2 .now-playing-timeline input:disabled{opacity:.45}
+  html.modern-web.fy-ui2 .comments-title-row,
+  html.modern-web.fy-ui2 .now-comment-card,
+  html.modern-web.fy-ui2 .comments-link-wrap{border-color:rgba(158,212,185,.16)}
+  html.modern-web.fy-ui2 .comments-title-row h3,
+  html.modern-web.fy-ui2 .now-comment-card p{color:#e7fbf3}
+  html.modern-web.fy-ui2 .comments-title-row p,
+  html.modern-web.fy-ui2 .now-comment-head,
+  html.modern-web.fy-ui2 .comments-status{color:#9db9b1}
+  html.modern-web.fy-ui2 .now-comment-head strong{color:#87ecc0}
+  html.modern-web.fy-ui2 .comments-title-row button{
+    background:#213a3b;border-color:#436056;color:#c8f2df;
+  }
+  html.modern-web.fy-ui2 :is(button,input,a):focus-visible{
+    outline:2px solid #80fac1;outline-offset:3px;
+  }
+}
+@media (min-width:741px) and (max-width:1160px){
+  html.modern-web.fy-ui2 .player-bar{left:106px;right:18px}
+  html.modern-web.fy-ui2 .player-song{flex-basis:185px}
+  html.modern-web.fy-ui2 .player-extras{flex-basis:128px}
+  html.modern-web.fy-ui2 .now-playing-album-column{padding:25px}
+}
+@media (prefers-reduced-motion:reduce){
+  html.modern-web.fy-ui2 .ui2-artwork-ambient,
+  html.modern-web.fy-ui2 .player-bar,
+  html.modern-web.fy-ui2 .now-playing-cover-box,
+  html.modern-web.fy-ui2 .now-playing-cover-box img,
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-line,
+  html.modern-web.fy-ui2 .nav-item,
+  html.modern-web.fy-ui2 .player-icon-btn,
+  html.modern-web.fy-ui2 .now-playing-transport-buttons button{
+    transition:none!important;animation:none!important;
+  }
+}
+
+
+/* ================================================================
+   FYMUSIC UI 2.0 / PHASE 2 — DISCOVERY, COLLECTIONS & MOBILE
+   Opt-in ?ui2=1 ONLY. No audio, data or navigation logic changes.
+   ================================================================ */
+@media (min-width:741px) {
+  html.modern-web.fy-ui2 .view-header {
+    padding:8px 2px 9px;margin-bottom:24px;
+  }
+  html.modern-web.fy-ui2 .view-header h1{
+    font-size:clamp(31px,2.65vw,43px);letter-spacing:-1.15px;
+    color:#effff6;text-wrap:balance;
+  }
+  html.modern-web.fy-ui2 .view-note,
+  html.modern-web.fy-ui2 .muted,
+  html.modern-web.fy-ui2 .quality-summary{color:#9db6ae}
+  html.modern-web.fy-ui2 .view-tab,
+  html.modern-web.fy-ui2 .my-tab{
+    background:#182b33;border-color:#2c4848;color:#a8c5ba;
+    border-radius:12px;
+    transition:color .18s,background-color .18s,border-color .18s,transform .18s;
+  }
+  html.modern-web.fy-ui2 .view-tab.active,
+  html.modern-web.fy-ui2 .my-tab.active{
+    background:#245346;border-color:#3b7863;color:#daffeb;
+  }
+  html.modern-web.fy-ui2 .view-tab:hover,
+  html.modern-web.fy-ui2 .my-tab:hover{background:#285047;color:#f0fff6}
+  html.modern-web.fy-ui2 .sub-toolbar,
+  html.modern-web.fy-ui2 .category-row,
+  html.modern-web.fy-ui2 .ranking-source-switch,
+  html.modern-web.fy-ui2 .playlist-service-note{
+    background:rgba(24,41,50,.96);
+    border:1px solid rgba(126,196,173,.18);
+    border-radius:16px;color:#b5d2c8;
+  }
+  html.modern-web.fy-ui2 .channel-button,
+  html.modern-web.fy-ui2 .platform-pill,
+  html.modern-web.fy-ui2 .category-pill,
+  html.modern-web.fy-ui2 .catalog-source,
+  html.modern-web.fy-ui2 .mobile-channel-toggle{
+    background:#20373b;border-color:#35514c;color:#aacabe;
+    border-radius:11px;transition:background .18s,color .18s,border-color .18s;
+  }
+  html.modern-web.fy-ui2 .channel-button.active,
+  html.modern-web.fy-ui2 .platform-pill.active,
+  html.modern-web.fy-ui2 .category-pill.active,
+  html.modern-web.fy-ui2 .catalog-source.active{
+    background:#285648;border-color:#58a780;color:#d4ffe8;
+  }
+  html.modern-web.fy-ui2 .channel-button:hover,
+  html.modern-web.fy-ui2 .platform-pill:hover,
+  html.modern-web.fy-ui2 .category-pill:hover,
+  html.modern-web.fy-ui2 .catalog-source:hover{background:#31564d;color:#fff7e9}
+  html.modern-web.fy-ui2 .results-head{color:#accac0}
+  html.modern-web.fy-ui2 .results-head strong{color:#e8fff3;font-size:17px}
+  html.modern-web.fy-ui2 .results-list:empty:after,
+  html.modern-web.fy-ui2 .library-list:empty:after{
+    background:linear-gradient(135deg,#142a31,#173b35);
+    border:1px dashed #38645a;color:#aacabe;
+    border-radius:17px;
+  }
+  html.modern-web.fy-ui2 .search-inspiration{
+    min-height:365px;max-width:950px;margin:22px auto 0;
+    background:
+      radial-gradient(ellipse 58% 100% at 16% 15%,rgba(60,158,122,.24),transparent 80%),
+      linear-gradient(120deg,#163036,#172835 60%,#22263b);
+    border:1px solid #38645a;border-radius:28px;
+    box-shadow:0 18px 55px rgba(0,0,0,.19);color:#eafcf4;
+  }
+  html.modern-web.fy-ui2 .search-inspiration-icon{
+    color:#c9ffe7;background:linear-gradient(140deg,#367765,#20483d);
+    border:1px solid #508b76;border-radius:22px;
+  }
+  html.modern-web.fy-ui2 .search-inspiration h2{font-size:27px;color:#f1fff8}
+  html.modern-web.fy-ui2 .search-inspiration p,
+  html.modern-web.fy-ui2 .search-inspiration-foot{color:#a8c9bd}
+  html.modern-web.fy-ui2 .search-suggestions button{
+    color:#c1fce1;background:#25433c;border:1px solid #3c7762;
+  }
+  html.modern-web.fy-ui2 .search-suggestions button:hover{
+    background:#356552;border-color:#7ae5ae;transform:translateY(-1px);
+  }
+  html.modern-web.fy-ui2 #search-results>.search-song-row,
+  html.modern-web.fy-ui2 .search-row,
+  html.modern-web.fy-ui2 #ranking-songs>.chart-song-row{
+    background:#182b34;border:1px solid #2a4545;
+    color:#e9f9f3;border-radius:14px;
+    box-shadow:none;
+    transition:background-color .18s,border-color .18s,transform .18s;
+  }
+  html.modern-web.fy-ui2 #search-results>.search-song-row:hover,
+  html.modern-web.fy-ui2 .search-row:hover,
+  html.modern-web.fy-ui2 #ranking-songs>.chart-song-row:hover{
+    background:#223e3e;border-color:#4e8e70;
+    transform:translateX(3px);
+  }
+  html.modern-web.fy-ui2 #search-results>.search-song-row .search-song-main,
+  html.modern-web.fy-ui2 #search-results>.search-song-row .song-title,
+  html.modern-web.fy-ui2 .search-row>b,
+  html.modern-web.fy-ui2 #ranking-songs>.chart-song-row .chart-song-name{
+    color:#edfef7;
+  }
+  html.modern-web.fy-ui2 #search-results>.search-song-row .song-artist,
+  html.modern-web.fy-ui2 #search-results>.search-song-row .song-version-meta,
+  html.modern-web.fy-ui2 .search-row>span,
+  html.modern-web.fy-ui2 #ranking-songs>.chart-song-row .chart-song-artist{color:#a0bcb6}
+  html.modern-web.fy-ui2 .search-row .search-source{
+    background:#20443e;color:#9ef3c7;
+  }
+  html.modern-web.fy-ui2 .search-actions button,
+  html.modern-web.fy-ui2 .library-actions button,
+  html.modern-web.fy-ui2 .playlist-card-actions button{
+    background:#223d3e!important;color:#c4f4dc!important;
+    border:1px solid #416559!important;border-radius:11px;
+  }
+  html.modern-web.fy-ui2 .search-actions button:hover,
+  html.modern-web.fy-ui2 .library-actions button:hover,
+  html.modern-web.fy-ui2 .playlist-card-actions button:hover{
+    background:#2e6151!important;color:#effff4!important;
+  }
+  html.modern-web.fy-ui2 .search-actions button:first-child,
+  html.modern-web.fy-ui2 .playlist-card-actions button:first-child{
+    background:#6ee6b1!important;border-color:#6ee6b1!important;color:#0e3329!important;
+  }
+  html.modern-web.fy-ui2 .playlist-grid{gap:20px}
+  html.modern-web.fy-ui2 .playlist-card{
+    padding:12px;background:#192d36;border:1px solid #355451;
+    border-radius:19px;box-shadow:0 16px 30px rgba(0,0,0,.14);
+    transition:transform .25s,border-color .25s,box-shadow .25s;
+  }
+  html.modern-web.fy-ui2 .playlist-card:hover{
+    background:#213c41;border-color:#5da182;
+    transform:translateY(-4px);
+    box-shadow:0 22px 38px rgba(0,0,0,.23);
+  }
+  html.modern-web.fy-ui2 .playlist-cover{
+    border-radius:15px;background-color:#244c47;color:#9ceac8;
+  }
+  html.modern-web.fy-ui2 .playlist-name{color:#f0fff8;font-size:15px}
+  html.modern-web.fy-ui2 .playlist-meta{color:#a6c2bc}
+  html.modern-web.fy-ui2 .playlist-detail-panel{
+    background:#152730;border-color:#395b54;
+    box-shadow:0 15px 40px rgba(0,0,0,.18);
+  }
+  html.modern-web.fy-ui2 .playlist-detail-toolbar,
+  html.modern-web.fy-ui2 .playlist-table-heading{background:#1a3439;color:#a8c9bb;border-color:#395b54}
+  html.modern-web.fy-ui2 .playlist-detail-header,
+  html.modern-web.fy-ui2 #playlist-detail-songs,
+  html.modern-web.fy-ui2 #playlist-detail-songs>.playlist-song-row{
+    background:#152730;color:#d9f5e9;border-color:#2b4543;
+  }
+  html.modern-web.fy-ui2 .playlist-detail-meta h2,
+  html.modern-web.fy-ui2 #playlist-detail-songs>.playlist-song-row>.song-main b{color:#f1fff9}
+  html.modern-web.fy-ui2 .playlist-detail-creator,
+  html.modern-web.fy-ui2 .playlist-detail-count,
+  html.modern-web.fy-ui2 .playlist-detail-description{color:#b0cbc2}
+  html.modern-web.fy-ui2 #playlist-play-all-btn{background:#68dfad;color:#092c22;border-color:#68dfad}
+  html.modern-web.fy-ui2 .playlist-detail-toolbar button.secondary{background:#23463d;color:#caffdf;border-color:#45745f}
+  html.modern-web.fy-ui2 .ranking-layout{
+    background:#142731;border-color:#36564f;
+    box-shadow:0 15px 35px rgba(0,0,0,.17);
+  }
+  html.modern-web.fy-ui2 .ranking-sidebar{background:#132c32;border-color:#35594e}
+  html.modern-web.fy-ui2 .subsection-heading{color:#8cddbd}
+  html.modern-web.fy-ui2 .ranking-item{color:#b4cfbf;border:1px solid transparent}
+  html.modern-web.fy-ui2 .ranking-item:hover{background:#275044;color:#effff6}
+  html.modern-web.fy-ui2 .ranking-item.active{background:#285c49;color:#caffdf;border-color:#477c61}
+  html.modern-web.fy-ui2 .ranking-content,
+  html.modern-web.fy-ui2 .ranking-title,
+  html.modern-web.fy-ui2 #ranking-songs{background:#142731;color:#edfdf6}
+  html.modern-web.fy-ui2 .ranking-title{border-color:#36564f}
+  html.modern-web.fy-ui2 .ranking-play-hint{color:#9bbdb1}
+  html.modern-web.fy-ui2 #view-mylist .music-library-workspace{
+    background:#132731;border-color:#35564e;
+    box-shadow:0 16px 34px rgba(0,0,0,.13);
+  }
+  html.modern-web.fy-ui2 #view-mylist .music-library-sidebar{
+    background:#132e33;border-color:#34594e;
+  }
+  html.modern-web.fy-ui2 #view-mylist .music-library-content{
+    background:#142731;scrollbar-color:#35695a transparent;
+  }
+  html.modern-web.fy-ui2 #view-mylist .library-sidebar-caption,
+  html.modern-web.fy-ui2 #view-mylist .library-sidebar-footer{color:#9cbfb1;border-color:#35564e}
+  html.modern-web.fy-ui2 #view-mylist .my-tab{
+    background:transparent;color:#aac7b8;border-color:transparent;
+  }
+  html.modern-web.fy-ui2 #view-mylist .my-tab:hover{background:#234a43;color:#eafff3}
+  html.modern-web.fy-ui2 #view-mylist .my-tab.active{
+    background:#235243;border-color:#41725a;color:#d2ffe5;
+    box-shadow:inset 3px 0 #7bf6bb;
+  }
+  html.modern-web.fy-ui2 #view-mylist .library-tab-count{
+    background:#294e43;color:#b7e9cf;
+  }
+  html.modern-web.fy-ui2 #view-mylist .list-toolbar,
+  html.modern-web.fy-ui2 #view-mylist .library-column-header{
+    color:#b9d6c6;border-color:#38584e;
+    background:#142731;
+  }
+  html.modern-web.fy-ui2 #view-mylist .list-toolbar strong,
+  html.modern-web.fy-ui2 #view-mylist .library-title{color:#edfff7}
+  html.modern-web.fy-ui2 #view-mylist .library-row{
+    color:#ecfcf4;border-color:#2c4642;background:#142731;
+  }
+  html.modern-web.fy-ui2 #view-mylist .library-row:hover{background:#1e3a3b}
+  html.modern-web.fy-ui2 #view-mylist .library-meta{color:#9bb9ae}
+  html.modern-web.fy-ui2 .settings-section{
+    background:#172c34;border-color:#35564d;color:#bfdacf;
+  }
+  html.modern-web.fy-ui2 .settings-section h2{color:#effff8}
+  html.modern-web.fy-ui2 .settings-section :is(label,small,p){color:#b8d3c5}
+  html.modern-web.fy-ui2 .settings-section :is(input,select,textarea){
+    background:#1e3a3e;color:#effff7;border-color:#42675a;
+  }
+}
+
+/* Mobile FyMusic UI 2.0 keeps the original semantic controls and touch handlers.
+   More-specific selectors override the native-inspired baseline's !important. */
+@media(max-width:740px){
+  html.modern-web.fy-ui2{
+    color-scheme:dark;--bg:#0b161d;--mint:#73ebba;
+    --stroke:#36564e;--text:#edfff7;
+    background:#0b161d;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready body,
+  html.modern-web.fy-ui2.mobile-shell-ready .main-stage,
+  html.modern-web.fy-ui2.mobile-shell-ready .view-container{
+    background:#0b161d!important;color:#edfff7;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .topbar{
+    background:#10222b!important;border-color:#24453f!important;
+    box-shadow:0 8px 26px rgba(0,0,0,.13)!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .mobile-page-title,
+  html.modern-web.fy-ui2.mobile-shell-ready .view-header h1{color:#f0fff8!important}
+  html.modern-web.fy-ui2.mobile-shell-ready .mobile-menu-button{
+    color:#9cf4c9!important;background:#1e3d3a!important;border-radius:13px;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .persistent-top-stack,
+  html.modern-web.fy-ui2.mobile-shell-ready .global-search-bar{
+    background:#0b161d!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .global-search{
+    background:#1a313a!important;border-color:#34544f!important;
+    border-radius:15px!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .global-search input{
+    color:#edfdf6!important;caret-color:#85efc3;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .global-search input::placeholder{color:#99b5b5}
+  html.modern-web.fy-ui2.mobile-shell-ready .global-search button{
+    background:#67e6b1!important;color:#0c372b!important;
+    border-radius:11px!important;font-weight:750;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .global-status{
+    color:#c8ac81!important;background:transparent!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .global-status.fail{color:#ffb6ba!important}
+  html.modern-web.fy-ui2.mobile-shell-ready .nav-rail{
+    background:linear-gradient(150deg,#12262d,#101f2b)!important;
+    border-color:#3c5f54!important;box-shadow:18px 0 46px rgba(0,0,0,.42)!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .nav-brand,
+  html.modern-web.fy-ui2.mobile-shell-ready .mobile-drawer-heading{
+    color:#97eec5;border-color:#2d5247;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .mobile-drawer-close{
+    color:#b9ffe1;background:#26493e;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .nav-item{color:#b6d4c9}
+  html.modern-web.fy-ui2.mobile-shell-ready .nav-item.active{
+    background:#245446!important;color:#d7ffe9!important;
+    box-shadow:inset 3px 0 #79edb8!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .mobile-menu-shade{
+    background:rgba(2,12,18,.68);
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .view-tab{
+    background:#1a3139;color:#a8c8be;border-color:#31574c;
+    border-radius:12px;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .view-tab.active{
+    color:#e4fff1;background:#2a5f49;border-color:#579776;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .sub-toolbar,
+  html.modern-web.fy-ui2.mobile-shell-ready .category-row,
+  html.modern-web.fy-ui2.mobile-shell-ready .playlist-service-note{
+    background:#182d35;border-color:#31574d;color:#c3ded2;
+    border-radius:15px;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .mobile-channel-toggle,
+  html.modern-web.fy-ui2.mobile-shell-ready .catalog-source,
+  html.modern-web.fy-ui2.mobile-shell-ready .category-pill{
+    background:#22433e!important;color:#c3f4d9!important;
+    border-color:#42705c!important;border-radius:12px;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .catalog-source.active,
+  html.modern-web.fy-ui2.mobile-shell-ready .category-pill.active{
+    background:#2b6a4d!important;color:#effff5!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready body>#channel-list.mobile-channel-popover{
+    background:#1a3038!important;color:#e9f9f2!important;
+    border-color:#47725f!important;
+    box-shadow:0 15px 36px rgba(0,0,0,.38)!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready body>#channel-list.mobile-channel-popover .channel-button{
+    color:#c3efd7;background:#25453f;border-color:#507460;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready body>#channel-list.mobile-channel-popover .channel-button.active{
+    background:#2a6b4f;color:#effff5;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .view-note,
+  html.modern-web.fy-ui2.mobile-shell-ready .muted,
+  html.modern-web.fy-ui2.mobile-shell-ready .quality-summary{color:#9dbdb0}
+  html.modern-web.fy-ui2.mobile-shell-ready .results-head,
+  html.modern-web.fy-ui2.mobile-shell-ready .results-head strong{color:#e8fff4}
+  html.modern-web.fy-ui2.mobile-shell-ready .search-inspiration{
+    min-height:290px;margin-top:12px;
+    background:radial-gradient(ellipse 80% 80% at 8% 10%,#1c5550,#152a36 82%);
+    border:1px solid #386b5a;border-radius:23px;
+    color:#e8fff6;box-shadow:0 14px 35px rgba(0,0,0,.17);
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .search-inspiration-icon{
+    background:#285d50;color:#baffdb;border-radius:19px;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .search-inspiration h2{color:#f2fff8}
+  html.modern-web.fy-ui2.mobile-shell-ready .search-inspiration p,
+  html.modern-web.fy-ui2.mobile-shell-ready .search-inspiration-foot{color:#a5cdbb}
+  html.modern-web.fy-ui2.mobile-shell-ready .search-suggestions button{
+    background:#244c43;border:1px solid #44846a;color:#d6ffe6;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready #search-results>.search-song-row,
+  html.modern-web.fy-ui2.mobile-shell-ready #ranking-songs>.chart-song-row,
+  html.modern-web.fy-ui2.mobile-shell-ready .library-row.tap-to-play{
+    background:#1a303a!important;border-color:#36574f!important;color:#effff7;
+    border-radius:13px;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready #search-results>.search-song-row .song-title,
+  html.modern-web.fy-ui2.mobile-shell-ready #ranking-songs>.chart-song-row .chart-song-name,
+  html.modern-web.fy-ui2.mobile-shell-ready .library-title{color:#f1fff8!important}
+  html.modern-web.fy-ui2.mobile-shell-ready #search-results>.search-song-row .song-artist,
+  html.modern-web.fy-ui2.mobile-shell-ready .library-meta{color:#adc9bd!important}
+  html.modern-web.fy-ui2.mobile-shell-ready #search-results>.search-song-row .song-action-play,
+  html.modern-web.fy-ui2.mobile-shell-ready #search-results>.search-song-row .song-more>summary{
+    color:#b8fbdc!important;background:#264d44!important;
+    border:1px solid #508267!important;border-radius:12px;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .playlist-card{
+    background:#1b313a!important;border:1px solid #3a5c52!important;
+    box-shadow:0 12px 30px rgba(0,0,0,.15)!important;border-radius:18px;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .playlist-cover{
+    background-color:#295b4d!important;border-radius:13px;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .playlist-name{color:#f2fff9!important}
+  html.modern-web.fy-ui2.mobile-shell-ready .playlist-card-actions button{
+    color:#0c362a!important;background:#6ce9b3!important;
+    border-color:#6ce9b3!important;border-radius:11px;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .playlist-card-actions button.secondary{
+    color:#c2f2da!important;background:#294a44!important;
+    border-color:#496e5d!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .ranking-layout{
+    background:#142b34;border:1px solid #365e52;
+    border-radius:17px;box-shadow:none;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .ranking-sidebar{background:#142b34;border-color:#3c6155}
+  html.modern-web.fy-ui2.mobile-shell-ready .ranking-content,
+  html.modern-web.fy-ui2.mobile-shell-ready .ranking-title,
+  html.modern-web.fy-ui2.mobile-shell-ready #ranking-songs{background:#142b34;color:#edfff6}
+  html.modern-web.fy-ui2.mobile-shell-ready .ranking-title{border-color:#365e52}
+  html.modern-web.fy-ui2.mobile-shell-ready .ranking-item{color:#bed8c9}
+  html.modern-web.fy-ui2.mobile-shell-ready .ranking-item.active{
+    background:#2a604d;color:#effff4;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready #view-mylist .music-library-workspace,
+  html.modern-web.fy-ui2.mobile-shell-ready #view-mylist .music-library-content,
+  html.modern-web.fy-ui2.mobile-shell-ready #view-mylist .music-library-sidebar{
+    background:#152c35!important;border-color:#355b50!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready #view-mylist .my-tab{
+    background:#23433d;color:#bbd9c9;border-color:#355e50;
+    border-radius:12px;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready #view-mylist .my-tab.active{
+    background:#2a644d;color:#e3ffef;border-color:#448267;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready #view-mylist .list-toolbar,
+  html.modern-web.fy-ui2.mobile-shell-ready #view-mylist .library-column-header{
+    background:#152c35;color:#b0cbbb;border-color:#365b50;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready #view-mylist .list-toolbar strong{color:#f0fff9}
+  html.modern-web.fy-ui2.mobile-shell-ready .settings-section{
+    background:#1b333b;border-color:#426657;color:#d0ecdf;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .settings-section h2{color:#edfff7}
+  /* Compact floating Mini Dock, preserves original timeline and transport buttons. */
+  html.modern-web.fy-ui2.mobile-shell-ready .player-bar{
+    left:9px!important;right:9px!important;width:auto!important;
+    bottom:calc(7px + env(safe-area-inset-bottom))!important;
+    height:66px!important;min-height:66px!important;max-height:66px!important;
+    padding:8px 12px!important;
+    background:rgba(26,48,57,.98)!important;
+    border:1px solid #3f7564!important;border-radius:18px!important;
+    box-shadow:0 16px 32px rgba(0,0,0,.37)!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .player-art{
+    border-radius:11px!important;box-shadow:0 4px 12px rgba(0,0,0,.25)!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready #player-title{color:#f1fff8!important}
+  html.modern-web.fy-ui2.mobile-shell-ready #player-artist{color:#aac6bd!important}
+  html.modern-web.fy-ui2.mobile-shell-ready .player-main-toggle{
+    width:44px!important;min-width:44px!important;
+    background:#72eabb!important;color:#0b3429!important;
+    border-radius:14px!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready #player-seek{accent-color:#7cf3c1}
+  /* Now Playing becomes an artwork-first mobile listening screen. */
+  html.modern-web.fy-ui2.mobile-shell-ready .lyrics-overlay{background:#091720}
+  html.modern-web.fy-ui2.mobile-shell-ready .lyrics-sheet.now-playing-screen{
+    background:radial-gradient(ellipse 100% 55% at 50% 20%,#19483f,#0b1822 74%);
+    color:#f4fff9;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .ui2-artwork-ambient{
+    opacity:.12;filter:blur(32px);transform:scale(1.04);
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-screen .lyrics-sheet-header{
+    background:#10232b;border-color:#2d5048;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-screen h2,
+  html.modern-web.fy-ui2.mobile-shell-ready #lyrics-title{color:#f1fff8}
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-album-column{
+    flex:0 0 auto!important;flex-direction:column!important;
+    align-items:center!important;justify-content:flex-start!important;
+    gap:10px!important;max-height:none!important;min-height:0!important;
+    height:auto!important;overflow:visible!important;padding:14px 16px 5px!important;
+    border:0!important;background:transparent!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-cover-box{
+    flex:0 0 auto!important;
+    width:min(59vw,230px)!important;height:auto!important;
+    max-height:min(29dvh,230px)!important;aspect-ratio:1/1!important;
+    border-radius:18px!important;
+    box-shadow:0 14px 35px rgba(0,0,0,.35)!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-screen .lyrics-song-meta{
+    text-align:center!important;max-width:100%!important;
+    padding:2px 0 0;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-screen #lyrics-title{
+    font-size:24px!important;line-height:1.2;white-space:normal!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready #now-playing-artist{color:#b7dbc8;font-size:13px}
+  html.modern-web.fy-ui2.mobile-shell-ready #now-playing-platform{color:#a4c5b4}
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-detail-column{
+    background:transparent;min-height:0;flex:1 1 auto;padding:0 15px;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-tabs{
+    height:44px;border-color:#36594f;justify-content:center;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-tab{
+    color:#afcdbf;background:transparent;border-radius:12px;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-tab.active{
+    color:#e2ffef;background:#285846;border-color:#3c7459;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-screen .lyrics-lines{
+    padding:clamp(60px,11vh,125px) 0;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-screen .lyrics-line{
+    color:#a3bdb8;font-size:15px;text-align:center!important;
+    transition:color .22s,background-color .22s,transform .22s;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-screen .lyrics-line.active{
+    color:#f2fff8;background:rgba(75,166,131,.24);
+    box-shadow:none;transform:scale(1.025);
+    font-size:17px;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-transport{
+    background:#10222b;border-color:#315448;color:#d5f3e5;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-transport-buttons button{color:#b5d9c7}
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-transport-buttons .detail-main-toggle{
+    background:#75edb8;color:#0c392c;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-timeline{color:#a6c8b6}
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-timeline input,
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-volume input{accent-color:#7aefb9}
+  html.modern-web.fy-ui2.mobile-shell-ready .comments-title-row,
+  html.modern-web.fy-ui2.mobile-shell-ready .now-comment-card{border-color:#355a4e}
+  html.modern-web.fy-ui2.mobile-shell-ready .comments-title-row h3,
+  html.modern-web.fy-ui2.mobile-shell-ready .now-comment-card p{color:#effff8}
+  html.modern-web.fy-ui2.mobile-shell-ready .comments-title-row p,
+  html.modern-web.fy-ui2.mobile-shell-ready .comments-status{color:#a7c4b8}
+  html.modern-web.fy-ui2.mobile-shell-ready :is(button,a,input):focus-visible{
+    outline:2px solid #8af9c3!important;outline-offset:2px!important;
+  }
+}
+@media(max-width:740px) and (max-height:700px){
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-cover-box{
+    width:min(40vw,140px)!important;max-height:140px!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-album-column{gap:5px!important;padding-top:6px!important}
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-screen #lyrics-title{font-size:20px!important}
+  html.modern-web.fy-ui2.mobile-shell-ready .now-playing-screen .lyrics-lines{padding:45px 0}
+}
+@media (prefers-reduced-motion:reduce) {
+  html.modern-web.fy-ui2 .playlist-card,
+  html.modern-web.fy-ui2 .search-row,
+  html.modern-web.fy-ui2 #search-results>.search-song-row,
+  html.modern-web.fy-ui2 #ranking-songs>.chart-song-row,
+  html.modern-web.fy-ui2 .search-suggestions button,
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-line,
+  html.modern-web.fy-ui2 .view-tab,
+  html.modern-web.fy-ui2 .my-tab{transition:none!important;animation:none!important;transform:none!important}
+}
+
+/* UI2 stage 3 tablet — dark skin continuous across 741-980px, without DOM/JS changes */
+@media (min-width:741px) and (max-width:980px) {
+ html.modern-web.fy-ui2 .topbar{height:72px;min-height:72px}
+ html.modern-web.fy-ui2 .topbar-inner{min-width:0;gap:10px;padding-inline:15px}
+ html.modern-web.fy-ui2 .nav-rail{width:80px;min-width:80px;flex-basis:80px;top:72px;height:calc(100dvh - 72px);padding:18px 8px;overflow-x:hidden}
+ html.modern-web.fy-ui2 .nav-brand{font-size:9px;letter-spacing:.4px;text-align:center;margin:0}
+ html.modern-web.fy-ui2 .nav-item{justify-content:center;gap:0;padding:0 5px;min-height:46px}
+ html.modern-web.fy-ui2 .nav-item span:last-child{display:none}
+ html.modern-web.fy-ui2 .persistent-top-stack{top:72px}
+ html.modern-web.fy-ui2 .main-stage{min-width:0}
+ html.modern-web.fy-ui2 .view-container{max-width:100%;min-width:0;padding:18px 16px 148px}
+ html.modern-web.fy-ui2 .view-header h1{font-size:clamp(26px,3vw,33px)}
+ html.modern-web.fy-ui2 .view-note{display:none}
+ html.modern-web.fy-ui2 .global-search-bar{padding:8px 16px}
+ html.modern-web.fy-ui2 .global-search{height:50px}
+ html.modern-web.fy-ui2 .playlist-grid{grid-template-columns:repeat(auto-fill,minmax(164px,1fr));gap:12px}
+ html.modern-web.fy-ui2 .playlist-card{padding:9px;border-radius:15px}
+ html.modern-web.fy-ui2 .playlist-card-actions{gap:6px}
+ html.modern-web.fy-ui2 .playlist-card-actions button{font-size:11px!important}
+ html.modern-web.fy-ui2 .ranking-sidebar{width:177px;flex-basis:177px}
+ html.modern-web.fy-ui2 #view-mylist .music-library-workspace{grid-template-columns:164px minmax(0,1fr)}
+ html.modern-web.fy-ui2 #view-mylist .music-library-sidebar{padding-inline:8px}
+ html.modern-web.fy-ui2 #view-mylist .music-library-content{padding-inline:12px}
+ html.modern-web.fy-ui2 .search-inspiration{min-height:300px}
+ html.modern-web.fy-ui2 .search-inspiration h2{font-size:23px}
+ html.modern-web.fy-ui2 .player-bar{left:95px;right:15px;bottom:13px;height:88px;min-height:88px;max-height:88px;padding:10px 13px;gap:9px;border-radius:20px}
+ html.modern-web.fy-ui2 .player-song{flex:0 1 152px;width:152px;min-width:0}
+ html.modern-web.fy-ui2 .player-art{height:49px;width:49px;min-width:49px;flex-basis:49px}
+ html.modern-web.fy-ui2 #player-title{font-size:13px}
+ html.modern-web.fy-ui2 .player-center{flex:1 1 0;min-width:100px;gap:2px}
+ html.modern-web.fy-ui2 .player-extras{display:none}
+ html.modern-web.fy-ui2 .now-playing-body{grid-template-columns:minmax(0,40%) minmax(0,60%);gap:0}
+ html.modern-web.fy-ui2 .now-playing-album-column{padding:20px 19px;gap:13px}
+ html.modern-web.fy-ui2 .now-playing-cover-box{width:min(100%,240px,39dvh);max-height:240px;border-radius:17px}
+ html.modern-web.fy-ui2 .now-playing-screen .lyrics-song-meta{width:100%}
+ html.modern-web.fy-ui2 .now-playing-screen #lyrics-title{font-size:30px}
+ html.modern-web.fy-ui2 #now-playing-artist{font-size:14px}
+ html.modern-web.fy-ui2 .now-playing-detail-column{padding-inline:12px 22px}
+ html.modern-web.fy-ui2 .now-playing-screen .lyrics-line{font-size:15px;padding:8px}
+ html.modern-web.fy-ui2 .now-playing-screen .lyrics-line.active{font-size:18px;transform:translateX(3px)}
+ html.modern-web.fy-ui2 .now-playing-transport{min-height:96px;flex-basis:96px}
+ html.modern-web.fy-ui2 :is(button,input,a):focus-visible{outline:2px solid #8af9c3;outline-offset:2px}
+}
+
+/* UI2 stage 3 visual review fix: status/quality chips integrate into dark skin. */
+html.modern-web.fy-ui2 #status.global-status:not(.warn):not(.fail){
+  background:#172f35!important;color:#b9e2d2!important;border-color:#315448!important;
+}
+html.modern-web.fy-ui2 #quality-summary{
+  background:#25473f!important;color:#c0f2d8!important;border:1px solid #426f5d!important;
+}
+@media (min-width:741px) and (max-width:980px){
+  html.modern-web.fy-ui2 .nav-rail .nav-brand{display:none}
+}
+
+/* UI2 visual audit follow-up: legacy playback status sometimes removes
+   .global-status and leaves only .status.ready/.warn/.fail. */
+html.modern-web.fy-ui2 #status.status:not(.warn):not(.fail) {
+ background:#19352f!important;color:#c0ebd7!important;
+ border:1px solid #396353!important;border-radius:11px!important;
+ margin:6px clamp(14px,2.8vw,40px) 10px!important;
+ padding:7px 10px!important;
+}
+html.modern-web.fy-ui2 #status.status.warn{
+ background:#3e3127!important;color:#ffdeb7!important;
+ border:1px solid #7a6249!important;border-radius:11px!important;
+}
+html.modern-web.fy-ui2 #status.status.fail{
+ background:#462a34!important;color:#ffd0d9!important;
+ border:1px solid #854f5d!important;border-radius:11px!important;
+}
+@media(max-width:740px){
+ /* Source-ready duplication wastes space on short phones; warnings remain visible. */
+ html.modern-web.fy-ui2 #status.status.ready{display:none!important}
+}
+
+
+/* ================================================================
+   FyMusic UI 2.0 / Phase 4: accessible light mode
+   - Explicitly opt-in (?ui2=1&theme=light), switchable in-page.
+   - Scoped to UI2 class; legacy production UI is unchanged.
+   - No remote fonts, images, filters or continuous transitions.
+   ================================================================ */
+html.modern-web.fy-ui2 .ui2-theme-toggle,
+html.modern-web.fy-ui2 .ui2-theme-settings-toggle{
+  flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+  min-height:40px;min-width:86px;padding:8px 12px;
+  border:1px solid #4f796a;border-radius:13px;
+  color:#cbf4db;background:#21443a;
+  font-size:12px;font-weight:720;white-space:nowrap;line-height:1.2;
+  transition:background-color .17s,border-color .17s,color .17s;
+}
+html.modern-web.fy-ui2 .ui2-theme-toggle:hover,
+html.modern-web.fy-ui2 .ui2-theme-settings-toggle:hover{
+  color:#f8fff9;background:#315d4c;border-color:#74c89e;
+}
+html.modern-web.fy-ui2 .ui2-theme-toggle:focus-visible,
+html.modern-web.fy-ui2 .ui2-theme-settings-toggle:focus-visible{
+  outline:3px solid #86f8bd;outline-offset:3px;
+}
+html.modern-web.fy-ui2 .ui2-theme-settings{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;
+  gap:14px;padding:12px 0 20px;margin:0 0 18px;
+  border-bottom:1px solid var(--stroke);
+}
+html.modern-web.fy-ui2 .ui2-theme-settings strong{font-size:14px;color:var(--text)}
+html.modern-web.fy-ui2 .ui2-theme-settings p{margin:4px 0 0;max-width:530px;color:var(--muted);font-size:12px}
+@media(max-width:740px){
+  html.modern-web.fy-ui2.mobile-shell-ready .ui2-theme-toggle{
+    display:inline-flex!important;min-height:38px;min-width:72px;
+    margin-left:auto;padding:7px 9px;font-size:11px;border-radius:11px;
+  }
+}
+/* Semantic tokens for light UI, with explicit surface overrides for the
+   phase-1/2/3 dark palette that previously used literal colors. */
+html.modern-web.fy-ui2.fy-ui2-light{
+  color-scheme:light!important;
+  --bg:#f3f9f5;--panel:#fffefa;--surface:#ffffff;--surface2:#eaf3ed;
+  --mint:#187e61;--mint2:#268d74;--text:#203f33;--muted:#597568;
+  --stroke:#cddfd2;--secondary:#406d58;--light-mint:#d7eee2;
+  --soft-green:#eff8f1;--shadow:0 16px 36px rgba(31,88,56,.075);
+  background:#f3f9f5!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light body{
+  color-scheme:light!important;background:#f3f9f5!important;color:#203f33!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(#app,.lx-layout,.main-stage,.view-container){
+  background:#f3f9f5!important;color:#203f33!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .main-stage{
+  background:radial-gradient(ellipse 68% 50% at 85% 4%,rgba(103,199,150,.17),transparent 75%),#f3f9f5!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .topbar{
+  background:rgba(255,254,251,.98)!important;color:#203f33!important;
+  border-color:#d4e7d8!important;box-shadow:0 5px 18px rgba(41,109,70,.07)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .brand{color:#1c4d3a!important}
+html.modern-web.fy-ui2.fy-ui2-light .subtitle{color:#587a69!important}
+html.modern-web.fy-ui2.fy-ui2-light .topbar-chip{
+  color:#416c56!important;background:#ecf6ed!important;border-color:#c9e0ce!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .top-source-indicator{
+  color:#1f6749!important;background:#e0f2e5!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .nav-rail{
+  background:linear-gradient(180deg,#e9f4ed,#e4f0e9)!important;
+  color:#325745!important;border-color:#cddfd2!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .nav-brand{color:#447960!important}
+html.modern-web.fy-ui2.fy-ui2-light .nav-item{
+  color:#3a6551!important;background:transparent!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .nav-item:hover{
+  background:#d8eadf!important;color:#1e583e!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .nav-item.active,
+html.modern-web.fy-ui2.fy-ui2-light .nav-item.active:hover{
+  background:#ccebd8!important;color:#175c3b!important;border-color:#65ad83!important;
+  box-shadow:inset 3px 0 #239c68!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .persistent-top-stack,
+html.modern-web.fy-ui2.fy-ui2-light .global-search-bar{
+  background:rgba(247,251,247,.98)!important;border-color:#d6e5d9!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .global-search{
+  background:#fff!important;border-color:#c9e1d2!important;
+  box-shadow:0 7px 24px rgba(52,112,74,.06)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .global-search:focus-within{
+  border-color:#268b62!important;box-shadow:0 0 0 3px rgba(28,143,96,.16)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .global-search input{
+  color:#214535!important;background:transparent!important;caret-color:#168458;
+}
+html.modern-web.fy-ui2.fy-ui2-light .global-search input::placeholder{color:#607e6d!important}
+html.modern-web.fy-ui2.fy-ui2-light #quality-summary{
+  color:#1a6545!important;background:#e0f1e7!important;
+  border:1px solid #a6d3b6!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .global-search button{
+  color:#fff!important;background:linear-gradient(125deg,#258760,#176f58)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #status.status:not(.warn):not(.fail),
+html.modern-web.fy-ui2.fy-ui2-light .global-status:not(.warn):not(.fail){
+  color:#33654d!important;background:#e4f2e8!important;border-color:#c4dfcc!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #status.status.warn{
+  color:#7b4c13!important;background:#fff3d9!important;border-color:#dfca99!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #status.status.fail{
+  color:#98363c!important;background:#fff1ed!important;border-color:#e7c3bf!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.view-header h1,.results-head strong,.song-title,
+ .search-song-main,.playlist-name,.ranking-title,.library-title,.list-toolbar strong,
+ .playlist-detail-meta h2,.settings-section h2){
+  color:#203f33!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.view-note,.muted,.quality-summary,
+ .results-head,.playlist-meta,.library-meta,.playlist-detail-count,
+ .playlist-detail-creator,.playlist-detail-description,.song-artist){
+  color:#537164!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .panel-kicker{color:#237c56!important}
+html.modern-web.fy-ui2.fy-ui2-light :is(.sub-toolbar,.category-row,
+ .ranking-source-switch,.playlist-service-note,.playlist-detail-toolbar,
+ .playlist-table-heading,.list-toolbar,.library-column-header){
+  background:#eaf5ee!important;border-color:#d4e5d9!important;color:#3c6852!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.view-tab,.my-tab,.channel-button,
+ .platform-pill,.category-pill,.catalog-source,.mobile-channel-toggle){
+  background:#edf7f0!important;border:1px solid #c9e0ce!important;color:#295d42!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.view-tab,.my-tab,.channel-button,
+ .platform-pill,.category-pill,.catalog-source).active{
+  background:#d0eddb!important;border-color:#8abfa0!important;color:#175b3c!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.view-tab,.my-tab,.channel-button,
+ .platform-pill,.category-pill,.catalog-source):hover{background:#daeee2!important}
+html.modern-web.fy-ui2.fy-ui2-light .search-inspiration{
+  background:radial-gradient(ellipse 52% 85% at 12% 5%,rgba(131,215,157,.34),transparent 85%),
+    linear-gradient(125deg,#ecf9f0,#e4f1f0 70%,#f7f9ee)!important;
+  color:#254d3b!important;border:1px solid #c6e1d2!important;
+  box-shadow:0 16px 32px rgba(50,100,62,.065)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .search-inspiration h2{color:#214b36!important}
+html.modern-web.fy-ui2.fy-ui2-light :is(.search-inspiration p,.search-inspiration-foot){color:#597968!important}
+html.modern-web.fy-ui2.fy-ui2-light .search-inspiration-icon{
+  background:#c6ecd7!important;color:#1c7752!important;border-color:#96cbaa!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .search-suggestions button{
+  background:#d5efe0!important;border-color:#8bbba0!important;color:#185d3f!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(#search-results>.search-song-row,
+ .search-row,#ranking-songs>.chart-song-row,.library-row,
+ .playlist-card,.playlist-detail-panel,.playlist-detail-header,
+ #playlist-detail-songs,#playlist-detail-songs>.playlist-song-row){
+  background:#fff!important;border-color:#d9e9de!important;color:#244737!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(#search-results>.search-song-row,
+ .search-row,#ranking-songs>.chart-song-row,.library-row,
+ .playlist-card,#playlist-detail-songs>.playlist-song-row):hover{
+  background:#f0f9f3!important;border-color:#8ec9a8!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.search-song-main,.song-main b,.chart-song-name,
+ .search-row>b,.search-song-row .song-title,.playlist-detail-meta h2,
+ #playlist-detail-songs>.playlist-song-row>.song-main b){color:#204232!important}
+html.modern-web.fy-ui2.fy-ui2-light :is(.song-artist,.song-version-meta,
+ .chart-song-artist,.playlist-song-artist,.playlist-song-album,.playlist-song-duration){
+  color:#5b7768!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .search-row .search-source{
+  background:#d9efe2!important;color:#1b714b!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.search-actions button,
+ .library-actions button,.playlist-card-actions button,.settings-section button.secondary){
+  color:#1f5d43!important;background:#e4f4ea!important;
+  border-color:#b9d9c2!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.search-actions button:first-child,
+ .playlist-card-actions button:first-child,#playlist-play-all-btn){
+  color:#fff!important;background:#207f59!important;border-color:#207f59!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.playlist-name,.playlist-detail-meta h2){color:#214433!important}
+html.modern-web.fy-ui2.fy-ui2-light .playlist-cover{background-color:#dcefe2!important;color:#267253!important}
+html.modern-web.fy-ui2.fy-ui2-light .ranking-layout,
+html.modern-web.fy-ui2.fy-ui2-light .ranking-content,
+html.modern-web.fy-ui2.fy-ui2-light #ranking-songs,
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist .music-library-workspace,
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist .music-library-content,
+html.modern-web.fy-ui2.fy-ui2-light .settings-section{
+  color:#284838!important;background:#fff!important;border-color:#d5e6da!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .ranking-sidebar,
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist .music-library-sidebar{
+  color:#315743!important;background:#eaf4ee!important;border-color:#cddfd2!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.ranking-item,.my-tab){color:#35634d!important}
+html.modern-web.fy-ui2.fy-ui2-light :is(.ranking-item,.my-tab).active{
+  color:#135e3e!important;background:#d4eddf!important;border-color:#89bd9c!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.ranking-item,.my-tab):hover{
+  color:#155c3e!important;background:#e0f1e5!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .settings-section :is(label,small,p){color:#4d725d!important}
+html.modern-web.fy-ui2.fy-ui2-light .settings-section :is(input,select,textarea){
+  background:#fff!important;border-color:#b8d3c3!important;color:#244837!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .player-bar{
+  color:#254b38!important;background:rgba(253,255,251,.975)!important;
+  border-color:#c5dfcf!important;box-shadow:0 16px 37px rgba(40,102,65,.14)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #player-title{color:#214a35!important}
+html.modern-web.fy-ui2.fy-ui2-light #player-artist{color:#536f61!important}
+html.modern-web.fy-ui2.fy-ui2-light .player-icon-btn{
+  color:#32684f!important;background:transparent!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .player-icon-btn:hover{
+  color:#184d34!important;background:#dcefe3!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .player-main-toggle,
+html.modern-web.fy-ui2.fy-ui2-light .player-main-toggle:hover{
+  color:#fff!important;background:#237e57!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .player-time,
+html.modern-web.fy-ui2.fy-ui2-light .player-lyric{color:#47705c!important}
+html.modern-web.fy-ui2.fy-ui2-light #player-seek{background:#a8ceba!important;accent-color:#217c56!important}
+html.modern-web.fy-ui2.fy-ui2-light .player-mode-menu{
+  color:#264b35!important;background:#fff!important;border-color:#b4d6c2!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .player-mode-menu button{
+  color:#255a3e!important;background:#f3f9f4!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .player-mode-menu button.is-selected{
+  background:#d7eee1!important;color:#166542!important;
+}
+/* Immersive panel remains artwork-first but legible over soft light surfaces. */
+html.modern-web.fy-ui2.fy-ui2-light .lyrics-overlay{background:#e5f3e9!important}
+html.modern-web.fy-ui2.fy-ui2-light .lyrics-sheet.now-playing-screen{
+  color:#264a38!important;
+  background:radial-gradient(ellipse 72% 80% at 22% 36%,#d8efe1,transparent 72%),
+    linear-gradient(120deg,#f6faf5,#e7f4ed 60%,#f0f5f2)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .ui2-artwork-ambient.has-art{opacity:.095!important}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-screen .lyrics-sheet-header{
+  background:rgba(251,255,252,.94)!important;border-color:#d2e5d8!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-brand-mark{
+  color:#1b7450!important;background:#cfeddb!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.now-playing-screen h2,
+ .now-playing-screen #lyrics-title,.comments-title-row h3){color:#1c4432!important}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-screen .panel-kicker{color:#297d59!important}
+html.modern-web.fy-ui2.fy-ui2-light :is(#now-playing-artist,.comments-title-row p){color:#4c725b!important}
+html.modern-web.fy-ui2.fy-ui2-light :is(#now-playing-album,#now-playing-platform,
+ .lyrics-status,.comments-status){color:#63816e!important}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-album-column{
+  background:linear-gradient(115deg,rgba(191,229,206,.35),transparent 75%)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-cover-box{
+  background:#dcf0e2!important;box-shadow:0 21px 49px rgba(45,94,63,.18)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-detail-column{
+  background:rgba(250,255,250,.48)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-tabs{border-color:#cbded0!important}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-tab{
+  color:#507361!important;background:transparent!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-tab.active{
+  color:#176341!important;background:#d6efdf!important;border-color:#a1d0b1!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-screen .lyrics-line{
+  color:#637d6f!important;background:transparent;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-screen .lyrics-line.active{
+  color:#145c3c!important;background:linear-gradient(90deg,rgba(94,185,122,.2),transparent 85%)!important;
+  box-shadow:inset 3px 0 #27865b!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-transport{
+  color:#3c6650!important;background:rgba(250,255,251,.94)!important;
+  border-color:#d3e7da!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-transport-buttons button{
+  color:#3b7656!important;background:transparent!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-transport-buttons .detail-main-toggle{
+  color:#fff!important;background:#237e57!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-timeline{color:#507363!important}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-timeline input{accent-color:#237f58!important}
+html.modern-web.fy-ui2.fy-ui2-light #lyrics-close-btn,
+html.modern-web.fy-ui2.fy-ui2-light .lyrics-sheet-actions button{
+  color:#215a3f!important;background:#e6f4eb!important;border-color:#badcca!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.comments-title-row,.now-comment-card,
+ .comments-link-wrap){border-color:#d5e7da!important}
+html.modern-web.fy-ui2.fy-ui2-light .now-comment-card p{color:#355541!important}
+html.modern-web.fy-ui2.fy-ui2-light .now-comment-head strong{color:#297450!important}
+/* Mobile shell originally has !important styles; override only on UI2-light. */
+@media(max-width:740px){
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready body,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .main-stage,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .view-container{
+   background:#f3f9f5!important;color:#234b36!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .topbar{
+   background:#fcfffc!important;border-color:#d6e9dc!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .mobile-page-title{color:#1f4c37!important}
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .mobile-menu-button{
+   color:#225e42!important;background:#e6f3eb!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .global-status,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .persistent-top-stack{
+   background:#f3f9f5!important;color:#496b58!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .nav-rail{
+   background:#eef7f0!important;border-color:#d1e5d5!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .mobile-drawer-heading,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .nav-brand{color:#346d4b!important}
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .mobile-drawer-close{
+   background:#deefe5!important;color:#1c6949!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .mobile-menu-shade{
+   background:rgba(26,62,42,.24)!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .sub-toolbar,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .category-row,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .playlist-service-note{
+   background:#e9f5ed!important;border-color:#c9e1d2!important;color:#416c54!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .search-inspiration{
+   background:radial-gradient(ellipse 80% 70% at 14% 12%,#d1eadc,#eef8f0 82%)!important;
+   color:#244b36!important;border-color:#bedbcb!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready #search-results>.search-song-row,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready #ranking-songs>.chart-song-row,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .library-row.tap-to-play,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .playlist-card{
+   background:#fff!important;border-color:#cfdfd3!important;color:#254937!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready #view-mylist :is(
+   .music-library-workspace,.music-library-content,.music-library-sidebar){
+   background:#f9fdfa!important;border-color:#d3e8d9!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .ranking-layout,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .ranking-sidebar,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .ranking-content,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .ranking-title,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready #ranking-songs{
+   background:#f8fcf9!important;border-color:#cedfd4!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .player-bar{
+   color:#254e36!important;background:rgba(253,255,251,.98)!important;
+   border-color:#b5d9c3!important;box-shadow:0 12px 27px rgba(56,118,73,.14)!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .now-playing-screen .lyrics-sheet-header{
+   background:#f5fbf7!important;border-color:#d0e7d7!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .lyrics-sheet.now-playing-screen{
+   background:radial-gradient(ellipse 100% 55% at 50% 20%,#cfe9d9,#f6faf5 82%)!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .now-playing-detail-column{
+   background:transparent!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .now-playing-album-column{
+   background:transparent!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .now-playing-screen .lyrics-line.active{
+   color:#145c3c!important;background:#d3efdc!important;
+   box-shadow:none!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready :is(
+  .playlist-name,.library-title,.song-title,.chart-song-name,
+  .search-inspiration h2,.search-song-row .song-title,#lyrics-title){
+   color:#214b35!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready :is(
+  .playlist-meta,.library-meta,.song-artist,.search-inspiration p,
+  .search-inspiration-foot){color:#547466!important}
+}
+html.modern-web.fy-ui2.fy-ui2-light .ui2-theme-toggle,
+html.modern-web.fy-ui2.fy-ui2-light .ui2-theme-settings-toggle{
+  color:#1b6041;background:#e1f1e7;border-color:#a9cdb5;
+}
+html.modern-web.fy-ui2.fy-ui2-light .ui2-theme-toggle:hover,
+html.modern-web.fy-ui2.fy-ui2-light .ui2-theme-settings-toggle:hover{
+  color:#0e4c30;background:#cfe8d9;border-color:#86b99b;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(button,input,select,textarea,a):focus-visible{
+  outline:3px solid #237d58!important;outline-offset:2px!important;
+}
+@media(prefers-reduced-motion:reduce){
+ html.modern-web.fy-ui2 .ui2-theme-toggle,
+ html.modern-web.fy-ui2 .ui2-theme-settings-toggle{
+   transition:none!important;animation:none!important;
+ }
+}

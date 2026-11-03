@@ -37,8 +37,13 @@ try{
   const r=await fetch('/api/migu-lyrics?id='+encodeURIComponent(id)+'&url='+encodeURIComponent(url));
   const data=await r.json().catch(()=>({}));
   const lines=window.LXMusicLyrics.parseLrc(data.lyric||'');
+  const knownReasons=new Set(['invalid_request','redirect_rejected','upstream_transient_status',
+   'upstream_http_status','upstream_timeout','oversized_body','empty_body',
+   'upstream_network','invalid_timed_lyric']);
   return {allowed:true,status:r.status,source:data.source,correctId:String(data.id)===id,
-   lyricLines:lines.length,timed:lines.every(l=>Number.isFinite(l.time))};
+   lyricLines:lines.length,timed:lines.every(l=>Number.isFinite(l.time)),
+   failureReason:knownReasons.has(data.reason)?data.reason:null,
+   attempts:Number.isInteger(data.attempts)&&data.attempts>=0&&data.attempts<=2?data.attempts:null};
  },index);
  assert.equal(api.allowed,true,JSON.stringify(api));
  assert.equal(api.status,200,JSON.stringify(api));
@@ -48,10 +53,23 @@ try{
  assert.equal(api.timed,true);
  await page.locator('#audio').evaluate(a=>{a.muted=true;a.volume=0});
  await page.locator('#search-results .search-song-row .search-song-main').nth(index).click();
- await page.waitForFunction(()=>{
-  const a=document.getElementById('audio');
-  return a&&!a.paused&&a.readyState>=2&&a.currentTime>.8;
- },null,{timeout:35000});
+ try{
+  await page.waitForFunction(()=>{
+   const a=document.getElementById('audio');
+   return a&&!a.paused&&a.readyState>=2&&a.currentTime>.8;
+  },null,{timeout:35000});
+ }catch(error){
+  const diagnostic=await page.evaluate(()=>{
+   const a=document.getElementById('audio');
+   const s=String(window.__LXNowPlayingTrack?.source||'');
+   return {readyState:a?.readyState??null,networkState:a?.networkState??null,
+    mediaErrorCode:a?.error?.code??0,paused:a?.paused??null,
+    progressConfirmed:!!a&&!a.paused&&a.currentTime>.8,
+    source:['kg','kw','mg','wy','tx'].includes(s)?s:'unclassified'};
+  });
+  console.log('FYMUSIC_MIGU_REAL_AUDIO_PROGRESS_FAILURE',JSON.stringify(diagnostic));
+  throw error;
+ }
  await page.locator('#player-cover-button').click();
  await page.locator('#lyrics-overlay').waitFor({state:'visible',timeout:7000});
  await page.waitForFunction(()=>document.querySelectorAll('#lyrics-lines .lyrics-line').length>=10,
