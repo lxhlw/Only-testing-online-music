@@ -3,7 +3,7 @@
 const json=(body,status=200)=>new Response(JSON.stringify(body),{
   status,headers:{
     'Content-Type':'application/json; charset=utf-8',
-    'Cache-Control':'public, max-age=120, s-maxage=900',
+    'Cache-Control':status===200?'public, max-age=120, s-maxage=900':'no-store',
     'X-Content-Type-Options':'nosniff'
   }
 });
@@ -14,7 +14,7 @@ const safeCover=value=>{
   try{
     const u=new URL(raw);
     if(u.protocol!=='https:'||u.username||u.password||u.port)return '';
-    if(!/^img[0-9]*\.kuwo\.cn$/i.test(u.hostname))return '';
+    if(!/^img[0-9]*\.(?:kwcdn\.)?kuwo\.cn$/i.test(u.hostname))return '';
     return u.href;
   }catch{return ''}
 };
@@ -38,44 +38,60 @@ function buildLrc(rows){
   return lrc.join('\n');
 }
 export async function onRequestGet({request}){
-  const u=new URL(request.url),id=u.searchParams.get('id')||'';
+  const id=new URL(request.url).searchParams.get('id')||'';
   if(!/^[0-9]{1,20}$/.test(id))return json({error:'Invalid Kuwo song ID'},400);
+  // Only these fixed public Kuwo hosts can ever be requested. No caller
+  // controls a URL, origin, HTTP method, or authorization header.
+  const endpoints=[
+    'https://m.kuwo.cn/newh5/singles/songinfoandlrc?musicId='+id,
+    'https://www.kuwo.cn/newh5/singles/songinfoandlrc?musicId='+id
+  ];
   const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),7500);
+  const timer=setTimeout(()=>controller.abort(),8500);
+  let lastHttp=null,lastFailure='upstream-unavailable';
   try{
-    const url='https://m.kuwo.cn/newh5/singles/songinfoandlrc?musicId='+id;
-    const response=await fetch(url,{redirect:'error',signal:controller.signal,headers:{
-      'Accept':'application/json, text/plain, */*',
-      'Referer':'https://m.kuwo.cn/',
-      'User-Agent':'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 Version/16.0 Mobile/15E148 Safari/604.1'
-    }});
-    if(!response.ok)return json({error:'Kuwo song metadata unavailable'},502);
-    const announced=Number(response.headers.get('content-length')||0);
-    if(announced>700000)return json({error:'Kuwo metadata too large'},502);
-    const raw=await response.text();
-    if(raw.length>700000)return json({error:'Kuwo metadata too large'},502);
-    let payload;
-    try{payload=JSON.parse(raw.replace(/^\uFEFF/,'').trim())}
-    catch{return json({error:'Invalid Kuwo metadata response'},502)}
-    const data=payload?.data||{},song=data.songinfo||{};
-    if(!data||typeof data!=='object'||!song||typeof song!=='object')
-      return json({error:'Invalid Kuwo track metadata'},502);
-    const returnedId=String(song.musicId||song.musicrid||song.rid||song.id||'')
-      .replace(/^MUSIC_/,'');
-    if(returnedId&&/^\d+$/.test(returnedId)&&returnedId!==id)
-      return json({error:'Kuwo track ID mismatch'},502);
-    const lyric=buildLrc(data.lrclist);
-    const image=safeCover(song.pic||song.pic120||song.albumpic||song.albumPic);
-    return json({
-      id,source:'kw',
-      name:String(song.songName||song.name||'').slice(0,150),
-      singer:String(song.artist||'').slice(0,180),
-      albumName:String(song.album||'').slice(0,180),
-      image,lyric,available:Boolean(lyric)
-    });
-  }catch(e){
-    return json({error:e?.name==='AbortError'?
-      'Kuwo metadata timed out':'Kuwo metadata request failed'},502);
+    for(const endpoint of endpoints){
+      try{
+        const host=new URL(endpoint).hostname;
+        const response=await fetch(endpoint,{redirect:'error',signal:controller.signal,headers:{
+          'Accept':'application/json, text/plain, */*',
+          'Referer':'https://'+host+'/',
+          'User-Agent':'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 Version/16.0 Mobile/15E148 Safari/604.1'
+        }});
+        lastHttp=response.status;
+        if(!response.ok){lastFailure='upstream-http';continue;}
+        const announced=Number(response.headers.get('content-length')||0);
+        if(announced>700000){lastFailure='upstream-too-large';continue;}
+        const raw=await response.text();
+        if(raw.length>700000){lastFailure='upstream-too-large';continue;}
+        let payload;
+        try{payload=JSON.parse(raw.replace(/^\uFEFF/,'').trim())}
+        catch{lastFailure='upstream-invalid-json';continue;}
+        const data=payload?.data||{},song=data.songinfo||{};
+        if(typeof data!=='object'||!song||typeof song!=='object'){
+          lastFailure='upstream-invalid-song';continue;
+        }
+        const returnedId=String(song.musicId||song.musicrid||song.rid||song.id||'')
+          .replace(/^MUSIC_/,'');
+        if(returnedId&&/^\d+$/.test(returnedId)&&returnedId!==id)
+          return json({error:'Kuwo track ID mismatch'},502);
+        const lyric=buildLrc(data.lrclist);
+        const image=safeCover(song.pic||song.pic120||song.albumpic||song.albumPic);
+        if(!lyric&&!image){lastFailure='upstream-empty-track';continue;}
+        return json({
+          id,source:'kw',
+          name:String(song.songName||song.name||'').slice(0,150),
+          singer:String(song.artist||'').slice(0,180),
+          albumName:String(song.album||'').slice(0,180),
+          image,lyric,available:Boolean(lyric)
+        });
+      }catch(e){
+        lastFailure=e?.name==='AbortError'?'upstream-timeout':'upstream-fetch';
+        if(controller.signal.aborted)break;
+      }
+    }
+    return json({error:'Kuwo metadata temporarily unavailable',
+      upstreamStatus:lastHttp,reason:lastFailure},502);
   }finally{clearTimeout(timer)}
 }
 export async function onRequestOptions(){
