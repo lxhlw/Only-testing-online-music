@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Prepared v0.4.34 integrated candidate for final approval (NOT released)
+
+- **Goal:** Make the fully tested UI2/source code releaseable with consistent asset cache versions while preserving official v0.4.33.
+- **Changes:** Updated only release-candidate branch version metadata and index/settings asset references to v0.4.34, plus matching nonproduction workflow check. Added public-safe handoff for new exact SHA.
+- **Tests:** Prior v0.4.33 integrated RC #41691565640 ATTEMPT 2 SUCCESS on real Migu + Daoxiang and all UI2 browsers. The new v0.4.34 candidate tests PENDING and must be checked independently; old pass does not cover the new SHA. Main production CI remains separate.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/122 ; https://github.com/lxhlw/Only-testing-online-music/commit/0c5177f8c2420eb662a4353bf1887a5a2573e31f .
+- **Not done:** Physical device performance and screen-reader evidence, human visual acceptance, actual merge and deployed production recheck.
+- **Status:** RELEASE HOLD; no main code or official site changed.
+- **Next action:** Verify exact RC SHA CI and strict media real-browser gates, resolve any failed checks, then get human/device signoff before production rollout.
+
 ## 2026-11-04 · Stage 5A live preview: LRC restored in one sample, audio progress blocked
 
 - **Goal:** Evaluate a live, isolated Cloudflare Preview rather than count deterministic mocks as provider success.

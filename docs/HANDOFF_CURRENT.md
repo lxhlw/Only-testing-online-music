@@ -2,6 +2,13 @@
 
 > Repository is PUBLIC. Keep only sanitized engineering facts. Read HANDOFF_LOG.md and HANDOFF_POLICY.md before each operation. GitHub branch SHA, workflow results and deployed-site behavior override stale notes.
 
+### Release-candidate v0.4.34 — preparation only (2026-11-04)
+
+- **RC revision:** `release/fymusic-stage5-stage6-rc-20261104` now contains v0.4.34 versions in `version.json`, `package.json`, `src/app-version.js`, `index.html`, `settings.html` and integrated preview workflow assertions. Its code preparation commit was `0c5177f8c2420eb662a4353bf1887a5a2573e31f`.
+- **Release is NOT performed.** Production `main` stays v0.4.33. The old integrated code SHA `deb461c5` has complete automated success (RC workflow #41691565640 attempt 2, main browser PR #41691576704, playlist #41691576698); the NEW version-only RC SHA still needs its own complete CI/preview retest. Do not carry successful test status across SHA without inspection.
+- **Manual acceptance blockers:** Actual device FPS/CPU/memory and real screen-reader/visual approval are not available in these GitHub browser runs. The direct Kuwo control exposed upstream intermittent Daoxiang playback; production CI cannot guarantee future third-party availability. The candidate must remain unmerged until final device/user signoff and passing checks on the version-bumped SHA.
+- **Next:** Verify new RC Actions, review Cloudflare preview, obtain real-device and user design acceptance, then merge with no force push; verify official production and retain rollback commit.
+
 ## Snapshot — 2026-11-04 01:40 Asia/Singapore
 
 | Area | Current evidence |
