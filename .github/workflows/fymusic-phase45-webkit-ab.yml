@@ -62,13 +62,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx wrangler pages dev "$FYMUSIC_BASELINE_DIR" --ip 127.0.0.1 --port 8787 > /tmp/fymusic-phase45-main.log 2>&1 &
-          npx wrangler pages dev "$FYMUSIC_RELEASE_CANDIDATE_DIR" --ip 127.0.0.1 --port 8788 > /tmp/fymusic-phase45-candidate.log 2>&1 &
+          npx wrangler pages dev "$FYMUSIC_BASELINE_DIR" --ip 127.0.0.1 --port 8787 --inspector-port 9337 > /tmp/fymusic-phase45-main.log 2>&1 &
+          npx wrangler pages dev "$FYMUSIC_RELEASE_CANDIDATE_DIR" --ip 127.0.0.1 --port 8788 --inspector-port 9338 > /tmp/fymusic-phase45-candidate.log 2>&1 &
           MAIN_READY=0
           CAND_READY=0
           for i in {1..50}; do
-            curl -fsSL "$FYMUSIC_BASE_URL/" -o /tmp/fymusic-phase45-main-index.html && MAIN_READY=1 || true
-            curl -fsSL "$FYMUSIC_CANDIDATE_URL/" -o /tmp/fymusic-phase45-candidate-index.html && CAND_READY=1 || true
+            curl -fsSL "$FYMUSIC_BASE_URL/" -o /tmp/fymusic-phase45-main-index.html 2>/dev/null && MAIN_READY=1 || true
+            curl -fsSL "$FYMUSIC_CANDIDATE_URL/" -o /tmp/fymusic-phase45-candidate-index.html 2>/dev/null && CAND_READY=1 || true
             if [ "$MAIN_READY" = 1 ] && [ "$CAND_READY" = 1 ]; then break; fi
             sleep 1
           done
