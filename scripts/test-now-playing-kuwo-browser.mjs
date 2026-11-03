@@ -64,6 +64,9 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
    const launch=document.createElement('button');
    launch.type='button'; launch.id='kuwo-real-click-gesture';
    launch.textContent='测试用户点击播放';
+   // Keep the test-only genuine user gesture visible above the sticky player.
+   // A body-flow button otherwise lands behind the bottom transport bar.
+   launch.style.cssText='position:fixed;top:12px;left:12px;z-index:2147483647;display:block';
    launch.addEventListener('click',()=>window.OnlyTestingMusicApp.playMusic({
      id:'440613',songmid:'440613',name:'稻香',singer:'周杰伦',
      albumName:'魔杰座',source:'kw',interval:14
