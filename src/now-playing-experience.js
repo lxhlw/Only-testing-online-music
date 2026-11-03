@@ -333,8 +333,11 @@ function updateTransport(){
   toggle.dataset.playbackState=playing?'playing':'paused';
   toggle.setAttribute('aria-label',playing?'暂停':'播放');
   toggle.title=playing?'暂停':'播放';
-  toggle.querySelector('.detail-play-icon').hidden=playing;
-  toggle.querySelector('.detail-pause-icon').hidden=!playing;
+  // SVGSVGElement.hidden is not a reliably reflected DOM property:
+  // assigning false can leave the literal HTML "hidden" attribute intact.
+  // Toggle the attribute itself so CSS and the rendered icon agree.
+  toggle.querySelector('.detail-play-icon').toggleAttribute('hidden',playing);
+  toggle.querySelector('.detail-pause-icon').toggleAttribute('hidden',!playing);
 }
 function centerActiveLyric(instant=false){
   if(!isOpen()||activeTab!=='lyrics'||!lyricScroll)return;
