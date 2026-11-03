@@ -7,7 +7,9 @@
 - 独立发布候选分支：`release/fymusic-v0.4.27-rc`，固定 SHA `ae562ef8ce1c22d85326bfe5a150c1cb38f2ab8b`
 - 草稿 PR（未合并）：https://github.com/lxhlw/Only-testing-online-music/pull/107
 - 正式主分支基线：`main` = `c9a496ab580fb54775721b93a3944800bcaefc44`，版本 `v0.4.26`
-- 线上非生产预览专用工作流：https://github.com/lxhlw/Only-testing-online-music/actions/workflows/fymusic-v0427-release-preview.yml （请用成功运行输出中的 `FYMUSIC_V0427_SAFE_PREVIEW_URL`，**不要**用生产域名代替）。
+- **已验证的线上非生产预览地址**：https://15a05aee.only-testing-online-music.pages.dev （v0.4.27；独立发布 SHA `ae562ef8ce1c22d85326bfe5a150c1cb38f2ab8b`）
+- **预览 CI 已成功**：https://github.com/lxhlw/Only-testing-online-music/actions/runs/41576029509 ，16 个步骤成功；包含 Cloudflare 生产分支主分支保护、远程 Pages 版本与资源检查、完整 Chromium 现代网页回归，以及真实 Playwright WebKit 的 390px 视口页面 smoke。此项不是实际 Safari/iOS 硬件验收。
+- 线上非生产预览专用工作流：https://github.com/lxhlw/Only-testing-online-music/actions/workflows/fymusic-v0427-release-preview.yml 。上述 URL 取自实际成功运行的 `FYMUSIC_V0427_SAFE_PREVIEW_URL` 日志。
 - WebKit 长帧问题：https://github.com/lxhlw/Only-testing-online-music/issues/106
 
 ## 实机验收步骤（由真实设备执行）
