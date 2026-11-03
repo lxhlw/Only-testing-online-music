@@ -6,7 +6,7 @@ const fixture=[
  '/** @name 野花🌷 */',
  '(function(){',
  ' var api=globalThis.lx;',
- ' api.on(api.EVENT_NAMES.request,function(){return Promise.resolve({url:"https://media.example.test/test.wav"});});',
+ ' api.on(api.EVENT_NAMES.request,function(){return Promise.resolve({url:"https://media.example.test/kuwo.wav?id=440613"});});',
  ' api.send(api.EVENT_NAMES.inited,{status:true,sources:{',
  '  kg:{name:"酷狗",type:"music",actions:["musicUrl"],qualitys:["320k","128k"]},',
  '  kw:{name:"酷我",type:"music",actions:["musicUrl"],qualitys:["320k","128k"]},',
@@ -15,7 +15,7 @@ const fixture=[
  ' }});',
  '})();'
 ].join('\n');
-function wav(seconds=42,rate=8000){
+function wav(seconds=22,rate=8000){
  const b=Buffer.alloc(44+seconds*rate*2);
  b.write('RIFF',0);b.writeUInt32LE(b.length-8,4);
  b.write('WAVE',8);b.write('fmt ',12);b.writeUInt32LE(16,16);
@@ -25,9 +25,9 @@ function wav(seconds=42,rate=8000){
  b.writeUInt32LE(seconds*rate*2,40);return b;
 }
 const target={source:'kg',id:'kg-42',songmid:'kg-42',name:'示例歌曲',singer:'测试歌手',
- albumName:'示例专辑',interval:42};
+ albumName:'示例专辑',interval:35};
 const equivalent={source:'kw',id:'440613',songmid:'440613',name:'示例歌曲',
- singer:'测试歌手',albumName:'示例专辑',interval:43};
+ singer:'测试歌手',albumName:'示例专辑',interval:36};
 const wrong={...equivalent,id:'wrong',name:'示例歌曲 Live',interval:90};
 const results=[];
 for(const [engine,adapter] of Object.entries({chromium,webkit})){
@@ -77,14 +77,14 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
       window.__seamlessRequested.push({source,action,quality:args.type||null});
       if(action==='musicUrl'&&source==='kg'&&scenario==='kugou-media-failure')
        return done(new Error('Kugou Flower upstream HTTP 502'));
-      if(action==='musicUrl')return done(null,{url:'https://media.example.test/test.wav'});
+      if(action==='musicUrl')return done(null,{url:'https://media.example.test/kuwo.wav?id=440613'});
       return done(new Error('Unsupported action'));
     };
     const b=document.createElement('button');b.id='seamless-play';b.textContent='Test user play';
     b.style.cssText='position:fixed;top:15px;left:15px;z-index:2147483647';
     b.addEventListener('click',()=>window.OnlyTestingMusicApp.playMusic({
      source:'kg',id:'kg-42',songmid:'kg-42',name:'示例歌曲',
-     singer:'测试歌手',albumName:'示例专辑',interval:42
+     singer:'测试歌手',albumName:'示例专辑',interval:35
     }));
     document.body.appendChild(b);
    },{scenario,equivalent,wrong});
