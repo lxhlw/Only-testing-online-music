@@ -1,0 +1,93 @@
+name: FyMusic Phase45 - Paired WebKit Cold-Frame Comparison
+on:
+  push:
+    branches: [feature/fymusic-playback-verifier]
+    paths:
+      - '.github/workflows/fymusic-phase45-webkit-ab.yml'
+      - 'scripts/diagnostics/fymusic-phase45-webkit-ab-compare.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fymusic-phase45-ab-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  paired-native-webkit:
+    name: Baseline main versus curated runtime candidate (no deployment)
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    env:
+      BASE_SHA: c9a496ab580fb54775721b93a3944800bcaefc44
+      FYMUSIC_BASELINE_DIR: /tmp/fymusic-phase45-baseline
+      FYMUSIC_RELEASE_CANDIDATE_DIR: /tmp/fymusic-phase45-candidate
+      FYMUSIC_RELEASE_MANIFEST: /tmp/fymusic-phase45-candidate-manifest.json
+      FYMUSIC_PHASE45_AB_REPORT: /tmp/fymusic-phase45-webkit-ab-report.json
+      FYMUSIC_BASE_URL: http://127.0.0.1:8787
+      FYMUSIC_CANDIDATE_URL: http://127.0.0.1:8788
+      FYMUSIC_PHASE45_PAIRS: '8'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Enforce isolated branch and pinned production baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/feature/fymusic-playback-verifier'
+          test "$(git rev-parse origin/main)" = "$BASE_SHA"
+          node --check scripts/diagnostics/fymusic-phase45-webkit-ab-compare.mjs
+          node --check scripts/build-fymusic-phase44-candidate.mjs
+      - name: Build isolated main snapshot and SHA256-audited runtime candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$FYMUSIC_BASELINE_DIR" "$FYMUSIC_RELEASE_CANDIDATE_DIR"
+          git archive "$BASE_SHA" | tar -xf - -C "$FYMUSIC_BASELINE_DIR"
+          git archive "$BASE_SHA" | tar -xf - -C "$FYMUSIC_RELEASE_CANDIDATE_DIR"
+          node scripts/build-fymusic-phase44-candidate.mjs
+          test ! -e "$FYMUSIC_RELEASE_CANDIDATE_DIR/functions/api/fymusic-codec-selftest.js"
+          test ! -e "$FYMUSIC_RELEASE_CANDIDATE_DIR/.github"
+          grep -Fq 'src/fymusic-playback-verifier.js' "$FYMUSIC_RELEASE_CANDIDATE_DIR/index.html"
+      - name: Install original dependency versions and genuine WebKit engine
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps webkit
+      - name: Start baseline and curated candidate on separate LOCAL origins
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler pages dev "$FYMUSIC_BASELINE_DIR" --ip 127.0.0.1 --port 8787 > /tmp/fymusic-phase45-main.log 2>&1 &
+          npx wrangler pages dev "$FYMUSIC_RELEASE_CANDIDATE_DIR" --ip 127.0.0.1 --port 8788 > /tmp/fymusic-phase45-candidate.log 2>&1 &
+          MAIN_READY=0
+          CAND_READY=0
+          for i in {1..50}; do
+            curl -fsSL "$FYMUSIC_BASE_URL/" -o /tmp/fymusic-phase45-main-index.html && MAIN_READY=1 || true
+            curl -fsSL "$FYMUSIC_CANDIDATE_URL/" -o /tmp/fymusic-phase45-candidate-index.html && CAND_READY=1 || true
+            if [ "$MAIN_READY" = 1 ] && [ "$CAND_READY" = 1 ]; then break; fi
+            sleep 1
+          done
+          test "$MAIN_READY" = 1
+          test "$CAND_READY" = 1
+          grep -Fq 'LX Music Web' /tmp/fymusic-phase45-main-index.html
+          grep -Fq 'FyMusic' /tmp/fymusic-phase45-candidate-index.html
+      - name: Eight balanced paired genuine WebKit browser sessions
+        run: node scripts/diagnostics/fymusic-phase45-webkit-ab-compare.mjs
+      - name: Persist hashed candidate and exact balanced RAF comparison evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: fymusic-phase45-paired-webkit-evidence
+          path: |
+            ${{ env.FYMUSIC_RELEASE_MANIFEST }}
+            ${{ env.FYMUSIC_PHASE45_AB_REPORT }}
+          retention-days: 14
+      - name: Show emulator logs only on failure
+        if: failure()
+        run: |
+          cat /tmp/fymusic-phase45-main.log || true
+          cat /tmp/fymusic-phase45-candidate.log || true
