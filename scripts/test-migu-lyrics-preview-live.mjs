@@ -3,7 +3,10 @@ import {chromium} from 'playwright';
 // Real Migu source + original Flower audio, no mock responses.
 // Only report song and LRC counts, never lyric text, signed audio URLs or headers.
 const base=process.env.TEST_BASE_URL?.replace(/\/+$/,'');
-assert.match(base||'',/^https:\/\/[a-f0-9]{8}\.only-testing-online-music\.pages\.dev$/);
+const production=base==='https://only-testing-online-music.pages.dev';
+assert.ok(production?process.env.FYMUSIC_ACCEPT_PRODUCTION==='1':
+ /^https:\/\/[a-f0-9]{8}\.only-testing-online-music\.pages\.dev$/.test(base||''),
+ 'Only immutable Preview or explicitly accepted production may be tested');
 const browser=await chromium.launch({headless:true,args:['--autoplay-policy=no-user-gesture-required']});
 try{
  const page=await browser.newPage({viewport:{width:1320,height:860}});
