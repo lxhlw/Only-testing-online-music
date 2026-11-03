@@ -11,7 +11,6 @@
     "test:library": "node scripts/test-music-library.mjs",
     "test:lyrics": "node scripts/test-music-lyrics.mjs",
     "test:import-ui": "node scripts/test-import-ui.mjs",
-    "test:babel-proxy": "node scripts/test-babel-proxy.mjs",
     "test:huibq-browser": "node scripts/test-huibq-browser.mjs",
     "test:playlist": "node scripts/test-playlist-browser.mjs",
     "test:version": "node scripts/test-version.mjs",

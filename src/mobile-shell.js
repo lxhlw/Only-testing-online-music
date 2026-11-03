@@ -1,4 +1,4 @@
-// LX Music Web v0.4.18 — mobile-only interaction shell.
+// FyMusic modern Web — mobile interaction shell.
 // The business logic stays in app.js. This module only moves navigation
 // into an accessible drawer and keeps channel choices behind one disclosure.
 const root=document.documentElement;
@@ -36,7 +36,7 @@ if(navRail&&nav&&header&&toolbar&&channels){
   const drawerHeading=document.createElement('div');
   drawerHeading.className='mobile-drawer-heading';
   const drawerName=document.createElement('strong');
-  drawerName.textContent='LX Music';
+  drawerName.textContent='FyMusic';
   const drawerClose=document.createElement('button');
   drawerClose.type='button';drawerClose.className='mobile-drawer-close';
   drawerClose.setAttribute('aria-label','关闭主导航');

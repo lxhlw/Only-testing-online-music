@@ -716,7 +716,7 @@
 
   function onSourceInited(item) {
     setCheck('check-inited', 'ok');
-    setStatus('音源已执行并发送 inited：<b>' + escapeHtml(item.name) + '</b>', 'ready');
+    setStatus('音源已就绪：<b>' + escapeHtml(item.name) + '</b>', 'ready');
   }
 
   function buildPlayableUrl(url, forceProxy) {

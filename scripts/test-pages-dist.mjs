@@ -35,4 +35,12 @@ for(const name of paths.filter(p=>p!=='404.html')){
  const a=await readFile(join(root,name)),b=await readFile(join(dist,name));
  assert.ok(a.equals(b),'Unexpected static content rewrite: '+name);
 }
+const mobileSource=await readFile(join(dist,'src/mobile-shell.js'),'utf8');
+assert.ok(mobileSource.includes("drawerName.textContent='FyMusic'"),
+ 'FyMusic mobile drawer brand was not updated');
+assert.ok(!mobileSource.includes("drawerName.textContent='LX Music'"),
+ 'Obsolete mobile drawer brand exposed');
+const appSource=await readFile(join(dist,'src/app.js'),'utf8');
+assert.ok(!appSource.includes('音源已执行并发送 inited：'),
+ 'Technical-only source initialized message is still visible');
 console.log('FYMUSIC_PAGES_DIST_ALLOWLIST_PASS',JSON.stringify({files:paths.length,paths}));
