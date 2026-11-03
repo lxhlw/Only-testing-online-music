@@ -49,3 +49,31 @@ for(const [name,url] of urls){
    gdLyricsPresent:typeof d?.lyric==='string'&&d.lyric.length>15
  }));
 }
+
+
+const original=new URL('https://m.kuwo.cn/newh5/singles/songinfoandlrc?musicId='+id);
+const upstream=await cancel(original.href,{'Accept':'application/json','Referer':'https://m.kuwo.cn/'});
+const keys=['id','rid','musicId','musicrid','MUSICRID'];
+const song=upstream?.data?.data?.songinfo||{};
+const pic=String(song.pic||'');
+const imageUrl=pic.startsWith('//')?'https:'+pic:
+  pic.startsWith('http://')?'https://'+pic.slice(7):pic;
+let host='';
+try{host=new URL(imageUrl).hostname}catch{}
+console.log('FYMUSIC_KW_SONGINFO_DIAGNOSTIC',JSON.stringify({
+ id,keys:Object.fromEntries(keys.filter(k=>song[k]!=null).map(k=>[k,String(song[k]).slice(0,50)])),
+ imageHost:host,imageProtocol:imageUrl.slice(0,6),imagePresent:!!pic
+}));
+const strict=await fetch(original.href,{redirect:'error',signal:AbortSignal.timeout(9000),
+ headers:{'Accept':'application/json, text/plain, */*','Referer':'https://m.kuwo.cn/',
+ 'User-Agent':'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 Version/16.0 Mobile/15E148 Safari/604.1'}
+}).then(r=>({status:r.status,redirected:r.redirected})).catch(e=>({error:String(e.message||e).slice(0,180)}));
+console.log('FYMUSIC_KW_STRICT_FETCH_DIAGNOSTIC',JSON.stringify(strict));
+const {onRequestGet}=await import('../functions/api/kuwo-song-meta.js');
+const handler=await onRequestGet({request:new Request('https://fymusic.example/api/kuwo-song-meta?id='+id)});
+const data=await handler.json();
+console.log('FYMUSIC_KW_HANDLER_DIAGNOSTIC',JSON.stringify({
+ status:handler.status,error:data.error||null,
+ coverPresent:!!data.image,lyricLines:String(data.lyric||'').split('\n').filter(Boolean).length,
+ source:data.source||null,albumPresent:!!data.albumName
+}));
