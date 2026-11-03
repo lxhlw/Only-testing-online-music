@@ -57,14 +57,34 @@ jobs:
       - name: Check actual isolated preview and protected files
         run: |
           set -euo pipefail
-          curl -fsSL "$TEST_BASE_URL/version.json" -o /tmp/v0429-preview-version.json
-          node -e "const p=require('/tmp/v0429-preview-version.json');if(p.version!=='0.4.28')process.exit(1)"
-          for path in README.md package.json scripts/test-modern-web-browser.mjs; do
-            s=$(curl -sSL -o /dev/null -w '%{http_code}' "$TEST_BASE_URL/$path")
-            test "$s" = 404 || exit 1
+          # Immutable deployments can need a short edge propagation interval.
+          # Retry each concrete assertion, but fail if the expected status
+          # never appears. Do not hide a truly exposed repository asset.
+          READY=0
+          for i in {1..12}; do
+            if curl -fsSL "$TEST_BASE_URL/version.json" -o /tmp/v0429-preview-version.json &&
+              node -e "const p=require('/tmp/v0429-preview-version.json');if(p.version!=='0.4.28')process.exit(1)"; then
+              READY=1; break
+            fi
+            sleep 2
           done
-          s=$(curl -sSL -o /dev/null -w '%{http_code}' "$TEST_BASE_URL/api/proxy")
-          test "$s" = 400
+          test "$READY" = 1
+          for path in README.md package.json scripts/test-modern-web-browser.mjs; do
+            READY=0
+            for i in {1..8}; do
+              code=$(curl -sSL -o /dev/null -w '%{http_code}' "$TEST_BASE_URL/$path")
+              if test "$code" = 404; then READY=1; break; fi
+              sleep 2
+            done
+            test "$READY" = 1 || { echo "Unexpected public path $path status=$code"; exit 1; }
+          done
+          READY=0
+          for i in {1..8}; do
+            code=$(curl -sSL -o /dev/null -w '%{http_code}' "$TEST_BASE_URL/api/proxy")
+            if test "$code" = 400; then READY=1; break; fi
+            sleep 2
+          done
+          test "$READY" = 1 || { echo "Pages Function missing or misrouted: HTTP $code"; exit 1; }
           echo FYMUSIC_V0429_PREVIEW_SECURITY_SCOPE_PASS
       - name: Temporary fixed-host Kuwo Cloudflare egress diagnosis
         run: |
