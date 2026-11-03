@@ -1,0 +1,27 @@
+name: FyMusic · Public Handoff Privacy Check
+on:
+  push:
+    paths:
+      - 'docs/HANDOFF_*.md'
+      - 'scripts/check-handoff-privacy.mjs'
+      - '.github/workflows/handoff-privacy.yml'
+      - 'version.json'
+  pull_request:
+    paths:
+      - 'docs/HANDOFF_*.md'
+      - 'scripts/check-handoff-privacy.mjs'
+      - '.github/workflows/handoff-privacy.yml'
+      - 'version.json'
+permissions:
+  contents: read
+jobs:
+  public-safe-handoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Ensure no obvious confidential material is committed
+        run: node scripts/check-handoff-privacy.mjs
