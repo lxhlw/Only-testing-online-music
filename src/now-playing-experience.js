@@ -430,7 +430,13 @@ commentList?.addEventListener('scroll',()=>{
 updateCommentMode();
 $('detail-prev-btn')?.addEventListener('click',()=>$('prev-track-btn')?.click());
 $('detail-next-btn')?.addEventListener('click',()=>$('next-track-btn')?.click());
-$('detail-toggle-btn')?.addEventListener('click',()=>$('player-toggle-btn')?.click());
+$('detail-toggle-btn')?.addEventListener('click',()=>{
+  $('player-toggle-btn')?.click();
+  // The audio.paused flag changes synchronously on pause(), while browsers
+  // may dispatch the corresponding pause event in a later task. Update the
+  // immersive button in the click task to avoid a stale visible icon.
+  updateTransport();
+});
 const playbackModes=['sequence','list-loop','single-loop','shuffle'];
 const modeLabels={sequence:'顺序', 'list-loop':'列表循环','single-loop':'单曲循环',shuffle:'随机'};
 const modeButton=$('detail-mode-btn');
