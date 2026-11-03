@@ -843,3 +843,14 @@
  html.modern-web.fy-ui2 .now-playing-transport{min-height:96px;flex-basis:96px}
  html.modern-web.fy-ui2 :is(button,input,a):focus-visible{outline:2px solid #8af9c3;outline-offset:2px}
 }
+
+/* UI2 stage 3 visual review fix: status/quality chips integrate into dark skin. */
+html.modern-web.fy-ui2 #status.global-status:not(.warn):not(.fail){
+  background:#172f35!important;color:#b9e2d2!important;border-color:#315448!important;
+}
+html.modern-web.fy-ui2 #quality-summary{
+  background:#25473f!important;color:#c0f2d8!important;border:1px solid #426f5d!important;
+}
+@media (min-width:741px) and (max-width:980px){
+  html.modern-web.fy-ui2 .nav-rail .nav-brand{display:none}
+}

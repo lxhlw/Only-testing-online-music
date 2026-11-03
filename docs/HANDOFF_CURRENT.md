@@ -23,6 +23,10 @@
 
 ### Stage 3 WIP: tablet continuity and CI visual/performance audit (2026-11-04)
 
+- **Initial measured evidence:** [Stage 3 CI #41679764057](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41679764057) SUCCESS, with screenshot and metrics artifacts. Chromium frame interval P95 16.7–16.8ms, WebKit 17ms, no sampled intervals >50ms for 12 CI browser/viewport combinations. This is **CI only**, not real-device FPS.
+- **Actual screenshot review:** Light status/quality badges clashed with the dark theme, and the short tablet rail brand clipped; updated scoped dark chips and removed clipped label on the tablet icon rail. These corrective changes are awaiting their own CI verification.
+
+
 - **Branch:** draft PR #116; production remains v0.4.33.
 - **Prepared (tests pending):** dark tablet 741–980px compact navigation, floating Dock and split lyrics/cover layout. New Chromium/WebKit audit at 1440/980/820/741/390/320px; sanitized synthetic screenshots and CI requestAnimationFrame interval metrics stored as short-retention Actions artifacts.
 - **Status:** NEW stage 3 tests **PENDING**, CI metrics are NOT real-device FPS.

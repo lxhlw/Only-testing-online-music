@@ -45,8 +45,13 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
    if(tablet){assert.ok(state.navWidth<=90,'Tablet icon rail too wide '+JSON.stringify(state));assert.ok(state.dockLeft>=90,'Tablet dock overlaps rail');}
    const match=state.searchBackground.match(/\d+/g)?.slice(0,3).map(Number);
    assert.ok(match?.length===3&&match.reduce((a,b)=>a+b,0)<400,'Search panel not dark');
+   const qualityColor=await page.locator('#quality-summary').evaluate(e=>getComputedStyle(e).backgroundColor).catch(()=>null);
+   if(qualityColor&&qualityColor.startsWith('rgb(')){
+     const q=qualityColor.match(/\d+/g)?.slice(0,3).map(Number)||[];
+     assert.ok(q.reduce((a,b)=>a+b,0)<420,'Quality badge is too light '+qualityColor);
+   }
    await page.evaluate(()=>{
-     const status=document.getElementById('status');if(status){status.textContent='UI 2.0 预览界面';status.className='status global-status';}
+     const status=document.getElementById('status');if(status)status.textContent='UI 2.0 预览界面';
    });
    const perf=await page.evaluate(()=>new Promise(resolve=>{
      const frames=[];let start=0,last=0;

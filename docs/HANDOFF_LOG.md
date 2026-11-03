@@ -7,6 +7,10 @@
 
 ## 2026-11-04 · Stage 3 tablet/visual/performance audit (pending)
 
+- **Initial evidence:** [Stage 3 preview #41679764057](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41679764057) SUCCESS; public-safe screenshot archive recorded 1440/980/820/741/390/320px views and 12 Chromium/WebKit samples. Chromium frame P95 16.7–16.8ms, WebKit 17ms; no sampled intervals >50ms. CI metrics are not device FPS.
+- **Visual review fix pending:** pale source status, overly bright quality badge and clipped tablet brand corrected in CSS; screenshot fixture no longer overrides real status classes. Re-run is pending.
+
+
 - **Goal:** Close tablet style gap, add objective screenshot and bounded CI rendering metrics; playback logic unchanged.
 - **Changes:** Extend UI2 desktop styling from 741px with 741–980px tablet adjustments; add `scripts/test-ui2-visual-audit.mjs` and GitHub Action artifact capture (synthetic UI, no personal data).
 - **Tests:** New browser/visual tests pending, do not mistake GitHub runner rAF for physical-device performance.
