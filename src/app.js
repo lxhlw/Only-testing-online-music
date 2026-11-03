@@ -1517,6 +1517,50 @@
   }
 
 
+  // During a user-authorized cross-platform recovery, Flower can also fail
+  // for the matched substitute. Reuse existing same-platform trusted resolver
+  // adapters before abandoning that candidate. No new script or freeform
+  // target is loaded; the original song/artist/duration gate already passed.
+  function tryMatchedPlatformResolver(music,source,token) {
+    var state=playbackState;
+    if(!MODERN_WEB||!state||state.token!==token||token!==playbackToken||
+       !state.automaticAlternativeOrigin||state.nativeRecoveryAttempted||
+       !global.LXMusicSearch||!global.LXMusicSearch.resolveMusicUrlFast)return false;
+    state.nativeRecoveryAttempted=true;
+    var attemptId=state.resolveAttemptId;
+    var active=global.LXSourceManager.getActive();
+    var activeId=String(active&&(active.id||active.url)||'');
+    var done=false;
+    var quality=state.quality||state.plan&&state.plan[0]||'128k';
+    var timer=global.setTimeout(function(){finish(null,null);},10000);
+    function current(){
+      var now=global.LXSourceManager.getActive();
+      return playbackState===state&&token===playbackToken&&
+        state.resolveAttemptId===attemptId&&
+        String(now&&(now.id||now.url)||'')===activeId;
+    }
+    function finish(err,result){
+      if(done)return;done=true;global.clearTimeout(timer);
+      if(!current())return;
+      var url=result&&typeof result.url==='string'?result.url:'';
+      if(!err&&/^https?:\/\//i.test(url)&&
+         global.LXMusicSearch.isPlayableUrlForSource(source,url)){
+        var label='同平台备用线路';
+        var provider=String(result.provider||'native-fallback');
+        return useResolvedUrl(url,quality,token,music,source,
+          buildMusicInfo(music,source),getPlaySettings(),label,provider);
+      }
+      if(!recoverCrossPlatformPlayback(music,source,token))
+        setStatus('已尝试匹配的其他平台，目前没有可用的播放地址。','fail');
+    }
+    setStatus('正在尝试匹配版本的备用播放线路…','warn');
+    try{
+      global.LXMusicSearch.resolveMusicUrlFast(source,
+        buildMusicInfo(music,source),quality,finish);
+    }catch(error){finish(error);}
+    return true;
+  }
+
   // User-enabled, bounded recovery of a failed Kugou recording. This
   // searches OTHER CATALOGS, but resolves media through the installed LX
   // source for the selected alternate platform. No third-party resolver script,
@@ -1538,7 +1582,13 @@
       return attempted.indexOf(target)<0&&entry&&
         Array.isArray(entry.actions)&&entry.actions.indexOf('musicUrl')>=0;
     });
-    if(!targets.length)return false;
+    if(!targets.length){
+      if(state.automaticAlternativeOrigin){
+        setStatus('已尝试匹配的其他平台，当前均无法取得可用播放地址。','fail');
+        return true;
+      }
+      return false;
+    }
     state.crossRecoveryPending=true;
     var index=0;
     function isCurrent(){
@@ -1792,6 +1842,7 @@
           escapeHtml(plan[index+1])+'。原因：'+escapeHtml(playbackState.qualityFallbackReason),'warn');
         return requestQuality(music,source,musicInfo,plan,index+1,token);
       }
+      if (MODERN_WEB && tryMatchedPlatformResolver(music,source,token))return;
       if (MODERN_WEB && recoverCrossPlatformPlayback(music,source,token))return;
       if (NATIVE_COMPANION || MODERN_WEB) {
         setStatus(sourceUnavailable
@@ -2366,6 +2417,7 @@
       return requestQuality(state.music,state.source,buildMusicInfo(state.music,state.source),
         state.plan,state.index+1,state.token);
     }
+    if (MODERN_WEB && tryMatchedPlatformResolver(state.music,state.source,state.token))return;
     if (MODERN_WEB && recoverCrossPlatformPlayback(state.music,state.source,state.token))return;
     if (NATIVE_COMPANION || MODERN_WEB) {
       setStatus(MODERN_WEB ? '音频播放连接失败。请重新点选歌曲。' :
