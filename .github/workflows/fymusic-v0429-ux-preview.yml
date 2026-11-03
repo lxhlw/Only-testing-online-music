@@ -1,0 +1,80 @@
+name: FyMusic · UI Resilience Actual Cloudflare Preview
+on:
+  push:
+    branches: [feature/fymusic-v0429-ui-resilience]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fymusic-v0429-cloudflare-ux-preview
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    if: github.ref == 'refs/heads/feature/fymusic-v0429-ui-resilience'
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    env:
+      MAIN_SHA: f4dda7c110cc181ffa6ea8cf668166df093e50c8
+      PREVIEW_BRANCH: v0429-ux-audit-nonproduction
+      PROJECT: only-testing-online-music
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Guard production baseline and release version
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/feature/fymusic-v0429-ui-resilience
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$MAIN_SHA"
+          test "$PREVIEW_BRANCH" != main
+          test "$PREVIEW_BRANCH" != production
+          test "$(node -p "require('./package.json').version")" = '0.4.28'
+      - name: Install test dependencies
+        run: npm install --no-audit --no-fund
+      - name: Stage exact runtime-only output
+        run: |
+          npm run build:pages
+          npm run test:pages
+      - name: Deploy preview branch only
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx wrangler pages deploy dist --project-name "$PROJECT" \
+            --branch "$PREVIEW_BRANCH" --commit-hash "$GITHUB_SHA" | tee /tmp/v0429-ux-deploy.log
+          url=$(grep -Eo 'https://[0-9a-f]{8}\.only-testing-online-music\.pages\.dev' \
+            /tmp/v0429-ux-deploy.log | head -n1)
+          test -n "$url"
+          test "$url" != 'https://only-testing-online-music.pages.dev'
+          echo "TEST_BASE_URL=$url" >> "$GITHUB_ENV"
+          echo "FYMUSIC_V0429_PREVIEW_URL=$url"
+      - name: Check actual isolated preview and protected files
+        run: |
+          set -euo pipefail
+          curl -fsSL "$TEST_BASE_URL/version.json" -o /tmp/v0429-preview-version.json
+          node -e "const p=require('/tmp/v0429-preview-version.json');if(p.version!=='0.4.28')process.exit(1)"
+          for path in README.md package.json scripts/test-modern-web-browser.mjs; do
+            s=$(curl -sSL -o /dev/null -w '%{http_code}' "$TEST_BASE_URL/$path")
+            test "$s" = 404 || exit 1
+          done
+          s=$(curl -sSL -o /dev/null -w '%{http_code}' "$TEST_BASE_URL/api/proxy")
+          test "$s" = 400
+          echo FYMUSIC_V0429_PREVIEW_SECURITY_SCOPE_PASS
+      - name: Install browsers for actual preview UX acceptance
+        run: npx playwright install --with-deps chromium webkit
+      - name: Run UI functional and WebKit profile against immutable preview
+        run: |
+          set -euo pipefail
+          node scripts/test-modern-web-browser.mjs
+          node scripts/test-v0429-webkit-ux-profile.mjs
+          echo FYMUSIC_V0429_PREVIEW_UX_ACCEPTED
+      - name: Production main must remain untouched
+        run: |
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$MAIN_SHA"
+          echo FYMUSIC_V0429_PRODUCTION_UNCHANGED
