@@ -426,6 +426,99 @@
     if (lyricsLinesEl) lyricsLinesEl.innerHTML='<div class="lyrics-empty">正在获取歌词…</div>';
     lyricsActiveIndex=-1;
     setLyricsStatus('正在获取歌词…');
+    // Cross-catalog LRC recovery runs only after the selected platform has
+    // failed. Search metadata is checked before using another platform's
+    // LRC; never put a different recording's words under this song.
+    var crossLyricsStarted=false;
+    function crossLyrics(){
+      if(crossLyricsStarted||!valid())return;
+      crossLyricsStarted=true;
+      var gate=global.FyMusicCrossPlatformMatch;
+      var catalog=global.LXMusicSearch;
+      var options=['kw','mg','wy'].filter(function(source){return source!==state.source;});
+      function unavailable(){
+        if(!valid())return;
+        if(lyricsLinesEl)lyricsLinesEl.innerHTML=
+          '<div class="lyrics-empty">当前歌曲暂时找不到匹配歌词</div>';
+        setLyricsStatus('暂未找到匹配版本歌词，可稍后刷新','warn');
+      }
+      if(!gate||!gate.equivalent||!catalog||!catalog.search||
+         !global.LXMusicLyrics||!options.length){unavailable();return;}
+      var complete=false,pending=options.length;
+      var timeout=global.setTimeout(function(){
+        if(complete)return;complete=true;unavailable();
+      },13000);
+      function finishOne(){
+        if(complete||!valid())return;
+        pending--;
+        if(pending<=0){
+          complete=true;global.clearTimeout(timeout);unavailable();
+        }
+      }
+      var query=String(track.name||'')+' '+String(track.singer||'');
+      setLyricsStatus('正在匹配可用歌词…');
+      options.forEach(function(source){
+        var callbackHandled=false;
+        var searchTimer=global.setTimeout(function(){
+          if(callbackHandled)return;callbackHandled=true;finishOne();
+        },8000);
+        try{
+          catalog.search(source,query,1,25,function(err,response){
+            if(callbackHandled)return;
+            callbackHandled=true;global.clearTimeout(searchTimer);
+            if(complete||!valid())return;
+            var rows=response&&Array.isArray(response.list)?response.list:[];
+            var candidate=null;
+            if(!err)for(var i=0;i<rows.length;i++){
+              if(gate.equivalent(track,rows[i],'lyrics').accepted){
+                candidate=rows[i];break;
+              }
+            }
+            if(!candidate){finishOne();return;}
+            var id='',endpoint='';
+            if(source==='kw'){
+              id=String(candidate.id||candidate.songmid||'');
+              if(/^\d{1,20}$/.test(id))
+                endpoint='/api/kuwo-song-meta?id='+encodeURIComponent(id);
+            }else if(source==='mg'){
+              id=String(candidate.copyrightId||candidate.id||'');
+              var lrc=String(candidate.lyricId||
+                candidate.raw&&(candidate.raw.lrcUrl||candidate.raw.lyricUrl)||'');
+              if(/^[A-Za-z0-9_-]{1,80}$/.test(id)&&lrc)
+                endpoint='/api/migu-lyrics?id='+encodeURIComponent(id)+
+                  '&url='+encodeURIComponent(lrc);
+            }else if(source==='wy'){
+              id=String(candidate.lyricId||candidate.id||'');
+              if(/^\d{1,20}$/.test(id))
+                endpoint='/api/netease-lyrics?id='+encodeURIComponent(id);
+            }
+            if(!endpoint){finishOne();return;}
+            var controller=new AbortController();
+            var fetchTimer=global.setTimeout(function(){controller.abort();},7500);
+            global.fetch(endpoint,{signal:controller.signal})
+              .then(function(res){if(!res.ok)throw Error('No LRC');return res.json();})
+              .then(function(data){
+                if(complete||!valid())return;
+                if(source!=='wy'&&(data.source!==source||String(data.id)!==id))
+                  throw Error('Lyric source mismatch');
+                var lyric=global.LXMusicLyrics.normalize(data).lyric;
+                if(global.LXMusicLyrics.parseLrc(lyric).length<2)
+                  throw Error('No timed lyric');
+                complete=true;global.clearTimeout(timeout);
+                renderLyricsResult(track,{lyric:lyric});
+                setLyricsStatus('已自动匹配'+
+                  (CHANNEL_NAMES[source]||source.toUpperCase())+
+                  '版本的同步歌词','ready');
+              })
+              .catch(function(){finishOne();})
+              .finally(function(){global.clearTimeout(fetchTimer);});
+          });
+        }catch(error){
+          global.clearTimeout(searchTimer);
+          if(!callbackHandled){callbackHandled=true;finishOne();}
+        }
+      });
+    }
     var fallback=function(previousError){
       if(!valid())return;
       // Fall back to a fixed-host API for *this song's own platform* only.
@@ -449,7 +542,7 @@
         /^[0-9]{1,20}$/.test(id);
       if(!endpoint||!validId||(isMigu&&!miguLrc)){
         if(lyricsLinesEl)lyricsLinesEl.innerHTML='<div class="lyrics-empty">这首歌曲暂时没有可获取的歌词</div>';
-        setLyricsStatus('当前歌曲暂无可用歌词','warn');return;
+        crossLyrics();return;
       }
       var requestUrl=endpoint+encodeURIComponent(id)+
         (isMigu?'&url='+encodeURIComponent(miguLrc):'');
@@ -464,12 +557,13 @@
              (isMigu&&(data.source!=='mg'||String(data.id)!==id))){
             throw new Error('Platform lyric identity mismatch');
           }
+          if(!global.LXMusicLyrics.normalize(data).lyric){
+            crossLyrics();return;
+          }
           renderLyricsResult(track,data);
         })
         .catch(function(){
-          if(!valid())return;
-          if(lyricsLinesEl)lyricsLinesEl.innerHTML='<div class="lyrics-empty">当前歌词暂不可用，你仍可以正常听歌</div>';
-          setLyricsStatus('暂时无法取得歌词，可点击「刷新歌词」重试','warn');
+          if(valid())crossLyrics();
         })
         .finally(function(){global.clearTimeout(timer);});
     };
