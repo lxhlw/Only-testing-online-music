@@ -1389,6 +1389,9 @@
       }
       clearMiguPlaybackDeadline(state);
       clearPlaybackConfirmTimer(state);
+      // Retire any late Migu resolver callbacks without invalidating the
+      // recovery search token. Only the next selected track will get a new token.
+      state.resolveAttemptId=Number(state.resolveAttemptId||0)+1;
       // Detach a stalled source before trying a matching alternate platform.
       // The search owns this token until it selects a replacement recording.
       state.waitingForAudio = false;
