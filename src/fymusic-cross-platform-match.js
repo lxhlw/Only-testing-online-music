@@ -94,8 +94,27 @@
   return {accepted:true,reason:'metadata_only',
    durationDiff:left!==null&&right!==null?Math.abs(left-right):null};
  }
+ // When the exact recording is unavailable, the user-approved listening
+ // fallback may use a short edit of the same song. Exact title/artist and
+ // non-conflicting album metadata are still mandatory. This is never used for
+ // timed lyrics: a shortened recording can have a different lyric timeline.
+ function compatibleAudio(original,candidate) {
+  var strict=equivalent(original,candidate,'audio');
+  if(strict.accepted)return {accepted:true,reason:'exact_recording_metadata',
+   tier:'exact',durationDiff:strict.durationDiff};
+  if(strict.reason!=='duration')return strict;
+  var left=durationSeconds(original),right=durationSeconds(candidate);
+  if(left===null||right===null)return {accepted:false,reason:'duration_missing'};
+  var diff=Math.abs(left-right);
+  // Short edits such as 03:18 vs 03:43 are acceptable after an actual
+  // playback failure. Reject long/remix/live variants and large differences.
+  if(diff>30||diff>Math.max(12,Math.round(Math.max(left,right)*0.18)))
+   return {accepted:false,reason:'different_recording_length',durationDiff:diff};
+  return {accepted:true,reason:'short_edit_same_song_metadata',
+   tier:'compatible_edit',durationDiff:diff};
+ }
  global.FyMusicCrossPlatformMatch=Object.freeze({
   inspect:inspect,choices:choices,durationSeconds:durationSeconds,
-  equivalent:equivalent
+  equivalent:equivalent,compatibleAudio:compatibleAudio
  });
 })(window);

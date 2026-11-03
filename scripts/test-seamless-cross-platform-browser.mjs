@@ -35,7 +35,9 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
  const browser=await adapter.launch({headless:true,
    ...(engine==='chromium'?{args:['--autoplay-policy=no-user-gesture-required']}:{})});
  try{
-  for(const scenario of ['missing-lyrics','kugou-media-failure','native-after-both-flower-fail']){
+  for(const scenario of ['missing-lyrics','kugou-media-failure','native-after-both-flower-fail',
+   'daoxiang-title-search','daoxiang-short-edit','daoxiang-combined-retry',
+   'daoxiang-candidate-retry']){
    const page=await browser.newPage({viewport:{width:engine==='webkit'?390:1360,height:860}});
    const errors=[],media=[];
    page.on('pageerror',e=>errors.push(String(e.message).slice(0,180)));
@@ -49,7 +51,9 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
     }]));
     localStorage.setItem('only-testing-online-music.active-source-id','seamless-test-source');
    },{fixture});
-   const audioBytes=wav();
+   // Realistic length is required: the player deliberately rejects a 22s
+   // test WAV masquerading as a 03:43 song as protected/invalid media.
+   const audioBytes=wav(scenario.startsWith('daoxiang-')?223:22);
    await page.route('https://media.example.test/**',route=>{
     const range=route.request().headers().range||'';
     const match=/^bytes=(\d+)-(\d*)$/.exec(range);
@@ -80,9 +84,18 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
    await page.evaluate(({scenario,equivalent,wrong})=>{
     window.__seamlessRequested=[];
     window.__seamlessSearch=[];
+    window.__seamlessQueries=[];
     window.__nativeSources=[];
+    const isDaoxiang=scenario.startsWith('daoxiang-');
+    const daoxiangCandidate={...equivalent,id:'440613',songmid:'440613',
+      name:'稻香',singer:'周杰伦',albumName:'魔杰座',interval:'03:43'};
+    const daoxiangWrong={...daoxiangCandidate,id:'wrong',name:'稻香 Live',interval:'04:10'};
+    const daoxiangExact={...daoxiangCandidate,id:'kw-exact',songmid:'kw-exact',
+      interval:'03:18'};
     window.LXMusicSearch.resolveMusicUrlFast=(source,info,quality,done)=>{
       window.__nativeSources.push(source);
+      if(scenario==='daoxiang-candidate-retry'&&info.id==='kw-exact')
+        return done(new Error('First same-song Kuwo ID native resolver unavailable'));
       done(null,{url:'https://media.example.test/kuwo.wav?id=440613',provider:'kuwo-native'});
     };
     window.__seamlessAudioErrors=[];
@@ -92,20 +105,36 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
     });
     window.LXMusicSearch.search=(source,query,page,size,done)=>{
       window.__seamlessSearch.push(source);
+      window.__seamlessQueries.push({source,query});
+      if(isDaoxiang){
+        const expectedQuery=scenario==='daoxiang-combined-retry'?'稻香 周杰伦':'稻香';
+        return done(null,{list:source==='kw'&&query===expectedQuery
+          ?(scenario==='daoxiang-candidate-retry'
+            ?[daoxiangWrong,daoxiangExact,daoxiangCandidate]
+            :[daoxiangWrong,daoxiangCandidate]):[]});
+      }
       done(null,{list:source==='kw'?[wrong,equivalent]:[]});
     };
     window.LXSourceManager.requestAction=(source,action,args,done)=>{
-      window.__seamlessRequested.push({source,action,quality:args.type||null});
+      window.__seamlessRequested.push({source,action,quality:args.type||null,
+       trackId:String(args.musicInfo?.id||'')});
       if(action==='musicUrl'&&source==='kg'&&scenario!=='missing-lyrics')
        return done(new Error('Kugou Flower upstream HTTP 502'));
       if(action==='musicUrl'&&source==='kw'&&scenario==='native-after-both-flower-fail')
        return done(new Error('Matched Kuwo Flower upstream HTTP 502'));
+      if(action==='musicUrl'&&source==='kw'&&scenario==='daoxiang-candidate-retry'&&
+         args.musicInfo?.id==='kw-exact')
+       return done(new Error('First metadata-verified Kuwo recording unavailable HTTP 502'));
       if(action==='musicUrl')return done(null,{url:'https://media.example.test/kuwo.wav?id=440613'});
       return done(new Error('Unsupported action'));
     };
     const b=document.createElement('button');b.id='seamless-play';b.textContent='Test user play';
     b.style.cssText='position:fixed;top:15px;left:15px;z-index:2147483647';
-    b.addEventListener('click',()=>window.OnlyTestingMusicApp.playMusic({
+    b.addEventListener('click',()=>window.OnlyTestingMusicApp.playMusic(isDaoxiang?{
+     source:'kg',id:'kg-daoxiang',songmid:'kg-daoxiang',name:'稻香',
+     singer:'周杰伦',albumName:'魔杰座',
+     interval:['daoxiang-short-edit','daoxiang-candidate-retry'].includes(scenario)?'03:18':'03:43'
+    }:{
      source:'kg',id:'kg-42',songmid:'kg-42',name:'示例歌曲',
      singer:'测试歌手',albumName:'示例专辑',interval:35
     }));
@@ -146,6 +175,7 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
       lyrics:document.querySelectorAll('#lyrics-lines .lyrics-line').length,
       lyricStatus:document.getElementById('lyrics-status')?.textContent||'',
       searches:window.__seamlessSearch,
+      queries:window.__seamlessQueries,
       requests:window.__seamlessRequested,
       title:document.getElementById('player-title')?.textContent,
       sourceState:window.__LXNowPlayingTrack?.source,
@@ -156,8 +186,21 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
    assert.equal(result.audioPlaying,true);
    assert.equal(result.lyrics,2);
    assert.ok(result.searches.includes('kw'));
-   assert.equal(result.title,'示例歌曲');
+   if(scenario==='daoxiang-candidate-retry'){
+     const kuwoIds=result.requests.filter(r=>r.source==='kw').map(r=>r.trackId);
+     assert.ok(kuwoIds.includes('kw-exact')&&kuwoIds.includes('440613'),
+       'Retry 03:43 compatible edit after closer Kuwo 03:18 recording fails');
+     assert.equal(result.sourceState,'kw');
+   }
+   assert.equal(result.title,scenario.startsWith('daoxiang-')?'稻香':'示例歌曲');
    assert.equal(result.manualButtons,0,'Seamless fallback must not show a manual gate');
+   if(scenario.startsWith('daoxiang-')){
+     assert.ok(result.queries.some(q=>q.source==='kw'&&q.query==='稻香'),
+       'Daoxiang must try the title keyword the user proved works');
+     if(scenario==='daoxiang-combined-retry')
+       assert.ok(result.queries.some(q=>q.source==='kw'&&q.query==='稻香 周杰伦'),
+         'Retry the title + artist query after title-only misses');
+   }
    if(scenario==='missing-lyrics'){
     assert.ok(result.requests.every(x=>x.source==='kg'),
       'Only the lyric provider should change, not the audio source');
@@ -173,6 +216,7 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
    assert.deepEqual(errors,[]);
    results.push({engine,scenario,audioPlaying:result.audioPlaying,
     lyricLines:result.lyrics,requestedSources:[...new Set(result.requests.map(x=>x.source))],
+    daoxiangQueries:scenario.startsWith('daoxiang-')?result.queries:undefined,
     lyricStatus:result.lyricStatus,nativeSources:result.nativeSources});
    await page.close();
   }
