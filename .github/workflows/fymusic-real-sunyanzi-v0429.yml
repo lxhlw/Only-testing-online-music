@@ -1,0 +1,25 @@
+name: FyMusic · Real Sun Yanzi production playback detail (non-deploy)
+on:
+  push:
+    branches: [test/fymusic-v0429-real-track-20261103]
+permissions:
+  contents: read
+jobs:
+  verify-real-song:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install browser verification dependencies
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Verify current v0.4.29 production release without deploying
+        run: |
+          node --input-type=module -e "const r=await fetch('https://only-testing-online-music.pages.dev/version.json');const v=await r.json();if(v.version!=='0.4.29')process.exit(1)"
+          node scripts/test-fymusic-real-sunyanzi-v0429.mjs
+      - name: No production changes
+        run: echo FYMUSIC_REAL_SUN_YANZI_READ_ONLY
