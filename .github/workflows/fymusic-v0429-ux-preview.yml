@@ -66,12 +66,19 @@ jobs:
           s=$(curl -sSL -o /dev/null -w '%{http_code}' "$TEST_BASE_URL/api/proxy")
           test "$s" = 400
           echo FYMUSIC_V0429_PREVIEW_SECURITY_SCOPE_PASS
+      - name: Kuwo numeric-ID security, real cover image and timed LRC at this exact Preview
+        run: |
+          set -euo pipefail
+          node scripts/test-kuwo-track-info.mjs
+          node scripts/test-kuwo-preview-live.mjs
+          echo FYMUSIC_KUWO_PREVIEW_REAL_ENRICHMENT_PASS
       - name: Install browsers for actual preview UX acceptance
         run: npx playwright install --with-deps chromium webkit
       - name: Run UI functional and WebKit profile against immutable preview
         run: |
           set -euo pipefail
           node scripts/test-modern-web-browser.mjs
+          node scripts/test-now-playing-kuwo-browser.mjs
           node scripts/test-v0429-webkit-ux-profile.mjs
           echo FYMUSIC_V0429_PREVIEW_UX_ACCEPTED
       - name: Production main must remain untouched
