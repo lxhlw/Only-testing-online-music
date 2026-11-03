@@ -1,0 +1,27 @@
+name: FyMusic · Kuwo artwork and lyric diagnostics (read only)
+on:
+  push:
+    branches: [feature/fymusic-v0429-ui-resilience]
+    paths: 
+      - 'scripts/probe-kuwo-track-enrichment.mjs'
+      - '.github/workflows/fymusic-kuwo-track-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kuwo-enrichment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Perform read-only Kuwo metadata/lyric endpoint checks
+        run: node scripts/probe-kuwo-track-enrichment.mjs
+      - name: Confirm main remains the v0.4.28 production commit
+        run: |
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = f4dda7c110cc181ffa6ea8cf668166df093e50c8
+          echo FYMUSIC_KW_PROBE_PRODUCTION_UNCHANGED
