@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/fymusic-phase44-release-gate.yml'
       - 'scripts/build-fymusic-phase44-candidate.mjs'
+      - 'scripts/test-modern-web-browser.mjs'
   workflow_dispatch:
 
 permissions:
