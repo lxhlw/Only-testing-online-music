@@ -1,0 +1,104 @@
+name: FyMusic · Minimal Pages Nonproduction Preview
+on:
+  push:
+    branches: [chore/fymusic-minimal-pages-legacy-cleanup]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fymusic-cleanup-pr108-preview
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    if: github.ref == 'refs/heads/chore/fymusic-minimal-pages-legacy-cleanup'
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    env:
+      EXPECTED_MAIN_SHA: 586f592dc994b0868886bcb42b1213c3580f278b
+      CF_PAGES_PROJECT: only-testing-online-music
+      CF_PREVIEW_BRANCH: cleanup-pr108-nonproduction
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Production isolation and immutable main guard
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/chore/fymusic-minimal-pages-legacy-cleanup'
+          test "$CF_PREVIEW_BRANCH" != main
+          test "$CF_PREVIEW_BRANCH" != production
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$EXPECTED_MAIN_SHA"
+          test "$(node -p "require('./package.json').version")" = '0.4.27'
+      - name: Install regression tooling
+        run: npm install --no-audit --no-fund
+      - name: Stage a minimal static directory and validate every copied byte
+        run: |
+          set -euo pipefail
+          npm run build:pages
+          npm run test:pages
+          test ! -e dist/functions
+          test ! -e dist/.github
+          test ! -e dist/scripts
+      - name: Deploy isolated Cloudflare Pages preview ONLY
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx wrangler pages deploy dist --project-name "$CF_PAGES_PROJECT" \
+            --branch "$CF_PREVIEW_BRANCH" --commit-hash "$GITHUB_SHA" | tee /tmp/fymusic-cleanup-preview.log
+          url=$(grep -Eo 'https://[a-z0-9-]+\.only-testing-online-music\.pages\.dev' \
+            /tmp/fymusic-cleanup-preview.log | tail -n1)
+          test -n "$url"
+          case "$url" in
+            https://only-testing-online-music.pages.dev*) exit 2;;
+            https://*.only-testing-online-music.pages.dev) ;;
+            *) exit 2;;
+          esac
+          echo "TEST_BASE_URL=$url" >> "$GITHUB_ENV"
+          echo "FYMUSIC_CLEANUP_PREVIEW=$url"
+      - name: Verify actual preview runtime, private-file 404 and live Functions
+        run: |
+          set -euo pipefail
+          test -n "$TEST_BASE_URL"
+          curl -fsSL --retry 2 "$TEST_BASE_URL/version.json" \
+            -o /tmp/fymusic-cleanup-version.json
+          node --input-type=module -e "import fs from 'node:fs';import assert from 'node:assert/strict';const v=JSON.parse(fs.readFileSync('/tmp/fymusic-cleanup-version.json','utf8'));assert.equal(v.version,'0.4.27');console.log('FYMUSIC_CLEANUP_PREVIEW_VERSION_PASS')"
+          for path in README.md package.json .github/workflows/verify-and-deploy.yml \
+            scripts/test-modern-web-browser.mjs android-companion/README.md src/android-native-resolver.js; do
+            status=$(curl -sSL -o /tmp/fymusic-cleanup-notfound.html -w '%{http_code}' \
+              "$TEST_BASE_URL/$path")
+            test "$status" = 404 || { echo "Repository path exposed: $path $status"; exit 1; }
+            grep -Fq '404 · Not found' /tmp/fymusic-cleanup-notfound.html
+          done
+          stat=$(curl -sSL -o /tmp/fymusic-cleanup-proxy.json -w '%{http_code}' \
+            "$TEST_BASE_URL/api/proxy")
+          test "$stat" = 400 || { echo "Cloudflare Pages Functions missing: HTTP $stat"; exit 1; }
+          stat=$(curl -sSL -o /tmp/fymusic-cleanup-safe.json -w '%{http_code}' \
+            "$TEST_BASE_URL/api/proxy?url=http%3A%2F%2F127.0.0.1%2F")
+          test "$stat" = 403
+          stat=$(curl -sSL -o /tmp/fymusic-cleanup-public-api.json -w '%{http_code}' \
+            "$TEST_BASE_URL/api/netease-lyrics")
+          test "$stat" = 400 || { echo "Lyrics Function missing: HTTP $stat"; exit 1; }
+          echo 'FYMUSIC_CLEANUP_PREVIEW_FUNCTIONS_AND_ASSET_SCOPE_PASS'
+      - name: Install actual Chromium browser
+        run: npx playwright install chromium
+      - name: Run actual preview browser, playlist, mobile and source-selection regressions
+        run: |
+          set -euo pipefail
+          node scripts/test-modern-web-browser.mjs
+          node scripts/test-playlist-infinite-browser.mjs
+          node scripts/test-mobile-interaction-qa-browser.mjs
+          node scripts/test-web-source-selection-browser.mjs
+          echo "FYMUSIC_CLEANUP_PREVIEW_BROWSER_ACCEPTANCE_PASS"
+      - name: Guarantee production was not moved
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$EXPECTED_MAIN_SHA"
+          echo 'FYMUSIC_CLEANUP_PRODUCTION_UNCHANGED'
