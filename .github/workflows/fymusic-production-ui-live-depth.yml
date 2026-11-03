@@ -1,0 +1,53 @@
+name: FyMusic · Formal Production Live UI Depth (read only)
+on:
+  push:
+    branches: [audit/fymusic-production-ui-matrix-20261103]
+    paths:
+      - 'scripts/audit-production-ui-live-depth.mjs'
+      - '.github/workflows/fymusic-production-ui-live-depth.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fymusic-production-live-ui-depth-20261103
+  cancel-in-progress: true
+
+jobs:
+  live-depth:
+    if: github.ref == 'refs/heads/audit/fymusic-production-ui-matrix-20261103'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      EXPECTED_SHA: 586f592dc994b0868886bcb42b1213c3580f278b
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Pin formal production and forbid branch drift
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/audit/fymusic-production-ui-matrix-20261103
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$EXPECTED_SHA"
+          node --check scripts/audit-production-ui-live-depth.mjs
+      - name: Install browser toolkit and Chromium
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Real Cloudflare production live UI deep scenarios
+        run: node scripts/audit-production-ui-live-depth.mjs
+      - name: Upload real live UI screenshots and structured report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fymusic-v0427-production-ui-live-depth
+          path: audit-ui-live-depth/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Confirm formal production remains unchanged
+        if: always()
+        run: |
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$EXPECTED_SHA"
+          echo FYMUSIC_PRODUCTION_UI_LIVE_DEPTH_READ_ONLY
