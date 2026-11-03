@@ -14,8 +14,17 @@
 | Stage 4 automated preview | PASS: https://github.com/lxhlw/Only-testing-online-music/actions/runs/41684255301 |
 | Stage 4 full browser/security | PASS: https://github.com/lxhlw/Only-testing-online-music/actions/runs/41684265856 |
 | Stage 4 playlist / privacy | PASS: https://github.com/lxhlw/Only-testing-online-music/actions/runs/41684265845 and https://github.com/lxhlw/Only-testing-online-music/actions/runs/41684265860 |
-| Production baseline regression | Latest docs-only main run #41685131793 was still IN PROGRESS at this audit; preceding #41682617224 FAILED on real Migu lyric 502, while #41677152725 succeeded |
+| Production baseline regression | Latest main #41686835515 FAILED real Migu lyric HTTP 502; #41685131793 SUCCESS; older #41682617224 also FAILED same route |
 | Remaining macro-stages | 2: (5) provider reliability; (6) human-approved final release |
+
+### Stage 5A: source-reliability patch committed on isolated branch (2026-11-04)
+
+- **Development branch only:** `fix/fymusic-migu-lrc-bounded-retry-20261104` based on main `4527495d0b50`. Official production remains v0.4.33; UI2 PR #116 stays draft/unmerged.
+- **Implemented:** The allowlisted Migu lyric edge handler now retries once, only on transient upstream 429/500/502/503/504 or fetch/timeout failures. Each attempt is deadline-limited to 4.25 seconds; redirects, invalid destinations, malformed lyrics and oversized responses are not retried. No proxy-host widening and no playback-core change.
+- **Diagnostics:** Fixed reason enums plus bounded attempt count on failure; raw CDN URLs, upstream response bodies, request query strings and exception messages are not returned. The strict live Migu test records only the safe category while still requiring real timed lyrics, advancing audio, artwork and pause/resume.
+- **Tests implemented:** Unit coverage for 503-to-200 recovery, repeated 502 capped at two fetches, non-transient 404 single attempt, exception-message redaction, existing URL validation and response-size guards.
+- **Verification:** PR CI and privacy checks are PENDING at this checkpoint; do not claim a resolved live Migu issue. Latest previous main full workflow #41686835515 FAILED on real Migu lyric HTTP 502 (other browser/security and playback recovery gates passed). Prior main #41685131793 SUCCESS.
+- **Next:** Inspect PR checks and real-Migu outcome; fix any discovered failures. Then continue exact-match Kuwo recovery and source reliability, and only afterward final design/physical-device acceptance and production release.
 
 ## Completed operation: Stage 4 light theme automated verification and screenshot review
 
@@ -33,7 +42,7 @@
 4. Previous Daoxiang live recovery sometimes succeeds and sometimes fails when upstream alternative musicUrl resolution is unavailable (for example preview #41681089874 failed). Preserve strict real playback-progress acceptance and report transient upstream failure explicitly.
 5. Main release workflow #41685131793 was still running when checked; re-read its final status at the start of the next operation instead of treating IN PROGRESS as success.
 
-## Next goal — Stage 5: source reliability diagnostics (not yet implemented)
+## Next goal — Stage 5: source reliability diagnostics (Stage 5A pending CI)
 
 1. Re-read main and PR heads plus latest Actions. Locate the real Migu 502 response boundary (provider endpoint, edge relay or application parsing), classify without recording raw signed media URLs, tokens, cookies, personal headers or response payloads.
 2. Add bounded, observable retry and/or correctly matched cross-platform fallback ONLY when supported by source semantics. Do not misrepresent a resolved URL as playing; require media progress and keep existing lyric/artwork consistency.
