@@ -21,6 +21,14 @@
 | UI 2.0 development | Desktop and mobile phases 1–2 implemented and verified on draft PR #116 / independent Cloudflare preview only, NOT production |
 | Next execution priority | Visual review [phase 2 preview](https://fc82ed4d.only-testing-online-music.pages.dev/?ui2=1), then tablet/light theme accessibility and measured performance; separately diagnose intermittent production Migu test |
 
+### Stage 3 WIP: tablet continuity and CI visual/performance audit (2026-11-04)
+
+- **Branch:** draft PR #116; production remains v0.4.33.
+- **Prepared (tests pending):** dark tablet 741–980px compact navigation, floating Dock and split lyrics/cover layout. New Chromium/WebKit audit at 1440/980/820/741/390/320px; sanitized synthetic screenshots and CI requestAnimationFrame interval metrics stored as short-retention Actions artifacts.
+- **Status:** NEW stage 3 tests **PENDING**, CI metrics are NOT real-device FPS.
+- **Known source blocker:** preview #41677251142 failed the strict real `稻香` recovery test; alternative Kuwo URL resolution errored. UI and playlist regressions passed. Do not mark live audio green.
+- **Next:** resolve any layout audit failures; review metrics/screenshots, preserve true audio test errors; update this main checkpoint with verified results. Remaining macro-stages after stage 3: optional light theme, upstream source diagnosis, final acceptance/release.
+
 ### Latest project operation: UI 2.0 phase 2, COMPLETED on isolated preview (2026-11-04)
 
 - **Nonproduction preview:** [FyMusic UI 2.0 phase 2](https://fc82ed4d.only-testing-online-music.pages.dev/?ui2=1). Only the opt-in query `?ui2=1` activates it. The official production URL continues on v0.4.33 main.

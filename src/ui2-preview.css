@@ -3,7 +3,7 @@
  * The playback engine, DOM identities, mobile shell, and source logic stay unchanged.
  * No remote fonts, no infinite animations, no canvas polling.
  */
-@media (min-width: 981px) {
+@media (min-width: 741px) {
   html.modern-web.fy-ui2 {
     color-scheme: dark;
     --bg:#091218;--panel:#12212b;--surface:#162630;--surface2:#1b3038;
@@ -261,7 +261,7 @@
     outline:2px solid #80fac1;outline-offset:3px;
   }
 }
-@media (min-width:981px) and (max-width:1160px){
+@media (min-width:741px) and (max-width:1160px){
   html.modern-web.fy-ui2 .player-bar{left:106px;right:18px}
   html.modern-web.fy-ui2 .player-song{flex-basis:185px}
   html.modern-web.fy-ui2 .player-extras{flex-basis:128px}
@@ -285,7 +285,7 @@
    FYMUSIC UI 2.0 / PHASE 2 — DISCOVERY, COLLECTIONS & MOBILE
    Opt-in ?ui2=1 ONLY. No audio, data or navigation logic changes.
    ================================================================ */
-@media (min-width:981px) {
+@media (min-width:741px) {
   html.modern-web.fy-ui2 .view-header {
     padding:8px 2px 9px;margin-bottom:24px;
   }
@@ -798,4 +798,48 @@
   html.modern-web.fy-ui2 .now-playing-screen .lyrics-line,
   html.modern-web.fy-ui2 .view-tab,
   html.modern-web.fy-ui2 .my-tab{transition:none!important;animation:none!important;transform:none!important}
+}
+
+/* UI2 stage 3 tablet — dark skin continuous across 741-980px, without DOM/JS changes */
+@media (min-width:741px) and (max-width:980px) {
+ html.modern-web.fy-ui2 .topbar{height:72px;min-height:72px}
+ html.modern-web.fy-ui2 .topbar-inner{min-width:0;gap:10px;padding-inline:15px}
+ html.modern-web.fy-ui2 .nav-rail{width:80px;min-width:80px;flex-basis:80px;top:72px;height:calc(100dvh - 72px);padding:18px 8px;overflow-x:hidden}
+ html.modern-web.fy-ui2 .nav-brand{font-size:9px;letter-spacing:.4px;text-align:center;margin:0}
+ html.modern-web.fy-ui2 .nav-item{justify-content:center;gap:0;padding:0 5px;min-height:46px}
+ html.modern-web.fy-ui2 .nav-item span:last-child{display:none}
+ html.modern-web.fy-ui2 .persistent-top-stack{top:72px}
+ html.modern-web.fy-ui2 .main-stage{min-width:0}
+ html.modern-web.fy-ui2 .view-container{max-width:100%;min-width:0;padding:18px 16px 148px}
+ html.modern-web.fy-ui2 .view-header h1{font-size:clamp(26px,3vw,33px)}
+ html.modern-web.fy-ui2 .view-note{display:none}
+ html.modern-web.fy-ui2 .global-search-bar{padding:8px 16px}
+ html.modern-web.fy-ui2 .global-search{height:50px}
+ html.modern-web.fy-ui2 .playlist-grid{grid-template-columns:repeat(auto-fill,minmax(164px,1fr));gap:12px}
+ html.modern-web.fy-ui2 .playlist-card{padding:9px;border-radius:15px}
+ html.modern-web.fy-ui2 .playlist-card-actions{gap:6px}
+ html.modern-web.fy-ui2 .playlist-card-actions button{font-size:11px!important}
+ html.modern-web.fy-ui2 .ranking-sidebar{width:177px;flex-basis:177px}
+ html.modern-web.fy-ui2 #view-mylist .music-library-workspace{grid-template-columns:164px minmax(0,1fr)}
+ html.modern-web.fy-ui2 #view-mylist .music-library-sidebar{padding-inline:8px}
+ html.modern-web.fy-ui2 #view-mylist .music-library-content{padding-inline:12px}
+ html.modern-web.fy-ui2 .search-inspiration{min-height:300px}
+ html.modern-web.fy-ui2 .search-inspiration h2{font-size:23px}
+ html.modern-web.fy-ui2 .player-bar{left:95px;right:15px;bottom:13px;height:88px;min-height:88px;max-height:88px;padding:10px 13px;gap:9px;border-radius:20px}
+ html.modern-web.fy-ui2 .player-song{flex:0 1 152px;width:152px;min-width:0}
+ html.modern-web.fy-ui2 .player-art{height:49px;width:49px;min-width:49px;flex-basis:49px}
+ html.modern-web.fy-ui2 #player-title{font-size:13px}
+ html.modern-web.fy-ui2 .player-center{flex:1 1 0;min-width:100px;gap:2px}
+ html.modern-web.fy-ui2 .player-extras{display:none}
+ html.modern-web.fy-ui2 .now-playing-body{grid-template-columns:minmax(0,40%) minmax(0,60%);gap:0}
+ html.modern-web.fy-ui2 .now-playing-album-column{padding:20px 19px;gap:13px}
+ html.modern-web.fy-ui2 .now-playing-cover-box{width:min(100%,240px,39dvh);max-height:240px;border-radius:17px}
+ html.modern-web.fy-ui2 .now-playing-screen .lyrics-song-meta{width:100%}
+ html.modern-web.fy-ui2 .now-playing-screen #lyrics-title{font-size:30px}
+ html.modern-web.fy-ui2 #now-playing-artist{font-size:14px}
+ html.modern-web.fy-ui2 .now-playing-detail-column{padding-inline:12px 22px}
+ html.modern-web.fy-ui2 .now-playing-screen .lyrics-line{font-size:15px;padding:8px}
+ html.modern-web.fy-ui2 .now-playing-screen .lyrics-line.active{font-size:18px;transform:translateX(3px)}
+ html.modern-web.fy-ui2 .now-playing-transport{min-height:96px;flex-basis:96px}
+ html.modern-web.fy-ui2 :is(button,input,a):focus-visible{outline:2px solid #8af9c3;outline-offset:2px}
 }

@@ -5,6 +5,15 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Stage 3 tablet/visual/performance audit (pending)
+
+- **Goal:** Close tablet style gap, add objective screenshot and bounded CI rendering metrics; playback logic unchanged.
+- **Changes:** Extend UI2 desktop styling from 741px with 741–980px tablet adjustments; add `scripts/test-ui2-visual-audit.mjs` and GitHub Action artifact capture (synthetic UI, no personal data).
+- **Tests:** New browser/visual tests pending, do not mistake GitHub runner rAF for physical-device performance.
+- **Known blocker:** Preview #41677251142 failed real `稻香` alternate URL; production real Migu test also intermittently fails. Both source issues tracked separately.
+- **Not done:** UI2 light theme, hands-on visual review, real-device FPS/CPU/memory, controlled release.
+- **Next:** Check strict CI and artifact screenshots, fix any tablet clipping, then record verified results and three remaining macro-stages.
+
 ## 2026-11-04 · UI 2.0 phase 2 discovery, library and mobile preview verified
 
 - **Goal:** Continue the tested phase 1 design to search/songs, playlists, ranking, library/settings and responsive phone listening experience without replacing music data or player code.
