@@ -21,7 +21,8 @@ function wav(seconds=22,rate=8000){
  b.write('WAVE',8);b.write('fmt ',12);b.writeUInt32LE(16,16);
  b.writeUInt16LE(1,20);b.writeUInt16LE(1,22);
  b.writeUInt32LE(rate,24);b.writeUInt32LE(rate*2,28);
- b.writeUInt16LE(2,32);b.write('data',36);
+ b.writeUInt16LE(2,32);b.writeUInt16LE(16,34);
+ b.write('data',36);
  b.writeUInt32LE(seconds*rate*2,40);return b;
 }
 const target={source:'kg',id:'kg-42',songmid:'kg-42',name:'示例歌曲',singer:'测试歌手',
