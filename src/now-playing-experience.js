@@ -11,7 +11,29 @@ const lyricView=$('lyrics-view'),commentView=$('comments-view');
 const commentList=$('comments-list'),commentStatus=$('comments-status');
 const fullSeek=$('detail-seek'),baseSeek=$('player-seek');
 const artCache=new Map(),commentCache=new Map();
+// Keep per-track artwork and comment page caches bounded during long listening.
+// Only lightweight metadata is retained; evict oldest entries once full.
+const cachePut=(cache,key,value,maxEntries)=>{
+  cache.delete(key);
+  cache.set(key,value);
+  if(cache.size>maxEntries)cache.delete(cache.keys().next().value);
+};
 let track=null,sequence=0,metaAbort=null,commentAbort=null,activeTab='lyrics',lastFocused=null;
+let seekPreview=false,ignoreCancelledSeekChange=false;
+// Keep keyboard ownership after a committed range change so repeated keys
+// can continue; pointer commits still return focus as before.
+let seekInputFromKeyboard=false;
+// A held finger can outlive a native tab hide: Chrome may deliver new
+// trusted touchmove/input/change after foreground with NO new pointerdown.
+// Only a newly started pointer (or deliberate keyboard action) can rearm it.
+let abandonedTouchGesture=false;
+// WebKit can temporarily expose a previous media position while an OS seek
+// is still settling. Only a superseded native drag needs an explicit OS
+// target for its next trusted keyboard action.
+let supersedingOsSeek=null;
+// Keep the last explicitly committed target until native seeked confirms it.
+// WebKit's currentTime getter can lag a rapid sequence of real setter writes.
+let pendingNativeSeek=null;
 const isOpen=()=>overlay&&!overlay.classList.contains('hidden');
 const sourceNames={wy:'网易云音乐',kw:'酷我音乐',tx:'QQ音乐',kg:'酷狗音乐',mg:'咪咕音乐'};
 const formatSeconds=value=>{
@@ -28,32 +50,51 @@ const safeArt=(value,source='wy')=>{
     return '';
   }catch{return ''}
 };
+let currentCoverUrl='';
 function setCover(src){
   const url=safeArt(src,track?.source);
+  currentCoverUrl=url;
   for(const img of coverImages){
     img.hidden=!url;
-    if(url&&img.src!==url)img.src=url;
-    else if(!url){img.removeAttribute('src')}
+    if(url&&img.getAttribute('src')!==url)img.src=url;
+    else if(!url&&img.hasAttribute('src'))img.removeAttribute('src');
   }
   for(const box of coverBoxes)box?.classList.toggle('has-album-art',Boolean(url));
 }
 for(const img of coverImages){
   img.addEventListener('error',()=>{
-    if(!track)return;
-    const failed=img.src;
-    for(const other of coverImages){
-      if(other.src===failed){other.hidden=true;other.removeAttribute('src')}
-    }
-    for(const box of coverBoxes)box?.classList.remove('has-album-art');
+    // An old request can fail after src has already changed for the new
+    // track. Only a completed, *currently selected* failed image may clear
+    // the shared cover; never let an old error hide the incoming artwork.
+    const url=img.getAttribute('src')||'';
+    if(!track||!url||url!==currentCoverUrl||
+       !img.complete||img.naturalWidth!==0)return;
+    const failedTrack=track;
+    const failedUrl=currentCoverUrl;
+    // Older images can fire their error after the new song was chosen.
+    // Recheck before altering either cover or OS Media Session metadata.
+    if(track!==failedTrack||currentCoverUrl!==failedUrl)return;
+    artCache.delete(track.source+':'+track.id);
+    track={...track,image:''};
+    setCover('');
+    applyMetadata({},track.sequence);
   });
 }
-function applyMetadata(data){
-  if(!track)return;
-  track={...track,...data};
+function applyMetadata(data,expectedSequence=sequence){
+  // The network response is metadata, never the authority for the playback
+  // identity. A delayed response must not overwrite a newer selected track.
+  if(!track||track.sequence!==expectedSequence)return;
+  const singer=typeof data?.singer==='string'?data.singer.slice(0,180):'';
+  const albumName=typeof data?.albumName==='string'?data.albumName.slice(0,180):'';
+  const image=safeArt(data?.image,track.source);
+  track={...track,
+    singer:singer||track.singer,
+    albumName:albumName||track.albumName,
+    image:image||track.image};
   $('now-playing-artist').textContent=track.singer||'未知歌手';
   $('now-playing-album').textContent='专辑：'+(track.albumName||'未知专辑');
   $('now-playing-platform').textContent='来源：'+(sourceNames[track.source]||'当前平台');
-  if(data.image)setCover(data.image);
+  if(image)setCover(image);
   // Keep the OS/media keyboard display in step with the newly resolved art.
   try{
     if('mediaSession' in navigator&&'MediaMetadata' in window){
@@ -70,18 +111,30 @@ async function resolveCover(current,key){
   const supplied=safeArt(current.image,current.source);
   if(supplied){setCover(supplied);return;}
   if(current.source!=='wy'||!/^\d{1,20}$/.test(current.id))return;
-  if(artCache.has(key)){applyMetadata(artCache.get(key));return;}
+  if(artCache.has(key)){applyMetadata(artCache.get(key),current.sequence);return;}
   metaAbort?.abort();
   const controller=new AbortController();metaAbort=controller;
   try{
     const r=await fetch('/api/netease-song-meta?id='+encodeURIComponent(current.id),{signal:controller.signal});
     if(!r.ok)throw Error('metadata unavailable');
     const data=await r.json();
-    if(!data||data.id!==current.id||!data.image)return;
-    artCache.set(key,data);
+    if(!data||String(data.id)!==current.id||
+       !safeArt(data.image,current.source))return;
     if(sequence!==current.sequence)return;
-    applyMetadata(data);
-  }catch(e){if(e.name!=='AbortError')console.info('Song artwork not available',current.id)}
+    // Only the allowlisted metadata below is cached or applied. Discard any
+    // source, ID or sequence fields from the server response.
+    const details={
+      image:safeArt(data.image,current.source),
+      singer:typeof data.singer==='string'?data.singer.slice(0,180):'',
+      albumName:typeof data.albumName==='string'?data.albumName.slice(0,180):''
+    };
+    cachePut(artCache,key,details,96);
+    applyMetadata(details,current.sequence);
+  }catch(e){if(e.name!=='AbortError'&&sequence===current.sequence)
+    console.info('Song artwork not available',current.id);
+  }finally{
+    if(metaAbort===controller)metaAbort=null;
+  }
 }
 let commentMode='hot',commentOffset=0,commentLoaded=0,commentMore=false,commentLoading=false;
 const commentMoreButton=$('comments-load-more'),pageNote=$('comments-page-note');
@@ -170,7 +223,7 @@ async function loadComments(force=false,append=false){
     if(!r.ok)throw new Error('Comments service unavailable');
     const data=await r.json();
     if(current!==sequence||!isOpen()||activeTab!=='comments'||commentMode!==mode)return;
-    commentCache.set(key,data);
+    cachePut(commentCache,key,data,48);
     renderComments(data,append);
   }catch(e){
     if(e.name==='AbortError'||current!==sequence||mode!==commentMode)return;
@@ -183,6 +236,7 @@ async function loadComments(force=false,append=false){
       $('comments-link-wrap').hidden=false;
     }
   }finally{
+    if(commentAbort===controller)commentAbort=null;
     if(current===sequence&&mode===commentMode)commentLoading=false;
   }
 }
@@ -198,18 +252,26 @@ function setTab(tab){
   commentView.hidden=activeTab!=='comments';
   lyricView.classList.toggle('hidden',activeTab!=='lyrics');
   commentView.classList.toggle('hidden',activeTab!=='comments');
-  if(activeTab==='comments')loadComments();
-  else requestAnimationFrame(()=>centerActiveLyric(true));
+  if(activeTab==='comments'){
+    cancelLyricCenter();
+    loadComments();
+  }else scheduleLyricCenter(true);
 }
 function setTrack(next){
   if(!next)return;
   const id=String(next.id||''),source=String(next.source||'wy');
   const key=source+':'+id;
   sequence++;
+  supersedingOsSeek=null;
+  pendingNativeSeek=null;
+  // A track change invalidates old lyric scroll and uncommitted seek preview.
+  cancelLyricCenter();
+  invalidateSeekPreview();
   const currentSequence=sequence;
   metaAbort?.abort();commentAbort?.abort();
   track={id,source,sequence:currentSequence,name:String(next.name||'未知歌曲'),
-    singer:String(next.singer||''),albumName:String(next.albumName||''),image:String(next.image||'')};
+    singer:String(next.singer||''),albumName:String(next.albumName||''),
+    image:safeArt(next.image,source)};
   $('lyrics-title').textContent=track.name;
   applyMetadata(track);
   setCover(track.image);
@@ -220,12 +282,20 @@ function setTrack(next){
   lastActiveLyric=null;
 }
 function updateTransport(){
-  if(!audio)return;
+  // Closed immersive controls do not need DOM writes on every audio
+  // timeupdate. openScreen() refreshes them synchronously before display.
+  if(!audio||!isOpen())return;
   const valid=Number.isFinite(audio.duration)&&audio.duration>0;
-  const progress=valid?Math.max(0,Math.min(1000,Math.round(audio.currentTime/audio.duration*1000))):0;
-  if(!fullSeek.matches(':active')&&document.activeElement!==fullSeek)fullSeek.value=String(progress);
+  const pending=pendingNativeSeek&&pendingNativeSeek.source===audio.currentSrc&&
+    pendingNativeSeek.trackSequence===sequence?pendingNativeSeek:null;
+  const shownPosition=pending?pending.seconds:audio.currentTime;
+  const progress=valid?Math.max(0,Math.min(1000,Math.round(shownPosition/audio.duration*1000))):0;
   fullSeek.disabled=Boolean(baseSeek?.disabled)||!valid;
-  $('detail-current-time').textContent=formatSeconds(audio.currentTime);
+  if(fullSeek.disabled&&seekPreview)cancelSeekPreview();
+  if(!seekPreview)fullSeek.value=String(progress);
+  const shownSeconds=seekPreview&&valid?Number(fullSeek.value)/1000*audio.duration:shownPosition;
+  fullSeek.setAttribute('aria-valuetext',formatSeconds(shownSeconds)+' / '+formatSeconds(valid?audio.duration:0));
+  $('detail-current-time').textContent=formatSeconds(shownSeconds);
   $('detail-duration').textContent=formatSeconds(valid?audio.duration:0);
   const playing=!audio.paused&&!audio.ended;
   $('detail-toggle-btn').setAttribute('aria-label',playing?'暂停':'播放');
@@ -244,11 +314,28 @@ function centerActiveLyric(instant=false){
   lyricScroll.scrollTo({top:Math.max(0,target),behavior:instant||window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
 }
 let lastActiveLyric=null;
+let pendingLyricCenter=0;
+function cancelLyricCenter(){
+  if(pendingLyricCenter)cancelAnimationFrame(pendingLyricCenter);
+  pendingLyricCenter=0;
+}
+function scheduleLyricCenter(instant=false){
+  // Rapid lyric changes/seeks may happen before paint. Center only the final
+  // active line, at most once per animation frame, never a stale prior track.
+  cancelLyricCenter();
+  pendingLyricCenter=requestAnimationFrame(()=>{
+    pendingLyricCenter=0;
+    centerActiveLyric(instant);
+  });
+}
 if(lyricLines)new MutationObserver(()=>{
+  // The small player lyric summary is maintained independently by modern-ui.
+  // Avoid querying/centering a hidden immersive screen on each lyric change.
+  if(!isOpen()||activeTab!=='lyrics')return;
   const active=lyricLines.querySelector('.lyrics-line.active');
   if(active===lastActiveLyric)return;
   lastActiveLyric=active;
-  if(active)requestAnimationFrame(()=>centerActiveLyric(false));
+  if(active)scheduleLyricCenter(false);
 }).observe(lyricLines,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
 function openScreen(){
   if(!overlay)return;
@@ -261,15 +348,21 @@ function openScreen(){
   updateTransport();
   syncMode();syncVolume();
   $('lyrics-close-btn').focus();
-  requestAnimationFrame(()=>centerActiveLyric(true));
+  scheduleLyricCenter(true);
 }
 function closeScreen(){
   if(!isOpen())return;
+  cancelLyricCenter();
+  cancelSeekPreview();
   overlay.classList.add('hidden');
   overlay.setAttribute('aria-hidden','true');
   document.documentElement.classList.remove('lyrics-open');
   coverButton?.setAttribute('aria-expanded','false');
-  lastFocused?.focus?.();
+  const target=lastFocused?.isConnected?lastFocused:coverButton;
+  // A removed playlist/search row must not be retained for the entire next
+  // listening session just because it opened this modal once.
+  lastFocused=null;
+  target?.focus?.({preventScroll:true});
 }
 coverButton?.addEventListener('click',()=>isOpen()?closeScreen():openScreen());
 $('lyrics-close-btn')?.addEventListener('click',closeScreen);
@@ -331,21 +424,186 @@ detailVolume?.addEventListener('input',()=>{
 baseVolume?.addEventListener('input',syncVolume);
 syncVolume();
 
-fullSeek?.addEventListener('input',()=>{
-  if(!baseSeek||baseSeek.disabled)return;
+function cancelSeekPreview(){
+  if(!seekPreview)return;
+  seekPreview=false;
+  window.LXPlayerControls?.cancelSeek?.();
+  // This only restores presentation: it never writes audio.currentTime.
+  updateTransport();
+}
+function invalidateSeekPreview(event){
+  if(event?.type==='fymusic:external-seek'){
+    const seconds=event.detail?.seconds;
+    const duration=Number(audio?.duration);
+    if(Number.isFinite(seconds)&&Number.isFinite(duration)&&duration>0&&audio?.currentSrc)
+      pendingNativeSeek={seconds:Math.max(0,Math.min(duration,seconds)),
+        source:audio.currentSrc,trackSequence:sequence};
+    if((seekPreview||abandonedTouchGesture)&&Number.isFinite(seconds)&&
+       Number.isFinite(duration)&&duration>0&&audio?.currentSrc){
+      supersedingOsSeek={seconds:Math.max(0,Math.min(duration,seconds)),
+        source:audio.currentSrc,trackSequence:sequence};
+    }
+  }else supersedingOsSeek=null;
+  if(!seekPreview)return;
+  // OS seek and track replacement also invalidate an already held finger.
+  // Chrome can continue emitting trusted touchmove/input after this event;
+  // do not let that old input rearm a commit on the new media owner.
+  abandonedTouchGesture=true;
+  ignoreCancelledSeekChange=true;
+  cancelSeekPreview();
+}
+function abandonNativeTouchGesture(){
+  if(!seekPreview)return;
+  abandonedTouchGesture=true;
+  invalidateSeekPreview();
+}
+function rejectStaleNativeSeek(event){
+  if(event?.isTrusted && (!document.hasFocus()||abandonedTouchGesture)){
+    abandonedTouchGesture=true;
+    ignoreCancelledSeekChange=true;
+    cancelSeekPreview();
+    return true;
+  }
+  return false;
+}
+window.addEventListener('fymusic:external-seek',invalidateSeekPreview);
+fullSeek?.addEventListener('pointerdown',()=>{
+  pendingNativeSeek=null;
+  supersedingOsSeek=null;
+  // Chrome dispatches pointermove, but not pointerdown, for an old finger
+  // after tab restoration. A genuine new pointerdown starts a new gesture.
+  abandonedTouchGesture=false;
+  ignoreCancelledSeekChange=false;
+  seekInputFromKeyboard=false;
+});
+fullSeek?.addEventListener('input',event=>{
+  if(rejectStaleNativeSeek(event))return;
+  if(!isOpen()||!baseSeek||baseSeek.disabled)return;
+  ignoreCancelledSeekChange=false;
+  seekPreview=true;
   baseSeek.value=fullSeek.value;
   baseSeek.dispatchEvent(new Event('input',{bubbles:true}));
   const value=Number(fullSeek.value)/1000*(Number(audio?.duration)||0);
   $('detail-current-time').textContent=formatSeconds(value);
+  fullSeek.setAttribute('aria-valuetext',formatSeconds(value)+' / '+formatSeconds(audio?.duration));
 });
-fullSeek?.addEventListener('change',()=>{
-  if(!baseSeek||baseSeek.disabled)return;
+fullSeek?.addEventListener('change',event=>{
+  if(rejectStaleNativeSeek(event))return;
+  if(ignoreCancelledSeekChange){
+    ignoreCancelledSeekChange=false;
+    cancelSeekPreview();
+    return;
+  }
+  if(!isOpen()||!baseSeek||baseSeek.disabled){
+    cancelSeekPreview();return;
+  }
+  seekPreview=false;
+  supersedingOsSeek=null;
+  const duration=Number(audio?.duration);
+  if(Number.isFinite(duration)&&duration>0&&audio?.currentSrc)
+    pendingNativeSeek={seconds:Number(fullSeek.value)/1000*duration,
+      source:audio.currentSrc,trackSequence:sequence};
   baseSeek.value=fullSeek.value;
   baseSeek.dispatchEvent(new Event('change',{bubbles:true}));
-  fullSeek.blur();
+  // Native range change fires for both pointer and keyboard. Blurring after
+  // a keyboard step steals focus and drops the remaining held/repeated keys.
+  if(!seekInputFromKeyboard)fullSeek.blur();
+  updateTransport();
+});
+fullSeek?.addEventListener('pointercancel',()=>{
+  supersedingOsSeek=null;
+  seekInputFromKeyboard=false;
+  abandonedTouchGesture=true;
+  ignoreCancelledSeekChange=true;
+  cancelSeekPreview();
+});
+fullSeek?.addEventListener('keydown',event=>{
+  if(event.isTrusted&&event.key!=='Escape'&&document.hasFocus()){
+    seekInputFromKeyboard=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',
+      'PageUp','PageDown','Home','End'].includes(event.key);
+    // A cancelled physical drag may have changed the native range thumb
+    // without committing the audio. Restore the *real* currentTime before
+    // the browser applies this new keyboard step, or ArrowRight would jump
+    // from the abandoned thumb instead of the OS's latest seek position.
+    if(abandonedTouchGesture){
+      const intent=supersedingOsSeek;
+      const duration=Number(audio?.duration);
+      if(seekInputFromKeyboard&&intent&&intent.trackSequence===sequence&&
+         intent.source===audio?.currentSrc&&Number.isFinite(duration)&&duration>0){
+        // No audio.currentTime assignment: only the native trusted range
+        // change and existing base player may commit the resulting seek.
+        fullSeek.value=String(Math.round(intent.seconds/duration*1000));
+      }else updateTransport();
+    }
+    supersedingOsSeek=null;
+    abandonedTouchGesture=false;
+    ignoreCancelledSeekChange=false;
+  }
+  if(event.key==='Escape'&&seekPreview){
+    supersedingOsSeek=null;
+    seekInputFromKeyboard=false;
+    event.preventDefault();event.stopPropagation();
+    abandonedTouchGesture=true;
+    ignoreCancelledSeekChange=true;
+    cancelSeekPreview();
+    // The base player may disable the seek control after cancellation.
+    // Move focus to a stable button within the dialog so a second Escape
+    // still closes the immersive screen instead of landing on <body>.
+    $('lyrics-close-btn')?.focus({preventScroll:true});
+  }
+});
+window.addEventListener('resize',()=>{
+  if(isOpen()&&activeTab==='lyrics')scheduleLyricCenter(true);
+},{passive:true});
+window.visualViewport?.addEventListener('resize',()=>{
+  if(isOpen()&&activeTab==='lyrics')scheduleLyricCenter(true);
+},{passive:true});
+// A mobile browser may suspend the page in the middle of a touch seek.
+// Cancel only the UI preview; never pause, play, reload, or overwrite media
+// currentTime when the OS sends the tab to the background.
+const suspendImmersive=()=>{
+  cancelLyricCenter();
+  abandonNativeTouchGesture();
+};
+window.addEventListener('blur',suspendImmersive);
+const resumeImmersive=()=>{
+  if(document.hidden||!isOpen())return;
+  updateTransport();
+  if(activeTab==='lyrics')scheduleLyricCenter(true);
+  if(!overlay.contains(document.activeElement))
+    $('lyrics-close-btn')?.focus({preventScroll:true});
+};
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden)suspendImmersive();
+  else resumeImmersive();
+});
+window.addEventListener('pagehide',suspendImmersive);
+window.addEventListener('pageshow',resumeImmersive);
+// A completed native seek can retire OS intent once the target is actually
+// reached. Do not use timeupdate here: WebKit may report the old position.
+audio?.addEventListener('seeked',()=>{
+  const committed=pendingNativeSeek;
+  if(committed){
+    if(committed.source!==audio.currentSrc||committed.trackSequence!==sequence)
+      pendingNativeSeek=null;
+    else if(!audio.seeking&&Math.abs(audio.currentTime-committed.seconds)<Math.max(.009,Number(audio.duration||0)/2000))
+      pendingNativeSeek=null;
+  }
+  const intent=supersedingOsSeek;
+  if(!intent)return;
+  if(intent.source!==audio.currentSrc||intent.trackSequence!==sequence){
+    supersedingOsSeek=null;return;
+  }
+  if(!audio.seeking&&Math.abs(audio.currentTime-intent.seconds)<Math.max(.009,Number(audio.duration||0)/2000))
+    supersedingOsSeek=null;
 });
 for(const event of ['timeupdate','durationchange','loadedmetadata','play','playing','pause','ended','waiting','emptied'])
   audio?.addEventListener(event,updateTransport);
+// Keep programmatic keyboard focus inside the modal while it is visible.
+document.addEventListener('focusin',event=>{
+  if(isOpen()&&!overlay.contains(event.target))
+    $('lyrics-close-btn')?.focus({preventScroll:true});
+});
 overlay?.addEventListener('keydown',event=>{
   if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeScreen();return;}
   if(event.key!=='Tab')return;

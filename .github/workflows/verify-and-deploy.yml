@@ -154,9 +154,10 @@ jobs:
       - name: Verify production entrypoint and modern assets
         run: |
           set -euo pipefail
+          VERSION=$(node -p "JSON.parse(require('node:fs').readFileSync('version.json','utf8')).version")
           READY=0
           for i in {1..12}; do
-            if curl -fsSL 'https://only-testing-online-music.pages.dev/?v=0.4.26' -o /tmp/lx-modern-index.html && grep -Fq 'modern.css?v=0.4.26' /tmp/lx-modern-index.html; then
+            if curl -fsSL "https://only-testing-online-music.pages.dev/?v=$VERSION" -o /tmp/lx-modern-index.html && grep -Fq "modern.css?v=$VERSION" /tmp/lx-modern-index.html; then
               READY=1
               break
             fi
