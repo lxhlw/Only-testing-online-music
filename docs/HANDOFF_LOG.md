@@ -5,6 +5,17 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · UI 2.0 desktop preview shipped to isolated Cloudflare branch (verified)
+
+- **Goal:** Implement the first cinematic desktop UI while preserving audio, native player state, covers, synchronized lyrics and source recovery.
+- **Code:** `feature/fymusic-ui2-desktop-preview-20261104`, [draft PR #116](https://github.com/lxhlw/Only-testing-online-music/pull/116), tested SHA `1d13ee4f`.
+- **Changes:** `src/ui2-preview.css`, `src/ui2-preview.js` and opt-in `?ui2=1` links in `index.html`. Deep-toned immersive Now Playing, floating Dock, cover-colored static ambience, conditional UI lifecycle, no animation timers; mobile baseline unchanged.
+- **Verified:** [Preview workflow #41672796071](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41672796071) SUCCESS. Chromium/WebKit desktop+mobile UI, live preview security 404, single audio node, art/lyric visibility, play/pause/resume, reduced motion. [Browser/security #41672843044](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41672843044), [playlist #41672843520](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41672843520), [privacy #41672843842](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41672843842) all SUCCESS.
+- **Real source:** `稻香` Kugou error recovered into Kuwo alternate audio (progress), cover loaded, 48 timed lyrics. A `128k` request was observed, not measured codec/bitrate.
+- **Preview:** [isolated UI 2.0 test site](https://821da531.only-testing-online-music.pages.dev/?ui2=1); `main` and official production remain v0.4.33.
+- **Not done:** Visual sign-off, actual FPS/performance measurements, mobile UI 2.0, search/library redesign, merging or deploying to production.
+- **Next action:** User design review of preview, then refine desktop and implement phase 2 mobile/search/library with new CI gates. Update handoff after the next milestone.
+
 ## 2026-11-03 · Handoff protocol established
 
 - **Input / motivation:** Future conversations must recover technical progress after a context limit, without relying exclusively on chat memory.
