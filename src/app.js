@@ -1703,6 +1703,7 @@
           escapeHtml(plan[index+1])+'。原因：'+escapeHtml(playbackState.qualityFallbackReason),'warn');
         return requestQuality(music,source,musicInfo,plan,index+1,token);
       }
+      if (MODERN_WEB && recoverCrossPlatformPlayback(music,source,token))return;
       if (NATIVE_COMPANION || MODERN_WEB) {
         setStatus(sourceUnavailable
           ? '野花音源服务器当前无法返回播放地址（HTTP 502）。歌曲搜索仍可使用；本次已停止解析，不会擅自换用其他音源。'
@@ -2122,7 +2123,8 @@
     // Unsupported fixed KG quality is not silently reduced to 128k.
     // Offer only the same explicitly approved alternate catalog flow.
     if(qualityUnsupported){
-      offerCrossPlatformAlternative(music,source,token);
+      if(!recoverCrossPlatformPlayback(music,source,token))
+        offerCrossPlatformAlternative(music,source,token);
       return;
     }
     requestQuality(music, source, buildMusicInfo(music, source), plan, 0, token);
@@ -2167,7 +2169,8 @@
     var qualityMessage='请求 '+state.quality+
       (downgraded?'（由 '+state.initialQuality+' 降级；'+(state.qualityFallbackReason||'高音质不可用')+'）':'')+
       ' · 实际码率未经检测';
-    setStatus((state.manualAlternativeOrigin==='kg' ? '已手动确认的酷我备用版本' :
+    setStatus((state.automaticAlternativeOrigin==='kg' ? '已自动匹配的'+(CHANNEL_NAMES[state.source]||state.source.toUpperCase())+'备用版本' :
+      state.manualAlternativeOrigin==='kg' ? '已手动确认的酷我备用版本' :
       (CHANNEL_NAMES[state.source]||state.source.toUpperCase()))+
       ' 正在播放 · '+escapeHtml(qualityMessage),'ready');
     var playbackQualityNode=document.getElementById('inline-current-quality');
@@ -2269,6 +2272,7 @@
       return requestQuality(state.music,state.source,buildMusicInfo(state.music,state.source),
         state.plan,state.index+1,state.token);
     }
+    if (MODERN_WEB && recoverCrossPlatformPlayback(state.music,state.source,state.token))return;
     if (NATIVE_COMPANION || MODERN_WEB) {
       setStatus(MODERN_WEB ? '音频播放连接失败。请重新点选歌曲。' :
         '野花已返回地址，但原生播放失败。', 'fail');
