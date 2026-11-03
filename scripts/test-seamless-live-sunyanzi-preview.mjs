@@ -59,6 +59,10 @@ try{
     ['kw','mg','wy'].includes(source);
   },null,{timeout:75000});
  }catch(error){audit.error='Fallback did not establish real alternate audio';}
+ try{
+  await page.waitForFunction(()=>document.querySelectorAll('#lyrics-lines .lyrics-line').length>=2,
+   null,{timeout:22000});
+ }catch(error){audit.error='Real matching audio is playing but lyrics did not appear';}
  const result=await page.evaluate(()=>({
   sourceAfter:window.__LXNowPlayingTrack?.source||'',
   playing:(()=>{const a=document.getElementById('audio');return !a.paused&&a.readyState>=2&&a.currentTime>.9})(),
@@ -76,7 +80,7 @@ try{
  assert.equal(audit.offeredManualUI,false,'No popup or manual search gate');
  assert.equal(audit.displayTitle,'开始懂了');
  assert.ok(audit.qualityRequests.length>=1);
- // Timed LRC may be temporarily unavailable; audio fallback remains primary.
- if(audit.lyricLines>=2)console.log('FYMUSIC_REAL_CROSS_PROVIDER_LYRIC_PASS');
+ assert.ok(audit.lyricLines>=2,'Real matching lyrics should appear after audio starts');
+ console.log('FYMUSIC_REAL_CROSS_PROVIDER_LYRIC_PASS');
  console.log('FYMUSIC_REAL_KUGOU_SEAMLESS_AUDIO_FALLBACK_PASS');
 }finally{await browser.close()}
