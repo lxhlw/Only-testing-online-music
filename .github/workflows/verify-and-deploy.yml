@@ -6,6 +6,8 @@ on:
       - 'styles.css'
       - 'modern.css'
       - 'src/**'
+      - 'scripts/build-pages-dist.mjs'
+      - 'scripts/test-pages-dist.mjs'
       - 'scripts/test-modern-web-browser.mjs'
       - 'scripts/test-version.mjs'
       - 'scripts/test-flower-*.mjs'
@@ -46,6 +48,10 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Build allowlisted Pages site and exclude repository/test assets
+        run: |
+          node scripts/build-pages-dist.mjs
+          node scripts/test-pages-dist.mjs
       - name: Modern JS parse checks
         run: |
           node --check src/app.js
@@ -114,7 +120,7 @@ jobs:
       - name: Start Cloudflare Pages emulator and run modern web browser regression
         run: |
           set -euo pipefail
-          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 >/tmp/lx-modern-pages.log 2>&1 &
+          npx wrangler pages dev dist --ip 127.0.0.1 --port 8788 >/tmp/lx-modern-pages.log 2>&1 &
           READY=0
           for i in {1..50}; do
             if curl -fsS http://127.0.0.1:8788/ >/dev/null; then READY=1; break; fi
@@ -150,7 +156,9 @@ jobs:
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-          npx wrangler pages deploy . --project-name only-testing-online-music --commit-hash "$GITHUB_SHA"
+          node scripts/build-pages-dist.mjs
+          node scripts/test-pages-dist.mjs
+          npx wrangler pages deploy dist --project-name only-testing-online-music --commit-hash "$GITHUB_SHA"
       - name: Verify production entrypoint and modern assets
         run: |
           set -euo pipefail
@@ -173,6 +181,17 @@ jobs:
           grep -Fq 'mobile-shell-ready' /tmp/lx-mobile-js
           curl -fsSL https://only-testing-online-music.pages.dev/src/modern-ui.js -o /tmp/lx-modern-ui.js
           grep -Fq 'mediaSession' /tmp/lx-modern-ui.js
+
+      - name: Verify no repository files are exposed as public website assets
+        run: |
+          set -euo pipefail
+          for path in README.md package.json scripts/test-modern-web-browser.mjs android-companion/README.md .github/workflows/verify-and-deploy.yml; do
+            code=$(curl -sSL -o /tmp/fymusic-not-found.html -w '%{http_code}' "https://only-testing-online-music.pages.dev/$path")
+            test "$code" = 404 || { echo "Unexpected public file: $path HTTP $code"; exit 1; }
+            grep -Fq '404 · Not found' /tmp/fymusic-not-found.html
+          done
+          code=$(curl -sSL -o /tmp/fymusic-proxy-guard.json -w '%{http_code}' 'https://only-testing-online-music.pages.dev/api/proxy')
+          test "$code" = 400 || exit 1
 
       - name: Verify deployed version metadata
         run: |

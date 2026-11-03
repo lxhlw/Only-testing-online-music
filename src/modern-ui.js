@@ -315,7 +315,7 @@ if('mediaSession' in navigator){
     audio?.addEventListener(event,()=>schedule(syncMediaSession),{passive:true});
   const updateMetadata=()=>{
     // now-playing-experience owns rich metadata (actual track/album/artwork).
-    // Never overwrite it with a generic LX Music Web album after a track
+    // Never overwrite it with a generic old project album after a track
     // event arrives, including when a title mutation settles a frame later.
     if(window.__LXNowPlayingTrack)return;
     const name=(title?.textContent||'').trim();
@@ -323,7 +323,7 @@ if('mediaSession' in navigator){
       try{
         mediaSession.metadata=new MediaMetadata({
           title:name,artist:($('player-artist')?.textContent||'').trim(),
-          album:'LX Music Web'
+          album:'FyMusic'
         });
       }catch{}
     }
