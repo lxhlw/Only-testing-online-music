@@ -5,7 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4f8f2">
   <meta name="description" content="FyMusic — 现代化高性能 Web 音乐播放器。">
-  <script>document.documentElement.classList.add("modern-web");if(new URLSearchParams(location.search).get('ui2')==='1')document.documentElement.classList.add('fy-ui2');</script>
+  <script>(function(){
+  var root=document.documentElement;
+  root.classList.add("modern-web");
+  var params=new URLSearchParams(location.search);
+  if(params.get("ui2")!=="1")return;
+  root.classList.add("fy-ui2");
+  var mode=params.get("theme");
+  if(mode!=="light"&&mode!=="dark"){
+    try{mode=localStorage.getItem("fymusic-ui2-theme")}catch(e){mode=null}
+  }
+  if(mode==="light")root.classList.add("fy-ui2-light");
+  var meta=document.querySelector('meta[name="theme-color"]');
+  if(meta)meta.setAttribute("content",mode==="light"?"#f4faf6":"#091218");
+})();</script>
   <title>FyMusic — 现代音乐空间</title>
   <link rel="stylesheet" href="styles.css?v=0.4.33">
   <link rel="stylesheet" href="modern.css?v=0.4.33">

@@ -18,20 +18,28 @@
 | Stable release code | v0.4.33; main docs-only baseline `de908fa395c35a85a0a8c53021a814c491356b41` before this checkpoint |
 | Official site | `https://only-testing-online-music.pages.dev/` |
 | Main CI status | Prior production #41670345575 SUCCESS; latest docs-only #41673691537 FAILED at real Migu playback timeout; browser/security tests passed |
-| UI 2.0 development | Desktop and mobile phases 1–2 implemented and verified on draft PR #116 / independent Cloudflare preview only, NOT production |
-| Next execution priority | Visual review [phase 2 preview](https://fc82ed4d.only-testing-online-music.pages.dev/?ui2=1), then tablet/light theme accessibility and measured performance; separately diagnose intermittent production Migu test |
+| UI 2.0 development | Phases 1–3 implemented on draft PR #116; stage 3 baseline verified in isolated preview, polish retest pending; NOT production |
+| Next execution priority | Complete phase 3 polish retest, then accessible UI2 light theme and real-device review; separately diagnose upstream source instability |
 
-### Stage 3 WIP: tablet continuity and CI visual/performance audit (2026-11-04)
+### Stage 4 WIP: optional light theme and accessibility (2026-11-04)
 
-- **Initial measured evidence:** [Stage 3 CI #41679764057](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41679764057) SUCCESS, with screenshot and metrics artifacts. Chromium frame interval P95 16.7–16.8ms, WebKit 17ms, no sampled intervals >50ms for 12 CI browser/viewport combinations. This is **CI only**, not real-device FPS.
-- **Actual screenshot review:** Light status/quality badges clashed with the dark theme, and the short tablet rail brand clipped; updated scoped dark chips and removed clipped label on the tablet icon rail. These corrective changes are awaiting their own CI verification.
+- **Branch / release boundary:** Draft PR #116 `feature/fymusic-ui2-desktop-preview-20261104`, merged with main handoff parent to avoid stale docs. Official production remains v0.4.33 and no UI 2.0 code is released.
+- **Implemented, testing pending:** scoped UI 2.0 daylight palette for desktop/tablet/mobile, search/song/playlist/library/settings and immersive player. In-preview theme toggle appears in header and settings, supports keyboard/ARIA press state, remembers preference, accepts `?ui2=1&theme=light` deep links, and updates browser theme color. It does **not** call audio APIs or music source resolvers.
+- **Testing added:** Chromium/WebKit x 1440/820/390/320px light-surface + heading WCAG contrast checks, no overflow, one audio node, Enter-key toggle, settings-to-header synchronization, persisted mode after reload, reduced-motion and no added controls on legacy URL. Preview workflow includes light snapshots as short-retention CI artifact.
+- **Current evidence:** New stage-4 CI **PENDING**, do not claim it is verified or released. Previous stage-3 full browser/security and playlists passed. Last stage-3 preview workflow #41681958521 was still in progress on last read; refresh it before final acceptance, including the strict real `稻香` recovery gate.
+- **Outstanding:** physical-device FPS/CPU/memory measurement, keyboard/screen-reader manual inspection, independent upstream Kuwo/Migu reliability and explicit human visual sign-off.
+- **Next:** Run and fix stage-4 preview CI, review screenshots and contrast on both themes, reconcile provider failures, publish accurate checkpoint to main. Remaining stages after stage 4: source reliability diagnosis and final audited production release.
 
+### Stage 3: tablet continuity and visual/performance evidence (2026-11-04)
 
-- **Branch:** draft PR #116; production remains v0.4.33.
-- **Prepared (tests pending):** dark tablet 741–980px compact navigation, floating Dock and split lyrics/cover layout. New Chromium/WebKit audit at 1440/980/820/741/390/320px; sanitized synthetic screenshots and CI requestAnimationFrame interval metrics stored as short-retention Actions artifacts.
-- **Status:** NEW stage 3 tests **PENDING**, CI metrics are NOT real-device FPS.
-- **Known source blocker:** preview #41677251142 failed the strict real `稻香` recovery test; alternative Kuwo URL resolution errored. UI and playlist regressions passed. Do not mark live audio green.
-- **Next:** resolve any layout audit failures; review metrics/screenshots, preserve true audio test errors; update this main checkpoint with verified results. Remaining macro-stages after stage 3: optional light theme, upstream source diagnosis, final acceptance/release.
+- **Scope:** [Draft PR #116](https://github.com/lxhlw/Only-testing-online-music/pull/116), isolated UI2 `?ui2=1` preview. Production stays v0.4.33; no main UI merge.
+- **Verified stage 3 baseline:** feature SHA `5e80697bb707e48297ac5ea55c50a92fb1ee3808`. [UI2 Cloudflare workflow #41679764057](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41679764057) **SUCCESS**, including strict real `稻香` recovery, browser layout and source guard; [full browser/security #41679773945](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41679773945), [playlist #41679774062](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41679774062), [handoff privacy #41679774047](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41679774047) also **SUCCESS**.
+- **Implemented:** coherent dark 741–980px tablet experience (icon rail, compact mini-player, flexible album/lyrics); UI2 CSS preserved existing music/seek/lyrics/audio semantics. New public-safe screenshot and metrics CI artifact covering Chromium/WebKit at 1440/980/820/741/390/320px; no horizontal overflow, clipped Dock or multiple audio elements detected.
+- **CI frame interval sample:** Chromium P95 ~16.7–16.8ms, WebKit P95 ~17ms; 0 of the 12 short-interval samples had a frame over 50ms. This is **CI runner performance only**, not representative physical-device 60 FPS testing; actual-device review still needed.
+- **Visual review observations:** Real screenshot review identified overly bright status/quality badges and clipped tablet brand. These were adjusted in opt-in CSS; the current polish revision is `5de9af04fce229c9498f1db268f5c36f52a10e96`, pending a dedicated recheck in [#41681958521](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41681958521). Do **not** claim polish revision tests passed until recorded.
+- **External audio reliability:** Earlier preview [#41681089874](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41681089874) failed strict `稻香` recovery because upstream Kuwo URL resolution failed; that is real and must not be silently ignored. Recent production Migu test likewise intermittently fails. Distinguish confirmed UI tests from provider-dependent tests.
+- **Status:** Stage 3 layout/audit milestone implemented and proven on the baseline SHA; polish on draft branch pending, and human design sign-off / physical device FPS remain outstanding.
+- **Remaining 3 macro-stages:** **1.** Optional accessible light theme and design/real-device polish; **2.** provider reliability/Migu+Kuwo failure diagnosis and robustness; **3.** full regression, explicit design approval and controlled production rollout.
 
 ### Latest project operation: UI 2.0 phase 2, COMPLETED on isolated preview (2026-11-04)
 
@@ -77,15 +85,14 @@
 - **UI 2.0 remains draft preview only**: phases 1–2 desktop and mobile CSS are implemented and verified on PR #116, but not released. Human visual approval, measured FPS/memory, tablet 741–980px behavior and complete light-theme rollout remain unfinished.
 - The public GitHub handoff is intentionally restricted to public-safe technical facts. No private conversational memory is stored; full confidential backups require a separate PRIVATE GitHub repository.
 
-## Next goal: UI 2.0 visual sign-off, performance and safe rollout
+## Next goal: 3 remaining macro-stages to eventual UI 2.0 release
 
-1. Review [phase 2 preview](https://fc82ed4d.only-testing-online-music.pages.dev/?ui2=1) in desktop and mobile: navigation, hero/search, playlist cards, ranking, music library, album art/lyric sizes and mini Dock; collect actionable design feedback.
-2. Compare with the five-screen Figma reference **using authorized Figma connection only**, without sharing Figma access URLs or account IDs in this public document. Fix visual gaps via the existing feature draft PR #116.
-3. Measure real device animation smoothness, CPU/memory and reduced-motion behavior. Target responsiveness but **do not claim 60 FPS before measuring**; test small phones and the 741–980px tablet band.
-4. Implement a coherent optional light theme for UI 2.0, while protecting accessible contrast and system-theme settings. Existing `?ui2=1` flag stays opt-in until approval.
-5. Independently diagnose the current production Migu real-playback timeout in [#41673691537](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41673691537). Compare external source reliability and deterministic local fixtures; do not weaken release acceptance merely to make CI green.
-6. Re-run Chromium/WebKit desktop/mobile, real-source cover/lyric/recovery, audio seek/pause, security 404, strict dist allowlist and playlist tests after any new code changes.
-7. Keep **PR #116 DRAFT** and official v0.4.33 appearance untouched until visual review and acceptance. Update this current state plus append-only log after each meaningful operation; no private data in public GitHub.
+1. **Light theme + human design/performance acceptance:** Complete an accessible optional UI2 light mode, review desktop/tablet/mobile screenshots, test keyboard/screen-reader interactions and measure FPS/CPU/memory on real devices (CI rAF is not a device benchmark).
+2. **Source reliability diagnostics:** Keep `稻香` Kugou→Kuwo and real Migu cases strict. Investigate upstream musicUrl failures and add reliable diagnostics/appropriate bounded recovery without falsely asserting playback or weakening acceptance tests.
+3. **Final production acceptance and rollout:** Check all UI screens, audio state/seek, synchronized lyrics and covers, platform recovery, build allowlist and 404 guard; obtain explicit visual approval, merge PR only after gates pass and verify Cloudflare production with rollback ready.
+
+At this checkpoint, **all three remain**, and the optional UI 2.0 design has **not** shipped to `main`. Every future operation must update CURRENT and the append-only LOG while excluding private data.
+
 ## Next chat: recovery procedure
 
 Paste: **“继续 FyMusic。先从 GitHub 仓库 `lxhlw/Only-testing-online-music` 的 `main` 读取 `docs/HANDOFF_CURRENT.md`、`docs/HANDOFF_LOG.md` 和 `docs/HANDOFF_POLICY.md`，核对最新代码和 Actions，然后执行上面下一目标的第一项。每一步先验收、再更新 GitHub 交接记录；严禁上传私人信息。”**

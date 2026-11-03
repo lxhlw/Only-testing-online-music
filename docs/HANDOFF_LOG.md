@@ -5,18 +5,25 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
-## 2026-11-04 · Stage 3 tablet/visual/performance audit (pending)
+## 2026-11-04 · Stage 4 optional light theme and accessibility tests (in progress)
 
-- **Initial evidence:** [Stage 3 preview #41679764057](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41679764057) SUCCESS; public-safe screenshot archive recorded 1440/980/820/741/390/320px views and 12 Chromium/WebKit samples. Chromium frame P95 16.7–16.8ms, WebKit 17ms; no sampled intervals >50ms. CI metrics are not device FPS.
-- **Visual review fix pending:** pale source status, overly bright quality badge and clipped tablet brand corrected in CSS; screenshot fixture no longer overrides real status classes. Re-run is pending.
+- **Goal:** Turn the five-screen daylight reference into an actual UI 2.0 light palette with a reliable accessible toggle; do not modify the playback/source code.
+- **Changes:** CSS day palette scoped to `fy-ui2-light` across desktop, tablet and mobile; in-preview header and Settings theme controls with keyboard, ARIA pressed state, local persistence, preview deep link, browser theme-color. UI2 remains opt-in `?ui2=1`, default dark unless light selected.
+- **CI:** Added deterministic Chromium/WebKit 1440/820/390/320 light-theme check with contrast assertions, keyboard toggle/persistence, reduced-motion, no extra audio and screenshots. All stage-4 tests **pending** at handoff creation.
+- **Privacy:** No chat history, user details, credentials or private source URLs in GitHub docs; screenshot tests block external resources and use clean browser contexts.
+- **Not done:** Human visual approval, physical device performance, provider reliability, main merge and production release.
+- **Next:** Resolve any theme contrast/visual regressions and strict real provider failures, then publish the exact successful/failing CI IDs to main and move to source diagnostics.
 
+## 2026-11-04 · Stage 3 tablet continuity and visual/performance audit
 
-- **Goal:** Close tablet style gap, add objective screenshot and bounded CI rendering metrics; playback logic unchanged.
-- **Changes:** Extend UI2 desktop styling from 741px with 741–980px tablet adjustments; add `scripts/test-ui2-visual-audit.mjs` and GitHub Action artifact capture (synthetic UI, no personal data).
-- **Tests:** New browser/visual tests pending, do not mistake GitHub runner rAF for physical-device performance.
-- **Known blocker:** Preview #41677251142 failed real `稻香` alternate URL; production real Migu test also intermittently fails. Both source issues tracked separately.
-- **Not done:** UI2 light theme, hands-on visual review, real-device FPS/CPU/memory, controlled release.
-- **Next:** Check strict CI and artifact screenshots, fix any tablet clipping, then record verified results and three remaining macro-stages.
+- **Goal:** Make UI 2.0 dark-first design continuous across 741–980px tablet widths and produce actual screenshots with bounded CI rendering measurements.
+- **Code:** draft [PR #116](https://github.com/lxhlw/Only-testing-online-music/pull/116), feature baseline `5e80697b`, later visual fix `5de9af04` (polish CI pending). Main production stays v0.4.33.
+- **Verified:** [preview #41679764057](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41679764057) SUCCESS; [full browser/security #41679773945](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41679773945) SUCCESS; [playlist #41679774062](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41679774062) SUCCESS. Verified 12 Chromium/WebKit viewport samples, no horizontal overflow; CI P95 frame gaps 16.7–17ms, no >50ms gap. Do NOT equate CI sample with real user FPS.
+- **Visual review:** Saved public-safe UI screenshot ZIP as short-retention Actions artifact, manually inspected desktop/tablet/mobile. Corrected clipped tablet nav label and light source/quality badges (legacy runtime removes `global-status` class during status updates; CSS fix supports `status.ready/warn/fail`).
+- **Issue:** Strict real fallback `稻香` failed in separate run #41681089874 due upstream alternative musicUrl unavailable; earlier baseline passed. Do not silence this inconsistency or misattribute to UI CSS.
+- **Current polish status:** [CI #41681958521](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41681958521) pending at checkpoint; inspect result and record later.
+- **Not done:** Optional light theme, physical device performance, upstream provider reliability, human design approval and production release.
+- **Next (3 macro-stages):** (1) light-theme + accessible polish; (2) provider diagnostics and resilience; (3) complete verification, human sign-off and safe release.
 
 ## 2026-11-04 · UI 2.0 phase 2 discovery, library and mobile preview verified
 

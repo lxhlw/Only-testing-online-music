@@ -875,3 +875,403 @@ html.modern-web.fy-ui2 #status.status.fail{
  /* Source-ready duplication wastes space on short phones; warnings remain visible. */
  html.modern-web.fy-ui2 #status.status.ready{display:none!important}
 }
+
+
+/* ================================================================
+   FyMusic UI 2.0 / Phase 4: accessible light mode
+   - Explicitly opt-in (?ui2=1&theme=light), switchable in-page.
+   - Scoped to UI2 class; legacy production UI is unchanged.
+   - No remote fonts, images, filters or continuous transitions.
+   ================================================================ */
+html.modern-web.fy-ui2 .ui2-theme-toggle,
+html.modern-web.fy-ui2 .ui2-theme-settings-toggle{
+  flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+  min-height:40px;min-width:86px;padding:8px 12px;
+  border:1px solid #4f796a;border-radius:13px;
+  color:#cbf4db;background:#21443a;
+  font-size:12px;font-weight:720;white-space:nowrap;line-height:1.2;
+  transition:background-color .17s,border-color .17s,color .17s;
+}
+html.modern-web.fy-ui2 .ui2-theme-toggle:hover,
+html.modern-web.fy-ui2 .ui2-theme-settings-toggle:hover{
+  color:#f8fff9;background:#315d4c;border-color:#74c89e;
+}
+html.modern-web.fy-ui2 .ui2-theme-toggle:focus-visible,
+html.modern-web.fy-ui2 .ui2-theme-settings-toggle:focus-visible{
+  outline:3px solid #86f8bd;outline-offset:3px;
+}
+html.modern-web.fy-ui2 .ui2-theme-settings{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;
+  gap:14px;padding:12px 0 20px;margin:0 0 18px;
+  border-bottom:1px solid var(--stroke);
+}
+html.modern-web.fy-ui2 .ui2-theme-settings strong{font-size:14px;color:var(--text)}
+html.modern-web.fy-ui2 .ui2-theme-settings p{margin:4px 0 0;max-width:530px;color:var(--muted);font-size:12px}
+@media(max-width:740px){
+  html.modern-web.fy-ui2.mobile-shell-ready .ui2-theme-toggle{
+    display:inline-flex!important;min-height:38px;min-width:72px;
+    margin-left:auto;padding:7px 9px;font-size:11px;border-radius:11px;
+  }
+}
+/* Semantic tokens for light UI, with explicit surface overrides for the
+   phase-1/2/3 dark palette that previously used literal colors. */
+html.modern-web.fy-ui2.fy-ui2-light{
+  color-scheme:light!important;
+  --bg:#f3f9f5;--panel:#fffefa;--surface:#ffffff;--surface2:#eaf3ed;
+  --mint:#187e61;--mint2:#268d74;--text:#203f33;--muted:#597568;
+  --stroke:#cddfd2;--secondary:#406d58;--light-mint:#d7eee2;
+  --soft-green:#eff8f1;--shadow:0 16px 36px rgba(31,88,56,.075);
+  background:#f3f9f5!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light body{
+  color-scheme:light!important;background:#f3f9f5!important;color:#203f33!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(#app,.lx-layout,.main-stage,.view-container){
+  background:#f3f9f5!important;color:#203f33!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .main-stage{
+  background:radial-gradient(ellipse 68% 50% at 85% 4%,rgba(103,199,150,.17),transparent 75%),#f3f9f5!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .topbar{
+  background:rgba(255,254,251,.98)!important;color:#203f33!important;
+  border-color:#d4e7d8!important;box-shadow:0 5px 18px rgba(41,109,70,.07)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .brand{color:#1c4d3a!important}
+html.modern-web.fy-ui2.fy-ui2-light .subtitle{color:#587a69!important}
+html.modern-web.fy-ui2.fy-ui2-light .topbar-chip{
+  color:#416c56!important;background:#ecf6ed!important;border-color:#c9e0ce!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .top-source-indicator{
+  color:#1f6749!important;background:#e0f2e5!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .nav-rail{
+  background:linear-gradient(180deg,#e9f4ed,#e4f0e9)!important;
+  color:#325745!important;border-color:#cddfd2!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .nav-brand{color:#447960!important}
+html.modern-web.fy-ui2.fy-ui2-light .nav-item{
+  color:#3a6551!important;background:transparent!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .nav-item:hover{
+  background:#d8eadf!important;color:#1e583e!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .nav-item.active,
+html.modern-web.fy-ui2.fy-ui2-light .nav-item.active:hover{
+  background:#ccebd8!important;color:#175c3b!important;border-color:#65ad83!important;
+  box-shadow:inset 3px 0 #239c68!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .persistent-top-stack,
+html.modern-web.fy-ui2.fy-ui2-light .global-search-bar{
+  background:rgba(247,251,247,.98)!important;border-color:#d6e5d9!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .global-search{
+  background:#fff!important;border-color:#c9e1d2!important;
+  box-shadow:0 7px 24px rgba(52,112,74,.06)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .global-search:focus-within{
+  border-color:#268b62!important;box-shadow:0 0 0 3px rgba(28,143,96,.16)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .global-search input{
+  color:#214535!important;background:transparent!important;caret-color:#168458;
+}
+html.modern-web.fy-ui2.fy-ui2-light .global-search input::placeholder{color:#607e6d!important}
+html.modern-web.fy-ui2.fy-ui2-light .global-search button{
+  color:#fff!important;background:linear-gradient(125deg,#258760,#176f58)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #status.status:not(.warn):not(.fail),
+html.modern-web.fy-ui2.fy-ui2-light .global-status:not(.warn):not(.fail){
+  color:#33654d!important;background:#e4f2e8!important;border-color:#c4dfcc!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #status.status.warn{
+  color:#7b4c13!important;background:#fff3d9!important;border-color:#dfca99!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #status.status.fail{
+  color:#98363c!important;background:#fff1ed!important;border-color:#e7c3bf!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.view-header h1,.results-head strong,.song-title,
+ .search-song-main,.playlist-name,.ranking-title,.library-title,.list-toolbar strong,
+ .playlist-detail-meta h2,.settings-section h2){
+  color:#203f33!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.view-note,.muted,.quality-summary,
+ .results-head,.playlist-meta,.library-meta,.playlist-detail-count,
+ .playlist-detail-creator,.playlist-detail-description,.song-artist){
+  color:#537164!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .panel-kicker{color:#237c56!important}
+html.modern-web.fy-ui2.fy-ui2-light :is(.sub-toolbar,.category-row,
+ .ranking-source-switch,.playlist-service-note,.playlist-detail-toolbar,
+ .playlist-table-heading,.list-toolbar,.library-column-header){
+  background:#eaf5ee!important;border-color:#d4e5d9!important;color:#3c6852!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.view-tab,.my-tab,.channel-button,
+ .platform-pill,.category-pill,.catalog-source,.mobile-channel-toggle){
+  background:#edf7f0!important;border:1px solid #c9e0ce!important;color:#295d42!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.view-tab,.my-tab,.channel-button,
+ .platform-pill,.category-pill,.catalog-source).active{
+  background:#d0eddb!important;border-color:#8abfa0!important;color:#175b3c!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.view-tab,.my-tab,.channel-button,
+ .platform-pill,.category-pill,.catalog-source):hover{background:#daeee2!important}
+html.modern-web.fy-ui2.fy-ui2-light .search-inspiration{
+  background:radial-gradient(ellipse 52% 85% at 12% 5%,rgba(131,215,157,.34),transparent 85%),
+    linear-gradient(125deg,#ecf9f0,#e4f1f0 70%,#f7f9ee)!important;
+  color:#254d3b!important;border:1px solid #c6e1d2!important;
+  box-shadow:0 16px 32px rgba(50,100,62,.065)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .search-inspiration h2{color:#214b36!important}
+html.modern-web.fy-ui2.fy-ui2-light :is(.search-inspiration p,.search-inspiration-foot){color:#597968!important}
+html.modern-web.fy-ui2.fy-ui2-light .search-inspiration-icon{
+  background:#c6ecd7!important;color:#1c7752!important;border-color:#96cbaa!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .search-suggestions button{
+  background:#d5efe0!important;border-color:#8bbba0!important;color:#185d3f!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(#search-results>.search-song-row,
+ .search-row,#ranking-songs>.chart-song-row,.library-row,
+ .playlist-card,.playlist-detail-panel,.playlist-detail-header,
+ #playlist-detail-songs,#playlist-detail-songs>.playlist-song-row){
+  background:#fff!important;border-color:#d9e9de!important;color:#244737!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(#search-results>.search-song-row,
+ .search-row,#ranking-songs>.chart-song-row,.library-row,
+ .playlist-card,#playlist-detail-songs>.playlist-song-row):hover{
+  background:#f0f9f3!important;border-color:#8ec9a8!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.search-song-main,.song-main b,.chart-song-name,
+ .search-row>b,.search-song-row .song-title,.playlist-detail-meta h2,
+ #playlist-detail-songs>.playlist-song-row>.song-main b){color:#204232!important}
+html.modern-web.fy-ui2.fy-ui2-light :is(.song-artist,.song-version-meta,
+ .chart-song-artist,.playlist-song-artist,.playlist-song-album,.playlist-song-duration){
+  color:#5b7768!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .search-row .search-source{
+  background:#d9efe2!important;color:#1b714b!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.search-actions button,
+ .library-actions button,.playlist-card-actions button,.settings-section button.secondary){
+  color:#1f5d43!important;background:#e4f4ea!important;
+  border-color:#b9d9c2!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.search-actions button:first-child,
+ .playlist-card-actions button:first-child,#playlist-play-all-btn){
+  color:#fff!important;background:#207f59!important;border-color:#207f59!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.playlist-name,.playlist-detail-meta h2){color:#214433!important}
+html.modern-web.fy-ui2.fy-ui2-light .playlist-cover{background-color:#dcefe2!important;color:#267253!important}
+html.modern-web.fy-ui2.fy-ui2-light .ranking-layout,
+html.modern-web.fy-ui2.fy-ui2-light .ranking-content,
+html.modern-web.fy-ui2.fy-ui2-light #ranking-songs,
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist .music-library-workspace,
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist .music-library-content,
+html.modern-web.fy-ui2.fy-ui2-light .settings-section{
+  color:#284838!important;background:#fff!important;border-color:#d5e6da!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .ranking-sidebar,
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist .music-library-sidebar{
+  color:#315743!important;background:#eaf4ee!important;border-color:#cddfd2!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.ranking-item,.my-tab){color:#35634d!important}
+html.modern-web.fy-ui2.fy-ui2-light :is(.ranking-item,.my-tab).active{
+  color:#135e3e!important;background:#d4eddf!important;border-color:#89bd9c!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.ranking-item,.my-tab):hover{
+  color:#155c3e!important;background:#e0f1e5!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .settings-section :is(label,small,p){color:#4d725d!important}
+html.modern-web.fy-ui2.fy-ui2-light .settings-section :is(input,select,textarea){
+  background:#fff!important;border-color:#b8d3c3!important;color:#244837!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .player-bar{
+  color:#254b38!important;background:rgba(253,255,251,.975)!important;
+  border-color:#c5dfcf!important;box-shadow:0 16px 37px rgba(40,102,65,.14)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #player-title{color:#214a35!important}
+html.modern-web.fy-ui2.fy-ui2-light #player-artist{color:#536f61!important}
+html.modern-web.fy-ui2.fy-ui2-light .player-icon-btn{
+  color:#32684f!important;background:transparent!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .player-icon-btn:hover{
+  color:#184d34!important;background:#dcefe3!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .player-main-toggle,
+html.modern-web.fy-ui2.fy-ui2-light .player-main-toggle:hover{
+  color:#fff!important;background:#237e57!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .player-time,
+html.modern-web.fy-ui2.fy-ui2-light .player-lyric{color:#47705c!important}
+html.modern-web.fy-ui2.fy-ui2-light #player-seek{background:#a8ceba!important;accent-color:#217c56!important}
+html.modern-web.fy-ui2.fy-ui2-light .player-mode-menu{
+  color:#264b35!important;background:#fff!important;border-color:#b4d6c2!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .player-mode-menu button{
+  color:#255a3e!important;background:#f3f9f4!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .player-mode-menu button.is-selected{
+  background:#d7eee1!important;color:#166542!important;
+}
+/* Immersive panel remains artwork-first but legible over soft light surfaces. */
+html.modern-web.fy-ui2.fy-ui2-light .lyrics-overlay{background:#e5f3e9!important}
+html.modern-web.fy-ui2.fy-ui2-light .lyrics-sheet.now-playing-screen{
+  color:#264a38!important;
+  background:radial-gradient(ellipse 72% 80% at 22% 36%,#d8efe1,transparent 72%),
+    linear-gradient(120deg,#f6faf5,#e7f4ed 60%,#f0f5f2)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .ui2-artwork-ambient.has-art{opacity:.095!important}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-screen .lyrics-sheet-header{
+  background:rgba(251,255,252,.94)!important;border-color:#d2e5d8!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-brand-mark{
+  color:#1b7450!important;background:#cfeddb!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.now-playing-screen h2,
+ .now-playing-screen #lyrics-title,.comments-title-row h3){color:#1c4432!important}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-screen .panel-kicker{color:#297d59!important}
+html.modern-web.fy-ui2.fy-ui2-light :is(#now-playing-artist,.comments-title-row p){color:#4c725b!important}
+html.modern-web.fy-ui2.fy-ui2-light :is(#now-playing-album,#now-playing-platform,
+ .lyrics-status,.comments-status){color:#63816e!important}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-album-column{
+  background:linear-gradient(115deg,rgba(191,229,206,.35),transparent 75%)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-cover-box{
+  background:#dcf0e2!important;box-shadow:0 21px 49px rgba(45,94,63,.18)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-detail-column{
+  background:rgba(250,255,250,.48)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-tabs{border-color:#cbded0!important}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-tab{
+  color:#507361!important;background:transparent!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-tab.active{
+  color:#176341!important;background:#d6efdf!important;border-color:#a1d0b1!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-screen .lyrics-line{
+  color:#637d6f!important;background:transparent;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-screen .lyrics-line.active{
+  color:#145c3c!important;background:linear-gradient(90deg,rgba(94,185,122,.2),transparent 85%)!important;
+  box-shadow:inset 3px 0 #27865b!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-transport{
+  color:#3c6650!important;background:rgba(250,255,251,.94)!important;
+  border-color:#d3e7da!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-transport-buttons button{
+  color:#3b7656!important;background:transparent!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-transport-buttons .detail-main-toggle{
+  color:#fff!important;background:#237e57!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-timeline{color:#507363!important}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-timeline input{accent-color:#237f58!important}
+html.modern-web.fy-ui2.fy-ui2-light #lyrics-close-btn,
+html.modern-web.fy-ui2.fy-ui2-light .lyrics-sheet-actions button{
+  color:#215a3f!important;background:#e6f4eb!important;border-color:#badcca!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.comments-title-row,.now-comment-card,
+ .comments-link-wrap){border-color:#d5e7da!important}
+html.modern-web.fy-ui2.fy-ui2-light .now-comment-card p{color:#355541!important}
+html.modern-web.fy-ui2.fy-ui2-light .now-comment-head strong{color:#297450!important}
+/* Mobile shell originally has !important styles; override only on UI2-light. */
+@media(max-width:740px){
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready body,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .main-stage,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .view-container{
+   background:#f3f9f5!important;color:#234b36!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .topbar{
+   background:#fcfffc!important;border-color:#d6e9dc!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .mobile-page-title{color:#1f4c37!important}
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .mobile-menu-button{
+   color:#225e42!important;background:#e6f3eb!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .global-status,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .persistent-top-stack{
+   background:#f3f9f5!important;color:#496b58!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .nav-rail{
+   background:#eef7f0!important;border-color:#d1e5d5!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .mobile-drawer-heading,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .nav-brand{color:#346d4b!important}
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .mobile-drawer-close{
+   background:#deefe5!important;color:#1c6949!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .mobile-menu-shade{
+   background:rgba(26,62,42,.24)!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .sub-toolbar,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .category-row,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .playlist-service-note{
+   background:#e9f5ed!important;border-color:#c9e1d2!important;color:#416c54!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .search-inspiration{
+   background:radial-gradient(ellipse 80% 70% at 14% 12%,#d1eadc,#eef8f0 82%)!important;
+   color:#244b36!important;border-color:#bedbcb!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready #search-results>.search-song-row,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready #ranking-songs>.chart-song-row,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .library-row.tap-to-play,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .playlist-card{
+   background:#fff!important;border-color:#cfdfd3!important;color:#254937!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready #view-mylist :is(
+   .music-library-workspace,.music-library-content,.music-library-sidebar){
+   background:#f9fdfa!important;border-color:#d3e8d9!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .ranking-layout,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .ranking-sidebar,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .ranking-content,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .ranking-title,
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready #ranking-songs{
+   background:#f8fcf9!important;border-color:#cedfd4!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .player-bar{
+   color:#254e36!important;background:rgba(253,255,251,.98)!important;
+   border-color:#b5d9c3!important;box-shadow:0 12px 27px rgba(56,118,73,.14)!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .now-playing-screen .lyrics-sheet-header{
+   background:#f5fbf7!important;border-color:#d0e7d7!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .lyrics-sheet.now-playing-screen{
+   background:radial-gradient(ellipse 100% 55% at 50% 20%,#cfe9d9,#f6faf5 82%)!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .now-playing-detail-column{
+   background:transparent!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .now-playing-album-column{
+   background:transparent!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .now-playing-screen .lyrics-line.active{
+   color:#145c3c!important;background:#d3efdc!important;
+   box-shadow:none!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready :is(
+  .playlist-name,.library-title,.song-title,.chart-song-name,
+  .search-inspiration h2,.search-song-row .song-title,#lyrics-title){
+   color:#214b35!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready :is(
+  .playlist-meta,.library-meta,.song-artist,.search-inspiration p,
+  .search-inspiration-foot){color:#547466!important}
+}
+html.modern-web.fy-ui2.fy-ui2-light .ui2-theme-toggle,
+html.modern-web.fy-ui2.fy-ui2-light .ui2-theme-settings-toggle{
+  color:#1b6041;background:#e1f1e7;border-color:#a9cdb5;
+}
+html.modern-web.fy-ui2.fy-ui2-light .ui2-theme-toggle:hover,
+html.modern-web.fy-ui2.fy-ui2-light .ui2-theme-settings-toggle:hover{
+  color:#0e4c30;background:#cfe8d9;border-color:#86b99b;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(button,input,select,textarea,a):focus-visible{
+  outline:3px solid #237d58!important;outline-offset:2px!important;
+}
+@media(prefers-reduced-motion:reduce){
+ html.modern-web.fy-ui2 .ui2-theme-toggle,
+ html.modern-web.fy-ui2 .ui2-theme-settings-toggle{
+   transition:none!important;animation:none!important;
+ }
+}

@@ -28,6 +28,7 @@ jobs:
           node scripts/test-ui2-phase2-style.mjs
           node --check scripts/test-ui2-phase2-browser.mjs
           node --check scripts/test-ui2-visual-audit.mjs
+          node --check scripts/test-ui2-theme-browser.mjs
           node scripts/check-handoff-privacy.mjs
           node scripts/test-version.mjs
           node scripts/build-pages-dist.mjs
@@ -47,6 +48,7 @@ jobs:
           node scripts/test-ui2-desktop-browser.mjs
           node scripts/test-ui2-phase2-browser.mjs
           node scripts/test-ui2-visual-audit.mjs
+          node scripts/test-ui2-theme-browser.mjs
           node scripts/test-now-playing-kuwo-browser.mjs
       - name: Deploy isolated Cloudflare Pages preview (never production)
         env:
@@ -74,6 +76,7 @@ jobs:
           node scripts/test-ui2-desktop-browser.mjs
           node scripts/test-ui2-phase2-browser.mjs
           node scripts/test-ui2-visual-audit.mjs
+          node scripts/test-ui2-theme-browser.mjs
       - name: Upload public-safe UI2 screenshots and browser metrics
         if: always()
         uses: actions/upload-artifact@v4
