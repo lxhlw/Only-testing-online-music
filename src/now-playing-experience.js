@@ -101,7 +101,7 @@ function applyMetadata(data,expectedSequence=sequence){
       const cover=safeArt(track.image,track.source);
       navigator.mediaSession.metadata=new MediaMetadata({
         title:track.name||'未知歌曲',artist:track.singer||'',
-        album:track.albumName||'LX Music Web',
+        album:track.albumName||'FyMusic',
         artwork:cover?[{src:cover,sizes:'512x512',type:'image/jpeg'}]:[]
       });
     }
@@ -218,8 +218,33 @@ async function loadComments(force=false,append=false){
   }
   const current=sequence,mode=commentMode,controller=new AbortController();commentAbort=controller;
   try{
-    const r=await fetch('/api/netease-comments?source=wy&id='+encodeURIComponent(id)+
-      '&mode='+mode+'&offset='+offset,{signal:controller.signal});
+    const endpoint='/api/netease-comments?source=wy&id='+encodeURIComponent(id)+
+      '&mode='+mode+'&offset='+offset;
+    let r=await fetch(endpoint,{signal:controller.signal});
+    // Retry a transient 502/503/504 exactly once; do not retry client errors
+    // or let stale, aborted requests overwrite a newer track.
+    if([502,503,504].includes(r.status)&&current===sequence&&
+       !controller.signal.aborted&&isOpen()&&activeTab==='comments'&&mode===commentMode){
+      if(append){
+        if(pageNote)pageNote.textContent='评论暂时不可用，正在重试一次…';
+      }else{
+        commentStatus.textContent='评论服务暂时不可用，正在重试一次…';
+      }
+      await new Promise((resolve,reject)=>{
+        const onAbort=()=>{
+          clearTimeout(timer);
+          reject(new DOMException('Cancelled','AbortError'));
+        };
+        const timer=setTimeout(()=>{
+          controller.signal.removeEventListener('abort',onAbort);
+          resolve();
+        },450);
+        controller.signal.addEventListener('abort',onAbort,{once:true});
+        if(controller.signal.aborted)onAbort();
+      });
+      if(current!==sequence||!isOpen()||mode!==commentMode)return;
+      r=await fetch(endpoint,{signal:controller.signal});
+    }
     if(!r.ok)throw new Error('Comments service unavailable');
     const data=await r.json();
     if(current!==sequence||!isOpen()||activeTab!=='comments'||commentMode!==mode)return;
@@ -231,7 +256,7 @@ async function loadComments(force=false,append=false){
       if(pageNote)pageNote.textContent='加载失败 · 稍后继续向下滑动重试';
       commentStatus.textContent='评论下一页暂时不可用';
     }else{
-      hideComments('平台暂未返回'+(mode==='hot'?'热门':'最新')+'评论，可以刷新或前往原平台查看');
+      hideComments('评论服务暂时不可用，已重试一次；可点击刷新或前往原平台查看');
       $('comments-official-link').href='https://music.163.com/#/song?id='+encodeURIComponent(id);
       $('comments-link-wrap').hidden=false;
     }
