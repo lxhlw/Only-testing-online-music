@@ -21,6 +21,15 @@
 | UI 2.0 development | Phases 1–3 implemented on draft PR #116; stage 3 baseline verified in isolated preview, polish retest pending; NOT production |
 | Next execution priority | Complete phase 3 polish retest, then accessible UI2 light theme and real-device review; separately diagnose upstream source instability |
 
+### Stage 4 WIP: optional light theme and accessibility (2026-11-04)
+
+- **Branch / release boundary:** Draft PR #116 `feature/fymusic-ui2-desktop-preview-20261104`, merged with main handoff parent to avoid stale docs. Official production remains v0.4.33 and no UI 2.0 code is released.
+- **Implemented, testing pending:** scoped UI 2.0 daylight palette for desktop/tablet/mobile, search/song/playlist/library/settings and immersive player. In-preview theme toggle appears in header and settings, supports keyboard/ARIA press state, remembers preference, accepts `?ui2=1&theme=light` deep links, and updates browser theme color. It does **not** call audio APIs or music source resolvers.
+- **Testing added:** Chromium/WebKit x 1440/820/390/320px light-surface + heading WCAG contrast checks, no overflow, one audio node, Enter-key toggle, settings-to-header synchronization, persisted mode after reload, reduced-motion and no added controls on legacy URL. Preview workflow includes light snapshots as short-retention CI artifact.
+- **Current evidence:** New stage-4 CI **PENDING**, do not claim it is verified or released. Previous stage-3 full browser/security and playlists passed. Last stage-3 preview workflow #41681958521 was still in progress on last read; refresh it before final acceptance, including the strict real `稻香` recovery gate.
+- **Outstanding:** physical-device FPS/CPU/memory measurement, keyboard/screen-reader manual inspection, independent upstream Kuwo/Migu reliability and explicit human visual sign-off.
+- **Next:** Run and fix stage-4 preview CI, review screenshots and contrast on both themes, reconcile provider failures, publish accurate checkpoint to main. Remaining stages after stage 4: source reliability diagnosis and final audited production release.
+
 ### Stage 3: tablet continuity and visual/performance evidence (2026-11-04)
 
 - **Scope:** [Draft PR #116](https://github.com/lxhlw/Only-testing-online-music/pull/116), isolated UI2 `?ui2=1` preview. Production stays v0.4.33; no main UI merge.

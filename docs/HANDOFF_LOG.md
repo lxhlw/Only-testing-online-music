@@ -5,6 +5,15 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Stage 4 optional light theme and accessibility tests (in progress)
+
+- **Goal:** Turn the five-screen daylight reference into an actual UI 2.0 light palette with a reliable accessible toggle; do not modify the playback/source code.
+- **Changes:** CSS day palette scoped to `fy-ui2-light` across desktop, tablet and mobile; in-preview header and Settings theme controls with keyboard, ARIA pressed state, local persistence, preview deep link, browser theme-color. UI2 remains opt-in `?ui2=1`, default dark unless light selected.
+- **CI:** Added deterministic Chromium/WebKit 1440/820/390/320 light-theme check with contrast assertions, keyboard toggle/persistence, reduced-motion, no extra audio and screenshots. All stage-4 tests **pending** at handoff creation.
+- **Privacy:** No chat history, user details, credentials or private source URLs in GitHub docs; screenshot tests block external resources and use clean browser contexts.
+- **Not done:** Human visual approval, physical device performance, provider reliability, main merge and production release.
+- **Next:** Resolve any theme contrast/visual regressions and strict real provider failures, then publish the exact successful/failing CI IDs to main and move to source diagnostics.
+
 ## 2026-11-04 · Stage 3 tablet continuity and visual/performance audit
 
 - **Goal:** Make UI 2.0 dark-first design continuous across 741–980px tablet widths and produce actual screenshots with bounded CI rendering measurements.
