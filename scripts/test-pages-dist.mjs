@@ -14,7 +14,7 @@ async function visit(dir,prefix=''){
 await visit(dist);
 paths.sort();
 assert.ok(paths.length>=20&&paths.length<=32,'Unexpected build size: '+paths.length);
-for(const name of ['index.html','404.html','version.json','vendor/forge.min.js'])
+for(const name of ['index.html','404.html','_routes.json','version.json','vendor/forge.min.js'])
  assert.ok(paths.includes(name),'Required static asset absent: '+name);
 assert.equal(JSON.parse(await readFile(join(dist,'version.json'),'utf8')).version,
  JSON.parse(await readFile(join(root,'version.json'),'utf8')).version);
@@ -25,13 +25,21 @@ const forbidden=['README.md','package.json','.github/workflows/verify-and-deploy
  'src/source-transpiler.js','src/promise-lite.js'];
 for(const name of forbidden)assert.ok(!paths.includes(name),'Repository file shipped: '+name);
 assert.ok(paths.every(p=>!/(^|\/)(?:\.git|\.github|scripts|android-companion|functions|node_modules)(\/|$)/.test(p)));
+const routes=JSON.parse(await readFile(join(dist,'_routes.json'),'utf8'));
+assert.equal(routes.version,1);
+assert.deepEqual(routes.exclude,[]);
+for(const p of ['/api/*','/README.md','/package.json','/scripts/*',
+ '/android-companion/*','/.github/*','/node_modules/*','/.git/*'])
+ assert.ok(routes.include.includes(p),'Missing protected Pages Function route: '+p);
+for(const p of ['/*','/src/*','/vendor/*','/index.html','/modern.css','/'])
+ assert.ok(!routes.include.includes(p),'Unwanted Function invocation on runtime asset: '+p);
 const html=await readFile(join(dist,'index.html'),'utf8');
 for(const m of html.matchAll(/<(?:script|link)\b[^>]*\b(?:src|href)=["']([^"']+)["']/gi)){
  const url=m[1].split(/[?#]/)[0];
  if(!url||url.startsWith('http:')||url.startsWith('https:')||url.startsWith('//'))continue;
  assert.ok(paths.includes(url),'Broken index asset reference: '+url);
 }
-for(const name of paths.filter(p=>p!=='404.html')){
+for(const name of paths.filter(p=>!['404.html','_routes.json'].includes(p))){
  const a=await readFile(join(root,name)),b=await readFile(join(dist,name));
  assert.ok(a.equals(b),'Unexpected static content rewrite: '+name);
 }

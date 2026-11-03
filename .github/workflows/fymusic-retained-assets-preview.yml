@@ -1,0 +1,64 @@
+name: FyMusic · Retained Asset Edge Guard Preview (nonproduction)
+on:
+  push:
+    branches: [fix/fymusic-pages-retained-asset-guard-20261103]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: fymusic-retained-assets-preview-20261103
+  cancel-in-progress: true
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build, unit test, and install browser
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/fix/fymusic-pages-retained-asset-guard-20261103
+          npm install --no-audit --no-fund
+          node scripts/build-pages-dist.mjs
+          node scripts/test-pages-dist.mjs
+          node scripts/test-pages-route-guard.mjs
+          node --check functions/_middleware.js
+          npx playwright install --with-deps chromium
+      - name: Deploy isolated preview with synthetic retained assets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          # Synthetic, public-safe fixtures simulate OLD assets still existing at the CDN.
+          mkdir -p dist/scripts dist/android-companion dist/.github/workflows
+          for path in README.md package.json scripts/test-modern-web-browser.mjs android-companion/README.md .github/workflows/verify-and-deploy.yml; do
+            printf 'FYMUSIC_PUBLIC_SAFE_RETAINED_ASSET_SENTINEL\n' > "dist/$path"
+          done
+          npx wrangler pages deploy dist --project-name only-testing-online-music --branch retained-assets-test --commit-hash "$GITHUB_SHA" | tee /tmp/retained-preview.log
+          url=$(grep -Eo 'https://[0-9a-f]{8}\.only-testing-online-music\.pages\.dev' /tmp/retained-preview.log | head -n1)
+          test -n "$url"
+          test "$url" != https://only-testing-online-music.pages.dev
+          echo "TEST_BASE_URL=$url" >> "$GITHUB_ENV"
+          echo "FYMUSIC_RETAINED_ASSET_PREVIEW_URL=$url"
+      - name: Require protected 404 even when obsolete files physically exist
+        run: |
+          set -euo pipefail
+          for path in README.md package.json scripts/test-modern-web-browser.mjs android-companion/README.md .github/workflows/verify-and-deploy.yml; do
+            code=$(curl -sSL --max-time 20 -o /tmp/retained-asset-body -w '%{http_code}' "$TEST_BASE_URL/$path")
+            test "$code" = 404
+            grep -Fq '404 · Not found' /tmp/retained-asset-body
+            if grep -Fq 'FYMUSIC_PUBLIC_SAFE_RETAINED_ASSET_SENTINEL' /tmp/retained-asset-body; then exit 1; fi
+            echo "BLOCKED $path HTTP $code"
+          done
+          curl -fsSL "$TEST_BASE_URL/version.json" -o /tmp/preview-version.json
+          grep -Fq '"0.4.32"' /tmp/preview-version.json
+          code=$(curl -sSL -o /tmp/retained-proxy -w '%{http_code}' "$TEST_BASE_URL/api/proxy")
+          test "$code" = 400
+      - name: Live Kagou to Kuwo Daoxiang audio, cover, timed lyrics
+        run: node scripts/test-seamless-live-daoxiang-preview.mjs
