@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Stage 5/6 integrated RC, strict real-source release blocker
+
+- **Goal:** Execute source-reliability and UI2 final acceptance together, without premature production promotion.
+- **Changes:** Staged Migu LRC bounded retry and metadata-gated Migu/Kugou→Kuwo recovery with UI2 dark/light desktop/tablet/mobile on isolated RC draft PR #122. CI workflow deploys immutable Cloudflare preview and saves synthetic design screenshots. Source fix PR #121 and UI2 PR #116 remain independent drafts.
+- **Tests:** Integrated RC full browser/audio/security #41691576704 SUCCESS; playlist #41691576698 SUCCESS. Preview #41691565640 passed UI2 Chromium/WebKit screen, theme/a11y, 404 and Migu audio/55 timed lyric acceptance. The strict real Daoxiang KG→KW test FAILED despite direct Kuwo control playing; retry attempt #2 pending. Prior source preview #41690937874 separately recorded Migu and Daoxiang real pass lines but overall cancelled due later branch update.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/122 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41691565640 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41691576704 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41691576698 .
+- **Not done:** Reconcile intermittent provider identity/playback, pass live Daoxiang without reducing strictness, physical-device FPS/memory, real screen-reader/manual visual signoff, release version bump, main merge and production acceptance.
+- **Status:** SAFE RELEASE HOLD — production remains v0.4.33; only docs checkpoint committed on main.
+- **Next action:** Inspect exact rerun status; diagnose candidate metadata/recovery ordering; rerun both real-provider checks and full CI. Only after acceptance and device/user signoff merge and verify production with rollback.
+
 ## 2026-11-04 · Stage 5A live preview: LRC restored in one sample, audio progress blocked
 
 - **Goal:** Evaluate a live, isolated Cloudflare Preview rather than count deterministic mocks as provider success.

@@ -17,6 +17,15 @@
 | Production baseline regression | Latest main #41686835515 FAILED real Migu lyric HTTP 502; #41685131793 SUCCESS; older #41682617224 also FAILED same route |
 | Remaining macro-stages | 2: (5) provider reliability; (6) human-approved final release |
 
+### 2026-11-04 — Stage 5/6 integrated RC tested, production release blocked
+
+- **Integrated candidate:** DRAFT [PR #122](https://github.com/lxhlw/Only-testing-online-music/pull/122), `release/fymusic-stage5-stage6-rc-20261104`, code SHA `deb461c5d553c5141bce150a63bcc56eeb029d73`. It combines UI 2.0 dark/light desktop/tablet/phone preview with Migu lyric retry and bounded same-song Kugou/Migu recovery. `main` still uses v0.4.33 without UI2 integration.
+- **Deterministic CI PASS:** [full browser/audio/security #41691576704](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41691576704) and [playlist #41691576698](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41691576698) passed on exact RC SHA. Preview browser checks in [#41691565640](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41691565640) checked Chromium/WebKit responsive 1440/980/820/741/390/320, theme persistence, keyboard/reduced motion, one audio node, security 404, stable CI frame-interval samples and published synthetic screenshots (artifact 13256519117). CI metrics are NOT device FPS/CPU/memory.
+- **Real-source evidence:** A prior [Migu+Daoxiang isolated preview #41690937874](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41690937874) logged **real Migu Sun Yanzi audio progress, artwork, pause/resume and 55 timed lyric lines** and **real Daoxiang KG→KW playback with artwork and 48 timed lyrics**, but its overall run was cancelled after those pass lines due branch updates. The first integrated RC preview #41691565640 **FAILED** strict real Daoxiang fallback; its **real Migu media + 55 timed LRC gate PASSED** in the same preview. Direct Kuwo control subsequently played successfully, while the original selected KG fallback did not. Repeat strict run attempt #2 was started; do not assume final success before checking it.
+- **Do not weaken song matching or test media progress:** The original Kugou selection was 198 seconds, whereas the direct playable Kuwo control selected a different recorded length. Song title/artist alone cannot justify blind substitution. Diagnose candidate metadata and retry order with sanitized source/quality/status counts, not raw signed URLs.
+- **Unresolved release gates:** PR #116 remains draft and conflicts with main; PR #122 is mergeable but still draft. Real Daoxiang acceptance was failing at first RC attempt, real physical-device FPS/memory and manual screen-reader/visual signoff are not available. Hence **NO production merge**, no UI2 default-enable, no claim that both macro-stages are fully completed. Keep main v0.4.33 production rollback baseline.
+- **Next:** Recheck PR #122 rerun #41691565640 attempt 2. If Daoxiang fails, fix candidate identification/recovery without false equivalence or relaxing tests, repeat live Migu/Daoxiang + all CI. Then require real-device a11y/performance and user design acceptance; bump version/cache assets, merge controlled release, verify Cloudflare production and retain a rollback SHA.
+
 ### Stage 5A: source-reliability patch committed on isolated branch (2026-11-04)
 
 - **Development branch only:** `fix/fymusic-migu-lrc-bounded-retry-20261104` based on main `4527495d0b50`. Official production remains v0.4.33; UI2 PR #116 stays draft/unmerged.
@@ -42,7 +51,7 @@
 4. Previous Daoxiang live recovery sometimes succeeds and sometimes fails when upstream alternative musicUrl resolution is unavailable (for example preview #41681089874 failed). Preserve strict real playback-progress acceptance and report transient upstream failure explicitly.
 5. Main release workflow #41685131793 was still running when checked; re-read its final status at the start of the next operation instead of treating IN PROGRESS as success.
 
-## Next goal — Stage 5: source reliability diagnostics (Stage 5A pending CI)
+## Next goal — Stage 5/6: close real-source blocker and finish release gates
 
 1. Re-read main and PR heads plus latest Actions. Locate the real Migu 502 response boundary (provider endpoint, edge relay or application parsing), classify without recording raw signed media URLs, tokens, cookies, personal headers or response payloads.
 2. Add bounded, observable retry and/or correctly matched cross-platform fallback ONLY when supported by source semantics. Do not misrepresent a resolved URL as playing; require media progress and keep existing lyric/artwork consistency.
