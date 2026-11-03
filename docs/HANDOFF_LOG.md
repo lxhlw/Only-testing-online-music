@@ -5,6 +5,17 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Stage 3 tablet continuity and visual/performance audit
+
+- **Goal:** Make UI 2.0 dark-first design continuous across 741–980px tablet widths and produce actual screenshots with bounded CI rendering measurements.
+- **Code:** draft [PR #116](https://github.com/lxhlw/Only-testing-online-music/pull/116), feature baseline `5e80697b`, later visual fix `5de9af04` (polish CI pending). Main production stays v0.4.33.
+- **Verified:** [preview #41679764057](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41679764057) SUCCESS; [full browser/security #41679773945](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41679773945) SUCCESS; [playlist #41679774062](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41679774062) SUCCESS. Verified 12 Chromium/WebKit viewport samples, no horizontal overflow; CI P95 frame gaps 16.7–17ms, no >50ms gap. Do NOT equate CI sample with real user FPS.
+- **Visual review:** Saved public-safe UI screenshot ZIP as short-retention Actions artifact, manually inspected desktop/tablet/mobile. Corrected clipped tablet nav label and light source/quality badges (legacy runtime removes `global-status` class during status updates; CSS fix supports `status.ready/warn/fail`).
+- **Issue:** Strict real fallback `稻香` failed in separate run #41681089874 due upstream alternative musicUrl unavailable; earlier baseline passed. Do not silence this inconsistency or misattribute to UI CSS.
+- **Current polish status:** [CI #41681958521](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41681958521) pending at checkpoint; inspect result and record later.
+- **Not done:** Optional light theme, physical device performance, upstream provider reliability, human design approval and production release.
+- **Next (3 macro-stages):** (1) light-theme + accessible polish; (2) provider diagnostics and resilience; (3) complete verification, human sign-off and safe release.
+
 ## 2026-11-04 · UI 2.0 phase 2 discovery, library and mobile preview verified
 
 - **Goal:** Continue the tested phase 1 design to search/songs, playlists, ranking, library/settings and responsive phone listening experience without replacing music data or player code.
