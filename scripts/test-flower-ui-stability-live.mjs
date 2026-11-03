@@ -15,7 +15,7 @@ const trials=[];
 async function testChannel(channel,round){
   const result={channel,round,phase:'START',flowerActive:false,
     channelSelected:false,matchingSong:false,rowClicked:false,
-    originalFlowerRoute:false,started:false,durationSeconds:null,
+    sanitizedFlowerResolver:false,started:false,durationSeconds:null,
     initialProgressSeconds:0,seekEnabled:false,mouseSeekReached:false,
     afterSeekProgressSeconds:0,postDeadlinePlaying:null,
     postDeadlineProgressSeconds:null,audioError:false,verified:false};
@@ -86,19 +86,20 @@ async function testChannel(channel,round){
       const a=document.getElementById('audio');
       const requests=(window.LXSourceManager.getActive().runtime
         .__debugRequests||[]).slice(requestStart);
-      const sourceHit=requests.some(r=>{
-        try{
-          const u=new URL(r.url);
-          return u.protocol==='http:'&&u.hostname==='97.64.37.235'&&
-            u.pathname.startsWith('/flower/v1/url/'+channel+'/');
-        }catch{return false;}
-      });
+      // v0.4.27 deliberately redacts music URLs, IDs and headers from
+      // __debugRequests. Require its sanitized resolver category and
+      // proxied transport instead of relying on a private origin URL.
+      const sourceHit=requests.some(r=>
+        r?.category==='flower-resolver'&&r.proxied===true&&
+        !Object.prototype.hasOwnProperty.call(r,'url')&&
+        !Object.prototype.hasOwnProperty.call(r,'proxyUrl')&&
+        !Object.prototype.hasOwnProperty.call(r,'headers'));
       return {sourceHit,time:Number(a?.currentTime)||0,
         duration:Number(a?.duration)||null,paused:!!a?.paused,
         readyState:Number(a?.readyState)||0,error:!!a?.error,
         sliderEnabled:!document.getElementById('player-seek')?.disabled};
     },{requestStart,channel});
-    result.originalFlowerRoute=state.sourceHit;
+    result.sanitizedFlowerResolver=state.sourceHit;
     result.durationSeconds=state.duration===null?null:
       Math.round(state.duration*10)/10;
     result.started=!state.paused&&state.readyState>=2&&state.time>.9;
@@ -164,7 +165,7 @@ async function testChannel(channel,round){
       result.audioError ||=late.error;
     }
     result.verified=result.flowerActive&&result.channelSelected&&
-      result.matchingSong&&result.rowClicked&&result.originalFlowerRoute&&
+      result.matchingSong&&result.rowClicked&&result.sanitizedFlowerResolver&&
       result.started&&result.seekEnabled&&result.mouseSeekReached&&
       result.durationSeconds>=300&&result.durationSeconds<=650&&
       result.initialProgressSeconds>=.7&&
