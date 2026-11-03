@@ -294,6 +294,7 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
               ARTIST: '周杰伦',
               ALBUM: '叶惠美',
               ALBUMID: 'MUSIC_123',
+              web_albumpic_short: '120/7/83/4087363627.jpg',
               DURATION: '269',
               N_MINFO: 'level:lossless,bitrate:2000,format:flac,size:30.2M;level:standard,bitrate:128,format:mp3,size:4.2M'
             }
@@ -319,6 +320,8 @@ function createHarness(activeSources, requestHandler, xhrResponses) {
   assert.equal(result.list[0].songmid, '62355680')
   assert.equal(result.list[0].name, '晴天')
   assert.equal(result.list[0].singer, '周杰伦')
+  assert.equal(result.list[0].image,
+    'https://img3.kuwo.cn/star/albumcover/300/7/83/4087363627.jpg')
   assert.equal(result.list[0].interval, '04:29')
   assert.equal(result.list[0].types.map(item => item.type).join('|'), '128k|flac')
 

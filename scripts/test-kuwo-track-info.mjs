@@ -8,7 +8,7 @@ let called='';
 try{
  globalThis.fetch=async (url,init)=>{
   called=String(url);
-  assert.equal(init.redirect,'error');
+  assert.equal(init.redirect,'manual');
   return new Response(JSON.stringify({data:{
    songinfo:{musicId:'440613',songName:'稻香',artist:'周杰伦',
     album:'魔杰座',pic:'http://img1.kuwo.cn/star/albumcover/500/test.jpg'},
