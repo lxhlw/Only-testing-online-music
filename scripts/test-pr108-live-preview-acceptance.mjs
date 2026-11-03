@@ -112,17 +112,15 @@ try {
 
    await first.locator('.song-action-queue').first().click();
    await first.locator('.song-action-favorite').first().click();
-   const second=results.filter({hasNot:page.locator('[data-never-matches]')}).nth(1);
+   const second=results.nth(1);
    const secondArtist=(await second.locator('.song-artist').innerText()).trim();
-   await second.locator('.song-action-queue').first().click();
    state.secondArtist=secondArtist;
    let currentFavorite=await page.evaluate(()=>
     window.LXMusicLibrary.snapshot().favorites.some(m=>
       m.name.includes('开始懂了')&&m.singer.includes('孙燕姿')));
    assert.ok(currentFavorite,'Favorite did not update');
-   const queue=await page.evaluate(()=>window.LXMusicLibrary.snapshot().queue);
-   assert.ok(queue.length>=2,'Queue did not save both songs');
-   state.queueCount=queue.length;
+   assert.ok((await page.evaluate(()=>window.LXMusicLibrary.snapshot().queue.length))>=1,
+     'The selected song is not queued');
 
    await first.locator('.song-action-play').click();
    await page.waitForFunction(()=>{const a=document.querySelector('#audio');
@@ -174,6 +172,18 @@ try {
     status:await page.locator('#lyrics-status').innerText()};
    await page.screenshot({path:dir+'/round'+round+'-real-lyrics.png',animations:'disabled'});
    await page.locator('#lyrics-close-btn').click();
+
+   // The search Play action itself re-adds the selected track to the
+   // end of the playback queue; append the next track AFTER playback starts
+   // so the test exercises a normal [current,next] queue, not [next,current].
+   await second.locator('.song-action-queue').first().click();
+   const queue=await page.evaluate(()=>window.LXMusicLibrary.snapshot().queue.map(
+     x=>({name:x.name,singer:x.singer})));
+   state.queueOrder=queue;
+   assert.ok(queue.length>=2&&queue[0].singer.includes('孙燕姿')&&
+     queue[1].singer===secondArtist,
+     'Cannot test Next because queue is not ordered as [current, next]');
+   state.queueCount=queue.length;
 
    // Sequential navigation tests actual Next/Previous controls, not synthetic
    // replacement of player metadata. Source availability for the second
