@@ -88,6 +88,7 @@ try {
     const btn=document.createElement('button');
     btn.id='policy-fixture-play';
     btn.textContent='Test playback';
+    btn.style.cssText='position:fixed;top:10px;left:15px;z-index:999999;pointer-events:auto';
     btn.onclick=()=>window.OnlyTestingMusicApp.playMusic({
       source:'kg',id:'fixture-kg',songmid:'fixture-kg',
       name:'稻香',singer:'周杰伦',interval:'03:43',albumName:'魔杰座'
