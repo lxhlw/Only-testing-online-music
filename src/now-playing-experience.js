@@ -110,15 +110,18 @@ function applyMetadata(data,expectedSequence=sequence){
 async function resolveCover(current,key){
   const supplied=safeArt(current.image,current.source);
   if(supplied){setCover(supplied);return;}
-  if(current.source!=='wy'||!/^\d{1,20}$/.test(current.id))return;
+  if(!['wy','kw'].includes(current.source)||!/^\d{1,20}$/.test(current.id))return;
   if(artCache.has(key)){applyMetadata(artCache.get(key),current.sequence);return;}
   metaAbort?.abort();
   const controller=new AbortController();metaAbort=controller;
   try{
-    const r=await fetch('/api/netease-song-meta?id='+encodeURIComponent(current.id),{signal:controller.signal});
+    const api=current.source==='kw'?'/api/kuwo-song-meta?id=':
+      '/api/netease-song-meta?id=';
+    const r=await fetch(api+encodeURIComponent(current.id),{signal:controller.signal});
     if(!r.ok)throw Error('metadata unavailable');
     const data=await r.json();
     if(!data||String(data.id)!==current.id||
+       (current.source==='kw'&&data.source!=='kw')||
        !safeArt(data.image,current.source))return;
     if(sequence!==current.sequence)return;
     // Only the allowlisted metadata below is cached or applied. Discard any
@@ -323,10 +326,15 @@ function updateTransport(){
   $('detail-current-time').textContent=formatSeconds(shownSeconds);
   $('detail-duration').textContent=formatSeconds(valid?audio.duration:0);
   const playing=!audio.paused&&!audio.ended;
-  $('detail-toggle-btn').setAttribute('aria-label',playing?'暂停':'播放');
-  $('detail-toggle-btn').title=playing?'暂停':'播放';
-  $('detail-toggle-btn').querySelector('.detail-play-icon').hidden=playing;
-  $('detail-toggle-btn').querySelector('.detail-pause-icon').hidden=!playing;
+  const toggle=$('detail-toggle-btn');
+  // Keep native state, button state and both icons synchronized in the same
+  // media event. Class-driven display is explicit even for SVG in WebKit.
+  toggle.classList.toggle('is-playing',playing);
+  toggle.dataset.playbackState=playing?'playing':'paused';
+  toggle.setAttribute('aria-label',playing?'暂停':'播放');
+  toggle.title=playing?'暂停':'播放';
+  toggle.querySelector('.detail-play-icon').hidden=playing;
+  toggle.querySelector('.detail-pause-icon').hidden=!playing;
 }
 function centerActiveLyric(instant=false){
   if(!isOpen()||activeTab!=='lyrics'||!lyricScroll)return;
