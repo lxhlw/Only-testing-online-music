@@ -109,7 +109,10 @@ try {
     await resume.click();
     await page.waitForFunction(()=>document.getElementById('audio').currentTime>=0.4,
       null,{timeout:18000});
-    assert.ok(!(await page.locator('#status').innerText()).includes('浏览器当前限制'));
+    // CurrentTime may update between native media events; wait for the UI's
+    // confirmed-playing state instead of reading an intermediate status.
+    await page.waitForFunction(()=>document.getElementById('status')?.textContent?.includes('正在播放'),
+      null,{timeout:8000});
   }else{
     await page.waitForTimeout(200);
     assert.equal(await page.locator('#resume-audio-on-gesture').count(),0,
