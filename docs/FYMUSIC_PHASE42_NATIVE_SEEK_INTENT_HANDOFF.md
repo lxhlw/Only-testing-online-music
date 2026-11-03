@@ -41,12 +41,23 @@ Issue：https://github.com/lxhlw/Only-testing-online-music/issues/105
 - Run https://github.com/lxhlw/Only-testing-online-music/actions/runs/41560895265 （最新收紧的 setter+最终落点模式）**completed/success，24/24**，Firefox 专项通过、无断言失败。
 - 最新代码 SHA 4189fdf8fad5af4d69ac0a2a70749a01ffc96165 在 CI 中由独立 checkout 检查执行。
 
-## 四、仍需独立确认的完整回归
+## 四、独立完整回归最终结果（2026-11-03 核验）
 
 最新本地全套 CI：https://github.com/lxhlw/Only-testing-online-music/actions/runs/41560895228
-最新独立 Cloudflare Edge Preview 全套 CI：https://github.com/lxhlw/Only-testing-online-music/actions/runs/41560895324
+- completed/success；53 个步骤中 52 个 success、1 个诊断步骤按预期 skipped。
+- Phase31–42 已覆盖的本地播放、跨浏览器 OS seek、UI、资源与质量回归通过。
 
-本文件初次提交时两者仍在执行，**未验证前不得宣称完整双 CI 成功**。必须分别记录最终 run status/conclusion、成功步骤数、Preview 地址、是否所有 Phase31–42 回归通过，并更新此文档。不要因为专项 24/24 通过而忽略整套回归。
+最新独立 Cloudflare Edge Preview 全套 CI：https://github.com/lxhlw/Only-testing-online-music/actions/runs/41560895324
+- completed/success；51/51 个步骤全部 success。
+- 独立非生产 Preview 部署、安全门禁、真实音频和互动回归通过。
+
+专项严格 24-session WebKit + Firefox 验证：https://github.com/lxhlw/Only-testing-online-music/actions/runs/41560895265
+- completed/success，WebKit 24/24；Firefox 专项通过。
+
+三项 run 都以代码 SHA 4189fdf8fad5af4d69ac0a2a70749a01ffc96165 执行。
+截至本次交接，Phase42 达到完成条件，Issue #105 可标记修复完成。
+以上属于隔离原创媒体与 CI 浏览器证据，不等价于真实第三方音源或用户物理设备的全场景验收。
+生产 main 始终为 c9a496ab580fb54775721b93a3944800bcaefc44，未部署。
 
 ## 五、交接与剩余阶段
 
@@ -54,6 +65,6 @@ Issue：https://github.com/lxhlw/Only-testing-online-music/issues/105
 - Phase43：综合跨浏览器长会话性能、流畅动画、原生播放队列、源/音质归属和稳定性验收；真实设备/三方授权来源的能力边界需明确，不自动重启此前暂缓的酷狗专项。
 - Phase44：正式版本和开发分支差异复核、部署前安全检查、验收报告与推荐；生产部署只有用户明确授权才可操作。
 
-Phase42 即使专项通过，也须先核验本地和 Edge 全回归结果，才可标记完成。如仍有失败，先定位原因再决定是否追加阶段。
+Phase42 的本地、Edge 和 WebKit 专项已全部验收通过；Phase43 综合验收工作流另行执行。
 
 下一次用户说“下一步”，优先读取本文和当前 GitHub Actions 的最终状态，不盲目重复 Phase31–41 已验证项目。
