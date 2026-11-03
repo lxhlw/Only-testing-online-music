@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Stage 4 accessible UI2 light theme — initial checkpoint (tests pending)
+
+- **Goal:** Build a high-contrast daylight alternative with no change to music playback.
+- **Code:** [Draft PR #116](https://github.com/lxhlw/Only-testing-online-music/pull/116) feature SHA `d1f6f58c`. Theme preview query, topbar/Settings controls, ARIA/keyboard/persistence, desktop/tablet/phone and album/lyric light surfaces; no new audio nodes.
+- **Tests:** Added Chromium+WebKit light test at 1440, 820, 390 and 320px (contrast, accessible controls, preferences, reduced motion, no overflow). Full stage-4 preview and browser CI **PENDING**; only privacy and playlist currently SUCCESS. CI screenshots are sanitized.
+- **Stage 3 closure:** Last visual polish workflow #41681958521 is now SUCCESS at `5de9af04`, not indefinitely in progress as old checkpoint said.
+- **New finding:** Production main workflow #41682617224 FAILED; inspect detailed job step before diagnosing. Do not weaken real media tests to make results green.
+- **Not done:** Visual/physical-device approval, full screen-reader inspection, external source reliability work, production merge.
+- **Next:** Finish stage4 CI and review screenshots, publish verified outcome, then two remaining macro-stages: source reliability; final accepted production rollout.
+
 ## 2026-11-04 · Stage 3 tablet continuity and visual/performance audit
 
 - **Goal:** Make UI 2.0 dark-first design continuous across 741–980px tablet widths and produce actual screenshots with bounded CI rendering measurements.
