@@ -29,7 +29,7 @@ for(const width of [1440,390]){
  if(width===390){
   await page.locator('.mobile-menu-button').click();
   await save(width+'-nav-drawer');
-  await page.locator('.mobile-menu-button').click();
+  await page.locator('.mobile-drawer-close').click();
  }
  await go('playlist');
  await page.waitForTimeout(1250);
