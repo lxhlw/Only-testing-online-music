@@ -1,0 +1,103 @@
+name: FyMusic · Formal Production UI Scenario Audit (read only)
+on:
+  push:
+    branches: [audit/fymusic-production-ui-matrix-20261103]
+    paths:
+      - '.github/workflows/fymusic-production-ui-scenario-audit.yml'
+      - 'scripts/audit-production-ui-matrix.mjs'
+      - 'scripts/audit-production-ui-features.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fymusic-production-ui-audit-20261103
+  cancel-in-progress: true
+
+jobs:
+  matrix:
+    if: github.ref == 'refs/heads/audit/fymusic-production-ui-matrix-20261103'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      PROD_URL: https://only-testing-online-music.pages.dev
+      EXPECTED_SHA: 586f592dc994b0868886bcb42b1213c3580f278b
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm production stays pinned and version is current
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/audit/fymusic-production-ui-matrix-20261103'
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$EXPECTED_SHA"
+          curl -fsSL "$PROD_URL/version.json" -o /tmp/fymusic-ui-version.json
+          node -e "const assert=require('node:assert/strict');const v=require('/tmp/fymusic-ui-version.json');assert.equal(v.version,'0.4.27');assert.equal(v.name,'FyMusic');"
+          node --check scripts/audit-production-ui-matrix.mjs
+      - name: Install browser inspection tools in ephemeral runner
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium firefox webkit
+      - name: Real browser matrix with visual screenshots of all navigational states
+        id: browser_matrix
+        run: node scripts/audit-production-ui-matrix.mjs
+      - name: Preserve screenshot evidence and machine-readable findings even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fymusic-v0427-production-ui-visual-audit
+          path: audit-ui-evidence/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Verify main remained unchanged
+        if: always()
+        run: |
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$EXPECTED_SHA"
+          echo FYMUSIC_UI_AUDIT_PRODUCTION_UNCHANGED
+
+  functional:
+    if: github.ref == 'refs/heads/audit/fymusic-production-ui-matrix-20261103'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      TEST_BASE_URL: https://only-testing-online-music.pages.dev
+      EXPECTED_SHA: 586f592dc994b0868886bcb42b1213c3580f278b
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify isolated read-only remote target
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$EXPECTED_SHA"
+          test "$TEST_BASE_URL" = 'https://only-testing-online-music.pages.dev'
+      - name: Install real browser tools
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Functional UI state, local-only persistence, search, rankings, modes, modal and offline audits
+        run: node scripts/audit-production-ui-features.mjs
+      - name: Run existing deterministic browser regression on actual formal production website
+        run: |
+          set -euo pipefail
+          node scripts/test-player-controls-browser.mjs
+          node scripts/test-playlist-infinite-browser.mjs
+          node scripts/test-mobile-interaction-qa-browser.mjs
+          node scripts/test-web-source-selection-browser.mjs
+          echo FYMUSIC_PRODUCTION_FUNCTIONAL_REGRESSION_PASS
+      - name: Upload feature scenarios even if regressions fail
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fymusic-v0427-production-ui-functional-audit
+          path: audit-ui-features/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Verify main unchanged
+        if: always()
+        run: |
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$EXPECTED_SHA"
+          echo FYMUSIC_UI_FUNCTIONAL_AUDIT_PRODUCTION_UNCHANGED
