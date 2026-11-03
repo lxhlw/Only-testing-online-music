@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 const base=process.env.TEST_BASE_URL?.replace(/\/+$/,'')||'';
 const target=new URL(base);
 assert.equal(target.protocol,'https:');
-assert.ok(/^[a-f0-9]{8}\.only-testing-online-music\.pages\.dev$/.test(target.hostname));
-assert.notEqual(target.hostname,'only-testing-online-music.pages.dev');
+const production=target.hostname==='only-testing-online-music.pages.dev';
+assert.ok(production?process.env.FYMUSIC_ACCEPT_PRODUCTION==='1':
+ /^[a-f0-9]{8}\.only-testing-online-music\.pages\.dev$/.test(target.hostname),
+ 'Only immutable Preview or explicit production acceptance is permitted');
 const invalid=await fetch(base+'/api/kuwo-song-meta?id='+encodeURIComponent('http://127.0.0.1'),{
   signal:AbortSignal.timeout(11000)});
 assert.equal(invalid.status,400);
