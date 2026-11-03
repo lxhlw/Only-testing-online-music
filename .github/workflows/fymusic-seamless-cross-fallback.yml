@@ -1,0 +1,61 @@
+name: FyMusic · Seamless Cross-Platform Playback and Lyrics (nonproduction)
+on:
+  push:
+    branches: [feature/fymusic-cross-platform-seamless-fallback-20261103]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: seamless-cross-fallback-20261103
+  cancel-in-progress: true
+jobs:
+  seamless:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Parse source and test scripts
+        run: |
+          node --check src/app.js
+          node --check src/fymusic-cross-platform-match.js
+          node --check scripts/test-seamless-cross-platform-match.mjs
+          node --check scripts/test-seamless-cross-platform-browser.mjs
+      - name: Install dependencies and browser engines
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium webkit
+      - name: Conservative identity matcher, original lyrics and proxy safety
+        run: |
+          node scripts/test-seamless-cross-platform-match.mjs
+          node scripts/test-music-lyrics.mjs
+          node scripts/test-migu-lyrics-endpoint.mjs
+          node scripts/test-proxy-security.mjs
+      - name: Compile strictly allowlisted Pages runtime
+        run: |
+          npm run build:pages
+          npm run test:pages
+      - name: Start local Cloudflare Pages emulator
+        run: |
+          set -euo pipefail
+          npx wrangler pages dev dist --ip 127.0.0.1 --port 8788 >/tmp/seamless-pages.log 2>&1 &
+          READY=0
+          for i in {1..40}; do
+            if curl -fsS http://127.0.0.1:8788/version.json >/dev/null; then READY=1; break; fi
+            sleep 1
+          done
+          test "$READY" = 1 || { cat /tmp/seamless-pages.log; exit 1; }
+      - name: Playback audio fallback and lyrics without popup Chromium WebKit
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-seamless-cross-platform-browser.mjs
+      - name: Existing Kuwo playback detail and metadata regressions
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: |
+          node scripts/test-now-playing-kuwo-browser.mjs
+          node scripts/test-modern-web-browser.mjs
+      - name: Guarantee no production release
+        run: echo FYMUSIC_SEAMLESS_FALLBACK_DEVELOPMENT_ONLY
