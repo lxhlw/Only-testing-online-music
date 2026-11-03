@@ -218,6 +218,7 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/test-modern-web-browser.mjs
+          node scripts/test-now-playing-kuwo-browser.mjs
           node scripts/test-playlist-infinite-browser.mjs
           node scripts/test-mobile-interaction-qa-browser.mjs
       - name: Real Kuwo cover metadata and timed lyrics against the deployed website
