@@ -5,7 +5,10 @@ import {chromium} from 'playwright';
 // to model the user's known failing provider. Never log signed media URLs.
 const base=process.env.TEST_BASE_URL?.replace(/\/+$/,'')||'';
 const target=new URL(base);
-assert.match(target.hostname,/^[a-f0-9]{8}\.only-testing-online-music\.pages\.dev$/);
+const production=target.hostname==='only-testing-online-music.pages.dev';
+assert.ok(production?process.env.FYMUSIC_ACCEPT_PRODUCTION==='1':
+ /^[a-f0-9]{8}\.only-testing-online-music\.pages\.dev$/.test(target.hostname),
+ 'Only immutable Preview or explicitly authorized production probe');
 assert.equal(target.protocol,'https:');
 const browser=await chromium.launch({headless:true,args:['--autoplay-policy=no-user-gesture-required']});
 try{

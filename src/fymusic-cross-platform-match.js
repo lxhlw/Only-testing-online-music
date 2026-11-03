@@ -1,7 +1,7 @@
 (function(global) {
  'use strict';
- // Conservative catalog gate for explicitly user-approved KG -> KW retries.
- // Catalog metadata is not an audio fingerprint: keep confirmation mandatory.
+ // Conservative identity gate for user-approved automatic cross-platform fallback.
+ // Catalog metadata is not an audio fingerprint: reject ambiguous matches.
  function normalize(value) {
   return String(value == null ? '' : value).normalize('NFKC').toLowerCase()
    .replace(/[\s\u00b7·._'"‘’“”–—,，:：!?！？()（）\[\]【】]+/g,'');

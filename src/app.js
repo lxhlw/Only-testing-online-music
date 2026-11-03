@@ -1638,7 +1638,7 @@
     return true;
   }
 
-  // Optional KG -> KW recovery requires TWO explicit user interactions.
+  // Optional manual selection stays available if automatic recovery cannot locate a match.
   // No background cross-platform search or automatic playback substitution.
   function offerCrossPlatformAlternative(original,source,token){
     if(!MODERN_WEB||source!=='kg'||token!==playbackToken||
@@ -1653,7 +1653,7 @@
     var box=document.createElement('div');box.className='fymusic-alternate-offer';
     var description=document.createElement('p');
     description.className='fymusic-alternate-explanation';
-    description.textContent='酷狗解析未成功。可手动查找酷我同曲版本；不会自动换平台。' +
+    description.textContent='自动匹配暂不可用，也可以手动查找酷我同曲版本。' +
       '候选须匹配歌名、歌手、时长及可核对的专辑，仍不能保证录音内容相同。';
     var button=document.createElement('button');
     button.type='button';button.className='secondary fymusic-alternate-search';
@@ -1846,9 +1846,9 @@
       if (MODERN_WEB && recoverCrossPlatformPlayback(music,source,token))return;
       if (NATIVE_COMPANION || MODERN_WEB) {
         setStatus(sourceUnavailable
-          ? '野花音源服务器当前无法返回播放地址（HTTP 502）。歌曲搜索仍可使用；本次已停止解析，不会擅自换用其他音源。'
+          ? '野花音源暂时无法提供播放地址，请稍后重试。'
           : '当前歌曲暂未取得播放地址：' + escapeHtml(reason || '解析失败') +
-            (MODERN_WEB ? '。仅使用选中的 LX 音源“'+escapeHtml(activeSourceName)+'”，未自动切换其他播放源。' : '。'), 'fail');
+            (MODERN_WEB ? '。已尝试当前可用的播放线路。' : '。'), 'fail');
         if (MODERN_WEB) {
           var retry = document.createElement('button');
           retry.type = 'button';
