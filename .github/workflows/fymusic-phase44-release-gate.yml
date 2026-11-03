@@ -6,6 +6,7 @@ on:
       - '.github/workflows/fymusic-phase44-release-gate.yml'
       - 'scripts/build-fymusic-phase44-candidate.mjs'
       - 'scripts/test-modern-web-browser.mjs'
+      - 'scripts/diagnostics/fymusic-phase44-webkit-cold-frame.mjs'
   workflow_dispatch:
 
 permissions:
@@ -24,6 +25,7 @@ jobs:
       FYMUSIC_RELEASE_CANDIDATE_DIR: /tmp/fymusic-phase44-candidate
       FYMUSIC_RELEASE_MANIFEST: /tmp/fymusic-phase44-manifest.json
       BASE_SHA: c9a496ab580fb54775721b93a3944800bcaefc44
+      FYMUSIC_PHASE44_COLD_REPORT: /tmp/fymusic-phase44-webkit-cold.json
     steps:
       - uses: actions/checkout@v4
         with:
@@ -99,6 +101,10 @@ jobs:
             echo "FYMUSIC_PHASE44_RELEASE_CANDIDATE_ENGINE=$engine"
             BROWSER_ENGINE="$engine" node scripts/test-fymusic-phase43-render-interaction.mjs
           done
+      - name: Diagnose cold WebKit frame gaps without claiming hardware FPS
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/diagnostics/fymusic-phase44-webkit-cold-frame.mjs
       - name: Confirm no emitted QA audio API or fixture content
         shell: bash
         run: |
@@ -125,7 +131,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fymusic-phase44-local-candidate-manifest
-          path: ${{ env.FYMUSIC_RELEASE_MANIFEST }}
+          path: |
+            ${{ env.FYMUSIC_RELEASE_MANIFEST }}
+            ${{ env.FYMUSIC_PHASE44_COLD_REPORT }}
           retention-days: 14
       - name: Show local Pages logs on failure
         if: failure()
