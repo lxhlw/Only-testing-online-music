@@ -36,8 +36,11 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
  try{
   for(const scenario of ['missing-lyrics','kugou-media-failure']){
    const page=await browser.newPage({viewport:{width:engine==='webkit'?390:1360,height:860}});
-   const errors=[];
+   const errors=[],media=[];
    page.on('pageerror',e=>errors.push(String(e.message).slice(0,180)));
+   page.on('request',r=>{const u=new URL(r.url());if(u.hostname==='media.example.test'||u.pathname==='/api/proxy')media.push({kind:'request',host:u.hostname,path:u.pathname});});
+   page.on('response',r=>{const u=new URL(r.url());if(u.hostname==='media.example.test'||u.pathname==='/api/proxy')media.push({kind:'response',host:u.hostname,path:u.pathname,status:r.status()});});
+   page.on('requestfailed',r=>{const u=new URL(r.url());if(u.hostname==='media.example.test'||u.pathname==='/api/proxy')media.push({kind:'failed',host:u.hostname,path:u.pathname,code:r.failure()?.errorText?.slice(0,65)});});
    await page.addInitScript(({fixture})=>{
     localStorage.setItem('only-testing-online-music.lx-sources',JSON.stringify([{
      id:'seamless-test-source',name:'野花🌷',code:fixture,
@@ -61,6 +64,11 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
    await page.evaluate(({scenario,equivalent,wrong})=>{
     window.__seamlessRequested=[];
     window.__seamlessSearch=[];
+    window.__seamlessAudioErrors=[];
+    document.getElementById('audio')?.addEventListener('error',function(){
+      const a=this;window.__seamlessAudioErrors.push({code:a.error?.code||null,
+       networkState:a.networkState,readyState:a.readyState});
+    });
     window.LXMusicSearch.search=(source,query,page,size,done)=>{
       window.__seamlessSearch.push(source);
       done(null,{list:source==='kw'?[wrong,equivalent]:[]});
@@ -101,10 +109,11 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
        readyState:document.getElementById('audio')?.readyState,
        time:document.getElementById('audio')?.currentTime,
        srcPresent:!!document.getElementById('audio')?.src},
-     track:window.__LXNowPlayingTrack?.source
+     track:window.__LXNowPlayingTrack?.source,
+     audioErrors:window.__seamlessAudioErrors
     }));
     throw new Error('Fallback timeout '+engine+'/'+scenario+' '+JSON.stringify(diagnostic)+
-      ' pageErrors='+JSON.stringify(errors));
+      ' media='+JSON.stringify(media)+' pageErrors='+JSON.stringify(errors));
    }
    const result=await page.evaluate(()=>{
     const audio=document.getElementById('audio');
