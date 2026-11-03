@@ -97,6 +97,18 @@ jobs:
           node scripts/test-mobile-interaction-qa-browser.mjs
           node scripts/test-web-source-selection-browser.mjs
           echo "FYMUSIC_CLEANUP_PREVIEW_BROWSER_ACCEPTANCE_PASS"
+      - name: Validate new real-audio acceptance program
+        run: node --check scripts/test-pr108-live-preview-acceptance.mjs
+      - name: Real preview song playback, Seek, lyric, next/previous, favorite and reload acceptance
+        run: node scripts/test-pr108-live-preview-acceptance.mjs
+      - name: Preserve isolated preview audio and UI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fymusic-pr108-actual-preview-acceptance
+          path: audit-pr108-real-preview/
+          if-no-files-found: warn
+          retention-days: 14
       - name: Guarantee production was not moved
         run: |
           set -euo pipefail
