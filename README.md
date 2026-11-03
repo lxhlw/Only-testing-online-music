@@ -53,6 +53,6 @@ Queue, favorites, history and imported LX sources are stored in the current brow
 
 ## Release status
 
-The last verified production baseline before this cleanup is **v0.4.27**, commit `586f592dc994b0868886bcb42b1213c3580f278b`. The previous v0.4.26 deployment is retained as a rollback reference. This repository cleanup should be tested on a separate branch and non-production Pages preview before any new release.
+**v0.4.28** is the minimal-asset publication and retired Android 4.4 cleanup release. The previous production baseline was v0.4.27 at commit `586f592dc994b0868886bcb42b1213c3580f278b`. Release v0.4.28 only after immutable preview acceptance and production workflow verification. Keep the v0.4.27 immutable Pages deployment available as the immediate rollback reference.
 
 For historical audit evidence, see the developer-branch document `docs/FYMUSIC_V0427_FULL_PRODUCTION_AUDIT_2026-11-03.md` in `feature/fymusic-playback-verifier`.
