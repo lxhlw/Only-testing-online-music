@@ -5,6 +5,15 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Stage 4 automated verification closed; source-reliability triage opened
+
+- **Goal:** Reconcile pending Stage 4 CI, visually inspect retained synthetic screenshots, check latest production failures and refresh a safe cross-chat checkpoint.
+- **Changes:** No application code or production UI changes. Current-state handoff reconciled from actual GitHub runs; PR #116 stays draft and unmerged.
+- **Tests:** Stage4 preview #41684255301 SUCCESS at d1f6f58c; full browser/security #41684265856 SUCCESS; playlist #41684265845 SUCCESS; privacy #41684265860 SUCCESS. Chromium/WebKit light tests at 1440/820/390/320, 10.81:1 tested heading contrast; CI visual audit artifact #13254972843 inspected. CI rAF data is not physical-device performance.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41684255301 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41684265856 ; https://github.com/lxhlw/Only-testing-online-music/pull/116 . Main run #41682617224 failed a REAL Migu lyrics assertion (HTTP 502 / no timed lines), distinct from UI2; #41685131793 was still pending at review.
+- **Not done:** Manual screen-reader and real device testing, human visual approval, 320px scroll/reachability investigation, PR conflict resolution (mergeable_state dirty), provider failure root-cause analysis, production merge/deploy.
+- **Next:** Begin Stage 5 real-source 502/Kuwo musicUrl diagnostics without exposing signed requests, preserve strict acceptance; Stage 6 final approved release remains afterward.
+
 ## 2026-11-04 · Stage 4 accessible UI2 light theme — initial checkpoint (tests pending)
 
 - **Goal:** Build a high-contrast daylight alternative with no change to music playback.
