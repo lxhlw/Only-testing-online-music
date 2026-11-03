@@ -65,7 +65,8 @@ jobs:
           set -euo pipefail
           curl -fsSL "$TEST_BASE_URL/?ui2=1" -o /tmp/ui2-index.html
           grep -Fq 'ui2-preview.css?v=0.4.33' /tmp/ui2-index.html
-          curl -fsSL "$TEST_BASE_URL/src/ui2-preview.css" | grep -Fq 'FyMusic UI 2.0'
+          curl -fsSL "$TEST_BASE_URL/src/ui2-preview.css" -o /tmp/ui2-preview-live.css
+          grep -Fq 'FyMusic UI 2.0' /tmp/ui2-preview-live.css
           code=$(curl -sSL -o /tmp/ui2-public-guard -w '%{http_code}' "$TEST_BASE_URL/README.md")
           test "$code" = 404
           node scripts/test-ui2-desktop-browser.mjs
