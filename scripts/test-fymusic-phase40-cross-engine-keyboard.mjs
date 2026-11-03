@@ -213,10 +213,10 @@ try{
   const settleNative=async(expected,label)=>{
     await page.waitForFunction(target=>{
       const a=document.querySelector('#audio');
-      return !a.seeking&&Math.abs(a.currentTime-target)<.35;
+      return !a.seeking&&Math.abs(a.currentTime-target)<Math.max(.009,Number(a.duration||0)/2000);
     },expected,{timeout:7500,polling:'raf'});
     const settled=await snapshot();
-    assert.ok(Math.abs(settled.seconds-expected)<.35,
+    assert.ok(Math.abs(settled.seconds-expected)<Math.max(.009,duration/2000),
       ENGINE+' native media must eventually reach '+label+
       ' setter target '+expected);
     return settled;

@@ -586,7 +586,7 @@ audio?.addEventListener('seeked',()=>{
   if(committed){
     if(committed.source!==audio.currentSrc||committed.trackSequence!==sequence)
       pendingNativeSeek=null;
-    else if(!audio.seeking&&Math.abs(audio.currentTime-committed.seconds)<.35)
+    else if(!audio.seeking&&Math.abs(audio.currentTime-committed.seconds)<Math.max(.009,Number(audio.duration||0)/2000))
       pendingNativeSeek=null;
   }
   const intent=supersedingOsSeek;
@@ -594,7 +594,7 @@ audio?.addEventListener('seeked',()=>{
   if(intent.source!==audio.currentSrc||intent.trackSequence!==sequence){
     supersedingOsSeek=null;return;
   }
-  if(!audio.seeking&&Math.abs(audio.currentTime-intent.seconds)<.35)
+  if(!audio.seeking&&Math.abs(audio.currentTime-intent.seconds)<Math.max(.009,Number(audio.duration||0)/2000))
     supersedingOsSeek=null;
 });
 for(const event of ['timeupdate','durationchange','loadedmetadata','play','playing','pause','ended','waiting','emptied'])
