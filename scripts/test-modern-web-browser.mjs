@@ -346,8 +346,8 @@ try {
   assert.equal(await page.locator('#inline-fallback').isChecked(),true);
   checks.push('fixed-quality-honored-no-hidden-downgrade');
 
-  // Users explicitly accepting a 128k downgrade must be able to play
-  // despite the upstream declaring no FLAC32. Previous code stopped early.
+  // With downgrade enabled, an unavailable FLAC32 must choose the best
+  // declared lower quality (320k here), not hard-cap this source at 128k.
   await page.locator('#inline-quality').selectOption('flac32bit');
   await page.locator('#inline-fallback').check();
   await page.locator('#inline-save-settings').click();
@@ -359,12 +359,12 @@ try {
     };
   });
   await page.locator('#inline-replay-quality').click();
-  await page.waitForFunction(()=>window.__qualityTypes.includes('128k'),{timeout:5000});
-  assert.deepEqual(await page.evaluate(()=>window.__qualityTypes),['128k'],
-    'Opt-in downgrade must bypass unsupported FLAC32 and resolve 128k');
+  await page.waitForFunction(()=>window.__qualityTypes.includes('320k'),{timeout:5000});
+  assert.deepEqual(await page.evaluate(()=>window.__qualityTypes),['320k'],
+    'Opt-in downgrade must prefer the best declared 320k before 128k');
   await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('由 flac32bit 降级'),{timeout:7500});
   await page.locator('#inline-reset-settings').click();
-  checks.push('explicit-unsupported-flac-downgrades-to-working-128k');
+  checks.push('explicit-unsupported-flac-chooses-best-declared-quality');
   await page.locator('[data-view="search"]').click();
   await page.evaluate(()=>{
     window.LXSourceManager.requestAction=(source,action,params,done)=>
