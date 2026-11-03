@@ -31,12 +31,12 @@ for(let i=0;i<3;i++){
   if(data.image){
    const image=new URL(data.image);
    assert.equal(image.protocol,'https:');
-   assert.match(image.hostname,/^img[0-9]*\\.(?:kwcdn\\.)?kuwo\\.cn$/);
+   assert.match(image.hostname,/^img[0-9]*\.(?:kwcdn\.)?kuwo\.cn$/);
    cover={source:'Kuwo-metadata',present:true,loaded:false,hostname:image.hostname};
    try{
     const response=await fetch(image.href,{signal:AbortSignal.timeout(9000)});
     const type=response.headers.get('content-type')||'';
-    if(response.ok&&/^image\\//.test(type)){
+    if(response.ok&&/^image\//.test(type)){
      const bytes=new Uint8Array(await response.arrayBuffer());
      cover.loaded=bytes.byteLength>100;
      cover.bytes=bytes.byteLength;
