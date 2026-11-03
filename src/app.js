@@ -1907,6 +1907,15 @@
     // The lyrics panel is independent of the route: stale lyrics must never
     // remain visible when the listener selects another track.
     clearLyrics();
+    // Reflect the selected track before its asynchronous resolver settles.
+    // On upstream 502 the mini-player must not display the previous singer.
+    // This changes only visible metadata, not playback or the chosen source.
+    if (MODERN_WEB) {
+      var selectedTitle=document.getElementById('player-title');
+      var selectedArtist=document.getElementById('player-artist');
+      if (selectedTitle) selectedTitle.textContent=String(music && music.name || '未知歌曲');
+      if (selectedArtist) selectedArtist.textContent=String(music && (music.singer || music.artist) || '未知歌手');
+    }
     // The immersive screen receives the selected song immediately, even
     // while a third-party media URL is still resolving. Avoid polling app state.
     try {
