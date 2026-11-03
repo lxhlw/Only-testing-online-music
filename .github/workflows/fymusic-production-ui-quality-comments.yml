@@ -1,0 +1,50 @@
+name: FyMusic · Production 320k and Comments UI Audit (read only)
+on:
+  push:
+    branches: [audit/fymusic-production-ui-matrix-20261103]
+    paths:
+      - 'scripts/audit-production-ui-quality-comments.mjs'
+      - '.github/workflows/fymusic-production-ui-quality-comments.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fymusic-production-ui-quality-comments
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    if: github.ref == 'refs/heads/audit/fymusic-production-ui-matrix-20261103'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Pin production version and validate audit syntax
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = 586f592dc994b0868886bcb42b1213c3580f278b
+          node --check scripts/audit-production-ui-quality-comments.mjs
+      - name: Install Chromium only in ephemeral runner
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Real on-site 320k quality and comments retry audit
+        run: node scripts/audit-production-ui-quality-comments.mjs
+      - name: Save quality and comments screenshots and result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fymusic-v0427-quality-and-comments
+          path: audit-ui-quality-comments/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Production remains pinned
+        if: always()
+        run: |
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = 586f592dc994b0868886bcb42b1213c3580f278b
+          echo FYMUSIC_PRODUCTION_UI_QUALITY_READ_ONLY
