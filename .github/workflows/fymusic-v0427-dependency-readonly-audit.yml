@@ -1,0 +1,54 @@
+name: FyMusic v0.4.27 - Dependency and Supply Chain Audit
+on:
+  push:
+    branches: [feature/fymusic-playback-verifier]
+    paths:
+      - '.github/workflows/fymusic-v0427-dependency-readonly-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    if: github.ref == 'refs/heads/feature/fymusic-playback-verifier'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assert audit only; do not change project or production
+        run: |
+          test "$GITHUB_REF" = refs/heads/feature/fymusic-playback-verifier
+          test ! -f package-lock.json
+          node -e "const p=require('./package.json');console.log('FYMUSIC_AUDIT_DEPENDENCIES',JSON.stringify({node:process.version,version:p.version,packageManager:p.packageManager,directRuntime:Object.keys(p.dependencies||{}).length,directDev:Object.keys(p.devDependencies||{}).length,lockfilePresent:false}))"
+      - name: Install exact declared direct dependencies into ephemeral runner
+        run: npm install --no-audit --no-fund
+      - name: npm advisory summary including dev and deployment tooling
+        run: |
+          node --input-type=module <<'NODE'
+          import {spawnSync} from 'node:child_process';
+          import {writeFileSync} from 'node:fs';
+          const p=spawnSync('npm',['audit','--json'],{
+            encoding:'utf8',maxBuffer:16*1024*1024,timeout:120000
+          });
+          let parsed;
+          try{parsed=JSON.parse(p.stdout)}catch{
+            console.log('FYMUSIC_NPM_AUDIT_UNAVAILABLE',JSON.stringify({
+              code:p.status,signal:p.signal,error:'non-JSON audit result'}));process.exit(0)}
+          const vulnerable=parsed.metadata?.vulnerabilities;
+          const items=Object.entries(parsed.vulnerabilities||{}).map(([name,v])=>({
+            name,severity:v.severity,isDirect:v.isDirect,
+            viaCount:Array.isArray(v.via)?v.via.length:0,
+            fixAvailable:typeof v.fixAvailable==='boolean'?v.fixAvailable:Boolean(v.fixAvailable)
+          }));
+          console.log('FYMUSIC_NPM_AUDIT_RESULT',JSON.stringify({
+            exitCode:p.status,metadata:vulnerable||null,totalPackages:parsed.metadata?.dependencies?.total||null,
+            reportError:parsed.error?.code||null,directOrTransitive:items
+          }));
+          // Audit finding is informational only; no npm audit fix or production writes.
+          NODE
+      - name: Ephemeral dependency audit finished; production unchanged
+        run: echo FYMUSIC_DEPENDENCY_AUDIT_READ_ONLY_COMPLETE
