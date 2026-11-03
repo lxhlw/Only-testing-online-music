@@ -1605,33 +1605,51 @@
       }
       var target=targets[index++];
       attempted.push(target);
-      var finished=false;
-      var timer=global.setTimeout(function(){
-        if(finished)return;
-        finished=true;
-        next();
-      },8000);
-      try{
-        global.LXMusicSearch.search(target,
-          String(original.name||'')+' '+String(original.singer||''),1,25,
-          function(error,response){
-            if(finished)return;
-            finished=true;global.clearTimeout(timer);
-            if(!isCurrent())return;
-            var list=response&&Array.isArray(response.list)?response.list:[];
-            var match=null;
-            if(!error)for(var i=0;i<list.length;i++){
-              if(global.FyMusicCrossPlatformMatch.equivalent(original,list[i],'audio').accepted){
-                match=list[i];break;
-              }
+      // Catalogs differ in how they parse "title artist" queries. Try the
+      // exact title first (the user's successful Daoxiang search), then the
+      // combined query only if no trustworthy candidate was found.
+      var title=String(original.name||'').trim();
+      var combined=(title+' '+String(original.singer||'').trim()).trim();
+      var terms=[title];
+      if(combined&&combined!==title)terms.push(combined);
+      var queryIndex=0;
+      function tryQuery(){
+        if(!isCurrent())return;
+        if(queryIndex>=terms.length)return next();
+        var query=terms[queryIndex++];
+        var handled=false;
+        var timer=global.setTimeout(function(){
+          if(handled)return;
+          handled=true;
+          tryQuery();
+        },4800);
+        function finishSearch(error,response){
+          if(handled)return;
+          handled=true;global.clearTimeout(timer);
+          if(!isCurrent())return;
+          var list=!error&&response&&Array.isArray(response.list)?response.list:[];
+          var exact=null,compatible=null;
+          for(var i=0;i<list.length;i++){
+            var candidate=list[i];
+            if(global.FyMusicCrossPlatformMatch.equivalent(original,candidate,'audio').accepted){
+              exact=candidate;break;
             }
-            if(!match)return next();
-            // The original queue item remains untouched. Only the currently
-            // playing recording changes, with an unobtrusive accurate label.
-            state.crossRecoveryPending=false;
-            startPlayback(match,target,{original:original,tried:attempted.slice()});
-          });
-      }catch(error){global.clearTimeout(timer);if(!finished){finished=true;next();}}
+            if(!compatible&&global.FyMusicCrossPlatformMatch.compatibleAudio&&
+               global.FyMusicCrossPlatformMatch.compatibleAudio(original,candidate).accepted)
+              compatible=candidate;
+          }
+          var match=exact||compatible;
+          if(!match)return tryQuery();
+          // Never change the original queue item. The fallback is limited
+          // to this playback, and the actual selected platform is displayed.
+          state.crossRecoveryPending=false;
+          startPlayback(match,target,{original:original,tried:attempted.slice()});
+        }
+        try{
+          global.LXMusicSearch.search(target,query,1,40,finishSearch);
+        }catch(error){finishSearch(error);}
+      }
+      tryQuery();
     }
     setStatus('正在自动寻找可播放的同曲版本…','warn');
     next();
