@@ -56,6 +56,13 @@ try{
  await page.locator('#lyrics-overlay').waitFor({state:'visible',timeout:7000});
  await page.waitForFunction(()=>document.querySelectorAll('#lyrics-lines .lyrics-line').length>=10,
   null,{timeout:14000});
+ // Album art loads independently of audio and LRC; give the real image
+ // request a bounded opportunity to finish instead of sampling it too early.
+ // The subsequent assertion stays strict: no fake image or forced success.
+ await page.waitForFunction(()=>{
+  const img=document.getElementById('lyrics-cover-image');
+  return !!img&&img.complete&&img.naturalWidth>0;
+ },null,{timeout:15000});
  const on=await page.evaluate(()=>{
   const a=document.getElementById('audio'),btn=document.getElementById('detail-toggle-btn');
   return {audioPlaying:!a.paused,playIconVisible:getComputedStyle(btn.querySelector('.detail-play-icon')).display!=='none',
