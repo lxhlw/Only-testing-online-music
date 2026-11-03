@@ -200,10 +200,27 @@ jobs:
       - name: Verify no repository files are exposed as public website assets
         run: |
           set -euo pipefail
+          # Pages' production hostname can briefly serve a previous edge
+          # route during deploy propagation. Only an actual, stable branded
+          # 404 passes; an exposed non-HTML repository file fails immediately.
           for path in README.md package.json scripts/test-modern-web-browser.mjs android-companion/README.md .github/workflows/verify-and-deploy.yml; do
-            code=$(curl -sSL -o /tmp/fymusic-not-found.html -w '%{http_code}' "https://only-testing-online-music.pages.dev/$path")
-            test "$code" = 404 || { echo "Unexpected public file: $path HTTP $code"; exit 1; }
-            grep -Fq '404 · Not found' /tmp/fymusic-not-found.html
+            ready=0
+            for attempt in {1..12}; do
+              code=$(curl -sSL --max-time 12 -o /tmp/fymusic-not-found.html -w '%{http_code}' "https://only-testing-online-music.pages.dev/$path")
+              if test "$code" = 404 && grep -Fq '404 · Not found' /tmp/fymusic-not-found.html; then
+                ready=1; break
+              fi
+              if test "$code" = 200 &&
+                 ! grep -Eiq '<!doctype html|<html[ >]' /tmp/fymusic-not-found.html; then
+                echo "Real public repository content exposed: $path HTTP $code"
+                exit 1
+              fi
+              sleep 2
+            done
+            if test "$ready" != 1; then
+              echo "Protected path never became branded HTTP 404: $path last_status=$code"
+              exit 1
+            fi
           done
           code=$(curl -sSL -o /tmp/fymusic-proxy-guard.json -w '%{http_code}' 'https://only-testing-online-music.pages.dev/api/proxy')
           test "$code" = 400 || exit 1
