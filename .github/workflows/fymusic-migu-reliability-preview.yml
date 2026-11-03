@@ -37,6 +37,7 @@ jobs:
           npm run test:pages
           npx playwright install --with-deps chromium
       - name: Deploy isolated Cloudflare Pages preview
+        id: preview_deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -53,7 +54,7 @@ jobs:
       - name: Strict live Migu audio + timed lyrics + cover + pause resume
         run: node scripts/test-migu-lyrics-preview-live.mjs
       - name: Strict Daoxiang Kugou-to-Kuwo real media fallback
-        if: success()
+        if: ${{ always() && steps.preview_deploy.outcome == 'success' }}
         run: node scripts/test-seamless-live-daoxiang-preview.mjs
       - name: Verify production branch not changed
         if: always()
