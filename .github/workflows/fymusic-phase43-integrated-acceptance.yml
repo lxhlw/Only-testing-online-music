@@ -57,7 +57,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for trial in 1 2 3; do
+          trials=3
+          if [ "${{ matrix.engine }}" = "webkit" ]; then trials=12; fi
+          for trial in $(seq 1 "$trials"); do
             echo "FYMUSIC_PHASE43_RENDER=${{ matrix.engine }}_TRIAL=$trial"
             BROWSER_ENGINE=${{ matrix.engine }} node scripts/test-fymusic-phase43-render-interaction.mjs
           done
