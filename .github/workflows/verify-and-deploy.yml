@@ -146,6 +146,7 @@ jobs:
           node scripts/test-modern-web-browser.mjs
           node scripts/test-now-playing-kuwo-browser.mjs
           node scripts/test-seamless-cross-platform-browser.mjs
+          node scripts/test-playback-rejection-browser.mjs
           node scripts/test-playlist-infinite-browser.mjs
           node scripts/test-mobile-interaction-qa-browser.mjs
           node scripts/test-web-source-selection-browser.mjs
