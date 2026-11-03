@@ -854,3 +854,24 @@ html.modern-web.fy-ui2 #quality-summary{
 @media (min-width:741px) and (max-width:980px){
   html.modern-web.fy-ui2 .nav-rail .nav-brand{display:none}
 }
+
+/* UI2 visual audit follow-up: legacy playback status sometimes removes
+   .global-status and leaves only .status.ready/.warn/.fail. */
+html.modern-web.fy-ui2 #status.status:not(.warn):not(.fail) {
+ background:#19352f!important;color:#c0ebd7!important;
+ border:1px solid #396353!important;border-radius:11px!important;
+ margin:6px clamp(14px,2.8vw,40px) 10px!important;
+ padding:7px 10px!important;
+}
+html.modern-web.fy-ui2 #status.status.warn{
+ background:#3e3127!important;color:#ffdeb7!important;
+ border:1px solid #7a6249!important;border-radius:11px!important;
+}
+html.modern-web.fy-ui2 #status.status.fail{
+ background:#462a34!important;color:#ffd0d9!important;
+ border:1px solid #854f5d!important;border-radius:11px!important;
+}
+@media(max-width:740px){
+ /* Source-ready duplication wastes space on short phones; warnings remain visible. */
+ html.modern-web.fy-ui2 #status.status.ready{display:none!important}
+}
