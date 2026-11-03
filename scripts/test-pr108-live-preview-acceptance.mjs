@@ -191,14 +191,40 @@ try {
    await page.locator('#player-mode-btn').click();
    await page.locator('#player-mode-menu [data-mode="sequence"]').click();
    await page.locator('#next-track-btn').click();
-   await page.waitForFunction(firstArtist=>
-    document.querySelector('#player-artist')?.textContent?.trim()!==firstArtist,
-    artist,{timeout:18000});
-   state.nextArtist=(await page.locator('#player-artist').innerText()).trim();
+   // Next must select the actual queued candidate, even if the music
+   // provider cannot resolve its URL. A 502 is recorded as provider failure,
+   // not misreported as a broken Next button.
+   await page.waitForFunction(expected=>
+    window.__LXNowPlayingTrack?.singer?.trim()===expected,
+    secondArtist,{timeout:10000});
+   state.nextArtist=await page.locator('#player-artist').innerText();
+   let nextPlayable=false;
+   try{
+    await page.waitForFunction(expected=>{
+      const a=document.querySelector('#audio');
+      return window.__LXNowPlayingTrack?.singer?.trim()===expected&&
+        a&&a.readyState>=2&&!a.paused&&a.currentTime>.65&&!a.error;
+    },secondArtist,{timeout:14000});
+    nextPlayable=true;
+   }catch{}
+   state.nextPlayable=nextPlayable;
+   if(!nextPlayable){
+    const status=await page.locator('#status').innerText();
+    const providerError=calls.some(x=>x.status>=500);
+    assert.ok(providerError&&/解析失败|播放地址|502|服务器/.test(status),
+      'Next selected a new song but no valid upstream-error explanation appeared: '+status);
+    state.nextSourceWarning={status:status.slice(0,220),
+      upstreamHTTP:([...calls].reverse().find(x=>x.status>=500)||{}).status,
+      uiDisplayedArtist:state.nextArtist};
+   }
    await page.locator('#prev-track-btn').click();
    await page.waitForFunction(firstArtist=>
-    document.querySelector('#player-artist')?.textContent?.includes(firstArtist),
-    artist,{timeout:23000});
+    window.__LXNowPlayingTrack?.singer?.includes(firstArtist),
+    artist,{timeout:12000});
+   await page.waitForFunction(()=>{
+    const a=document.querySelector('#audio');
+    return a&&a.readyState>=2&&!a.paused&&a.currentTime>.65&&!a.error;
+   },null,{timeout:42000});
    state.previousReturned=true;
    await page.screenshot({path:dir+'/round'+round+'-after-next-prev.png',animations:'disabled'});
 
