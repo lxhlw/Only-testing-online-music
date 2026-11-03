@@ -1,0 +1,54 @@
+name: FyMusic · Real seamless fallback Cloudflare Preview (nonproduction)
+on:
+  push:
+    branches: [feature/fymusic-cross-platform-seamless-fallback-20261103]
+permissions:
+  contents: read
+concurrency:
+  group: fymusic-seamless-actual-preview
+  cancel-in-progress: true
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    env:
+      PROJECT: only-testing-online-music
+      PREVIEW_BRANCH: seamless-cross-fallback-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify production baseline and nonproduction intent
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/feature/fymusic-cross-platform-seamless-fallback-20261103
+          test "$PREVIEW_BRANCH" != main
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = e2e2296097640770424b648a3bbef3ca0ae72956
+          node --check scripts/test-seamless-live-sunyanzi-preview.mjs
+      - name: Install browser dependencies and build safe static output
+        run: |
+          npm install --no-audit --no-fund
+          npm run build:pages
+          npm run test:pages
+          npx playwright install --with-deps chromium
+      - name: Deploy Cloudflare preview branch only
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx wrangler pages deploy dist --project-name "$PROJECT" --branch "$PREVIEW_BRANCH" --commit-hash "$GITHUB_SHA" | tee /tmp/fymusic-seamless-preview.log
+          url=$(grep -Eo 'https://[0-9a-f]{8}\.only-testing-online-music\.pages\.dev' /tmp/fymusic-seamless-preview.log | head -n1)
+          test -n "$url"
+          test "$url" != 'https://only-testing-online-music.pages.dev'
+          echo "TEST_BASE_URL=$url" >> "$GITHUB_ENV"
+          echo "FYMUSIC_SEAMLESS_PREVIEW_URL=$url"
+      - name: Real live Sun Yanzi KG fault -> matched alternate playback
+        run: node scripts/test-seamless-live-sunyanzi-preview.mjs
+      - name: Production unchanged
+        run: |
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = e2e2296097640770424b648a3bbef3ca0ae72956
+          echo FYMUSIC_SEAMLESS_PREVIEW_NOT_PRODUCTION
