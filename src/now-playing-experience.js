@@ -27,6 +27,10 @@ let seekInputFromKeyboard=false;
 // trusted touchmove/input/change after foreground with NO new pointerdown.
 // Only a newly started pointer (or deliberate keyboard action) can rearm it.
 let abandonedTouchGesture=false;
+// WebKit can temporarily expose a previous media position while an OS seek
+// is still settling. Only a superseded native drag needs an explicit OS
+// target for its next trusted keyboard action.
+let supersedingOsSeek=null;
 const isOpen=()=>overlay&&!overlay.classList.contains('hidden');
 const sourceNames={wy:'网易云音乐',kw:'酷我音乐',tx:'QQ音乐',kg:'酷狗音乐',mg:'咪咕音乐'};
 const formatSeconds=value=>{
@@ -255,6 +259,7 @@ function setTrack(next){
   const id=String(next.id||''),source=String(next.source||'wy');
   const key=source+':'+id;
   sequence++;
+  supersedingOsSeek=null;
   // A track change invalidates old lyric scroll and uncommitted seek preview.
   cancelLyricCenter();
   invalidateSeekPreview();
@@ -419,7 +424,16 @@ function cancelSeekPreview(){
   // This only restores presentation: it never writes audio.currentTime.
   updateTransport();
 }
-function invalidateSeekPreview(){
+function invalidateSeekPreview(event){
+  if(event?.type==='fymusic:external-seek'){
+    const seconds=event.detail?.seconds;
+    const duration=Number(audio?.duration);
+    if((seekPreview||abandonedTouchGesture)&&Number.isFinite(seconds)&&
+       Number.isFinite(duration)&&duration>0&&audio?.currentSrc){
+      supersedingOsSeek={seconds:Math.max(0,Math.min(duration,seconds)),
+        source:audio.currentSrc,trackSequence:sequence};
+    }
+  }else supersedingOsSeek=null;
   if(!seekPreview)return;
   // OS seek and track replacement also invalidate an already held finger.
   // Chrome can continue emitting trusted touchmove/input after this event;
@@ -444,6 +458,7 @@ function rejectStaleNativeSeek(event){
 }
 window.addEventListener('fymusic:external-seek',invalidateSeekPreview);
 fullSeek?.addEventListener('pointerdown',()=>{
+  supersedingOsSeek=null;
   // Chrome dispatches pointermove, but not pointerdown, for an old finger
   // after tab restoration. A genuine new pointerdown starts a new gesture.
   abandonedTouchGesture=false;
@@ -472,6 +487,7 @@ fullSeek?.addEventListener('change',event=>{
     cancelSeekPreview();return;
   }
   seekPreview=false;
+  supersedingOsSeek=null;
   baseSeek.value=fullSeek.value;
   baseSeek.dispatchEvent(new Event('change',{bubbles:true}));
   // Native range change fires for both pointer and keyboard. Blurring after
@@ -480,6 +496,7 @@ fullSeek?.addEventListener('change',event=>{
   updateTransport();
 });
 fullSeek?.addEventListener('pointercancel',()=>{
+  supersedingOsSeek=null;
   seekInputFromKeyboard=false;
   abandonedTouchGesture=true;
   ignoreCancelledSeekChange=true;
@@ -493,11 +510,22 @@ fullSeek?.addEventListener('keydown',event=>{
     // without committing the audio. Restore the *real* currentTime before
     // the browser applies this new keyboard step, or ArrowRight would jump
     // from the abandoned thumb instead of the OS's latest seek position.
-    if(abandonedTouchGesture)updateTransport();
+    if(abandonedTouchGesture){
+      const intent=supersedingOsSeek;
+      const duration=Number(audio?.duration);
+      if(seekInputFromKeyboard&&intent&&intent.trackSequence===sequence&&
+         intent.source===audio?.currentSrc&&Number.isFinite(duration)&&duration>0){
+        // No audio.currentTime assignment: only the native trusted range
+        // change and existing base player may commit the resulting seek.
+        fullSeek.value=String(Math.round(intent.seconds/duration*1000));
+      }else updateTransport();
+    }
+    supersedingOsSeek=null;
     abandonedTouchGesture=false;
     ignoreCancelledSeekChange=false;
   }
   if(event.key==='Escape'&&seekPreview){
+    supersedingOsSeek=null;
     seekInputFromKeyboard=false;
     event.preventDefault();event.stopPropagation();
     abandonedTouchGesture=true;
@@ -536,6 +564,17 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('pagehide',suspendImmersive);
 window.addEventListener('pageshow',resumeImmersive);
+// A completed native seek can retire OS intent once the target is actually
+// reached. Do not use timeupdate here: WebKit may report the old position.
+audio?.addEventListener('seeked',()=>{
+  const intent=supersedingOsSeek;
+  if(!intent)return;
+  if(intent.source!==audio.currentSrc||intent.trackSequence!==sequence){
+    supersedingOsSeek=null;return;
+  }
+  if(!audio.seeking&&Math.abs(audio.currentTime-intent.seconds)<.35)
+    supersedingOsSeek=null;
+});
 for(const event of ['timeupdate','durationchange','loadedmetadata','play','playing','pause','ended','waiting','emptied'])
   audio?.addEventListener(event,updateTransport);
 // Keep programmatic keyboard focus inside the modal while it is visible.
