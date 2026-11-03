@@ -15,26 +15,28 @@
 | Project | FyMusic, modern browser-only streaming/music player |
 | Code repository | `lxhlw/Only-testing-online-music` (PUBLIC) |
 | Main release | v0.4.33, `version.json` |
-| Stable release baseline commit | `217973faa12b659432a214eeaf88bb1e697c56de` (v0.4.33 code unchanged by UI 2.0) |
+| Stable release code | v0.4.33; main docs-only baseline `de908fa395c35a85a0a8c53021a814c491356b41` before this checkpoint |
 | Official site | `https://only-testing-online-music.pages.dev/` |
-| Stable release CI | [Modern Web Verify and Deploy #41670345575](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41670345575): **completed / success** |
-| Design exploration | Five editable Figma screens + motion guidance; **first desktop UI 2.0 feature preview implemented and tested on isolated branch, not on production** |
-| Next execution priority | Review the [UI 2.0 isolated desktop preview](https://821da531.only-testing-online-music.pages.dev/?ui2=1), then refine artwork/dock/accessibility and implement the next search/library/mobile screens without changing audio logic |
+| Main CI status | Prior production #41670345575 SUCCESS; latest docs-only #41673691537 FAILED at real Migu playback timeout; browser/security tests passed |
+| UI 2.0 development | Desktop and mobile phases 1–2 implemented and verified on draft PR #116 / independent Cloudflare preview only, NOT production |
+| Next execution priority | Visual review [phase 2 preview](https://fc82ed4d.only-testing-online-music.pages.dev/?ui2=1), then tablet/light theme accessibility and measured performance; separately diagnose intermittent production Migu test |
 
-### Latest project operation: UI 2.0 desktop preview, COMPLETED and VERIFIED (2026-11-04)
+### Latest project operation: UI 2.0 phase 2, COMPLETED on isolated preview (2026-11-04)
 
-- **Live preview (nonproduction only):** [FyMusic UI 2.0 desktop preview](https://821da531.only-testing-online-music.pages.dev/?ui2=1). Query `?ui2=1` enables the desktop UI. Ordinary URL without it preserves baseline appearance. This is **not** the production site.
-- **Code:** [draft PR #116](https://github.com/lxhlw/Only-testing-online-music/pull/116), feature branch `feature/fymusic-ui2-desktop-preview-20261104`, tested branch SHA `1d13ee4f0b8709b4982b23b13eab3b0c5db9bcbf`.
-- **Implemented:** desktop cinematic dark palette, dedicated immersive artwork/lyrics layout, floating bottom player Dock, event-driven ambient background reusing already-loaded cover artwork, and `prefers-reduced-motion`. The existing mobile shell is intentionally unchanged.
-- **Safety/behavior:** One original `audio` element, unchanged media resolver, quality/seek handlers, lyrics and platform recovery. The new preview visual module only observes existing images and media state, does not send new fetches or run polling.
-- **Verification (all SUCCESS on the tested SHA):** 
-  - [Isolated Cloudflare Preview #41672796071](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41672796071): built with static allowlist, 404 protection, local and deployed desktop/mobile Chromium+WebKit browser tests, no overflow, cover + lyrics, pause/resume, artwork lifecycle and reduced-motion checks.
-  - [Full browser/security CI #41672843044](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41672843044): SUCCESS.
-  - [Playlist regression #41672843520](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41672843520): SUCCESS.
-  - [Handoff privacy CI #41672843842](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41672843842): SUCCESS.
-  - Real-source scenario: Kugou `稻香` failure automatically chose Kuwo alternative, real audio progressed, 48 timed lyric lines and cover loaded. Requested `128k`; actual bitrate not measured.
-- **Release state:** UI 2.0 changes remain on a **DRAFT PR**. No merge or production release. The official site stays v0.4.33. Do not claim UI 2.0 as the shipped main UI.
-- **Current limitation:** Browser functional checks passed, but final human visual review, performance measurements in normal client devices, future mobile redesign and search/library UI polish are still outstanding.
+- **Nonproduction preview:** [FyMusic UI 2.0 phase 2](https://fc82ed4d.only-testing-online-music.pages.dev/?ui2=1). Only the opt-in query `?ui2=1` activates it. The official production URL continues on v0.4.33 main.
+- **Code:** [DRAFT PR #116](https://github.com/lxhlw/Only-testing-online-music/pull/116), branch `feature/fymusic-ui2-desktop-preview-20261104`. Verified feature SHA `9bc207d78a4691216a24cec5e8463d2f2ab97043`.
+- **Phase 1 retained:** desktop dark cinematic now-playing view, artwork-driven ambient layer (clears when closed), floating music Dock, synchronized lyric styling, reduced-motion support.
+- **Phase 2 implemented:** same opt-in CSS adds redesigned search/discovery empty state, song rows, playlists and detail, rankings, history/favorites/queue, settings; mobile dark discovery, navigation drawer, search, playlist/list cards, mini floating Dock, cover-first immersive player, responsive reduced-motion styling. All original DOM IDs and music/playlist logic are preserved.
+- **Functional boundaries:** No music search/source URL resolver changes, playback-core changes, additional audio elements, extra music fetches or continuous JavaScript animation loops. Visual layer observes existing artwork and media state.
+- **Verification:**
+  - [Phase 2 Cloudflare preview workflow #41676240585](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41676240585): **SUCCESS** at SHA `9bc207d7`. Chromium and WebKit local + deployed browser checks, desktop 1440px, phones 390px and 320px, view navigation, dark surface styles, no horizontal overflow, art, timed lyrics, play/pause/resume, reduced-motion check.
+  - [Full browser/security verification #41676250254](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41676250254): **SUCCESS**.
+  - [Playlist regression #41676250284](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41676250284): **SUCCESS**.
+  - Public asset allowlist and retained-file 404 protection passed.
+  - Real source scenario: failed Kugou `稻香` seamlessly played a Kuwo alternative, lyrics had 48 timed lines and album art loaded. The tested music request was `128k`, **not** a measured codec/bitrate.
+- **Preview test failure and fix:** Initial phase 2 run [#41675764216](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41675764216) failed after deploying because `curl | grep -q` produced a SIGPIPE / exit 23 under `pipefail`; stylesheet was fetched. Updated the workflow to save the CSS to a file before grepping, then verified the succeeding run #41676240585.
+- **Release:** **PR #116 remains DRAFT; UI 2.0 is NOT merged or deployed to production.** User/device visual sign-off and objective FPS/memory review remain pending.
+- **Separate production issue:** The latest documentation-only `main` release workflow [#41673691537](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41673691537) passed baseline browser/security tests but **failed a real Migu song test after timeout**. A previous main release workflow [#41670345575](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41670345575) succeeded. This upstream-dependent failure is **not demonstrated to be caused by UI 2.0**; keep tracked as a production media diagnostic, do not silently ignore.
 
 ### Confirmed implementation milestones
 
@@ -60,19 +62,18 @@
 - The v0.4.33 production CI was successful at the baseline commit, but external providers are not permanently guaranteed.
 - A screenshot from the prior v0.4.32 UI showed `浏览器阻止自动播放` and 0:00, and fixed `flac32bit` downgrading immediately to 128k. v0.4.33 addresses the rejection classifier and selection policy; real user-device reproduction should still be part of later acceptance.
 - The recent Daoxiang live provider fallback still requested **128k** in the tested source configuration; real output bitrate is unmeasured. Higher-quality capability must be verified source by source.
-- **UI 2.0 remains isolated feature-preview only**: desktop presentation is implemented and verified in PR #116, not merged. Mobile and search/library visual redesign remain planned.
+- **UI 2.0 remains draft preview only**: phases 1–2 desktop and mobile CSS are implemented and verified on PR #116, but not released. Human visual approval, measured FPS/memory, tablet 741–980px behavior and complete light-theme rollout remain unfinished.
 - The public GitHub handoff is intentionally restricted to public-safe technical facts. No private conversational memory is stored; full confidential backups require a separate PRIVATE GitHub repository.
 
-## Next goal: UI 2.0 visual review and phase 2
+## Next goal: UI 2.0 visual sign-off, performance and safe rollout
 
-1. Open the exact [isolated preview](https://821da531.only-testing-online-music.pages.dev/?ui2=1) on a desktop. Check visual proportions, legibility, artwork, Dock buttons and animations; collect feedback without changing the official website.
-2. Compare UI to the five-screen private Figma reference using an authorized design tool; keep private Figma URL out of public GitHub documents.
-3. Fix any review issues on feature branch PR #116; re-run browser/security/real-audio validation and update this checkpoint.
-4. Next scoped implementation: UI 2.0 search/song list/library presentation and mobile layouts; keep functional playback/search APIs untouched.
-5. Measure low-end devices, `prefers-reduced-motion`, keyboard focus and memory; do not claim 60 FPS without measurement.
-6. Keep PR draft until user accepts design and all regression gates pass. Production v0.4.33 remains as safe rollback.
-7. After **every operation** update current checkpoint and append operation log in GitHub while enforcing privacy screening.
-
+1. Review [phase 2 preview](https://fc82ed4d.only-testing-online-music.pages.dev/?ui2=1) in desktop and mobile: navigation, hero/search, playlist cards, ranking, music library, album art/lyric sizes and mini Dock; collect actionable design feedback.
+2. Compare with the five-screen Figma reference **using authorized Figma connection only**, without sharing Figma access URLs or account IDs in this public document. Fix visual gaps via the existing feature draft PR #116.
+3. Measure real device animation smoothness, CPU/memory and reduced-motion behavior. Target responsiveness but **do not claim 60 FPS before measuring**; test small phones and the 741–980px tablet band.
+4. Implement a coherent optional light theme for UI 2.0, while protecting accessible contrast and system-theme settings. Existing `?ui2=1` flag stays opt-in until approval.
+5. Independently diagnose the current production Migu real-playback timeout in [#41673691537](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41673691537). Compare external source reliability and deterministic local fixtures; do not weaken release acceptance merely to make CI green.
+6. Re-run Chromium/WebKit desktop/mobile, real-source cover/lyric/recovery, audio seek/pause, security 404, strict dist allowlist and playlist tests after any new code changes.
+7. Keep **PR #116 DRAFT** and official v0.4.33 appearance untouched until visual review and acceptance. Update this current state plus append-only log after each meaningful operation; no private data in public GitHub.
 ## Next chat: recovery procedure
 
 Paste: **“继续 FyMusic。先从 GitHub 仓库 `lxhlw/Only-testing-online-music` 的 `main` 读取 `docs/HANDOFF_CURRENT.md`、`docs/HANDOFF_LOG.md` 和 `docs/HANDOFF_POLICY.md`，核对最新代码和 Actions，然后执行上面下一目标的第一项。每一步先验收、再更新 GitHub 交接记录；严禁上传私人信息。”**
@@ -86,4 +87,6 @@ If this document is older than the last code change, inspect the latest commits,
 - `scripts/build-pages-dist.mjs`, `scripts/test-pages-dist.mjs` — static allowlist
 - `scripts/test-playback-rejection-browser.mjs`, `scripts/test-playback-quality-policy.mjs` — v0.4.33 media behavior
 - `scripts/test-seamless-live-daoxiang-preview.mjs` — real provider fallback scenario
+- `src/ui2-preview.css`, `src/ui2-preview.js` — UI 2.0 feature branch visual layer; `?ui2=1`
+- `scripts/test-ui2-phase2-browser.mjs`, `scripts/test-ui2-phase2-style.mjs` — Phase 2 desktop/mobile acceptance
 - `.github/workflows/verify-and-deploy.yml` — release pipeline
