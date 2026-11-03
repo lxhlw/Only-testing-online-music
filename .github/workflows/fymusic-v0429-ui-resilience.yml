@@ -35,10 +35,17 @@ jobs:
           node --check src/app.js
           node --check scripts/test-v0429-webkit-ux-profile.mjs
           node --check scripts/test-modern-web-browser.mjs
+          node --check functions/api/kuwo-song-meta.js
+          node --check scripts/test-kuwo-track-info.mjs
+          node --check scripts/test-now-playing-kuwo-browser.mjs
       - name: Install runtime and browser test dependencies
         run: |
           npm install --no-audit --no-fund
           npx playwright install --with-deps chromium webkit
+      - name: Strict Kuwo metadata and LRC API security and data tests
+        run: |
+          node scripts/test-kuwo-track-info.mjs
+          echo FYMUSIC_KUWO_METADATA_LYRICS_API_UNIT_PASS
       - name: Build only published runtime assets
         run: |
           npm run build:pages
@@ -58,6 +65,12 @@ jobs:
         run: |
           node scripts/test-modern-web-browser.mjs
           echo FYMUSIC_V0429_UI_COMMENT_QUALITY_METADATA_PASS
+      - name: Real detail Play/Pause SVG and Kuwo artwork/lyrics in Chromium and WebKit
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: |
+          node scripts/test-now-playing-kuwo-browser.mjs
+          echo FYMUSIC_KUWO_DETAIL_ARTWORK_LYRICS_PAUSE_PLAY_PASS
       - name: Actual WebKit and Chromium list mutation and RAF observation
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
