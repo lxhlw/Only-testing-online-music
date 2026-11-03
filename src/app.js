@@ -428,21 +428,29 @@
     setLyricsStatus('正在获取歌词…');
     var fallback=function(previousError){
       if(!valid())return;
-      // Never mix lyrics from a different platform or song. Official NetEase
-      // lyric ID lookup applies only to numeric NetEase track identifiers.
-      var rawId=track.lyricId||track.id||track.songId||track.songmid||'';
+      // Fall back to a fixed-host API for *this song's own platform* only.
+      // Kuwo has its own numeric song ID and lyric timeline; never substitute
+      // another provider's recording with a coincidentally similar title.
+      var rawId=state.source==='kw'
+        ?(track.id||track.songId||track.songmid||'')
+        :(track.lyricId||track.id||track.songId||track.songmid||'');
       var id=String(rawId);
-      if(state.source!=='wy'||!/^[0-9]{1,20}$/.test(id)){
+      var endpoint=state.source==='kw'?'/api/kuwo-song-meta?id=':
+        (state.source==='wy'?'/api/netease-lyrics?id=':'');
+      if(!endpoint||!/^[0-9]{1,20}$/.test(id)){
         if(lyricsLinesEl)lyricsLinesEl.innerHTML='<div class="lyrics-empty">这首歌曲暂时没有可获取的歌词</div>';
         setLyricsStatus('当前歌曲暂无可用歌词','warn');return;
       }
       var controller=typeof AbortController==='function'?new AbortController():null;
       var timer=global.setTimeout(function(){if(controller)controller.abort();},8500);
-      global.fetch('/api/netease-lyrics?id='+encodeURIComponent(id),
+      global.fetch(endpoint+encodeURIComponent(id),
         controller?{signal:controller.signal}:{})
         .then(function(res){if(!res.ok)throw new Error('歌词服务暂不可用');return res.json();})
         .then(function(data){
           if(!valid())return;
+          if(state.source==='kw'&&(data.source!=='kw'||String(data.id)!==id)){
+            throw new Error('Kuwo lyric identity mismatch');
+          }
           renderLyricsResult(track,data);
         })
         .catch(function(){
@@ -1907,6 +1915,15 @@
     // The lyrics panel is independent of the route: stale lyrics must never
     // remain visible when the listener selects another track.
     clearLyrics();
+    // Reflect the selected track before its asynchronous resolver settles.
+    // On upstream 502 the mini-player must not display the previous singer.
+    // This changes only visible metadata, not playback or the chosen source.
+    if (MODERN_WEB) {
+      var selectedTitle=document.getElementById('player-title');
+      var selectedArtist=document.getElementById('player-artist');
+      if (selectedTitle) selectedTitle.textContent=String(music && music.name || '未知歌曲');
+      if (selectedArtist) selectedArtist.textContent=String(music && (music.singer || music.artist) || '未知歌手');
+    }
     // The immersive screen receives the selected song immediately, even
     // while a third-party media URL is still resolving. Avoid polling app state.
     try {

@@ -101,7 +101,7 @@ function applyMetadata(data,expectedSequence=sequence){
       const cover=safeArt(track.image,track.source);
       navigator.mediaSession.metadata=new MediaMetadata({
         title:track.name||'未知歌曲',artist:track.singer||'',
-        album:track.albumName||'LX Music Web',
+        album:track.albumName||'FyMusic',
         artwork:cover?[{src:cover,sizes:'512x512',type:'image/jpeg'}]:[]
       });
     }
@@ -110,15 +110,18 @@ function applyMetadata(data,expectedSequence=sequence){
 async function resolveCover(current,key){
   const supplied=safeArt(current.image,current.source);
   if(supplied){setCover(supplied);return;}
-  if(current.source!=='wy'||!/^\d{1,20}$/.test(current.id))return;
+  if(!['wy','kw'].includes(current.source)||!/^\d{1,20}$/.test(current.id))return;
   if(artCache.has(key)){applyMetadata(artCache.get(key),current.sequence);return;}
   metaAbort?.abort();
   const controller=new AbortController();metaAbort=controller;
   try{
-    const r=await fetch('/api/netease-song-meta?id='+encodeURIComponent(current.id),{signal:controller.signal});
+    const api=current.source==='kw'?'/api/kuwo-song-meta?id=':
+      '/api/netease-song-meta?id=';
+    const r=await fetch(api+encodeURIComponent(current.id),{signal:controller.signal});
     if(!r.ok)throw Error('metadata unavailable');
     const data=await r.json();
     if(!data||String(data.id)!==current.id||
+       (current.source==='kw'&&data.source!=='kw')||
        !safeArt(data.image,current.source))return;
     if(sequence!==current.sequence)return;
     // Only the allowlisted metadata below is cached or applied. Discard any
@@ -218,8 +221,33 @@ async function loadComments(force=false,append=false){
   }
   const current=sequence,mode=commentMode,controller=new AbortController();commentAbort=controller;
   try{
-    const r=await fetch('/api/netease-comments?source=wy&id='+encodeURIComponent(id)+
-      '&mode='+mode+'&offset='+offset,{signal:controller.signal});
+    const endpoint='/api/netease-comments?source=wy&id='+encodeURIComponent(id)+
+      '&mode='+mode+'&offset='+offset;
+    let r=await fetch(endpoint,{signal:controller.signal});
+    // Retry a transient 502/503/504 exactly once; do not retry client errors
+    // or let stale, aborted requests overwrite a newer track.
+    if([502,503,504].includes(r.status)&&current===sequence&&
+       !controller.signal.aborted&&isOpen()&&activeTab==='comments'&&mode===commentMode){
+      if(append){
+        if(pageNote)pageNote.textContent='评论暂时不可用，正在重试一次…';
+      }else{
+        commentStatus.textContent='评论服务暂时不可用，正在重试一次…';
+      }
+      await new Promise((resolve,reject)=>{
+        const onAbort=()=>{
+          clearTimeout(timer);
+          reject(new DOMException('Cancelled','AbortError'));
+        };
+        const timer=setTimeout(()=>{
+          controller.signal.removeEventListener('abort',onAbort);
+          resolve();
+        },450);
+        controller.signal.addEventListener('abort',onAbort,{once:true});
+        if(controller.signal.aborted)onAbort();
+      });
+      if(current!==sequence||!isOpen()||mode!==commentMode)return;
+      r=await fetch(endpoint,{signal:controller.signal});
+    }
     if(!r.ok)throw new Error('Comments service unavailable');
     const data=await r.json();
     if(current!==sequence||!isOpen()||activeTab!=='comments'||commentMode!==mode)return;
@@ -231,7 +259,7 @@ async function loadComments(force=false,append=false){
       if(pageNote)pageNote.textContent='加载失败 · 稍后继续向下滑动重试';
       commentStatus.textContent='评论下一页暂时不可用';
     }else{
-      hideComments('平台暂未返回'+(mode==='hot'?'热门':'最新')+'评论，可以刷新或前往原平台查看');
+      hideComments('评论服务暂时不可用，已重试一次；可点击刷新或前往原平台查看');
       $('comments-official-link').href='https://music.163.com/#/song?id='+encodeURIComponent(id);
       $('comments-link-wrap').hidden=false;
     }
@@ -298,10 +326,18 @@ function updateTransport(){
   $('detail-current-time').textContent=formatSeconds(shownSeconds);
   $('detail-duration').textContent=formatSeconds(valid?audio.duration:0);
   const playing=!audio.paused&&!audio.ended;
-  $('detail-toggle-btn').setAttribute('aria-label',playing?'暂停':'播放');
-  $('detail-toggle-btn').title=playing?'暂停':'播放';
-  $('detail-toggle-btn').querySelector('.detail-play-icon').hidden=playing;
-  $('detail-toggle-btn').querySelector('.detail-pause-icon').hidden=!playing;
+  const toggle=$('detail-toggle-btn');
+  // Keep native state, button state and both icons synchronized in the same
+  // media event. Class-driven display is explicit even for SVG in WebKit.
+  toggle.classList.toggle('is-playing',playing);
+  toggle.dataset.playbackState=playing?'playing':'paused';
+  toggle.setAttribute('aria-label',playing?'暂停':'播放');
+  toggle.title=playing?'暂停':'播放';
+  // SVGSVGElement.hidden is not a reliably reflected DOM property:
+  // assigning false can leave the literal HTML "hidden" attribute intact.
+  // Toggle the attribute itself so CSS and the rendered icon agree.
+  toggle.querySelector('.detail-play-icon').toggleAttribute('hidden',playing);
+  toggle.querySelector('.detail-pause-icon').toggleAttribute('hidden',!playing);
 }
 function centerActiveLyric(instant=false){
   if(!isOpen()||activeTab!=='lyrics'||!lyricScroll)return;
@@ -394,7 +430,13 @@ commentList?.addEventListener('scroll',()=>{
 updateCommentMode();
 $('detail-prev-btn')?.addEventListener('click',()=>$('prev-track-btn')?.click());
 $('detail-next-btn')?.addEventListener('click',()=>$('next-track-btn')?.click());
-$('detail-toggle-btn')?.addEventListener('click',()=>$('player-toggle-btn')?.click());
+$('detail-toggle-btn')?.addEventListener('click',()=>{
+  $('player-toggle-btn')?.click();
+  // The audio.paused flag changes synchronously on pause(), while browsers
+  // may dispatch the corresponding pause event in a later task. Update the
+  // immersive button in the click task to avoid a stale visible icon.
+  updateTransport();
+});
 const playbackModes=['sequence','list-loop','single-loop','shuffle'];
 const modeLabels={sequence:'顺序', 'list-loop':'列表循环','single-loop':'单曲循环',shuffle:'随机'};
 const modeButton=$('detail-mode-btn');

@@ -546,6 +546,17 @@
     return types.reverse();
   }
 
+  // Kuwo's native search response includes the actual album artwork path.
+  // Use it before waiting for a separate metadata service, which some
+  // Cloudflare data centers cannot reach. Do not treat MV art as album art.
+  function kuwoSearchAlbumCover(item) {
+    var path=String(item && item.web_albumpic_short || '');
+    if (/^\d{2,3}\/(?:[A-Za-z0-9_-]+\/){1,7}[A-Za-z0-9_-]+\.(?:jpe?g|png|webp)$/i.test(path)) {
+      return 'https://img3.kuwo.cn/star/albumcover/300/'+path.replace(/^\d{2,3}\//,'');
+    }
+    return '';
+  }
+
   function searchKuwo(keyword, page, limit, callback) {
     var url = 'http://search.kuwo.cn/r.s' +
       '?client=kt' +
@@ -593,6 +604,7 @@
             singer: decodeKuwoText(item.ARTIST),
             albumName: decodeKuwoText(item.ALBUM),
             albumId: decodeKuwoText(item.ALBUMID),
+            image: kuwoSearchAlbumCover(item),
             interval: formatKuwoInterval(item.DURATION),
             source: 'kw',
             types: parseKuwoNMinfos(item.N_MINFO),

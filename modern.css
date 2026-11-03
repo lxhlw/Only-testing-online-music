@@ -1108,6 +1108,9 @@ html.modern-web .now-playing-transport-buttons .detail-main-toggle:hover{
   background:#287a59;color:#fff
 }
 html.modern-web .detail-main-toggle [hidden]{display:none!important}
+/* Explicit SVG visibility state for the immersive Play/Pause button. */
+html.modern-web #detail-toggle-btn.is-playing .detail-play-icon{display:none!important}
+html.modern-web #detail-toggle-btn:not(.is-playing) .detail-pause-icon{display:none!important}
 html.modern-web .now-playing-timeline{
   display:flex;align-items:center;gap:12px;width:min(690px,100%);
   color:#698b74;font-size:11px;font-variant-numeric:tabular-nums

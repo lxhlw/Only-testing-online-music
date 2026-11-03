@@ -415,6 +415,43 @@ try {
   await page.locator('#comments-hot-btn').click();
   await page.waitForFunction(()=>document.querySelectorAll('.now-comment-card').length===1,{timeout:5500});
   checks.push('hot-latest-comment-pagination');
+  // An upstream 502 should retry exactly once and retain the same song.
+  let transientAttempts=0;
+  const transient=route=>{
+    transientAttempts++;
+    if(transientAttempts===1)return route.fulfill({
+      status:502,contentType:'application/json',body:'{"error":"bad gateway"}'
+    });
+    return route.fulfill({
+      status:200,contentType:'application/json',
+      body:JSON.stringify({source:'wy',id:'123456',kind:'hot',total:1,offset:0,
+        comments:[{id:'recovered',user:'重试用户',content:'评论重试成功',likedCount:0}]})
+    });
+  };
+  await page.route('**/api/netease-comments?*',transient);
+  await page.locator('#comments-refresh-btn').click();
+  await page.waitForFunction(()=>document.querySelector('.now-comment-card p')?.textContent==='评论重试成功',
+    {timeout:7000});
+  assert.equal(transientAttempts,2,'Transient comments 502 should retry once');
+  assert.equal(await page.locator('.now-comment-card').count(),1);
+  await page.unroute('**/api/netease-comments?*',transient);
+  checks.push('comments-502-retry-once');
+
+  let repeatedFailures=0;
+  const failed=route=>{
+    repeatedFailures++;
+    return route.fulfill({
+      status:502,contentType:'application/json',body:'{"error":"bad gateway"}'
+    });
+  };
+  await page.route('**/api/netease-comments?*',failed);
+  await page.locator('#comments-refresh-btn').click();
+  await page.waitForFunction(()=>document.querySelector('#comments-status')?.textContent.includes('已重试一次'),
+    {timeout:7000});
+  assert.equal(repeatedFailures,2,'Comment retry must stop after second gateway failure');
+  assert.equal(await page.locator('#comments-official-link').isVisible(),true);
+  await page.unroute('**/api/netease-comments?*',failed);
+  checks.push('comments-502-failure-visible-with-official-link');
 
   assert.ok((await page.locator('#comments-official-link').getAttribute('href')).endsWith('id=123456'));
   await page.locator('.now-playing-cover-box').click();
@@ -688,5 +725,27 @@ try {
   checks.push('320-390-424px-no-overflow-and-drawer-keyboard');
 
   checks.push('mobile');
+  const qualityHelp=await page.locator('#quality-source-explainer').textContent();
+  assert.match(qualityHelp,/渠道.*声明支持/,'Selected source quality support must be clear');
+  assert.match(qualityHelp,/不是实测媒体码率/);
+  assert.ok((await page.locator('#inline-quality').getAttribute('aria-describedby')).includes('quality-source-explainer'));
+  checks.push('quality-source-capability-explained');
+
+  // This track's resolver deliberately never returns: the compact player
+  // must still show its new identity instead of stale previous-track metadata.
+  await page.evaluate(()=>{
+    window.LXSourceManager.requestAction=(source,action,params,done)=>{
+      window.__pendingTrackResolver=done;
+    };
+    window.OnlyTestingMusicApp.playMusic({
+      id:'pending-2026-ui',name:'切换中的歌曲',singer:'新歌曲歌手',
+      source:'wy',interval:12
+    });
+  });
+  await page.waitForFunction(()=>
+    document.querySelector('#player-title')?.textContent==='切换中的歌曲'&&
+    document.querySelector('#player-artist')?.textContent==='新歌曲歌手',
+    {timeout:4500});
+  checks.push('pending-track-title-singer-not-stale');
   console.log('PASS modern-web:',checks.join(', '),'Flower-only outage reporting, bounded playback and responsive library');
 }finally{await browser.close()}
