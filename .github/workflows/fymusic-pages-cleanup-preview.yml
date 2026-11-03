@@ -53,8 +53,10 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           npx wrangler pages deploy dist --project-name "$CF_PAGES_PROJECT" \
             --branch "$CF_PREVIEW_BRANCH" --commit-hash "$GITHUB_SHA" | tee /tmp/fymusic-cleanup-preview.log
-          url=$(grep -Eo 'https://[a-z0-9-]+\.only-testing-online-music\.pages\.dev' \
-            /tmp/fymusic-cleanup-preview.log | tail -n1)
+          # Wrangler prints both an immutable deployment URL and a mutable
+          # branch alias; test the exact immutable deployment, never the alias.
+          url=$(grep -Eo 'https://[0-9a-f]{8}\.only-testing-online-music\.pages\.dev' \
+            /tmp/fymusic-cleanup-preview.log | head -n1)
           test -n "$url"
           case "$url" in
             https://only-testing-online-music.pages.dev*) exit 2;;
