@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
-import {chromium} from 'playwright';
+import {chromium,webkit} from 'playwright';
 
-// Real HTMLAudioElement and Chromium decoder. All media bytes are a synthetic
+// Real HTMLAudioElement and native browser decoder. All media bytes are a synthetic
 // WAV tone generated here; no signed URLs, Flower APIs or copyrighted songs.
 const BASE=process.env.TEST_BASE_URL||'http://127.0.0.1:8788';
+const ENGINE=process.env.BROWSER_ENGINE||'chromium';
+assert.ok(['chromium','webkit'].includes(ENGINE),'supported native engine');
 function makeWav(seconds=8,rate=8000){
   const samples=seconds*rate,buf=Buffer.alloc(44+samples*2);
   buf.write('RIFF',0);buf.writeUInt32LE(buf.length-8,4);
@@ -16,8 +18,9 @@ function makeWav(seconds=8,rate=8000){
     buf.writeInt16LE(Math.round(Math.sin(i*2*Math.PI*440/rate)*1500),44+i*2);
   return buf;
 }
-const browser=await chromium.launch({
- headless:true,args:['--autoplay-policy=no-user-gesture-required']
+const browser=await ({chromium,webkit})[ENGINE].launch({
+ headless:true,
+ ...(ENGINE==='chromium'?{args:['--autoplay-policy=no-user-gesture-required']}:{})
 });
 try{
  const page=await browser.newPage({viewport:{width:390,height:844},
@@ -196,8 +199,8 @@ try{
  assert.ok(responses.some(r=>r.path==='/fymusic-phase18-slow.wav'&&r.status===200));
  assert.ok(responses.some(r=>r.path==='/fymusic-phase18-invalid.mp3'&&r.status===200));
  assert.deepEqual(errors,[]);
- console.log('FYMUSIC_REAL_MEDIA_LIFECYCLE_PASS '+JSON.stringify({
-   realChromiumDecoder:true,
+ console.log('FYMUSIC_REAL_MEDIA_LIFECYCLE_PASS_'+ENGINE+' '+JSON.stringify({
+   realNativeDecoder:true,engine:ENGINE,
    controlledWavSeconds:8,
    delayedLoadingWaiting:true,
    nativeMetadataAndPlayback:true,
