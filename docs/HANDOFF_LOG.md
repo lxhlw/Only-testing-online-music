@@ -5,6 +5,15 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Stage 5A live preview: LRC restored in one sample, audio progress blocked
+
+- **Goal:** Evaluate a live, isolated Cloudflare Preview rather than count deterministic mocks as provider success.
+- **Changes:** Created draft PR #121 and a nonproduction Migu reliability workflow. Added strictly limited media-state diagnostic (readyState/networkState/error code/paused/progress and source enum only) after audio timeout; ensured independent strict Daoxiang fallback test runs even if Migu test fails after a successful preview deploy.
+- **Tests:** Preview #41689359962 deployed successfully. Migu unit, asset allowlist and public-handoff privacy check PASSED. Real Migu acceptance passed the lyric API assertions and then FAILED waiting 35s for actual audio progress. Full browser PR CI was superseded by later branch commits; newest rechecks PENDING. No false audio success claim.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41689359962 ; https://github.com/lxhlw/Only-testing-online-music/pull/121 .
+- **Status:** Source reliability Stage 5 remains IN PROGRESS. Do not release branch to production. UI2 PR #116 is separate and still draft.
+- **Next action:** Read newest preview and PR CI logs for safe audio-state reason and Daoxiang real fallback. If audio is still unavailable, inspect source resolver state and implement bounded appropriately matched recovery without weakening playback-progress checks. Stage 6 acceptance/release remains after Stage 5.
+
 ## 2026-11-04 · Stage 5A Migu LRC bounded retry and sanitized diagnostics
 
 - **Goal:** Diagnose recurring Migu HTTP 502 without leaking upstream details; improve recoverability from transient errors.
