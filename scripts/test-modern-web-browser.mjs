@@ -289,7 +289,24 @@ try {
       source:'wy',interval:8
     });
   });
-  await page.waitForFunction(()=>document.querySelector('#status')?.textContent.includes('野花音源暂时无法提供播放地址'),{timeout:5000});
+  try {
+    await page.waitForFunction(()=>document.querySelector('#status')?.textContent.includes('野花音源暂时无法提供播放地址'),null,{timeout:7000});
+  } catch(error) {
+    const outage=await page.evaluate(()=>({
+      status:document.querySelector('#status')?.textContent?.slice(0,400),
+      statusClass:document.querySelector('#status')?.className,
+      playerTitle:document.getElementById('player-title')?.textContent,
+      audioSrc:document.getElementById('audio')?.getAttribute('src'),
+      requestedQualities:window.__outageQualityRequests,
+      fallbackCalls:window.__fallbackCalls,
+      activeSource:window.LXSourceManager?.getActive?.()?.name,
+      sourceChannels:Object.keys(window.LXSourceManager?.getActive?.()?.sources||{}),
+      nowPlayingSource:window.__LXNowPlayingTrack?.source,
+      audioPlays:window.__audioPlayCalls,
+      pageVersion:document.getElementById('app-version')?.textContent
+    }));
+    throw new Error('FYMUSIC_FLOWER_OUTAGE_UI_DIAGNOSTIC '+JSON.stringify(outage));
+  }
   assert.equal(await page.evaluate(()=>window.__fallbackCalls),0,
     'Flower-only mode must never call another provider');
   assert.deepEqual(await page.evaluate(()=>window.__outageQualityRequests),['320k'],
