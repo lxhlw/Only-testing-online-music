@@ -96,10 +96,17 @@ try{
    window.__fymusicRealLifecycle.firstPlay=a.play().then(
      ()=>({ok:true}),error=>({ok:false,name:error.name}));
  });
- await page.waitForFunction(()=>
-   document.documentElement.classList.contains('is-buffering') &&
-   !document.querySelector('#player-network-hint').hidden,
-   null,{timeout:5000});
+ try{
+   await page.waitForFunction(()=>
+     document.documentElement.classList.contains('is-buffering') &&
+     !document.querySelector('#player-network-hint').hidden,
+     null,{timeout:5000});
+ }catch(error){
+   console.error('FYMUSIC_REAL_MEDIA_SLOW_BUFFER_DIAGNOSTIC_'+ENGINE+' '+
+     JSON.stringify({state:await snap(),requests:{slowRequests,normalRequests,
+       invalidRequests},error:String(error)}));
+   throw error;
+ }
  const pending=await snap();
  assert.equal(pending.buffering,true);
  assert.match(pending.hint,/音频缓冲中/);
