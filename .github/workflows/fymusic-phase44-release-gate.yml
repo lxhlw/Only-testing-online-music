@@ -20,8 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 24
     env:
-      FYMUSIC_RELEASE_CANDIDATE_DIR: ${{ runner.temp }}/fymusic-phase44-candidate
-      FYMUSIC_RELEASE_MANIFEST: ${{ runner.temp }}/fymusic-phase44-manifest.json
+      FYMUSIC_RELEASE_CANDIDATE_DIR: /tmp/fymusic-phase44-candidate
+      FYMUSIC_RELEASE_MANIFEST: /tmp/fymusic-phase44-manifest.json
       BASE_SHA: c9a496ab580fb54775721b93a3944800bcaefc44
     steps:
       - uses: actions/checkout@v4
@@ -66,7 +66,6 @@ jobs:
           set -euo pipefail
           node scripts/test-proxy-security.mjs
           node scripts/test-modern-flower-proxy.mjs
-          node scripts/test-fymusic-runtime-request-privacy.mjs
       - name: Start ISOLATED local Pages candidate, never Cloudflare production
         shell: bash
         run: |
@@ -81,6 +80,10 @@ jobs:
           grep -Fq 'src/fymusic-playback-verifier.js' /tmp/fymusic-phase44-index.html
           curl -fsS http://127.0.0.1:8788/src/fymusic-playback-core.js -o /tmp/fymusic-phase44-core.js
           grep -Fq 'createPlaybackVerifier' /tmp/fymusic-phase44-core.js
+      - name: Validate no browser runtime signed URL or tag retention
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-fymusic-runtime-request-privacy.mjs
       - name: Full existing modern-web browser smoke on curated release candidate
         env:
           TEST_BASE_URL: http://127.0.0.1:8788
