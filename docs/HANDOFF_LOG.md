@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · v0.4.34 final integrated candidate all automated gates green; release held for device approval
+
+- **Goal:** Run final v0.4.34 UI2/source candidate with coherent versioned assets, strict live providers, security and privacy, then prepare safe user-reviewable release.
+- **Changes:** Branch `release/fymusic-stage5-stage6-rc-20261104` head `e6745688` contains UI2 light/dark desktop/tablet/mobile, bounded Migu LRC and provider recovery, version.json/package/app-version/HTML v0.4.34 plus updated UI2 contract assertions. PR #122 marked READY FOR REVIEW and evidence documented; no production code merge.
+- **Tests:** Exact head preview #41694637948 SUCCESS: local/deployed Chromium+WebKit UI2, theme a11y, keyboard, reduced motion, no overflow, 404/static asset guard, single audio; real KG `稻香`→KW playable audio/cover/48 timed LRC and Migu `开始懂了` audio/cover/55 timed LRC/pause/resume. Prior v0.4.34 full browser/security #41694285132 SUCCESS, playlist #41694285353 SUCCESS, privacy #41694404264 SUCCESS. First earlier v0.4.33 integrated live Daoxiang attempt failed then rerun passed; upstream flakiness remains.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41694637948 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41694285132 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41694285353 ; https://github.com/lxhlw/Only-testing-online-music/pull/122 . Synthetic screenshots artifact #13261185210.
+- **Not done:** Physical-device FPS/memory/CPU, real screen-reader and 320px touch reachability, human design approval, production merge, production version/site verification or rollback exercise. Do NOT call Stage 6 production completed.
+- **Status:** Stage 5 technical and Stage 6 AUTOMATED acceptance completed; Stage 6 official RELEASE HOLD. Main remains v0.4.33.
+- **Next action:** Human/device review of https://d8b9d8d9.only-testing-online-music.pages.dev/?ui2=1 ; only after acceptance merge PR #122, validate official production and preserve revert rollback.
+
 ## 2026-11-04 · Integrated RC acceptance passed; ready for human review, production held
 
 - **Goal:** Finish automated provider and UI2 regression on the same release candidate, then preserve exact evidence and rollback plan.
