@@ -1423,6 +1423,82 @@
   }
 
 
+  // User-enabled, bounded recovery of a failed Kugou recording. This
+  // searches OTHER CATALOGS, but resolves media through the installed LX
+  // source for the selected alternate platform. No third-party resolver script,
+  // no signed URLs in events/logs and no popup or extra user gesture.
+  function recoverCrossPlatformPlayback(music,source,token) {
+    if(!MODERN_WEB||token!==playbackToken||!playbackState||
+       playbackState.token!==token||!global.FyMusicCrossPlatformMatch||
+       !global.LXMusicSearch||!global.LXMusicSearch.search)return false;
+    var state=playbackState;
+    var original=state.autoOriginalMusic||(source==='kg'?music:null);
+    if(!original||String(original.source||'kg').toLowerCase()!=='kg')return false;
+    if(state.crossRecoveryPending)return true;
+    var active=global.LXSourceManager.getActive();
+    var activeId=String(active&&(active.id||active.url)||'');
+    var attempted=Array.isArray(state.autoTriedSources)?state.autoTriedSources.slice():['kg'];
+    var order=['kw','mg','wy'];
+    var targets=order.filter(function(target){
+      var entry=active&&active.sources&&active.sources[target];
+      return attempted.indexOf(target)<0&&entry&&
+        Array.isArray(entry.actions)&&entry.actions.indexOf('musicUrl')>=0;
+    });
+    if(!targets.length)return false;
+    state.crossRecoveryPending=true;
+    var index=0;
+    function isCurrent(){
+      var now=global.LXSourceManager.getActive();
+      return token===playbackToken&&playbackState===state&&
+        String(now&&(now.id||now.url)||'')===activeId;
+    }
+    function next(){
+      if(!isCurrent())return;
+      if(index>=targets.length){
+        state.crossRecoveryPending=false;
+        setStatus('当前歌曲和匹配的备用版本暂时都无法播放，请稍后重试。','fail');
+        return;
+      }
+      var target=targets[index++];
+      attempted.push(target);
+      var finished=false;
+      var timer=global.setTimeout(function(){
+        if(finished)return;
+        finished=true;
+        next();
+      },8000);
+      try{
+        global.LXMusicSearch.search(target,
+          String(original.name||'')+' '+String(original.singer||''),1,25,
+          function(error,response){
+            if(finished)return;
+            finished=true;global.clearTimeout(timer);
+            if(!isCurrent())return;
+            var list=response&&Array.isArray(response.list)?response.list:[];
+            var match=null;
+            if(!error)for(var i=0;i<list.length;i++){
+              if(global.FyMusicCrossPlatformMatch.equivalent(original,list[i],'audio').accepted){
+                match=list[i];break;
+              }
+            }
+            if(!match)return next();
+            // The original queue item remains untouched. Only the currently
+            // playing recording changes, with an unobtrusive accurate label.
+            state.crossRecoveryPending=false;
+            startPlayback(match,target);
+            if(playbackState&&playbackState.source===target){
+              playbackState.autoOriginalMusic=original;
+              playbackState.autoTriedSources=attempted.slice();
+              playbackState.automaticAlternativeOrigin='kg';
+            }
+          });
+      }catch(error){global.clearTimeout(timer);if(!finished){finished=true;next();}}
+    }
+    setStatus('正在自动寻找可播放的同曲版本…','warn');
+    next();
+    return true;
+  }
+
   // Optional KG -> KW recovery requires TWO explicit user interactions.
   // No background cross-platform search or automatic playback substitution.
   function offerCrossPlatformAlternative(original,source,token){
