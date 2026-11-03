@@ -17,7 +17,7 @@ const browser=await chromium.launch({headless:true,args:['--autoplay-policy=no-u
 const wait=(n)=>new Promise(resolve=>setTimeout(resolve,n));
 const isCurrent=()=>fetch(base+'/version.json',{signal:AbortSignal.timeout(18000)})
   .then(r=>{assert.equal(r.status,200);return r.json()})
-  .then(v=>{assert.equal(v.name,'FyMusic');assert.equal(v.version,'0.4.27');return v});
+  .then(v=>{assert.equal(v.name,'FyMusic');assert.equal(v.version,'0.4.28');return v});
 
 try {
  evidence.tests.version=await isCurrent();
