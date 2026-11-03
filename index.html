@@ -261,8 +261,8 @@
             <div class="settings-section">
               <h2>播放设置</h2>
               <div class="setting-row-inline">
-                <div><strong>播放音质</strong><p>选择固定音质时将优先按指定规格请求。音源不支持时会明确提示；成功解析不代表媒体实际码率相同。</p></div>
-                <select id="inline-quality">
+                <div><strong>播放音质</strong><p id="quality-source-explainer">当前渠道只能请求音源声明支持的规格；320k、FLAC 是否可用因音源及歌曲而异。播放器显示的是“请求音质”，不是实测媒体码率。</p></div>
+                <select id="inline-quality" aria-describedby="quality-source-explainer inline-quality-hint">
                   <option value="highest">自动选择最佳音质（优先 MP3）</option>
                   <option value="128k">128k</option>
                   <option value="192k">192k</option>
