@@ -5,6 +5,15 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Stage 5A Migu LRC bounded retry and sanitized diagnostics
+
+- **Goal:** Diagnose recurring Migu HTTP 502 without leaking upstream details; improve recoverability from transient errors.
+- **Changes:** Separate developer branch `fix/fymusic-migu-lrc-bounded-retry-20261104` based on main 4527495d. On Migu CDN-only LRC function, classify failures using safe reason enums, retry once on 429/500/502/503/504 and transport timeout/network failure, 4.25s attempt deadline. Never broaden URL allowlist or follow redirects. Keep strict media and timed lyric acceptance.
+- **Tests:** Added unit coverage for 503 recovery, exhausted retry, 404 no retry, exception sanitization. Updated live test to include only a fixed reason category and attempt count; it still fails unless timed lyrics, real audio progress, cover and pause/resume all succeed. CI PENDING at record creation; no actual provider success is yet claimed.
+- **Evidence:** Main #41686835515 FAILED strict Migu HTTP 502; main #41685131793 passed. Developer commits aefb6de9, 084cecc5, 6d1a2c08 (code/tests) and e781f47d (handoff); pull request and CI to be checked next.
+- **Status:** Isolated feature work only; official production remains v0.4.33; UI2 PR #116 remains draft.
+- **Next action:** Open a draft PR, run browser/security, privacy and real-source gates; interpret result without weakening real music playback acceptance. Then diagnose any remaining upstream reliability gaps and complete Stage 6 final approval.
+ 
 ## 2026-11-04 · Handoff checkpoint gate fix
 
 - **Goal:** Restore the mandatory public-handoff privacy workflow after the Stage 4 review checkpoint.
