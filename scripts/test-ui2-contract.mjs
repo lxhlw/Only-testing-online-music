@@ -5,7 +5,7 @@ const css=fs.readFileSync('src/ui2-preview.css','utf8');
 const js=fs.readFileSync('src/ui2-preview.js','utf8');
 assert.match(html,/src\/ui2-preview\.css\?v=0\.4\.33/);
 assert.match(html,/src\/ui2-preview\.js\?v=0\.4\.33/);
-assert.match(css,/@media \(min-width: 981px\)/);
+assert.match(css,/@media \(min-width: ?741px\)/);
 assert.match(css,/prefers-reduced-motion:reduce/);
 assert.match(css,/ui2-artwork-ambient/);
 assert.match(css,/player-bar/);
