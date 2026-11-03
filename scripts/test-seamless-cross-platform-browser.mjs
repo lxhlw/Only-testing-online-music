@@ -81,15 +81,31 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
     document.body.appendChild(b);
    },{scenario,equivalent,wrong});
    await page.locator('#seamless-play').click();
-   await page.waitForFunction(({scenario})=>{
-    const audio=document.getElementById('audio');
-    const lines=document.querySelectorAll('#lyrics-lines .lyrics-line');
-    const tracks=window.__seamlessRequested||[];
-    const alternatePlayed=tracks.some(t=>t.source==='kw'&&t.action==='musicUrl');
-    return audio&&!audio.paused&&audio.readyState>=2&&audio.currentTime>.45&&
-     lines.length>=2&&
-     (scenario==='missing-lyrics'||alternatePlayed);
-   },{scenario},{timeout:18000});
+   try{
+    await page.waitForFunction(({scenario})=>{
+     const audio=document.getElementById('audio');
+     const lines=document.querySelectorAll('#lyrics-lines .lyrics-line');
+     const tracks=window.__seamlessRequested||[];
+     const alternatePlayed=tracks.some(t=>t.source==='kw'&&t.action==='musicUrl');
+     return audio&&!audio.paused&&audio.readyState>=2&&audio.currentTime>.45&&
+      lines.length>=2&&
+      (scenario==='missing-lyrics'||alternatePlayed);
+    },{scenario},{timeout:18000});
+   }catch(error){
+    const diagnostic=await page.evaluate(()=>({
+     status:document.getElementById('status')?.textContent?.slice(0,220),
+     lyricStatus:document.getElementById('lyrics-status')?.textContent?.slice(0,120),
+     lyricLines:document.querySelectorAll('#lyrics-lines .lyrics-line').length,
+     search:window.__seamlessSearch,requested:window.__seamlessRequested,
+     audio:{paused:document.getElementById('audio')?.paused,
+       readyState:document.getElementById('audio')?.readyState,
+       time:document.getElementById('audio')?.currentTime,
+       srcPresent:!!document.getElementById('audio')?.src},
+     track:window.__LXNowPlayingTrack?.source
+    }));
+    throw new Error('Fallback timeout '+engine+'/'+scenario+' '+JSON.stringify(diagnostic)+
+      ' pageErrors='+JSON.stringify(errors));
+   }
    const result=await page.evaluate(()=>{
     const audio=document.getElementById('audio');
     return {
