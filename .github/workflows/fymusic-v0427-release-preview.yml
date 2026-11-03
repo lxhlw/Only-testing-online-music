@@ -1,0 +1,209 @@
+name: FyMusic v0.4.27 - Isolated Release Candidate Preview
+on:
+  push:
+    branches: [feature/fymusic-playback-verifier]
+    paths:
+      - '.github/workflows/fymusic-v0427-release-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fymusic-v0427-preview
+  cancel-in-progress: false
+
+jobs:
+  preview-only:
+    if: github.ref == 'refs/heads/feature/fymusic-playback-verifier'
+    name: Pin release RC and validate non-production Cloudflare Preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PROJECT_NAME: only-testing-online-music
+      EXPECTED_MAIN_SHA: c9a496ab580fb54775721b93a3944800bcaefc44
+      EXPECTED_RC_SHA: ae562ef8ce1c22d85326bfe5a150c1cb38f2ab8b
+      PREVIEW_BRANCH: release/fymusic-v0.4.27-rc
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release/fymusic-v0.4.27-rc
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Fail closed unless pinned draft PR release candidate exactly matches
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/feature/fymusic-playback-verifier'
+          test "$PREVIEW_BRANCH" = 'release/fymusic-v0.4.27-rc'
+          test "$PREVIEW_BRANCH" != main
+          test "$(git rev-parse HEAD)" = "$EXPECTED_RC_SHA"
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN_SHA"
+          test "$(git rev-list --count "$EXPECTED_MAIN_SHA..HEAD")" = 1
+          test "$(git diff --name-only "$EXPECTED_MAIN_SHA...HEAD" | wc -l | tr -d ' ')" = 23
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const v=JSON.parse(fs.readFileSync('version.json','utf8'));
+          const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+          const html=fs.readFileSync('index.html','utf8');
+          assert.equal(v.version,'0.4.27');
+          assert.equal(pkg.version,v.version);
+          assert.equal(v.name,'FyMusic');
+          assert.match(html,/modern\.css\?v=0\.4\.27/);
+          assert.match(html,/src\/player-controls\.js\?v=0\.4\.27/);
+          assert.match(html,/src\/fymusic-playback-verifier\.js\?v=0\.4\.27/);
+          for(const p of ['functions/api/fymusic-codec-selftest.js',
+            'functions/api/fymusic-range-selftest.js',
+            'functions/api/fymusic-throttle-selftest.js',
+            'qa-fixtures']){
+            assert.equal(fs.existsSync(p),false,'QA-only payload would ship: '+p);
+          }
+          console.log('FYMUSIC_V0427_PREVIEW_PIN_PASS');
+          NODE
+      - name: Verify Cloudflare production branch remains main
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo 'FYMUSIC_PREVIEW_CREDENTIALS_UNAVAILABLE'
+            exit 1
+          fi
+          curl --fail --silent --show-error --max-time 25 \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT_NAME" \
+            -o /tmp/fymusic-v0427-cloudflare-project.json
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const d=JSON.parse(fs.readFileSync('/tmp/fymusic-v0427-cloudflare-project.json','utf8'));
+          assert.equal(d.success,true);
+          assert.equal(d.result?.production_branch,'main');
+          console.log('FYMUSIC_V0427_PREVIEW_ONLY_PRODUCTION_MAIN_GUARD_PASS');
+          NODE
+      - name: Install dependency versions and pass version regression
+        run: |
+          npm install --no-audit --no-fund
+          node scripts/test-version.mjs
+          node scripts/test-proxy-security.mjs
+          node scripts/test-modern-flower-proxy.mjs
+          node --check src/modern-ui.js
+          node --check src/now-playing-experience.js
+      - name: Deploy exact pinned release branch ONLY to Pages Preview
+        id: preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_RC_SHA"
+          if ! npx wrangler pages deploy . \
+            --project-name "$PROJECT_NAME" \
+            --branch "$PREVIEW_BRANCH" \
+            --commit-hash "$EXPECTED_RC_SHA" \
+            --commit-message 'FyMusic v0.4.27 preview ONLY (unmerged draft PR 107)' \
+            > /tmp/fymusic-v0427-preview-deploy.log 2>&1; then
+            sed -E 's/(token|secret|authorization)[^ ]*/[REDACTED]/Ig' /tmp/fymusic-v0427-preview-deploy.log
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const raw=fs.readFileSync('/tmp/fymusic-v0427-preview-deploy.log','utf8');
+          const hits=[...raw.matchAll(/https:\/\/[a-z0-9-]+\.only-testing-online-music\.pages\.dev(?:\/)?/gi)]
+            .map(m=>m[0].replace(/\/$/,''));
+          const url=hits.find(s=>{
+            const host=new URL(s).hostname;
+            return host!=='only-testing-online-music.pages.dev' &&
+              host.endsWith('.only-testing-online-music.pages.dev');
+          });
+          if(!url){console.error('FYMUSIC_V0427_PREVIEW_URL_UNAVAILABLE');process.exit(1)}
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'preview_url='+url+'\n');
+          console.log('FYMUSIC_V0427_SAFE_PREVIEW_URL '+url);
+          NODE
+      - name: Confirm actual Edge preview has FyMusic v0.4.27 assets
+        shell: bash
+        env:
+          PREVIEW_URL: ${{ steps.preview.outputs.preview_url }}
+        run: |
+          set -euo pipefail
+          test "$PREVIEW_URL" != 'https://only-testing-online-music.pages.dev'
+          curl -fsSL --max-time 30 "$PREVIEW_URL/version.json" -o /tmp/fymusic-v0427-preview-version.json
+          curl -fsSL --max-time 30 "$PREVIEW_URL/" -o /tmp/fymusic-v0427-preview-index.html
+          curl -fsSL --max-time 30 "$PREVIEW_URL/src/fymusic-playback-core.js" -o /tmp/fymusic-v0427-preview-core.js
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const v=JSON.parse(fs.readFileSync('/tmp/fymusic-v0427-preview-version.json','utf8'));
+          const html=fs.readFileSync('/tmp/fymusic-v0427-preview-index.html','utf8');
+          const core=fs.readFileSync('/tmp/fymusic-v0427-preview-core.js','utf8');
+          assert.equal(v.version,'0.4.27');
+          assert.equal(v.name,'FyMusic');
+          assert.match(html,/modern\.css\?v=0\.4\.27/);
+          assert.match(html,/src\/player-controls\.js\?v=0\.4\.27/);
+          assert.match(core,/createPlaybackVerifier/);
+          console.log('FYMUSIC_V0427_EDGE_PREVIEW_VERSION_AND_ASSETS_PASS');
+          NODE
+      - name: Install real Chromium and WebKit for preview-only browser tests
+        run: npx playwright install --with-deps chromium webkit
+      - name: Full modern browser regression against Edge Preview
+        env:
+          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: node scripts/test-modern-web-browser.mjs
+      - name: Genuine WebKit smoke on the exact hosted preview
+        env:
+          TEST_BASE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: |
+          node --input-type=module <<'NODE'
+          import {webkit} from 'playwright';
+          import assert from 'node:assert/strict';
+          const base=process.env.TEST_BASE_URL;
+          assert.notEqual(new URL(base).hostname,'only-testing-online-music.pages.dev');
+          const browser=await webkit.launch({headless:true});
+          try {
+            const page=await browser.newPage({viewport:{width:390,height:844},
+              reducedMotion:'no-preference'});
+            const errors=[];
+            page.on('pageerror',e=>errors.push(String(e.message||e)));
+            await page.goto(base,{waitUntil:'domcontentloaded',timeout:35000});
+            await page.waitForFunction(()=>!!window.LXPlayerControls?.refresh,{timeout:20000});
+            const val=await page.evaluate(()=>({
+              title:document.querySelector('.brand')?.textContent?.trim(),
+              version:document.querySelector('#app-version')?.textContent?.trim(),
+              audioCount:document.querySelectorAll('audio').length,
+              playerReady:!!window.FyMusicPlaybackDiagnostics
+            }));
+            assert.deepEqual(val,{title:'FyMusic',version:'v0.4.27',
+              audioCount:1,playerReady:true});
+            assert.deepEqual(errors,[]);
+            console.log('FYMUSIC_V0427_EDGE_PREVIEW_WEBKIT_BROWSER_PASS '+JSON.stringify(val));
+          }finally {await browser.close()}
+          NODE
+      - name: Persist non-production URL and immutable release SHA evidence
+        if: success()
+        env:
+          PREVIEW_URL: ${{ steps.preview.outputs.preview_url }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const url=process.env.PREVIEW_URL;
+          const report={
+            version:'0.4.27',
+            branch:'release/fymusic-v0.4.27-rc',
+            releaseSha:process.env.EXPECTED_RC_SHA,
+            productionBaselineSha:process.env.EXPECTED_MAIN_SHA,
+            previewUrl:url,
+            productionMerged:false,
+            productionDeploymentAuthorized:false,
+            hardwareSafariValidated:false
+          };
+          fs.writeFileSync('/tmp/fymusic-v0427-safe-preview-report.json',JSON.stringify(report,null,2)+'\n');
+          console.log('FYMUSIC_V0427_PREVIEW_ACCEPTED '+url);
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: fymusic-v0427-preview-audit
+          path: /tmp/fymusic-v0427-safe-preview-report.json
+          retention-days: 14
