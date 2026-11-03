@@ -212,9 +212,9 @@
             if(!settings.autoFallback)return [];
             // Use the best declared quality AT OR BELOW the listener's fixed
             // choice; an unavailable FLAC 32bit does NOT mean forced 128k.
-            var requestedRank=global.LXPlaySettings.getQualityRank(fixedKey);
+            var requestedRank=global.LXPlaySettings.qualityRank(fixedKey);
             if(requestedRank)chosen=ordered.filter(function(q){
-              var rank=global.LXPlaySettings.getQualityRank(q);
+              var rank=global.LXPlaySettings.qualityRank(q);
               return rank>0&&rank<=requestedRank;
             });
             if(!chosen.length)chosen=ordered.slice();
