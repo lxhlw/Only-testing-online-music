@@ -30,11 +30,21 @@ Run: https://github.com/lxhlw/Only-testing-online-music/actions/runs/41569473983
 - Chromium 源选择、FLAC24 和 MP3 原创素材、自动降级保护、系统元数据以及弱网回归 2 次通过；未验证第三方音乐供给、真实用户设备锁屏。
 - Phase42 独立 Cloudflare Edge Preview 完整回归 51/51 成功： https://github.com/lxhlw/Only-testing-online-music/actions/runs/41560895324 。Phase43 没有修改生产代码；Phase43 新压力测试仅运行在隔离本地 Pages，不要声称已经在 Edge 重新运行。
 
-## 第二轮增强 WebKit 诊断
+## 第二轮增强 WebKit 诊断（最终完成）
 
 Run: https://github.com/lxhlw/Only-testing-online-music/actions/runs/41569768603
 
-12 次独立 WebKit RAF/UI 交互压力运行，另有 Chromium/Firefox 和长会话/媒体重验。**初次编写本文时尚未最终确认，必须在判定 Phase43 完成前记录 status/conclusion 和帧间隔分布**。单个异常帧不能直接归因为产品缺陷，也不能忽略；若重复出现，Phase44 发布审核应保留该风险并做真实设备性能验证。
+**completed/success；4/4 jobs 全部通过。** WebKit 12/12 组真正内核的 UI RAF/交互压力测试通过、2/2 原创 MP3/OS/键盘回归通过。Chromium、Firefox、Chromium 资源/质量分组也均成功。
+
+12 组 WebKit RAF 数据（单位 ms）：
+
+- p50：12/12 组均为 16ms。
+- p95：各组为 17、17、17、29、28、17、17、17、17、17、17、18ms。
+- 单组最大值：344、148、49、43、35、46、60、49、65、51、52、51ms。
+- 首两组出现 344ms、148ms 超长帧，其余 10 组单次最大值均不超过 65ms；全部 12 组正常完成最终 UI 归属、3 次弹窗交互、180 个最终列表节点、单 HTMLAudioElement/双封面节点、无页面异常。
+- **不可忽略最初两组的超长帧。** 观察到重复会话的冷启动抖动趋势，但这些 CI 测量无法证明根因就是浏览器首次进程初始化，也不能说明普通硬件用户一定没有类似卡顿。Phase44 应将首屏动画/首交互真实设备性能采样列为发布复核项目。
+
+结论：Phase43 **隔离浏览器综合功能及资源验收通过**；WebKit 初次会话的长帧是一项**未完全消除的性能风险**，不能把本阶段成功说成“真实设备全场景 60/120 FPS 无卡顿保证”。生产代码无新改动，所有测试未合并 main。
 
 ## 交接及发布边界
 
