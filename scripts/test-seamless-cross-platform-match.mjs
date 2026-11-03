@@ -25,4 +25,24 @@ assert.equal(match.equivalent({...base,interval:''},other,'lyrics').accepted,tru
 assert.equal(match.equivalent({...base,interval:'',albumName:''},other,'lyrics').accepted,false);
 assert.equal(match.inspect(base,other).accepted,true,
  'The previous explicitly approved KG/KW matcher remains compatible');
+const daoxiang={source:'kg',id:'kg-daoxiang-edit',name:'稻香',singer:'周杰伦',
+ albumName:'魔杰座',interval:'03:18'};
+const kuwoDaoxiang={source:'kw',id:'kw-daoxiang',name:'稻香',singer:'周杰伦',
+ albumName:'魔杰座',interval:'03:43'};
+assert.equal(match.equivalent(daoxiang,kuwoDaoxiang,'audio').accepted,false,
+ 'Strict recording duration match remains narrow');
+assert.equal(match.compatibleAudio(daoxiang,kuwoDaoxiang).accepted,true,
+ 'Playback may use a bounded same-song short edit, 03:18 to 03:43');
+assert.equal(match.compatibleAudio(daoxiang,kuwoDaoxiang).tier,'compatible_edit');
+assert.equal(match.equivalent(daoxiang,kuwoDaoxiang,'lyrics').accepted,false,
+ 'Never use a shortened recording as synchronized LRC substitute');
+for(const unsafe of [
+ {...kuwoDaoxiang,name:'稻香 (Live)'},
+ {...kuwoDaoxiang,singer:'不同歌手'},
+ {...kuwoDaoxiang,albumName:'演唱会专辑'},
+ {...kuwoDaoxiang,interval:'02:31'},
+ {...kuwoDaoxiang,interval:''}
+])assert.equal(match.compatibleAudio(daoxiang,unsafe).accepted,false,
+ 'Daoxiang fallback must reject unrelated versions: '+JSON.stringify(unsafe));
+console.log('FYMUSIC_DAOXIANG_SHORT_EDIT_MATCH_SECURITY_PASS');
 console.log('FYMUSIC_SEAMLESS_METADATA_MATCH_SECURITY_PASS');
