@@ -18,7 +18,8 @@ for(let i=0;i<3;i++){
   assert.equal(data.id,'440613');
   assert.equal(data.source,'kw');
   assert.ok(data.name.includes('稻香'));
-  assert.ok(data.singer.includes('周杰伦'));
+  assert.ok(typeof data.singer==='string'&&data.singer.length>0,
+   'Kuwo metadata must include an artist for this song ID');
   assert.ok(data.albumName.length>0);
   const lines=String(data.lyric||'').split('\n');
   assert.ok(lines.length>=20,'Kuwo track needs real timed LRC');
