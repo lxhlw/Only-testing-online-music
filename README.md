@@ -61,6 +61,10 @@ Queue, favorites, history and imported LX sources are stored in the current brow
 
 ## Release status
 
-**v0.4.32 (2026-11-03)** strengthens cross-platform Kugou recovery based on the user-reported 周杰伦《稻香》 failure. Search the song title first, retry with artist when needed, prefer ±3 second exact matches and then bounded ≤30 second/18% short edits (never for synchronized lyrics); retry up to three same-platform verified candidate recordings before moving to the next platform. Independent Cloudflare Preview verified real KG 03:18 → KW playback, visible album art and 48 timed LRC lines with no modal. Chromium/WebKit, metadata security, playlist, real Preview and production gates must pass. Preserve v0.4.31 as immediate rollback.
+**v0.4.33 (2026-11-03)** strengthens cross-platform Kugou recovery based on the user-reported 周杰伦《稻香》 failure. Search the song title first, retry with artist when needed, prefer ±3 second exact matches and then bounded ≤30 second/18% short edits (never for synchronized lyrics); retry up to three same-platform verified candidate recordings before moving to the next platform. Independent Cloudflare Preview verified real KG 03:18 → KW playback, visible album art and 48 timed LRC lines with no modal. Chromium/WebKit, metadata security, playlist, real Preview and production gates must pass. Preserve v0.4.31 as immediate rollback.
 
 Releases must pass the minimum Pages asset allowlist, proxy/SSRF security tests, dual-engine browser regressions, CI and production deployment verification. Real third-party music availability is variable, so real-media diagnostics are reported separately and do not justify claiming a permanent music availability guarantee.
+
+## v0.4.33 media playback UX
+
+Modern Web quality preference now begins with the highest declared quality (including lossless); when a fixed choice is unavailable but downgrade is enabled it tries the best declared lower quality, not hard-coded 128k. Real media encoding and bitrate are never inferred from requested labels. The player separately identifies browser permission denials, interrupted play requests, and unsupported media. A genuine browser permission denial exposes a direct, user-activated resume control; no script can override a user/OS autoplay restriction.

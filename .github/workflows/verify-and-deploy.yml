@@ -121,6 +121,7 @@ jobs:
           node scripts/test-flower-tcp-socket.mjs
           node scripts/test-music-library.mjs
           node scripts/test-music-lyrics.mjs
+          node scripts/test-playback-quality-policy.mjs
           node scripts/test-netease-lyrics.mjs
           node scripts/test-now-playing-apis.mjs
           node scripts/test-migu-lyrics-endpoint.mjs

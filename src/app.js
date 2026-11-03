@@ -197,63 +197,46 @@
     var available = activeSource.sources[channel].qualitys || [];
     if (global.LXPlaySettings) {
       var settings = getPlaySettings();
-      // Modern browser: automatic means the best *lossy/MP3-size* quality
-      // explicitly declared by this Flower channel, not a hard-coded 128k.
-      // Lossless remains a manual selection because it may start more slowly.
-      if (MODERN_WEB && settings.qualityMode === 'highest') {
-        var preferredMp3=['320k','256k','192k','128k'],best='';
-        for(var mp=0;mp<preferredMp3.length&&!best;mp++)
-          for(var aq=0;aq<available.length;aq++)
-            if(String(available[aq]).toLowerCase()===preferredMp3[mp]){best=available[aq];break;}
-        if(best){
-          var quick=[best];
-          if(settings.autoFallback&&String(best).toLowerCase()!=='128k')
-            for(var low=0;low<available.length;low++)
-              if(String(available[low]).toLowerCase()==='128k'){quick.push(available[low]);break;}
-          return quick;
-        }
-      }
       if (MODERN_WEB) {
-        // A fixed quality MUST be declared by Flower; an absent FLAC 32bit
-        // cannot be quietly translated into 128k, even when fallback is on.
-        var fixedKey=String(settings.fixedQuality||'').toLowerCase();
-        if(settings.qualityMode==='fixed'&&!available.some(function(q){
-          return String(q||'').toLowerCase()===fixedKey;
-        })){
-          // "Allow downgrade" must work even if Flower never declares the
-          // requested format. Skip that impossible request and use the
-          // declared MP3 fallback, with explicit provenance in playback.
-          if(settings.autoFallback){
-            for(var fa=0;fa<available.length;fa++){
-              if(String(available[fa]).toLowerCase()==='128k')return [available[fa]];
-            }
+        // Never cap modern Web to 128k or silently prefer MP3 over FLAC.
+        // Trust the channel's declared qualities, not an assumed media bitrate.
+        var ordered=global.LXPlaySettings.normalizeQualityList(available);
+        if(!ordered.length)return [];
+        var chosen=ordered.slice();
+        if(settings.qualityMode==='fixed'){
+          var fixedKey=String(settings.fixedQuality||'').toLowerCase();
+          var declared=ordered.some(function(q){return String(q).toLowerCase()===fixedKey;});
+          if(declared){
+            chosen=global.LXPlaySettings.buildPlan(available,settings);
+          }else{
+            if(!settings.autoFallback)return [];
+            // Use the best declared quality AT OR BELOW the listener's fixed
+            // choice; an unavailable FLAC 32bit does NOT mean forced 128k.
+            var requestedRank=global.LXPlaySettings.getQualityRank(fixedKey);
+            if(requestedRank)chosen=ordered.filter(function(q){
+              var rank=global.LXPlaySettings.getQualityRank(q);
+              return rank>0&&rank<=requestedRank;
+            });
+            if(!chosen.length)chosen=ordered.slice();
           }
-          return [];
         }
-        // For manually selected quality, only one optional low-quality
-        // fallback is allowed; do not traverse a slow ladder.
-        var requested=global.LXPlaySettings.buildPlan(available,settings);
-        if(!requested.length)return [];
-        var compact=[requested[0]];
-        if(settings.autoFallback&&String(compact[0]).toLowerCase()!=='128k')
-          for(var quickLow=0;quickLow<available.length;quickLow++)
-            if(String(available[quickLow]).toLowerCase()==='128k'){compact.push(available[quickLow]);break;}
-        return compact;
-      }
-      // Android 4.4 browsers often cannot decode FLAC/Hi-Res streams.
-      // On the default automatic setting, prefer an MP3-sized stream first;
-      // never override a quality explicitly chosen by the listener.
-      var ua = String(global.navigator && global.navigator.userAgent || '');
-      if (/Android 4[.]4/i.test(ua) && settings.qualityMode === 'highest') {
-        var low = '';
-        for (var qi = 0; qi < available.length; qi += 1) {
-          var q = String(available[qi] || '').toLowerCase();
-          if (q === '128k') { low = available[qi]; break; }
-          if (!low && q === '320k') low = available[qi];
+        if(!settings.autoFallback)return chosen.slice(0,1);
+        // Bounded candidate plan: highest eligible, next eligible, best
+        // declared MP3, then 128k if declared. Never forge a missing quality.
+        var result=chosen.slice(0,2);
+        var lossy=['320k','256k','192k','128k'];
+        for(var i=0;i<lossy.length;i++){
+          var candidate=chosen.find(function(q){
+            return String(q).toLowerCase()===lossy[i];
+          });
+          if(candidate){
+            if(result.indexOf(candidate)<0)result.push(candidate);
+            break;
+          }
         }
-        if (low) return global.LXPlaySettings.buildPlan(available, {
-          qualityMode:'fixed', fixedQuality:low, autoFallback:settings.autoFallback
-        });
+        var low=chosen.find(function(q){return String(q).toLowerCase()==='128k';});
+        if(low&&result.indexOf(low)<0)result.push(low);
+        return result.slice(0,4);
       }
       return global.LXPlaySettings.buildPlan(available, settings);
     }
@@ -1156,46 +1139,69 @@
     }
 
     var playRequested = false;
+    var retriedInterruptedPlay = false;
 
     function requireManualPlayback(error) {
       if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
-      // On Android 4.4, resolving a URL asynchronously consumes the original
-      // tap gesture. The browser can reject the subsequent play() even for a
-      // valid stream. Do not discard that valid URL and retry all resolvers.
       playbackState.manualPlaybackRequired = true;
       clearPlaybackConfirmTimer(playbackState);
       clearMiguPlaybackDeadline(playbackState);
-      setStatus(
-        (MODERN_WEB ? '浏览器阻止自动播放，请点击底部绿色播放按钮继续。' :
-         '歌曲地址已获得，但旧版浏览器阻止自动播放。请直接点击下方播放器的 ▶ 播放按钮。') +
-        (error && error.name === 'NotSupportedError' ? ' 如仍无法播放，请切换较低音质。' : ''),
-        'warn'
-      );
+      playRequested=false;
+      var denied=String(error&&error.name||'')==='NotAllowedError';
+      var message=denied
+        ? '浏览器当前限制了有声自动播放，音频地址已保留。'
+        : '播放请求被中断，音频地址已保留。';
+      // Browser policy cannot be bypassed by retries or timers. An explicit
+      // button click carries a valid user activation, on the SAME media URL.
+      setStatus(message+
+        ' <button type="button" id="resume-audio-on-gesture" class="secondary compact-button">继续播放</button>',
+        'warn');
+      var resume=document.getElementById('resume-audio-on-gesture');
+      if(resume)resume.onclick=function(){
+        if(token!==playbackToken||!playbackState||playbackState.url!==playableUrl)return;
+        playbackState.manualPlaybackRequired=false;
+        startAudioPlayback();
+      };
+    }
+
+    function onPlayRejected(error) {
+      if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
+      var name=String(error&&error.name||'');
+      global.dispatchEvent(new CustomEvent('fymusic:audio-play-rejected',{detail:{
+        reason:name==='NotAllowedError'?'autoplay_policy':
+          name==='NotSupportedError'?'unsupported_media':
+          name==='AbortError'?'interrupted':'other'
+      }}));
+      if(name==='NotAllowedError')return requireManualPlayback(error);
+      if(name==='NotSupportedError'||audio.error){
+        playRequested=false;
+        return handleAudioError(token,playableUrl);
+      }
+      if(name==='AbortError'&&!retriedInterruptedPlay){
+        retriedInterruptedPlay=true;
+        playRequested=false;
+        // One deferred retry for a load/play race. Never misreport this as
+        // a browser permission denial and never spin on the same media URL.
+        if(audio.readyState>=2){
+          global.setTimeout(startAudioPlayback,0);
+        }else{
+          audio.addEventListener('canplay',startAudioPlayback,{once:true});
+        }
+        return;
+      }
+      requireManualPlayback(error);
     }
 
     function startAudioPlayback() {
       if (playRequested) return;
       if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
       playRequested = true;
-
       try {
         var playResult = audio.play();
-        if (playResult && typeof playResult.catch === 'function') {
-          playResult.catch(function (error) {
-            if (token !== playbackToken || !playbackState || playbackState.url !== playableUrl) return;
-            if (audio.error && settings.autoFallback) {
-              playRequested = false;
-              handleAudioError(token, playableUrl);
-              return;
-            }
-            requireManualPlayback(error);
-          });
-        }
-      } catch (e) {
-        if (audio.error && settings.autoFallback) {
-          playRequested = false;
-          handleAudioError(token, playableUrl);
-        } else requireManualPlayback(e);
+        if (playResult && typeof playResult.catch === 'function')
+          playResult.catch(onPlayRejected);
+      } catch(e) {
+        onPlayRejected(e);
       }
     }
 
@@ -2020,7 +2026,7 @@
               var declared=ready.sources[source].qualitys;
               if(Array.isArray(declared)&&declared.length){
                 setStatus('野花音源已就绪，但不支持所选 '+escapeHtml(getPlaySettings().fixedQuality)+
-                  ' 音质；不会自动改成128k。','fail');
+                  ' 音质；请更换音质或启用自动降级。','fail');
                 return;
               }
               freshPlan=[getPlaySettings().qualityMode==='fixed'?
@@ -2033,7 +2039,7 @@
               String(freshPlan[0]).toLowerCase()!==String(userQuality.fixedQuality).toLowerCase();
             playbackState.initialQuality=downgradedFromFixed?userQuality.fixedQuality:freshPlan[0];
             if(downgradedFromFixed)
-              playbackState.qualityFallbackReason='音源未声明支持 '+userQuality.fixedQuality+'，允许降到128k';
+              playbackState.qualityFallbackReason='音源未声明支持 '+userQuality.fixedQuality+'，已选最佳可用音质 '+freshPlan[0];
             requestQuality(music,source,musicInfo,freshPlan,0,token);
             return;
           }
