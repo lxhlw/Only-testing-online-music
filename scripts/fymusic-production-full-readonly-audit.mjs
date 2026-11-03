@@ -46,9 +46,18 @@ const paths=['index.html','styles.css','modern.css','src/app-version.js',
 const diffs=[];
 for(const path of paths){
  const origin=execFileSync('git',['show',sha+':'+path],{maxBuffer:10_000_000});
- const remote=await req('/'+path);
+ let remote=await req('/'+path);
+ const initialStatus=remote.res.status;
+ let canonical=null;
+ if(initialStatus===308||initialStatus===301||initialStatus===302){
+   const target=new URL(remote.res.headers.get('location')||'',base);
+   assert.equal(target.origin,base,'canonical redirect must remain on official origin');
+   canonical=target.pathname;
+   remote=await req(target.pathname+target.search);
+ }
  const same=remote.res.status===200&&hash(remote.body)===hash(origin);
- const result={path,status:remote.res.status,exact:same,localBytes:origin.length,
+ const result={path,status:remote.res.status,initialStatus,canonical,
+  exact:same,localBytes:origin.length,
   remoteBytes:remote.body.length,contentType:remote.res.headers.get('content-type')};
  console.log('FYMUSIC_FULL_AUDIT_ASSET',JSON.stringify(result));
  if(!same)diffs.push(result);
