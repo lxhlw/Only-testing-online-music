@@ -9,7 +9,7 @@ const BASE=process.env.FYMUSIC_BASE_URL||'http://127.0.0.1:8787';
 const CANDIDATE=process.env.FYMUSIC_CANDIDATE_URL||'http://127.0.0.1:8788';
 const OUT=process.env.FYMUSIC_PHASE45_AB_REPORT||'';
 const PAIRS=Number(process.env.FYMUSIC_PHASE45_PAIRS||8);
-assert.ok(Number.isSafeInteger(PAIRS)&&PAIRS>=4&&PAIRS<=16);
+assert.ok(Number.isSafeInteger(PAIRS)&&PAIRS>=4&&PAIRS<=16&&PAIRS%2===0);
 assert.notEqual(new URL(BASE).origin,new URL(CANDIDATE).origin,
   'independent origins are required for baseline and candidate');
 
@@ -44,6 +44,7 @@ for(let pair=1;pair<=PAIRS;pair++){
     window.LXPlayerControls?.refresh
    ),null,{timeout:18000});
    const measurement=await page.evaluate(async variant=>{
+    const round=value=>Math.round(value*10)/10;
     const list=document.querySelector('#playlist-detail-songs');
     const trackChange=window.CustomEvent;
     const nextFrame=()=>new Promise(resolve=>
