@@ -68,3 +68,12 @@ Releases must pass the minimum Pages asset allowlist, proxy/SSRF security tests,
 ## v0.4.33 media playback UX
 
 Modern Web quality preference now begins with the highest declared quality (including lossless); when a fixed choice is unavailable but downgrade is enabled it tries the best declared lower quality, not hard-coded 128k. Real media encoding and bitrate are never inferred from requested labels. The player separately identifies browser permission denials, interrupted play requests, and unsupported media. A genuine browser permission denial exposes a direct, user-activated resume control; no script can override a user/OS autoplay restriction.
+
+## Project continuity (public-safe checkpoint)
+
+For a fresh development session or context-limit recovery, read:
+- [Current verified state and next goal](docs/HANDOFF_CURRENT.md)
+- [Append-only operation log](docs/HANDOFF_LOG.md)
+- [Every-operation handoff and privacy policy](docs/HANDOFF_POLICY.md)
+
+These files deliberately contain **only public-safe project facts** because this GitHub repository is **public**. They are not private chat archives. Run `node scripts/check-handoff-privacy.mjs` before committing updates. Confidential notes must use a separately verified private repository, not a public branch or PR.
