@@ -53,19 +53,41 @@ export function sanitizeMiguLyric(text){
  }
  return lines.length>=2?lines.join('\n'):'';
 }
+// Fixed diagnostic categories; never copy the upstream URL, response or exception.
+// A transient error may trigger one immediate retry, with a deadline per attempt.
+const transientStatus=new Set([429,500,502,503,504]);
+const failure=(reason,attempts,status=502)=>respond({
+ error:status===400?'Invalid Migu lyric request':'Migu lyric temporarily unavailable',
+ reason,attempts
+},status);
 export async function onRequestGet({request}){
- const p=new URL(request.url).searchParams;
- const id=p.get('id')||'',url=validateMiguLyricUrl(p.get('url')||'');
- if(!validCopyright(id)||!url)return respond({error:'Invalid Migu lyric request'},400);
- const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),9000);
- try{
-  const upstream=await fetch(url,{redirect:'manual',signal:controller.signal});
-  if(upstream.status!==200)return respond({error:'Migu lyric unavailable'},502);
-  const text=await readBounded(upstream,180000),lyric=sanitizeMiguLyric(text);
-  if(!lyric)return respond({error:'No timed Migu lyric'},502);
-  return respond({source:'mg',id,lyric,available:true});
- }catch{return respond({error:'Migu lyric temporarily unavailable'},502)}
- finally{clearTimeout(timer)}
+ const params=new URL(request.url).searchParams;
+ const id=params.get('id')||'',url=validateMiguLyricUrl(params.get('url')||'');
+ if(!validCopyright(id)||!url)return failure('invalid_request',0,400);
+ for(let attempt=1;attempt<=2;attempt++){
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),4250);
+  try{
+   const upstream=await fetch(url,{redirect:'manual',signal:controller.signal});
+   if(upstream.status!==200){
+    const retryable=transientStatus.has(upstream.status);
+    if(retryable&&attempt===1){controller.abort();continue}
+    const reason=upstream.status>=300&&upstream.status<400
+      ?'redirect_rejected':retryable?'upstream_transient_status':'upstream_http_status';
+    return failure(reason,attempt);
+   }
+   const raw=await readBounded(upstream,180000),lyric=sanitizeMiguLyric(raw);
+   if(!lyric)return failure('invalid_timed_lyric',attempt);
+   return respond({source:'mg',id,lyric,available:true,attempts:attempt});
+  }catch(error){
+   const reason=controller.signal.aborted?'upstream_timeout':
+     error?.message==='oversized'?'oversized_body':
+     error?.message==='no-body'?'empty_body':'upstream_network';
+   if((reason==='upstream_timeout'||reason==='upstream_network')&&attempt===1)continue;
+   return failure(reason,attempt);
+  }finally{clearTimeout(timeout)}
+ }
+ return failure('upstream_network',2);
 }
 export async function onRequestOptions(){
  return new Response(null,{status:204,headers:{Allow:'GET, OPTIONS'}});
