@@ -55,9 +55,11 @@ for(const file of files){
 await writeFile(join(out,'404.html'),
  '<!doctype html>\n<html lang="en"><meta charset="utf-8"><title>Not found · FyMusic</title>'+
  '<body><h1>404 · Not found</h1><p>Return to <a href="/">FyMusic</a>.</p></body></html>\n');
+// Only route API and archived repository paths through Functions. Keep media/UI static.
+await writeFile(join(out,'_routes.json'),"{\n  \"version\": 1,\n  \"include\": [\n    \"/api/*\",\n    \"/README.md\",\n    \"/package.json\",\n    \"/package-lock.json\",\n    \"/npm-shrinkwrap.json\",\n    \"/yarn.lock\",\n    \"/pnpm-lock.yaml\",\n    \"/wrangler.toml\",\n    \"/wrangler.json\",\n    \"/wrangler.jsonc\",\n    \"/.env\",\n    \"/.env.*\",\n    \"/scripts/*\",\n    \"/android-companion/*\",\n    \"/.github/*\",\n    \"/.git/*\",\n    \"/node_modules/*\",\n    \"/docs/*\",\n    \"/tests/*\"\n  ],\n  \"exclude\": []\n}\n");
 const copied=(await readdir(out,{recursive:true,withFileTypes:true}))
  .filter(x=>x.isFile()).length;
-assert.equal(copied,files.length+1);
+assert.equal(copied,files.length+2);
 console.log('FYMUSIC_PAGES_DIST_CREATED',JSON.stringify({
- files:files.length+1,sourceAssets:files,output:'dist/',hasFunctionsInStatic:false
+ files:files.length+2,sourceAssets:files,output:'dist/',hasFunctionsInStatic:false
 }));

@@ -29,7 +29,7 @@ npm run test:pages
 npx wrangler pages dev dist --ip 127.0.0.1 --port 8788
 ```
 
-The build discovers allowed static files referenced by `index.html` and its local ES modules, and copies their original bytes to **`dist/`**. Cloudflare Functions remain in the root `functions/` folder and are automatically used by Wrangler. The builder writes an explicit `404.html` to prevent accidental fallback for unknown/repository paths.
+The build discovers allowed static files referenced by `index.html` and its local ES modules, and copies their original bytes to **`dist/`**. Cloudflare Functions remain in the root `functions/` folder and are automatically used by Wrangler. The builder writes a `404.html` and a narrowly scoped `_routes.json`: `/api/*` and known former repository asset paths use Pages Functions; normal app HTML/CSS/JS/audio stay on the fast static path. An edge guard returns a branded 404 for historical repository files even while Cloudflare retains old uploaded assets. This is defense in depth; do not remove the explicit static allowlist.
 
 **Never deploy the repository root.** For an approved release the workflow uses:
 
