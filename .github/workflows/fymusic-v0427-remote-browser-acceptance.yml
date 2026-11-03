@@ -1,0 +1,93 @@
+name: FyMusic v0.4.27 - Remote Preview Native Media and Render Acceptance
+on:
+  push:
+    branches: [feature/fymusic-playback-verifier]
+    paths:
+      - '.github/workflows/fymusic-v0427-remote-browser-acceptance.yml'
+      - 'scripts/test-fymusic-real-media-lifecycle-browser.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fymusic-v0427-remote-browser-acceptance
+  cancel-in-progress: true
+
+jobs:
+  remote-browser-acceptance:
+    if: github.ref == 'refs/heads/feature/fymusic-playback-verifier'
+    name: Real native decoded media and interactive rendering on isolated Edge preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TEST_BASE_URL: https://15a05aee.only-testing-online-music.pages.dev
+      EXPECTED_RC_SHA: ae562ef8ce1c22d85326bfe5a150c1cb38f2ab8b
+      EXPECTED_MAIN_SHA: c9a496ab580fb54775721b93a3944800bcaefc44
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Fail closed against production URL, branch drift, or changed release candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/feature/fymusic-playback-verifier'
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN_SHA"
+          git cat-file -e "$EXPECTED_RC_SHA^{commit}"
+          test "$(git rev-parse release/fymusic-v0.4.27-rc)" = "$EXPECTED_RC_SHA" || \
+            test "$(git rev-parse origin/release/fymusic-v0.4.27-rc)" = "$EXPECTED_RC_SHA"
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const url=process.env.TEST_BASE_URL;
+          const host=new URL(url).hostname;
+          assert.equal(host,'15a05aee.only-testing-online-music.pages.dev');
+          assert.notEqual(host,'only-testing-online-music.pages.dev');
+          console.log('FYMUSIC_V0427_REMOTE_NONPROD_URL_PASS '+url);
+          NODE
+          node --check scripts/test-fymusic-real-media-lifecycle-browser.mjs
+          node --check scripts/test-fymusic-phase43-render-interaction.mjs
+      - name: Compare real Preview JS bytes to immutable RC commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 "$TEST_BASE_URL/version.json" -o /tmp/fymusic-rc-version.json
+          node -e "const x=require('/tmp/fymusic-rc-version.json'); if(x.version!=='0.4.27'||x.name!=='FyMusic')process.exit(1)"
+          for path in src/player-controls.js src/app.js src/now-playing-experience.js src/fymusic-playback-core.js; do
+            git show "$EXPECTED_RC_SHA:$path" > "/tmp/rc-$(basename "$path")"
+            curl -fsSL --retry 3 "$TEST_BASE_URL/$path" -o "/tmp/edge-$(basename "$path")"
+            cmp -s "/tmp/rc-$(basename "$path")" "/tmp/edge-$(basename "$path")"
+            echo "FYMUSIC_V0427_REMOTE_SHA256_MATCH $path $(sha256sum "/tmp/edge-$(basename "$path")" | cut -d' ' -f1)"
+          done
+      - name: Install project dependencies and browser engines
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium firefox webkit
+      - name: Chromium native WAV decoder, waiting, Seek, background recovery and error route
+        env:
+          BROWSER_ENGINE: chromium
+        run: node scripts/test-fymusic-real-media-lifecycle-browser.mjs
+      - name: WebKit native WAV decoder, waiting, Seek, background recovery and error route
+        env:
+          BROWSER_ENGINE: webkit
+        run: node scripts/test-fymusic-real-media-lifecycle-browser.mjs
+      - name: Chromium real DOM list churn and immersive interactions
+        env:
+          BROWSER_ENGINE: chromium
+        run: node scripts/test-fymusic-phase43-render-interaction.mjs
+      - name: Firefox real DOM list churn and immersive interactions
+        env:
+          BROWSER_ENGINE: firefox
+        run: node scripts/test-fymusic-phase43-render-interaction.mjs
+      - name: WebKit real DOM list churn and immersive interactions
+        env:
+          BROWSER_ENGINE: webkit
+        run: node scripts/test-fymusic-phase43-render-interaction.mjs
+      - name: Protect physical-device and production-release gate
+        run: |
+          echo 'FYMUSIC_V0427_REMOTE_ACCEPTANCE_COMPLETE'
+          echo 'This is headless Linux browser evidence, NOT physical Safari or iOS.'
+          echo 'No production code, branch, or deployment is changed by this workflow.'
