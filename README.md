@@ -61,6 +61,6 @@ Queue, favorites, history and imported LX sources are stored in the current brow
 
 ## Release status
 
-**v0.4.31 (2026-11-03)** adds user-approved metadata-verified automatic cross-platform lyrics and Kugou audio recovery. The independent Cloudflare Preview validated real Sun Yanzi 《开始懂了》 playback, album art and 56 timed lyrics after a controlled Kugou resolver failure. Preserve stable previous production v0.4.30 for rollback.
+**v0.4.32 (2026-11-03)** strengthens cross-platform Kugou recovery based on the user-reported 周杰伦《稻香》 failure. Search the song title first, retry with artist when needed, prefer ±3 second exact matches and then bounded ≤30 second/18% short edits (never for synchronized lyrics); retry up to three same-platform verified candidate recordings before moving to the next platform. Independent Cloudflare Preview verified real KG 03:18 → KW playback, visible album art and 48 timed LRC lines with no modal. Chromium/WebKit, metadata security, playlist, real Preview and production gates must pass. Preserve v0.4.31 as immediate rollback.
 
 Releases must pass the minimum Pages asset allowlist, proxy/SSRF security tests, dual-engine browser regressions, CI and production deployment verification. Real third-party music availability is variable, so real-media diagnostics are reported separately and do not justify claiming a permanent music availability guarantee.
