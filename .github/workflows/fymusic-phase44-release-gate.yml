@@ -1,0 +1,128 @@
+name: FyMusic Phase44 - Release Candidate Safety Gate
+on:
+  push:
+    branches: [feature/fymusic-playback-verifier]
+    paths:
+      - '.github/workflows/fymusic-phase44-release-gate.yml'
+      - 'scripts/build-fymusic-phase44-candidate.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fymusic-phase44-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  candidate-acceptance:
+    name: Runtime-only staging and real-browser regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    env:
+      FYMUSIC_RELEASE_CANDIDATE_DIR: ${{ runner.temp }}/fymusic-phase44-candidate
+      FYMUSIC_RELEASE_MANIFEST: ${{ runner.temp }}/fymusic-phase44-manifest.json
+      BASE_SHA: c9a496ab580fb54775721b93a3944800bcaefc44
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Strict non-production reference and script syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/feature/fymusic-playback-verifier'
+          test "$(git rev-parse origin/main)" = "$BASE_SHA"
+          node --check scripts/build-fymusic-phase44-candidate.mjs
+          node --check src/fymusic-playback-verifier.js
+          node --check src/fymusic-playback-core.js
+          node --check src/fymusic-chain-report.js
+          node --check src/fymusic-diagnostic-classifier.js
+          node --check src/now-playing-experience.js
+          node --check src/player-controls.js
+          node --check src/modern-ui.js
+      - name: Assemble exact audited main baseline then copy only runtime allowlist
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$FYMUSIC_RELEASE_CANDIDATE_DIR"
+          git archive "$BASE_SHA" | tar -xf - -C "$FYMUSIC_RELEASE_CANDIDATE_DIR"
+          node scripts/build-fymusic-phase44-candidate.mjs
+          test ! -e "$FYMUSIC_RELEASE_CANDIDATE_DIR/functions/api/fymusic-codec-selftest.js"
+          test ! -e "$FYMUSIC_RELEASE_CANDIDATE_DIR/functions/api/fymusic-range-selftest.js"
+          test ! -e "$FYMUSIC_RELEASE_CANDIDATE_DIR/functions/api/fymusic-throttle-selftest.js"
+          test ! -e "$FYMUSIC_RELEASE_CANDIDATE_DIR/.github"
+          test ! -e "$FYMUSIC_RELEASE_CANDIDATE_DIR/scripts"
+      - name: Install Playwright and three real browser engines
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium firefox webkit
+      - name: Verify strictly scoped proxy and runtime privacy
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/test-proxy-security.mjs
+          node scripts/test-modern-flower-proxy.mjs
+          node scripts/test-fymusic-runtime-request-privacy.mjs
+      - name: Start ISOLATED local Pages candidate, never Cloudflare production
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler pages dev "$FYMUSIC_RELEASE_CANDIDATE_DIR" --ip 127.0.0.1 --port 8788 > /tmp/fymusic-phase44-candidate.log 2>&1 &
+          READY=0
+          for i in {1..40}; do
+            if curl -fsSL http://127.0.0.1:8788/ -o /tmp/fymusic-phase44-index.html; then READY=1; break; fi
+            sleep 1
+          done
+          if [ "$READY" != 1 ]; then cat /tmp/fymusic-phase44-candidate.log; exit 1; fi
+          grep -Fq 'src/fymusic-playback-verifier.js' /tmp/fymusic-phase44-index.html
+          curl -fsS http://127.0.0.1:8788/src/fymusic-playback-core.js -o /tmp/fymusic-phase44-core.js
+          grep -Fq 'createPlaybackVerifier' /tmp/fymusic-phase44-core.js
+      - name: Full existing modern-web browser smoke on curated release candidate
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: node scripts/test-modern-web-browser.mjs
+      - name: Real cross-engine animation and interaction on curated candidate
+        shell: bash
+        env:
+          TEST_BASE_URL: http://127.0.0.1:8788
+        run: |
+          set -euo pipefail
+          for engine in chromium firefox webkit; do
+            echo "FYMUSIC_PHASE44_RELEASE_CANDIDATE_ENGINE=$engine"
+            BROWSER_ENGINE="$engine" node scripts/test-fymusic-phase43-render-interaction.mjs
+          done
+      - name: Confirm no emitted QA audio API or fixture content
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module - <<'NODE'
+          import {readFileSync,existsSync} from 'node:fs';
+          import {join} from 'node:path';
+          const dir=process.env.FYMUSIC_RELEASE_CANDIDATE_DIR;
+          const manifest=JSON.parse(readFileSync(process.env.FYMUSIC_RELEASE_MANIFEST,'utf8'));
+          if(manifest.runtimeFileCount!==17||manifest.releaseApprovalGranted!==false)
+            throw Error('release manifest is incomplete or mislabelled');
+          for(const p of [
+            'functions/api/fymusic-codec-selftest.js',
+            'functions/api/fymusic-range-selftest.js',
+            'functions/api/fymusic-throttle-selftest.js',
+            '.github','docs','scripts','qa-fixtures']){
+            if(existsSync(join(dir,p)))throw Error('unexpected test content '+p);
+          }
+          console.log('FYMUSIC_PHASE44_CANDIDATE_NO_QA_API_PASS '+
+            JSON.stringify({baseline:manifest.baselineMainSha,head:manifest.devHeadSha,
+              version:manifest.candidateVersion,allowlistedFiles:manifest.runtimeFileCount}));
+          NODE
+      - name: Attach manifest of candidate files, hashes and baseline (not deployed)
+        uses: actions/upload-artifact@v4
+        with:
+          name: fymusic-phase44-local-candidate-manifest
+          path: ${{ env.FYMUSIC_RELEASE_MANIFEST }}
+          retention-days: 14
+      - name: Show local Pages logs on failure
+        if: failure()
+        run: cat /tmp/fymusic-phase44-candidate.log || true
