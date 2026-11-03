@@ -37,7 +37,7 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
  try{
   for(const scenario of ['missing-lyrics','kugou-media-failure','native-after-both-flower-fail',
    'daoxiang-title-search','daoxiang-short-edit','daoxiang-combined-retry',
-   'daoxiang-candidate-retry']){
+   'daoxiang-candidate-retry','migu-resolver-failure']){
    const page=await browser.newPage({viewport:{width:engine==='webkit'?390:1360,height:860}});
    const errors=[],media=[];
    page.on('pageerror',e=>errors.push(String(e.message).slice(0,180)));
@@ -96,6 +96,8 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
       window.__nativeSources.push(source);
       if(scenario==='daoxiang-candidate-retry'&&info.id==='kw-exact')
         return done(new Error('First same-song Kuwo ID native resolver unavailable'));
+      if(scenario==='migu-resolver-failure'&&source==='mg')
+        return done(new Error('Migu native endpoint unavailable'));
       done(null,{url:'https://media.example.test/kuwo.wav?id=440613',provider:'kuwo-native'});
     };
     window.__seamlessAudioErrors=[];
@@ -118,6 +120,8 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
     window.LXSourceManager.requestAction=(source,action,args,done)=>{
       window.__seamlessRequested.push({source,action,quality:args.type||null,
        trackId:String(args.musicInfo?.id||'')});
+      if(action==='musicUrl'&&source==='mg'&&scenario==='migu-resolver-failure')
+       return done(new Error('Migu Flower upstream HTTP 502'));
       if(action==='musicUrl'&&source==='kg'&&scenario!=='missing-lyrics')
        return done(new Error('Kugou Flower upstream HTTP 502'));
       if(action==='musicUrl'&&source==='kw'&&scenario==='native-after-both-flower-fail')
@@ -135,7 +139,10 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
      singer:'周杰伦',albumName:'魔杰座',
      interval:['daoxiang-short-edit','daoxiang-candidate-retry'].includes(scenario)?'03:18':'03:43'
     }:{
-     source:'kg',id:'kg-42',songmid:'kg-42',name:'示例歌曲',
+     source:scenario==='migu-resolver-failure'?'mg':'kg',
+     id:scenario==='migu-resolver-failure'?'mg-42':'kg-42',
+     songmid:scenario==='migu-resolver-failure'?'mg-42':'kg-42',
+     name:'示例歌曲',
      singer:'测试歌手',albumName:'示例专辑',interval:35
     }));
     document.body.appendChild(b);
@@ -186,6 +193,12 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
    assert.equal(result.audioPlaying,true);
    assert.equal(result.lyrics,2);
    assert.ok(result.searches.includes('kw'));
+   if(scenario==='migu-resolver-failure'){
+     assert.ok(result.requests.some(x=>x.source==='mg'&&x.action==='musicUrl'));
+     // The app may take a metadata-verified alternate immediately when
+     // the original provider fails; its native resolver is optional.
+     assert.equal(result.sourceState,'kw','Migu should recover into same-song Kuwo media');
+   }
    if(scenario==='daoxiang-candidate-retry'){
      const kuwoIds=result.requests.filter(r=>r.source==='kw').map(r=>r.trackId);
      assert.ok(kuwoIds.includes('kw-exact')&&kuwoIds.includes('440613'),

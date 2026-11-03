@@ -1345,6 +1345,9 @@
     clearMiguPlaybackDeadline(state);
     state.waitingForAudio = false;
     state.playing = false;
+    // Migu catalog failure is eligible for the same user-authorized,
+    // metadata-checked alternate recording path as Kugou, not a blind switch.
+    if (MODERN_WEB && recoverCrossPlatformPlayback(state.music,'mg',token)) return;
     setStatus(unavailablePlaybackMessage('mg'), 'fail');
   }
 
@@ -1386,9 +1389,11 @@
       }
       clearMiguPlaybackDeadline(state);
       clearPlaybackConfirmTimer(state);
-      // Invalidate every pending LX-source/native/fallback callback. A stale
-      // audio URL must never start after this attempt has finished.
-      playbackToken += 1;
+      // Retire any late Migu resolver callbacks without invalidating the
+      // recovery search token. Only the next selected track will get a new token.
+      state.resolveAttemptId=Number(state.resolveAttemptId||0)+1;
+      // Detach a stalled source before trying a matching alternate platform.
+      // The search owns this token until it selects a replacement recording.
       state.waitingForAudio = false;
       state.playing = false;
       if (audio) {
@@ -1401,6 +1406,9 @@
         try { audio.removeAttribute('src'); } catch (e) {}
         try { if (typeof audio.load === 'function') audio.load(); } catch (e) {}
       }
+      if (MODERN_WEB && recoverCrossPlatformPlayback(state.music,'mg',token)) return;
+      // No trustworthy match was found; then invalidate all stale callbacks.
+      playbackToken += 1;
       setStatus(
         '咪咕播放已等待 ' + Math.round(MIGU_PLAYBACK_MAX_WAIT_MS / 1000) +
         ' 秒，仍未成功开始播放。已停止本次等待；可稍后重试或尝试其他歌曲。',
@@ -1567,7 +1575,7 @@
     return true;
   }
 
-  // User-enabled, bounded recovery of a failed Kugou recording. This
+  // User-enabled, bounded recovery of a failed Kugou or Migu recording. This
   // searches OTHER CATALOGS, but resolves media through the installed LX
   // source for the selected alternate platform. No third-party resolver script,
   // no signed URLs in events/logs and no popup or extra user gesture.
@@ -1576,12 +1584,14 @@
        playbackState.token!==token||!global.FyMusicCrossPlatformMatch||
        !global.LXMusicSearch||!global.LXMusicSearch.search)return false;
     var state=playbackState;
-    var original=state.autoOriginalMusic||(source==='kg'?music:null);
-    if(!original||String(original.source||'kg').toLowerCase()!=='kg')return false;
+    var original=state.autoOriginalMusic||
+      (source==='kg'||source==='mg'?music:null);
+    var origin=String(original&&original.source||source).toLowerCase();
+    if(!original||['kg','mg'].indexOf(origin)<0)return false;
     if(state.crossRecoveryPending)return true;
     var active=global.LXSourceManager.getActive();
     var activeId=String(active&&(active.id||active.url)||'');
-    var attempted=Array.isArray(state.autoTriedSources)?state.autoTriedSources.slice():['kg'];
+    var attempted=Array.isArray(state.autoTriedSources)?state.autoTriedSources.slice():[origin];
     // A matching catalog can return several verified recordings. If the
     // first Kuwo ID cannot resolve, try the next metadata-checked candidate
     // before abandoning the one platform the user proved can play this song.
@@ -1592,7 +1602,7 @@
         remainingCandidates:remaining.slice(1)});
       return true;
     }
-    var order=['kw','mg','wy'];
+    var order=origin==='mg'?['kw','wy','kg']:['kw','mg','wy'];
     var targets=order.filter(function(target){
       var entry=active&&active.sources&&active.sources[target];
       return attempted.indexOf(target)<0&&entry&&
@@ -2295,7 +2305,7 @@
       playbackState.autoOriginalMusic=seamlessRecovery.original;
       playbackState.autoTriedSources=seamlessRecovery.tried||[source];
       playbackState.autoRemainingCandidates=seamlessRecovery.remainingCandidates||[];
-      playbackState.automaticAlternativeOrigin='kg';
+      playbackState.automaticAlternativeOrigin=String(seamlessRecovery.original.source||'kg').toLowerCase();
     }
 
     armMiguPlaybackDeadline(playbackState);
@@ -2352,7 +2362,7 @@
     var qualityMessage='请求 '+state.quality+
       (downgraded?'（由 '+state.initialQuality+' 降级；'+(state.qualityFallbackReason||'高音质不可用')+'）':'')+
       ' · 实际码率未经检测';
-    setStatus((state.automaticAlternativeOrigin==='kg' ? '已自动匹配的'+(CHANNEL_NAMES[state.source]||state.source.toUpperCase())+'备用版本' :
+    setStatus((['kg','mg'].indexOf(state.automaticAlternativeOrigin)>=0 ? '已自动匹配的'+(CHANNEL_NAMES[state.source]||state.source.toUpperCase())+'备用版本' :
       state.manualAlternativeOrigin==='kg' ? '已手动确认的酷我备用版本' :
       (CHANNEL_NAMES[state.source]||state.source.toUpperCase()))+
       ' 正在播放 · '+escapeHtml(qualityMessage),'ready');
