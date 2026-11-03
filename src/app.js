@@ -1576,6 +1576,16 @@
     var active=global.LXSourceManager.getActive();
     var activeId=String(active&&(active.id||active.url)||'');
     var attempted=Array.isArray(state.autoTriedSources)?state.autoTriedSources.slice():['kg'];
+    // A matching catalog can return several verified recordings. If the
+    // first Kuwo ID cannot resolve, try the next metadata-checked candidate
+    // before abandoning the one platform the user proved can play this song.
+    var remaining=Array.isArray(state.autoRemainingCandidates)?
+      state.autoRemainingCandidates:[];
+    if(state.automaticAlternativeOrigin&&remaining.length){
+      startPlayback(remaining[0],source,{original:original,tried:attempted,
+        remainingCandidates:remaining.slice(1)});
+      return true;
+    }
     var order=['kw','mg','wy'];
     var targets=order.filter(function(target){
       var entry=active&&active.sources&&active.sources[target];
@@ -1628,22 +1638,25 @@
           handled=true;global.clearTimeout(timer);
           if(!isCurrent())return;
           var list=!error&&response&&Array.isArray(response.list)?response.list:[];
-          var exact=null,compatible=null;
+          var exact=[],compatible=[],seen=Object.create(null);
           for(var i=0;i<list.length;i++){
-            var candidate=list[i];
-            if(global.FyMusicCrossPlatformMatch.equivalent(original,candidate,'audio').accepted){
-              exact=candidate;break;
-            }
-            if(!compatible&&global.FyMusicCrossPlatformMatch.compatibleAudio&&
-               global.FyMusicCrossPlatformMatch.compatibleAudio(original,candidate).accepted)
-              compatible=candidate;
+            var candidate=list[i],key=String(candidate.id||candidate.songmid||'');
+            if(!key||seen[key])continue;
+            var strict=global.FyMusicCrossPlatformMatch.equivalent(original,candidate,'audio');
+            var relaxed=!strict.accepted&&global.FyMusicCrossPlatformMatch.compatibleAudio&&
+              global.FyMusicCrossPlatformMatch.compatibleAudio(original,candidate);
+            if(strict.accepted){exact.push(candidate);seen[key]=true;}
+            else if(relaxed&&relaxed.accepted){compatible.push(candidate);seen[key]=true;}
           }
-          var match=exact||compatible;
-          if(!match)return tryQuery();
+          // Exact matches first, then short edits. Bound the number of
+          // recordings tried to avoid a runaway serial resolver waterfall.
+          var matches=exact.concat(compatible).slice(0,3);
+          if(!matches.length)return tryQuery();
           // Never change the original queue item. The fallback is limited
           // to this playback, and the actual selected platform is displayed.
           state.crossRecoveryPending=false;
-          startPlayback(match,target,{original:original,tried:attempted.slice()});
+          startPlayback(matches[0],target,{original:original,tried:attempted.slice(),
+            remainingCandidates:matches.slice(1)});
         }
         try{
           global.LXMusicSearch.search(target,query,1,40,finishSearch);
@@ -2275,6 +2288,7 @@
     if(seamlessRecovery&&seamlessRecovery.original){
       playbackState.autoOriginalMusic=seamlessRecovery.original;
       playbackState.autoTriedSources=seamlessRecovery.tried||[source];
+      playbackState.autoRemainingCandidates=seamlessRecovery.remainingCandidates||[];
       playbackState.automaticAlternativeOrigin='kg';
     }
 
