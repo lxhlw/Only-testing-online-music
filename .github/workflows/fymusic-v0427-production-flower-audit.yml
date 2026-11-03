@@ -1,0 +1,65 @@
+name: FyMusic v0.4.27 - Live Production Flower Privacy-Safe Audit
+on:
+  push:
+    branches: [feature/fymusic-playback-verifier]
+    paths:
+      - '.github/workflows/fymusic-v0427-production-flower-audit.yml'
+      - 'scripts/test-flower-ui-stability-live.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fymusic-v0427-live-prod-flower-audit
+  cancel-in-progress: true
+
+jobs:
+  production-flower-audit:
+    if: github.ref == 'refs/heads/feature/fymusic-playback-verifier'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TEST_BASE_URL: https://only-testing-online-music.pages.dev
+      EXPECTED_MAIN_SHA: 586f592dc994b0868886bcb42b1213c3580f278b
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Guard against drift, non-production hosts and accidental deployment
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/feature/fymusic-playback-verifier
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$EXPECTED_MAIN_SHA"
+          test "$TEST_BASE_URL" = 'https://only-testing-online-music.pages.dev'
+          node --check scripts/test-flower-ui-stability-live.mjs
+      - name: Verify Cloudflare Pages live v0.4.27
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 3 --max-time 30 \
+            "$TEST_BASE_URL/version.json" -o /tmp/fymusic-v0427-prod-version.json
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const v=JSON.parse(fs.readFileSync('/tmp/fymusic-v0427-prod-version.json','utf8'));
+          assert.equal(v.version,'0.4.27');
+          assert.equal(v.name,'FyMusic');
+          console.log('FYMUSIC_V0427_PRODUCTION_VERSION_MATCH');
+          NODE
+      - name: Install dependencies and real Chromium
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Real Flower Kuwo/Migu native UI two-round long playback and seek
+        run: |
+          set -euo pipefail
+          node scripts/test-flower-ui-stability-live.mjs | tee /tmp/fymusic-v0427-flower-live-results.log
+          test "$(grep -Fc '"verified":true' /tmp/fymusic-v0427-flower-live-results.log)" -eq 4
+          test "$(grep -Fc '"sanitizedFlowerResolver":true' /tmp/fymusic-v0427-flower-live-results.log)" -eq 4
+          grep -Fq '"allVerified":true' /tmp/fymusic-v0427-flower-live-results.log
+          echo 'FYMUSIC_V0427_PRODUCTION_FLOWER_LIVE_4_OF_4_PASS'
+      - name: Record no production mutation
+        run: |
+          echo 'FYMUSIC_V0427_PRODUCTION_FLOWER_AUDIT_READ_ONLY'
+          echo 'No main push, Wrangler command, secret access, or production deployment is used.'
