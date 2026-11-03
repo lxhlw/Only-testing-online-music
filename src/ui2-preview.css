@@ -1,0 +1,281 @@
+/*
+ * FyMusic UI 2.0 — isolated desktop preview. Query switch: ?ui2=1.
+ * The playback engine, DOM identities, mobile shell, and source logic stay unchanged.
+ * No remote fonts, no infinite animations, no canvas polling.
+ */
+@media (min-width: 981px) {
+  html.modern-web.fy-ui2 {
+    color-scheme: dark;
+    --bg:#091218;--panel:#12212b;--surface:#162630;--surface2:#1b3038;
+    --mint:#73edb5;--mint2:#61dcb6;--text:#eafaf2;--muted:#98afb2;
+    --stroke:rgba(170,225,207,.14);
+    --secondary:#b6d1cb;--light-mint:#1b4539;--soft-green:#102922;
+    --shadow:0 18px 45px rgba(0,0,0,.18);
+    background:#091218;
+  }
+  html.modern-web.fy-ui2 body,
+  html.modern-web.fy-ui2 #app,
+  html.modern-web.fy-ui2 .lx-layout,
+  html.modern-web.fy-ui2 .main-stage,
+  html.modern-web.fy-ui2 .view-container {background:#091218;color:#ecf7f4}
+  html.modern-web.fy-ui2 .main-stage {
+    background:radial-gradient(ellipse 65% 43% at 85% 5%,rgba(27,109,93,.17),transparent 75%),#091218;
+  }
+  html.modern-web.fy-ui2 .topbar {
+    height:76px;background:rgba(12,24,30,.985);border-bottom:1px solid rgba(150,214,193,.13);
+    box-shadow:none;color:#f0fbf7;
+  }
+  html.modern-web.fy-ui2 .brand{color:#e9fff5;font-size:22px;letter-spacing:-.8px}
+  html.modern-web.fy-ui2 .brand-block::before{background:linear-gradient(135deg,#82f0c2,#2b997e);color:#09241e}
+  html.modern-web.fy-ui2 .subtitle{color:#8ca9a7}
+  html.modern-web.fy-ui2 .topbar-chip{background:#162c2d;border-color:#2c5149;color:#bce1d4}
+  html.modern-web.fy-ui2 .top-source-indicator{background:#143a31;color:#83efbc}
+  html.modern-web.fy-ui2 .nav-rail{
+    top:76px;height:calc(100vh - 76px);background:linear-gradient(180deg,#0e1c25,#0c1921);
+    border-color:#223438;padding-top:27px;
+  }
+  html.modern-web.fy-ui2 .nav-brand{color:#6dc7a8;font-weight:800}
+  html.modern-web.fy-ui2 .nav-item{color:#a0b9b4;transition:background-color .2s,color .2s,transform .2s}
+  html.modern-web.fy-ui2 .nav-item:hover{background:#1e3537;color:#e7fff7;transform:translateX(2px)}
+  html.modern-web.fy-ui2 .nav-item.active,
+  html.modern-web.fy-ui2 .nav-item.active:hover{
+    background:#1d4036;color:#bdfddc;border-color:#386852;
+    box-shadow:inset 3px 0 #76f4b9;
+  }
+  html.modern-web.fy-ui2 .persistent-top-stack{
+    top:76px;background:rgba(9,18,24,.97);border-color:#1c3636;box-shadow:none;
+  }
+  html.modern-web.fy-ui2 .global-search {
+    background:#172a33;border-color:#2c4747;
+    box-shadow:0 8px 20px rgba(0,0,0,.11);
+    border-radius:17px;height:56px
+  }
+  html.modern-web.fy-ui2 .global-search:focus-within{border-color:#6adeb1;box-shadow:0 0 0 3px rgba(111,238,180,.14)}
+  html.modern-web.fy-ui2 .global-search input{background:transparent;color:#f0fff9}
+  html.modern-web.fy-ui2 .global-search input::placeholder{color:#90a9ab}
+  html.modern-web.fy-ui2 .global-search button{background:linear-gradient(125deg,#67e5b0,#35c0a0);color:#082b26}
+  html.modern-web.fy-ui2 .global-status{
+    background:#162b2d;color:#adcac2;border-color:#2d4a45;
+    padding:7px 12px;font-size:12px;
+  }
+  html.modern-web.fy-ui2 .global-status.warn{background:#3d3024;color:#ffe1a9;border-color:#796047}
+  html.modern-web.fy-ui2 .global-status.fail{background:#492b30;color:#ffc7c8;border-color:#805254}
+  html.modern-web.fy-ui2 .view-header h1,
+  html.modern-web.fy-ui2 .view-header .panel-kicker{color:#e9fff4}
+  html.modern-web.fy-ui2 .view-header .panel-kicker{color:#69dfb2}
+  html.modern-web.fy-ui2 .results-head,
+  html.modern-web.fy-ui2 .search-song-main,
+  html.modern-web.fy-ui2 .song-title{color:#effbf7}
+  html.modern-web.fy-ui2 .sub-toolbar,
+  html.modern-web.fy-ui2 .category-row,
+  html.modern-web.fy-ui2 .search-row,
+  html.modern-web.fy-ui2 .search-song-row,
+  html.modern-web.fy-ui2 .playlist-song-row,
+  html.modern-web.fy-ui2 .view-tab,
+  html.modern-web.fy-ui2 .channel-button,
+  html.modern-web.fy-ui2 .platform-pill,
+  html.modern-web.fy-ui2 .category-pill{
+    background:#16262e;border-color:#2a4241;color:#a9c6bd;
+  }
+  html.modern-web.fy-ui2 .view-tab.active,
+  html.modern-web.fy-ui2 .channel-button.active,
+  html.modern-web.fy-ui2 .platform-pill.active{background:#244f41;color:#d1ffe5;border-color:#3c745f}
+  html.modern-web.fy-ui2 .search-song-row:hover{border-color:#49826c;background:#1d3537}
+  /* Floating Dock: same audio/seek/buttons, only a new presentation. */
+  html.modern-web.fy-ui2 .player-bar {
+    left:calc(206px + 26px);right:26px;bottom:16px;
+    width:auto;height:93px;min-height:93px;max-height:93px;
+    padding:14px 22px;gap:17px;border:1px solid rgba(152,231,199,.21);
+    border-radius:23px;background:rgba(25,43,52,.975);color:#edfdf5;
+    box-shadow:0 21px 45px rgba(0,0,0,.29),0 0 0 1px rgba(255,255,255,.03) inset;
+    z-index:80;transition:box-shadow .26s,border-color .26s;
+  }
+  html.modern-web.fy-ui2.is-playing .player-bar{border-color:rgba(122,236,185,.39)}
+  html.modern-web.fy-ui2 .player-song{flex:0 1 230px;width:230px}
+  html.modern-web.fy-ui2 .player-art{width:61px;min-width:61px;height:61px;flex-basis:61px;border-radius:13px;
+    box-shadow:0 7px 18px rgba(0,0,0,.28)}
+  html.modern-web.fy-ui2 .player-art:hover{box-shadow:0 0 0 2px rgba(115,237,181,.65)}
+  html.modern-web.fy-ui2 #player-title{color:#f0fff9;font-size:15px;font-weight:760}
+  html.modern-web.fy-ui2 #player-artist{color:#a3bdbb;font-size:12px}
+  html.modern-web.fy-ui2 #player-network-hint{color:#f6cb89}
+  html.modern-web.fy-ui2 .player-center{gap:4px}
+  html.modern-web.fy-ui2 .player-icon-btn{
+    color:#c0d7d3!important;background:transparent!important;
+    transition:background-color .18s,color .18s,transform .18s;
+  }
+  html.modern-web.fy-ui2 .player-icon-btn:hover{color:#e7fff6!important;background:#294740!important;transform:translateY(-1px)}
+  html.modern-web.fy-ui2 .player-main-toggle,
+  html.modern-web.fy-ui2 .player-main-toggle:hover{
+    background:#77efb8!important;color:#10352b!important;
+    width:49px;min-width:49px;height:49px;min-height:49px;
+    box-shadow:0 4px 19px rgba(92,228,165,.24)!important;
+  }
+  html.modern-web.fy-ui2 .player-timeline,
+  html.modern-web.fy-ui2 .player-time{color:#96b8af}
+  html.modern-web.fy-ui2 #player-seek{
+    background:#416059;border-radius:99px;accent-color:#7cf0bc;
+  }
+  html.modern-web.fy-ui2 #player-seek::-webkit-slider-thumb{background:#7cf0bc}
+  html.modern-web.fy-ui2 .player-extras{flex-basis:190px}
+  html.modern-web.fy-ui2 #player-volume{accent-color:#79ecb7}
+  html.modern-web.fy-ui2 .player-lyric{color:#a6c4be}
+  html.modern-web.fy-ui2 .player-mode-menu{
+    background:#20323a;border-color:#41635b;color:#eefdf7;
+  }
+  html.modern-web.fy-ui2 .player-mode-menu button{
+    background:#223740!important;color:#e5fff2!important;
+  }
+  html.modern-web.fy-ui2 .player-mode-menu button:hover,
+  html.modern-web.fy-ui2 .player-mode-menu button.is-selected{
+    background:#345a4d!important;color:#9cf3c8!important;
+  }
+  /* Immersive screen with cover-colored ambient still image. */
+  html.modern-web.fy-ui2 .lyrics-overlay{background:#071117}
+  html.modern-web.fy-ui2 .lyrics-sheet.now-playing-screen {
+    isolation:isolate;
+    background:radial-gradient(ellipse 63% 85% at 25% 40%,#143e3c 0%,transparent 72%),
+               linear-gradient(120deg,#0b1720 0%,#0c1823 58%,#151823 100%);
+    color:#f2fff9;
+  }
+  html.modern-web.fy-ui2 .ui2-artwork-ambient{
+    position:absolute;pointer-events:none;inset:-9%;z-index:0;opacity:0;
+    background-position:22% 42%;background-size:cover;
+    filter:blur(58px) saturate(1.12);
+    transform:scale(1.08);
+    transition:opacity .35s ease;
+  }
+  html.modern-web.fy-ui2 .ui2-artwork-ambient.has-art{opacity:.27}
+  html.modern-web.fy-ui2 .lyrics-sheet.now-playing-screen > :not(.ui2-artwork-ambient){
+    position:relative;z-index:1;
+  }
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-sheet-header {
+    flex-basis:79px;min-height:79px;padding:13px clamp(27px,3.6vw,62px);
+    background:rgba(13,26,34,.87);border-color:rgba(164,230,201,.13);
+  }
+  html.modern-web.fy-ui2 .now-playing-brand-mark{
+    background:linear-gradient(145deg,#19483b,#2c735b);color:#a8ffd3;
+    box-shadow:0 0 0 1px rgba(137,241,183,.23) inset;
+  }
+  html.modern-web.fy-ui2 .now-playing-screen .panel-kicker{color:#78ebba}
+  html.modern-web.fy-ui2 .now-playing-screen h2{color:#f0fff7;font-size:19px;font-weight:730}
+  html.modern-web.fy-ui2 .lyrics-sheet-actions button,
+  html.modern-web.fy-ui2 #lyrics-close-btn{
+    background:#21323a!important;border:1px solid #38544d!important;
+    color:#d9f3e7!important;border-radius:12px;
+  }
+  html.modern-web.fy-ui2 #lyrics-close-btn:hover,
+  html.modern-web.fy-ui2 .lyrics-sheet-actions button:hover{background:#2d4c45!important;color:#fff!important}
+  html.modern-web.fy-ui2 .now-playing-body{
+    grid-template-columns:minmax(340px,44%) minmax(0,56%);
+    gap:0;
+  }
+  html.modern-web.fy-ui2 .now-playing-album-column{
+    gap:20px;padding:36px clamp(30px,4.7vw,80px);
+    border:0;background:linear-gradient(110deg,rgba(35,100,83,.18),rgba(11,28,35,.11));
+    scrollbar-width:thin;scrollbar-color:#365e56 transparent;
+  }
+  html.modern-web.fy-ui2 .now-playing-cover-box{
+    width:min(100%,460px,52vh);max-height:460px;border-radius:22px;
+    box-shadow:0 28px 68px rgba(0,0,0,.38),0 0 0 1px rgba(204,255,231,.1);
+    background:linear-gradient(135deg,#2c6657,#143443);
+    transition:transform .32s ease,box-shadow .32s ease;
+  }
+  html.modern-web.fy-ui2 .now-playing-cover-box img{
+    background:#1a393f;
+    transition:opacity .32s ease;
+  }
+  html.modern-web.fy-ui2 .now-playing-cover-fallback{color:#a0edca}
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-song-meta{
+    width:min(100%,460px);text-align:left;padding:4px 0 0;
+  }
+  html.modern-web.fy-ui2 .now-playing-screen #lyrics-title{
+    color:#f1fff9;font-size:clamp(31px,3vw,47px);letter-spacing:-.8px;
+    line-height:1.2;font-weight:820;
+  }
+  html.modern-web.fy-ui2 #now-playing-artist{color:#c7e9db;font-size:17px;margin-top:10px}
+  html.modern-web.fy-ui2 #now-playing-album,
+  html.modern-web.fy-ui2 #now-playing-platform{color:#91adae;font-size:12px}
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-status{color:#9fcbbd;font-size:12px}
+  html.modern-web.fy-ui2 .now-playing-detail-column{
+    padding:0 clamp(24px,4vw,74px) 0 clamp(14px,2.3vw,40px);
+    background:linear-gradient(115deg,transparent,rgba(11,25,33,.28));
+  }
+  html.modern-web.fy-ui2 .now-playing-tabs{
+    height:78px;justify-content:flex-start;gap:12px;
+    border-color:rgba(171,228,205,.15);
+  }
+  html.modern-web.fy-ui2 .now-playing-tab{
+    color:#a4bebc;background:transparent;border-color:transparent;
+    min-height:40px;border-radius:12px;
+  }
+  html.modern-web.fy-ui2 .now-playing-tab.active{
+    color:#b8ffdb;background:#1e4037;border-color:#33634e;
+  }
+  html.modern-web.fy-ui2 .now-playing-tab:hover{background:#29443e;color:#fff}
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-scroll{scrollbar-color:#386258 transparent}
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-line{
+    color:#92afb0;text-align:left;
+    font-size:clamp(16px,1.48vw,20px);
+    line-height:1.55;padding:12px 13px;
+    transform:translateX(0);
+    transition:color .28s ease,background-color .28s ease,transform .28s ease;
+  }
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-line.active{
+    color:#f6fffb;background:linear-gradient(90deg,rgba(80,193,147,.18),transparent 85%);
+    transform:translateX(5px);font-size:clamp(20px,1.85vw,27px);
+    box-shadow:inset 3px 0 #79f2b9;
+  }
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-empty{color:#9bb8b3}
+  html.modern-web.fy-ui2 .now-playing-transport{
+    flex-basis:114px;min-height:114px;background:rgba(15,29,37,.94);
+    border-color:rgba(170,229,202,.13);gap:8px;
+  }
+  html.modern-web.fy-ui2 .now-playing-transport-buttons button{
+    color:#b9d5ce;transition:background .18s,color .18s,transform .18s;
+  }
+  html.modern-web.fy-ui2 .now-playing-transport-buttons button:hover{
+    color:#f8fff9;background:#27463e;transform:translateY(-1px);
+  }
+  html.modern-web.fy-ui2 .now-playing-transport-buttons .detail-main-toggle,
+  html.modern-web.fy-ui2 .now-playing-transport-buttons .detail-main-toggle:hover{
+    width:54px;height:54px;min-height:54px;background:#77ecb7;color:#11372d;
+    box-shadow:0 3px 16px rgba(98,228,165,.25);
+  }
+  html.modern-web.fy-ui2 .now-playing-timeline{color:#a5c6bb;width:min(740px,100%)}
+  html.modern-web.fy-ui2 .now-playing-timeline input,
+  html.modern-web.fy-ui2 .now-playing-volume input{accent-color:#77edb7}
+  html.modern-web.fy-ui2 .now-playing-timeline input:disabled{opacity:.45}
+  html.modern-web.fy-ui2 .comments-title-row,
+  html.modern-web.fy-ui2 .now-comment-card,
+  html.modern-web.fy-ui2 .comments-link-wrap{border-color:rgba(158,212,185,.16)}
+  html.modern-web.fy-ui2 .comments-title-row h3,
+  html.modern-web.fy-ui2 .now-comment-card p{color:#e7fbf3}
+  html.modern-web.fy-ui2 .comments-title-row p,
+  html.modern-web.fy-ui2 .now-comment-head,
+  html.modern-web.fy-ui2 .comments-status{color:#9db9b1}
+  html.modern-web.fy-ui2 .now-comment-head strong{color:#87ecc0}
+  html.modern-web.fy-ui2 .comments-title-row button{
+    background:#213a3b;border-color:#436056;color:#c8f2df;
+  }
+  html.modern-web.fy-ui2 :is(button,input,a):focus-visible{
+    outline:2px solid #80fac1;outline-offset:3px;
+  }
+}
+@media (min-width:981px) and (max-width:1160px){
+  html.modern-web.fy-ui2 .player-bar{left:106px;right:18px}
+  html.modern-web.fy-ui2 .player-song{flex-basis:185px}
+  html.modern-web.fy-ui2 .player-extras{flex-basis:128px}
+  html.modern-web.fy-ui2 .now-playing-album-column{padding:25px}
+}
+@media (prefers-reduced-motion:reduce){
+  html.modern-web.fy-ui2 .ui2-artwork-ambient,
+  html.modern-web.fy-ui2 .player-bar,
+  html.modern-web.fy-ui2 .now-playing-cover-box,
+  html.modern-web.fy-ui2 .now-playing-cover-box img,
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-line,
+  html.modern-web.fy-ui2 .nav-item,
+  html.modern-web.fy-ui2 .player-icon-btn,
+  html.modern-web.fy-ui2 .now-playing-transport-buttons button{
+    transition:none!important;animation:none!important;
+  }
+}
