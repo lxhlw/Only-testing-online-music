@@ -50,7 +50,9 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
     }]));
     localStorage.setItem('only-testing-online-music.active-source-id','seamless-test-source');
    },{fixture});
-   const audioBytes=wav();
+   // Realistic length is required: the player deliberately rejects a 22s
+   // test WAV masquerading as a 03:43 song as protected/invalid media.
+   const audioBytes=wav(scenario.startsWith('daoxiang-')?223:22);
    await page.route('https://media.example.test/**',route=>{
     const range=route.request().headers().range||'';
     const match=/^bytes=(\d+)-(\d*)$/.exec(range);
