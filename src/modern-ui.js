@@ -262,7 +262,7 @@ if('mediaSession' in navigator){
     const position=Math.max(0,Math.min(duration,seconds));
     // An OS seek supersedes any unfinished immersive touch drag. Without
     // invalidation its delayed "change" can overwrite this new seek target.
-    window.dispatchEvent(new Event('fymusic:external-seek'));
+    window.dispatchEvent(new CustomEvent('fymusic:external-seek',{detail:{seconds:position}}));
     seek.value=String(Math.round(position/duration*1000));
     // Let the existing transport perform preview, validation and commit.
     seek.dispatchEvent(new Event('input',{bubbles:true}));
