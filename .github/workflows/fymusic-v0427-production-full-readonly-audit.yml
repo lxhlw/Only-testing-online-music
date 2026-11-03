@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/fymusic-v0427-production-full-readonly-audit.yml'
       - 'scripts/fymusic-production-full-readonly-audit.mjs'
+      - 'scripts/fymusic-production-cross-engine-runtime-audit.mjs'
   workflow_dispatch:
 
 permissions:
@@ -18,7 +19,7 @@ jobs:
   audit:
     if: github.ref == 'refs/heads/feature/fymusic-playback-verifier'
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     env:
       TEST_BASE_URL: https://only-testing-online-music.pages.dev
       MAIN_SHA: 586f592dc994b0868886bcb42b1213c3580f278b
@@ -37,7 +38,26 @@ jobs:
           test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$MAIN_SHA"
           test "$(git rev-parse origin/main)" = "$MAIN_SHA"
           node --check scripts/fymusic-production-full-readonly-audit.mjs
+          node --check scripts/fymusic-production-cross-engine-runtime-audit.mjs
       - name: Read-only actual Edge HTTP, static parity and safe rejection probes
         run: node scripts/fymusic-production-full-readonly-audit.mjs
+      - name: Install browser engines without changing production
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium firefox webkit
+      - name: Production desktop and mobile runtime smoke in three real browser engines
+        run: node scripts/fymusic-production-cross-engine-runtime-audit.mjs
+      - name: Production native DOM churn and lyric overlay interaction Chromium
+        env:
+          BROWSER_ENGINE: chromium
+        run: node scripts/test-fymusic-phase43-render-interaction.mjs
+      - name: Production native DOM churn and lyric overlay interaction Firefox
+        env:
+          BROWSER_ENGINE: firefox
+        run: node scripts/test-fymusic-phase43-render-interaction.mjs
+      - name: Production native DOM churn and lyric overlay interaction WebKit
+        env:
+          BROWSER_ENGINE: webkit
+        run: node scripts/test-fymusic-phase43-render-interaction.mjs
       - name: No publishing, production source modification or secret reads
         run: echo 'FYMUSIC_FULL_READONLY_AUDIT_COMPLETE; production untouched.'
