@@ -200,25 +200,25 @@ jobs:
       - name: Verify no repository files are exposed as public website assets
         run: |
           set -euo pipefail
-          # Pages' production hostname can briefly serve a previous edge
-          # route during deploy propagation. Only an actual, stable branded
-          # 404 passes; an exposed non-HTML repository file fails immediately.
+          # Cloudflare may temporarily route new code through an old edge.
+          # Poll for a verified branded 404, even if the very first response
+          # is HTTP 200 non-HTML. Never accept an exposed file as success:
+          # persistent 200 at the end of the bounded window fails deployment.
           for path in README.md package.json scripts/test-modern-web-browser.mjs android-companion/README.md .github/workflows/verify-and-deploy.yml; do
             ready=0
-            for attempt in {1..12}; do
+            for attempt in {1..25}; do
               code=$(curl -sSL --max-time 12 -o /tmp/fymusic-not-found.html -w '%{http_code}' "https://only-testing-online-music.pages.dev/$path")
               if test "$code" = 404 && grep -Fq '404 · Not found' /tmp/fymusic-not-found.html; then
                 ready=1; break
               fi
               if test "$code" = 200 &&
                  ! grep -Eiq '<!doctype html|<html[ >]' /tmp/fymusic-not-found.html; then
-                echo "Real public repository content exposed: $path HTTP $code"
-                exit 1
+                echo "Protected path $path still returns non-HTML HTTP 200 (attempt $attempt/25)"
               fi
-              sleep 2
+              sleep 3
             done
             if test "$ready" != 1; then
-              echo "Protected path never became branded HTTP 404: $path last_status=$code"
+              echo "SECURITY GATE FAILED: repository path not confirmed as branded 404: $path last_status=$code"
               exit 1
             fi
           done
