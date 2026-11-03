@@ -14,19 +14,27 @@ jobs:
     if: github.ref == 'refs/heads/feature/fymusic-playback-verifier'
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    env:
+      MAIN_SHA: 586f592dc994b0868886bcb42b1213c3580f278b
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Assert audit only; do not change project or production
         run: |
           test "$GITHUB_REF" = refs/heads/feature/fymusic-playback-verifier
-          test ! -f package-lock.json
-          node -e "const p=require('./package.json');console.log('FYMUSIC_AUDIT_DEPENDENCIES',JSON.stringify({node:process.version,version:p.version,packageManager:p.packageManager,directRuntime:Object.keys(p.dependencies||{}).length,directDev:Object.keys(p.devDependencies||{}).length,lockfilePresent:false}))"
-      - name: Install exact declared direct dependencies into ephemeral runner
+          test "$(git rev-parse origin/main)" = "$MAIN_SHA"
+          git worktree add --detach /tmp/fymusic-audit-release "$MAIN_SHA"
+          test ! -f /tmp/fymusic-audit-release/package-lock.json
+          node -e "const p=require('/tmp/fymusic-audit-release/package.json');if(p.version!=='0.4.27')process.exit(1);console.log('FYMUSIC_AUDIT_DEPENDENCIES',JSON.stringify({sha:process.env.MAIN_SHA,node:process.version,version:p.version,packageManager:p.packageManager,directRuntime:Object.keys(p.dependencies||{}).length,directDev:Object.keys(p.devDependencies||{}).length,lockfilePresent:false}))"
+      - name: Install exact release dependencies in isolated temporary worktree
+        working-directory: /tmp/fymusic-audit-release
         run: npm install --no-audit --no-fund
-      - name: npm advisory summary including dev and deployment tooling
+      - name: npm advisory summary on exact v0.4.27 release tree
+        working-directory: /tmp/fymusic-audit-release
         run: |
           node --input-type=module <<'NODE'
           import {spawnSync} from 'node:child_process';
