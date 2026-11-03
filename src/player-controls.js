@@ -19,6 +19,11 @@
   var audio = null;
   var seek = null;
   var dragging = false;
+  // A native pointer may remain held while OS Media Session or a new track
+  // takes ownership. Its later trusted input/change must not overwrite that
+  // newer media position. Programmatic OS events remain valid.
+  var pointerHeld = false;
+  var ignoreOldPointerCommit = false;
   var settings = {};
 
   function get(id) { return document.getElementById(id); }
@@ -105,8 +110,42 @@
     show(tip);
     updateSeekFill();
   }
-  function commitSeek() {
+  function cancelSeek() {
+    // A touch/pointer cancellation must clear the *base* seek preview too;
+    // otherwise its 'dragging' flag can freeze the small player indefinitely.
+    if(!seek)return;
+    dragging=false;
+    hide(get('player-seek-preview'));
+    refresh();
+  }
+  function invalidateCurrentGesture() {
+    if (pointerHeld) ignoreOldPointerCommit = true;
+    if (dragging) cancelSeek();
+  }
+  function invalidateForPageLoss() {
+    // Browser focus loss may swallow pointerup entirely. Do not retain a
+    // permanently held pointer that would block a future keyboard seek.
+    // Still discard any late native "change" from the abandoned drag.
+    invalidateCurrentGesture();
+    pointerHeld = false;
+  }
+  function commitSeek(event) {
     if (!seek || !audio) return;
+    // A real Chrome tab switch can emit the native range "change" *before*
+    // window.blur and visibilitychange, while document.hidden is still false.
+    // Focus ownership is already lost at that point: never commit the drag.
+    // Programmatic OS seek events remain valid through the existing gate.
+    if (event && event.isTrusted && !document.hasFocus()) {
+      if (pointerHeld) ignoreOldPointerCommit = true;
+      pointerHeld = false;
+      cancelSeek();
+      return;
+    }
+    if (ignoreOldPointerCommit && event && event.isTrusted) {
+      ignoreOldPointerCommit = false;
+      cancelSeek();
+      return;
+    }
     var state = playableState();
     var total = duration();
     var target = total * Number(seek.value || 0) / 1000;
@@ -190,10 +229,39 @@
       }
     };
 
-    seek.oninput = function () {
+    seek.addEventListener('pointerdown', function () {
+      pointerHeld = true;
+      ignoreOldPointerCommit = false;
+    }, false);
+    seek.addEventListener('pointerup', function () {
+      // Keep the old gesture invalid until its trailing native change event;
+      // the browser dispatches that event *after* pointerup on many devices.
+      pointerHeld = false;
+    }, false);
+    seek.addEventListener('pointercancel', function () {
+      pointerHeld = false;
+      ignoreOldPointerCommit = true;
+      cancelSeek();
+    }, false);
+    seek.addEventListener('keydown', function () {
+      // A subsequent keyboard seek is a fresh deliberate user action.
+      if (!pointerHeld) ignoreOldPointerCommit = false;
+    }, false);
+    seek.oninput = function (event) {
+      if (ignoreOldPointerCommit && event && event.isTrusted) return;
       if (!seek.disabled) previewSeek();
     };
     seek.onchange = commitSeek;
+    global.addEventListener('fymusic:external-seek', invalidateCurrentGesture, false);
+    global.addEventListener('lx:trackchange', invalidateCurrentGesture, false);
+    // Lifecycle events also clear an unfinished preview even if a browser
+    // does not send a native "change". The focus guard above handles Chrome's
+    // earlier change-before-blur ordering.
+    global.addEventListener('blur', invalidateForPageLoss, false);
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) invalidateForPageLoss();
+    }, false);
+    global.addEventListener('pagehide', invalidateForPageLoss, false);
     // Android 4.4 does not reliably dispatch input on all range taps,
     // but change on release reliably commits the selected position.
     audio.addEventListener('timeupdate', refresh, false);
@@ -260,5 +328,5 @@
     renderMode();
     refresh();
   }
-  global.LXPlayerControls = { init: init, refresh: refresh, getMode: function () { return mode; }, setMode: setMode, timeString: timeString };
+  global.LXPlayerControls = { init: init, refresh: refresh, cancelSeek: cancelSeek, getMode: function () { return mode; }, setMode: setMode, timeString: timeString };
 })(window);

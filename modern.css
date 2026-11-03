@@ -403,6 +403,12 @@ html.modern-web #player-title{
   color:#274a36;font-size:14px;font-weight:780;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
 }
 html.modern-web #player-artist{color:#7e9485;font-size:12px}
+html.modern-web #player-network-hint{
+  display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  color:#92662b;font-size:11px;line-height:1.25
+}
+html.modern-web #player-network-hint[hidden]{display:none}
+html.modern-web.is-offline #player-network-hint{color:#a04d38}
 html.modern-web .player-center{
   flex:1 1 0%;display:flex;flex-direction:column;justify-content:center;
   align-items:stretch;min-width:0;gap:2px
@@ -1845,4 +1851,35 @@ html.modern-web .library-row.tap-to-play .library-main:focus-visible{
   html.modern-web #playlist-detail-songs>.playlist-song-row:focus-visible{
     outline:2px solid #58ae7e;outline-offset:-2px
   }
+}
+
+/* FyMusic immersive transport: touch-friendly seeking without creating
+   a second slider or a polling animation loop. */
+html.modern-web #detail-seek{
+  min-height:40px;touch-action:pan-x;
+}
+html.modern-web #detail-seek:focus-visible{
+  outline:2px solid #2b936f;outline-offset:2px;border-radius:8px;
+}
+@media(max-width:740px){
+  html.modern-web .now-playing-transport{
+    flex-basis:112px!important;min-height:112px!important;
+    padding-bottom:calc(7px + env(safe-area-inset-bottom))!important
+  }
+  html.modern-web .now-playing-transport-buttons button{
+    min-width:44px!important;width:44px!important;
+    min-height:44px!important;height:44px!important
+  }
+  html.modern-web .now-playing-transport-buttons .detail-main-toggle{
+    min-width:48px!important;width:48px!important;
+    min-height:48px!important;height:48px!important
+  }
+  html.modern-web #detail-seek{
+    min-height:44px;height:44px;touch-action:pan-x
+  }
+}
+@media(max-width:740px) and (max-height:500px){
+  html.modern-web .now-playing-album-column{max-height:65px;min-height:65px;padding:3px 12px}
+  html.modern-web .now-playing-cover-box{width:48px;height:48px;max-height:48px;flex-basis:48px}
+  html.modern-web .now-playing-tabs{height:42px}
 }

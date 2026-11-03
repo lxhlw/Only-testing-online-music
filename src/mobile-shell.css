@@ -591,3 +591,26 @@ html.modern-web #view-playlist.is-detail-open #playlist-detail-panel{
     margin-top:4px!important;border-radius:14px!important
   }
 }
+
+/* FyMusic modern mobile ergonomics: 44px touch targets with visible
+   keyboard focus, without adding animation or reflow-heavy effects. */
+@media(max-width:740px){
+  html.modern-web.mobile-shell-ready .mobile-menu-button,
+  html.modern-web.mobile-shell-ready .mobile-drawer-close{
+    width:44px!important;height:44px!important;
+    min-width:44px!important;min-height:44px!important
+  }
+  html.modern-web.mobile-shell-ready .mobile-channel-toggle,
+  html.modern-web.mobile-shell-ready body>#channel-list.mobile-channel-popover .channel-button{
+    min-height:44px!important
+  }
+  html.modern-web.mobile-shell-ready .mobile-menu-button:focus-visible,
+  html.modern-web.mobile-shell-ready .mobile-drawer-close:focus-visible,
+  html.modern-web.mobile-shell-ready .mobile-channel-toggle:focus-visible,
+  html.modern-web.mobile-shell-ready body>#channel-list.mobile-channel-popover .channel-button:focus-visible{
+    outline:2px solid #2d9465!important;outline-offset:2px!important
+  }
+  html.modern-web.mobile-shell-ready .mobile-menu-button:focus-visible{
+    background:#eaf5ec!important
+  }
+}

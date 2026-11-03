@@ -4,20 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4f8f2">
-  <meta name="description" content="LX Music — 轻盈流畅的现代网页音乐播放器。">
+  <meta name="description" content="FyMusic — 现代化高性能 Web 音乐播放器。">
   <script>document.documentElement.classList.add("modern-web");</script>
-  <title>LX Music — 轻盈护眼音乐空间</title>
-  <link rel="stylesheet" href="styles.css?v=0.4.26">
-  <link rel="stylesheet" href="modern.css?v=0.4.26">
-  <link rel="stylesheet" href="src/mobile-shell.css?v=0.4.26">
+  <title>FyMusic — 现代音乐空间</title>
+  <link rel="stylesheet" href="styles.css?v=0.4.27">
+  <link rel="stylesheet" href="modern.css?v=0.4.27">
+  <link rel="stylesheet" href="src/mobile-shell.css?v=0.4.27">
 </head>
 <body>
   <div id="app">
     <header class="topbar">
       <div class="topbar-inner">
         <div class="brand-block">
-          <div class="brand">LX Music Web</div>
-          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.26</span></div>
+          <div class="brand">FyMusic</div>
+          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.27</span></div>
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">护眼淡绿模式</span>
@@ -306,7 +306,7 @@
 
             <div class="settings-section">
               <h2>版本信息</h2>
-              <div class="version-detail"><strong id="version-current">v0.4.26</strong><span id="version-release-date">2026-10-30</span></div>
+              <div class="version-detail"><strong id="version-current">v0.4.27</strong><span id="version-release-date">2026-11-03</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
             </div>
@@ -329,7 +329,7 @@
         <header class="lyrics-sheet-header">
           <div class="now-playing-header-brand">
             <span class="now-playing-brand-mark" aria-hidden="true">♫</span>
-            <div><div class="panel-kicker">LX MUSIC · NOW PLAYING</div><h2 id="lyrics-heading">沉浸聆听</h2></div>
+            <div><div class="panel-kicker">FYMUSIC · NOW PLAYING</div><h2 id="lyrics-heading">沉浸聆听</h2></div>
           </div>
           <div class="lyrics-sheet-actions">
             <button id="lyrics-refresh-btn" type="button" class="lyrics-refresh" title="重新获取歌词">刷新歌词</button>
@@ -401,6 +401,7 @@
         <div class="player-meta">
           <div id="player-title">未播放</div>
           <div id="player-artist">—</div>
+          <span id="player-network-hint" role="status" aria-live="polite" aria-atomic="true" hidden></span>
         </div>
       </div>
       <div class="player-center">
@@ -452,18 +453,20 @@
   </div>
 
   <script src="vendor/forge.min.js"></script>
-  <script src="src/app-version.js"></script>
+  <script src="src/app-version.js?v=0.4.27"></script>
   <script src="src/version-check.js"></script>
   <script src="src/source-transpiler-modern.js"></script>
   <script src="src/sha1.js"></script>
   <script src="src/play-settings.js"></script>
-  <script src="src/music-search.js?v=0.4.26"></script>
+  <script src="src/fymusic-cross-platform-match.js?v=0.4.27"></script>
+  <script src="src/music-search.js?v=0.4.27"></script>
   <script src="src/lx-runtime.js"></script>
-  <script src="src/source-manager.js?v=0.4.26"></script>
-  <script src="src/music-library.js?v=0.4.26"></script>
-  <script src="src/music-lyrics.js?v=0.4.26"></script>
-  <script src="src/player-controls.js"></script>
-  <script src="src/app.js?v=0.4.26"></script>
+  <script src="src/source-manager.js?v=0.4.27"></script>
+  <script src="src/music-library.js?v=0.4.27"></script>
+  <script src="src/music-lyrics.js?v=0.4.27"></script>
+  <script src="src/player-controls.js?v=0.4.27"></script>
+  <script src="src/app.js?v=0.4.27"></script>
+  <script type="module" src="src/fymusic-playback-verifier.js?v=0.4.27"></script>
   <script>
   (function (global) {
     'use strict';
@@ -836,6 +839,7 @@
         }
         var playlist=data&&data.playlist?data.playlist:item;
         var pageSongs=data&&data.songs instanceof Array?data.songs:[];
+        var previousRowCount=append?playlistDetailSongs.length:0;
         if(append){
           var known={};
           for(var k=0;k<playlistDetailSongs.length;k++)known[playlistSongKey(playlistDetailSongs[k])]=true;
@@ -854,7 +858,7 @@
         el('playlist-detail-count').innerHTML=escapeHtml((playlist.trackCount||playlistDetailSongs.length)+' 首歌曲');
         el('playlist-detail-description').innerHTML=escapeHtml(playlist.description||item.description||'暂无简介');
         el('playlist-detail-status').innerHTML='已加载 '+playlistDetailSongs.length+' 首歌曲';
-        renderPlaylistSongs(playlistDetailSongs);
+        renderPlaylistSongs(playlistDetailSongs,previousRowCount);
         if(playlistHasMore&&typeof IntersectionObserver!=='function'){
           more.innerHTML='加载更多歌曲';removeClass(more,'hidden');
         }
@@ -917,6 +921,7 @@
             // asynchronous results into another playlist.
             if(playlistDetailItem&&String(playlistDetailItem.id)===playlistId&&
               capturedGeneration===playlistPageGeneration){
+              var priorRows=playlistDetailSongs.length;
               var seen={};
               for(var k=0;k<playlistDetailSongs.length;k++)seen[playlistSongKey(playlistDetailSongs[k])]=true;
               var changed=false;
@@ -929,7 +934,7 @@
               playlistNextOffset=nextOffset;
               playlistHasMore=hasMore;
               el('playlist-detail-status').innerHTML='已加载 '+playlistDetailSongs.length+' 首歌曲';
-              if(changed)renderPlaylistSongs(playlistDetailSongs);
+              if(changed)renderPlaylistSongs(playlistDetailSongs,priorRows);
               if(hasMore&&typeof IntersectionObserver!=='function')removeClass(el('playlist-load-more-btn'),'hidden');
               else addClass(el('playlist-load-more-btn'),'hidden');
               updatePlaylistDetailFooter(false);
@@ -943,14 +948,19 @@
       }
     }
 
-    function renderPlaylistSongs(list){
+    function renderPlaylistSongs(list,fromIndex){
       var host=el('playlist-detail-songs');
-      host.innerHTML='';
+      var start=Number(fromIndex)||0;
+      // Append only the unseen page. Keep existing rows (and their focus,
+      // scroll position, event handlers and current-track indication) intact.
+      // If another playlist replaced the DOM, safely rebuild from index 0.
+      if(start<0||start>list.length||host.children.length!==start||
+         (start>0&&!hasClass(host.firstElementChild,'playlist-song-row')))
+        start=0;
+      if(start===0)host.innerHTML='';
       if(!list.length){host.innerHTML='<div class="empty-note">该歌单没有可用歌曲</div>';return;}
-      // DOM fragment + one append prevents large playlists from flashing on
-      // old Via WebViews; each row is keyboard- and touch-operable.
       var fragment=document.createDocumentFragment();
-      for(var i=0;i<list.length;i+=1){
+      for(var i=start;i<list.length;i+=1){
         var item=list[i]||{};
         var row=document.createElement('div');
         row.className='playlist-song-row search-row';
@@ -1423,8 +1433,8 @@
     };
   })(window);
   </script>
-  <script type="module" src="src/modern-ui.js?v=0.4.26"></script>
-  <script type="module" src="src/now-playing-experience.js?v=0.4.26"></script>
-  <script type="module" src="src/mobile-shell.js?v=0.4.26"></script>
+  <script type="module" src="src/modern-ui.js?v=0.4.27"></script>
+  <script type="module" src="src/now-playing-experience.js?v=0.4.27"></script>
+  <script type="module" src="src/mobile-shell.js?v=0.4.27"></script>
 </body>
 </html>

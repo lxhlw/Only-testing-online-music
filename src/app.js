@@ -321,10 +321,22 @@
       var hasFallback=qualitySettings.autoFallback;
       var text='音质 '+requestedName+' · '+(selected===requestedName?'按所选播放':'首选 '+selected)+
         (hasFallback&&plan.length>1?' · 可降级':'');
-      if(!available.length)text='音质 '+requestedName+' · 音源准备中';
+      var fixedUnsupported=qualitySettings.qualityMode==='fixed' &&
+        available.length>0 && !available.some(function(q){
+          return String(q||'').toLowerCase()===String(qualitySettings.fixedQuality||'').toLowerCase();
+        });
+      if(!available.length) {
+        text='音质 '+requestedName+' · '+
+          (active&&active.inited?'音源未声明可用音质':'音源准备中');
+      } else if(fixedUnsupported) {
+        text='音质 '+requestedName+' · 音源未声明支持'+
+          (hasFallback&&plan.length?' · 已允许降级至 '+selected:' · 不自动降级');
+      } else if(available.length===1) {
+        text+=' · 音源仅声明 '+available[0];
+      }
       qualitySummaryEl.textContent=text;
       qualitySummaryEl.title='当前渠道声明音质：'+(available.join('、')||'未提供')+
-        '；实际媒体规格以服务器响应为准';
+        '；这是音源能力声明，不是实际媒体码率或格式检测结果';
       qualitySummaryEl.setAttribute('aria-label',qualitySummaryEl.title);
     }
   }
@@ -997,6 +1009,11 @@
     playbackState.resolver = viaLabel || 'LX source';
     playbackState.resolverProvider = viaProvider || 'lx-source';
     playbackState.expectedDuration = getExpectedDurationSeconds(music);
+    // Diagnostics receives only safe metadata, NEVER an audio URL or signature.
+    global.dispatchEvent(new CustomEvent('fymusic:url-resolved',{detail:{
+      source:source,quality:quality,provider:playbackState.resolverProvider,
+      transport:playbackState.transport
+    }}));
 
     if (usingNative) {
       playbackState.nativePlayback = true;
@@ -1384,6 +1401,108 @@
     };
   }
 
+
+  // Optional KG -> KW recovery requires TWO explicit user interactions.
+  // No background cross-platform search or automatic playback substitution.
+  function offerCrossPlatformAlternative(original,source,token){
+    if(!MODERN_WEB||source!=='kg'||token!==playbackToken||
+      selectedChannel!=='kg'||!playbackState||playbackState.token!==token||
+      playbackState.source!=='kg'||!global.FyMusicCrossPlatformMatch||
+      !global.LXMusicSearch||typeof global.LXMusicSearch.search!=='function')return;
+    var active=global.LXSourceManager.getActive();
+    var kw=active&&active.sources&&active.sources.kw;
+    if(!active||!active.inited||!active.runtime||!kw||
+      !Array.isArray(kw.actions)||kw.actions.indexOf('musicUrl')<0)return;
+    var activeId=String(active.id||active.url||''),gate=global.FyMusicCrossPlatformMatch;
+    var box=document.createElement('div');box.className='fymusic-alternate-offer';
+    var description=document.createElement('p');
+    description.className='fymusic-alternate-explanation';
+    description.textContent='酷狗解析未成功。可手动查找酷我同曲版本；不会自动换平台。' +
+      '候选须匹配歌名、歌手、时长及可核对的专辑，仍不能保证录音内容相同。';
+    var button=document.createElement('button');
+    button.type='button';button.className='secondary fymusic-alternate-search';
+    button.textContent='查找酷我同曲（手动）';
+    var results=document.createElement('div');
+    results.className='fymusic-alternate-results';
+    results.setAttribute('role','status');
+    results.setAttribute('aria-live','polite');
+    box.append(description,button,results);statusEl.appendChild(box);
+    function current(){
+      var a=global.LXSourceManager.getActive();
+      return token===playbackToken&&playbackState&&
+       playbackState.token===token&&playbackState.music===original&&
+       playbackState.source==='kg'&&selectedChannel==='kg'&&
+       String(a&&(a.id||a.url)||'')===activeId&&box.isConnected;
+    }
+    button.onclick=function(){
+      if(!current())return;
+      button.disabled=true;results.textContent='正在酷我搜索并核对同曲版本…';
+      global.dispatchEvent(new CustomEvent('fymusic:alternate-search',{
+        detail:{from:'kg',to:'kw'}
+      }));
+      var settled=false;
+      var timer=global.setTimeout(function(){
+        if(settled)return;settled=true;
+        if(current()){button.disabled=false;results.textContent='搜索超时。未切换歌曲，可再次手动查找。';}
+      },9000);
+      try{
+        global.LXMusicSearch.search('kw',
+          String(original.name||'')+' '+String(original.singer||''),1,20,
+          function(err,response){
+            if(settled)return;settled=true;global.clearTimeout(timer);
+            if(!current())return;
+            button.disabled=false;results.replaceChildren();
+            if(err){results.textContent='酷我搜索暂不可用。没有更改当前歌曲。';return;}
+            var matches=gate.choices(original,response&&response.list,3);
+            if(!matches.length){
+              results.textContent='未找到歌名、歌手、时长与专辑校验通过的酷我版本。' +
+                '没有切换歌曲，可自行通过搜索页面选择其他录音。';
+              return;
+            }
+            var info=document.createElement('p');
+            info.className='fymusic-alternate-explanation';
+            info.textContent='以下为酷我候选（仅元数据匹配，并未验证音频指纹）。' +
+              '必须再次确认具体版本才会尝试播放：';
+            results.appendChild(info);
+            matches.forEach(function(entry){
+              var candidate=entry.item,row=document.createElement('div');
+              row.className='fymusic-alternate-candidate';
+              var label=document.createElement('span');
+              label.textContent='酷我 · '+String(candidate.name||'')+' — '+
+                String(candidate.singer||'')+' · '+String(candidate.interval||'')+
+                (candidate.albumName?' · '+String(candidate.albumName).slice(0,70):'');
+              var confirm=document.createElement('button');
+              confirm.type='button';confirm.className='secondary fymusic-alternate-confirm';
+              confirm.textContent='确认尝试此酷我版本';
+              confirm.onclick=function(){
+                if(!current()||!gate.inspect(original,candidate).accepted)return;
+                var now=global.LXSourceManager.getActive();
+                if(!now||!now.inited||!now.sources||!now.sources.kw||
+                  !Array.isArray(now.sources.kw.actions)||
+                  now.sources.kw.actions.indexOf('musicUrl')<0){
+                  results.textContent='当前音源不再支持酷我解析，未切换歌曲。';return;
+                }
+                global.dispatchEvent(new CustomEvent('fymusic:alternate-approved',{
+                  detail:{from:'kg',to:'kw',verified:'metadata_only'}
+                }));
+                // This explicit selection bypasses testMusic's KG search-tab
+                // restriction but still uses regular KW source and quality plan.
+                startPlayback(candidate,'kw');
+                if(playbackState&&playbackState.source==='kw')
+                  playbackState.manualAlternativeOrigin='kg';
+              };
+              row.append(label,confirm);results.appendChild(row);
+            });
+          });
+      }catch(e){
+        if(!settled){
+          settled=true;global.clearTimeout(timer);
+          if(current()){button.disabled=false;results.textContent='酷我搜索未能启动，未切换歌曲。';}
+        }
+      }
+    };
+  }
+
   function requestQuality(music, source, musicInfo, plan, index, token) {
     var active = global.LXSourceManager.getActive();
     var settings = getPlaySettings();
@@ -1393,6 +1512,15 @@
     // cross-source retries or repeated multibit-rate waterfalls.
     if (NATIVE_COMPANION && plan.length > 1) plan = [plan[0]];
     var quality = plan[index];
+    // Compare the selected catalog row with what we actually pass to the
+    // resolver. This does NOT verify the audio content or copyright.
+    global.dispatchEvent(new CustomEvent('fymusic:catalog-identity',{detail:{
+      expected:{name:music.name,singer:music.singer,source:source},
+      candidate:{name:musicInfo.name,singer:musicInfo.singer,source:musicInfo.source}
+    }}));
+    global.dispatchEvent(new CustomEvent('fymusic:resolver-attempt',{detail:{
+      source:source,quality:quality
+    }}));
     playbackState.index = index;
     playbackState.quality = quality;
     playbackState.waitingForAudio = false;
@@ -1458,6 +1586,16 @@
 
     function runFallback(reason) {
       if (!isCurrentAttempt() || !finishAttempt()) return;
+      // A failed resolver may never return an HTTP status (timeout/empty data).
+      // Report only bounded classifications, not raw URLs or failure text.
+      var diagnosticReason=String(reason||'');
+      var reportedHttp=diagnosticReason.match(/\bHTTP[\s:_-]*([45][0-9]{2})\b/i);
+      global.dispatchEvent(new CustomEvent('fymusic:resolver-error',{detail:{
+        status:reportedHttp?Number(reportedHttp[1]):null,
+        code:/timeout|超时|deadline|timed out/i.test(diagnosticReason)?'timeout':
+          /network|socket|connect|econn|dns|网络/i.test(diagnosticReason)?'network':
+          'unknown'
+      }}));
       var sourceUnavailable = MODERN_WEB && isFlowerOutage(reason);
 
       // Downgrading bitrate cannot recover an unreachable Flower server;
@@ -1478,8 +1616,30 @@
           retry.type = 'button';
           retry.className = 'secondary';
           retry.textContent = sourceUnavailable ? '稍后重试' : '重试这首歌';
-          retry.onclick = function(){ if(token===playbackToken) testMusic(music,false); };
+          retry.onclick = function(){
+            if(token!==playbackToken || !playbackState ||
+                playbackState.token!==token || playbackState.music!==music ||
+                playbackState.source!==source)return;
+            // An explicitly confirmed KW substitute can be playing while the
+            // catalog/search tab remains KG. testMusic() correctly rejects
+            // normal cross-tab selection, but must not block a USER-CLICKED
+            // retry of this exact previously approved KW candidate.
+            if(source==='kw' && playbackState.manualAlternativeOrigin==='kg'){
+              var now=global.LXSourceManager.getActive();
+              if(selectedChannel!=='kg'||!now||!now.inited||!now.runtime||
+                  String(now.id||now.url||'')!==playbackState.activeSourceId||
+                  !now.sources||!now.sources.kw||
+                  !Array.isArray(now.sources.kw.actions)||
+                  now.sources.kw.actions.indexOf('musicUrl')<0)return;
+              startPlayback(music,'kw');
+              if(playbackState&&playbackState.source==='kw')
+                playbackState.manualAlternativeOrigin='kg';
+              return;
+            }
+            testMusic(music,false);
+          };
           statusEl.appendChild(retry);
+          offerCrossPlatformAlternative(music,source,token);
         }
         return;
       }
@@ -1664,6 +1824,17 @@
         if (!isCurrentAttempt() || settled) return;
 
         if (err) {
+          // Never broadcast a source's raw error: it may contain signed URLs
+          // or request metadata. Only safe status/code are observable.
+          var diagnosticError=String(err && (err.message || err) || '');
+          var diagnosticStatusMatch=diagnosticError.match(/\bHTTP[\s:_-]*(\d{3})\b/i);
+          var diagnosticCode=/timeout|timed out|超时/i.test(diagnosticError)?'timeout':
+            /network|socket|connect|econn|dns|failed to fetch|网络/i.test(diagnosticError)?'network':
+            /invalid|undefined|unexpected|json|format|无效|缺少/i.test(diagnosticError)?'invalid':'unknown';
+          global.dispatchEvent(new CustomEvent('fymusic:resolver-error',{detail:{
+            status:diagnosticStatusMatch?Number(diagnosticStatusMatch[1]):null,
+            code:diagnosticCode
+          }}));
           flowerFailed=activeSourceName+'解析失败：'+String(err && (err.message || err) || '网络错误').slice(0,160);
           if (fastEnabled) { startFastRace(); return; }
           return runFallback(flowerFailed);
@@ -1762,6 +1933,7 @@
     var qualityChoice=getPlaySettings();
     var advertisedQuality=active&&active.sources&&active.sources[source]&&
       active.sources[source].qualitys||[];
+    var qualityUnsupported=false;
     var missingFixed=MODERN_WEB&&qualityChoice.qualityMode==='fixed'&&
       Array.isArray(advertisedQuality)&&advertisedQuality.length>0&&
       !advertisedQuality.some(function(q){
@@ -1775,7 +1947,7 @@
       var advertised=active.sources[source].qualitys||[];
       setStatus('当前野花渠道未声明支持 '+escapeHtml(requested.qualityMode==='fixed'?requested.fixedQuality:'所选音质')+
         '。可用：'+escapeHtml(advertised.join('、')||'未知')+'。未擅自改成128k。','fail');
-      return;
+      qualityUnsupported=true;
     }
     if (!plan.length) {
       // Startup placeholder only: it MUST be recalculated after Flower
@@ -1841,6 +2013,12 @@
       setStatus('野花渠道不支持 '+escapeHtml(qualityChoice.fixedQuality)+
         '，已获你的允许，降到 '+escapeHtml(plan[0])+' 进行播放解析。','warn');
     }
+    // Unsupported fixed KG quality is not silently reduced to 128k.
+    // Offer only the same explicitly approved alternate catalog flow.
+    if(qualityUnsupported){
+      offerCrossPlatformAlternative(music,source,token);
+      return;
+    }
     requestQuality(music, source, buildMusicInfo(music, source), plan, 0, token);
   }
 
@@ -1868,6 +2046,13 @@
     if (state.source !== 'mg') clearMiguPlaybackDeadline(state);
     state.waitingForAudio = false;
     state.playing = true;
+    // The native timeupdate listener can refresh seek *before* this callback
+    // confirms progress. Recalculate from the newly confirmed state now,
+    // without waiting for the next (potentially throttled) media event.
+    // This preserves the existing state-derived validity guard.
+    if (global.LXPlayerControls && typeof global.LXPlayerControls.refresh === 'function') {
+      global.LXPlayerControls.refresh();
+    }
     if (global.LXMusicLibrary) {
       global.LXMusicLibrary.addHistory(state.music);
       renderLibrary();
@@ -1876,7 +2061,8 @@
     var qualityMessage='请求 '+state.quality+
       (downgraded?'（由 '+state.initialQuality+' 降级；'+(state.qualityFallbackReason||'高音质不可用')+'）':'')+
       ' · 实际码率未经检测';
-    setStatus((CHANNEL_NAMES[state.source]||state.source.toUpperCase())+
+    setStatus((state.manualAlternativeOrigin==='kg' ? '已手动确认的酷我备用版本' :
+      (CHANNEL_NAMES[state.source]||state.source.toUpperCase()))+
       ' 正在播放 · '+escapeHtml(qualityMessage),'ready');
     var playbackQualityNode=document.getElementById('inline-current-quality');
     if(playbackQualityNode)playbackQualityNode.textContent='本曲：'+qualityMessage;
@@ -2585,6 +2771,9 @@
       keyword:keyword,channel:channel,token:token,page:0,
       loading:false,hasMore:true,seen:Object.create(null),count:0
     };
+    global.dispatchEvent(new CustomEvent('fymusic:search-start',{detail:{
+      id:token,source:channel
+    }}));
     resultsEl.innerHTML='';
     global.__LXLastSearchResults=[];
     loadNextSongSearchPage();
@@ -2611,6 +2800,13 @@
       session.loading=false;
       if(err){
         if(nextPage===1){
+          var errorText=String(err&&err.message||err||'');
+          var errorClass=/timeout|超时/i.test(errorText)?'timeout':
+            /\bHTTP\s+[45][0-9][0-9]\b/i.test(errorText)?'http_error':
+            /network|socket|网络|failed/i.test(errorText)?'network':'unknown';
+          global.dispatchEvent(new CustomEvent('fymusic:search-error',{detail:{
+            id:session.token,source:session.channel,code:errorClass
+          }}));
           setStatus('搜索失败：'+escapeHtml(err.message||err)+'。可重新搜索。','fail');
           resultsEl.innerHTML='<div class="empty-note">网络或音源暂时不可用。<button type="button" id="retry-song-search">重新搜索</button></div>';
           var retry=document.getElementById('retry-song-search');
@@ -2628,6 +2824,13 @@
         if(session.seen[key])continue;
         session.seen[key]=1;unique.push(item);
       }
+      global.dispatchEvent(new CustomEvent('fymusic:search-page',{detail:{
+        id:session.token,source:session.channel,page:nextPage,
+        provider:String(result&&result.searchProvider||'unknown'),
+        items:unique.slice(0,160).map(function(x){return {
+          name:x.name,singer:x.singer,source:x.source||session.channel
+        };})
+      }}));
       session.page=nextPage;
       session.count+=unique.length;
       var counter=document.getElementById('song-result-counter');
@@ -2709,7 +2912,12 @@
       source.className='search-source';
       source.textContent=String(CHANNEL_NAMES[item.source]||item.source||'');
       var actions=document.createElement('div');actions.className='search-actions';
-      const play=function(){testMusic(item,true);};
+      const play=function(){
+        global.dispatchEvent(new CustomEvent('fymusic:search-selection',{detail:{
+          name:item.name,singer:item.singer,source:item.source||selectedChannel
+        }}));
+        testMusic(item,true);
+      };
       main.onclick=play;
       main.onkeydown=function(event){
         if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();play();}
