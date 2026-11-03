@@ -81,6 +81,13 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
    await page.waitForFunction(()=>document.documentElement.dataset.ui2Theme==='dark');
    assert.equal(await page.locator('#ui2-theme-settings-toggle').getAttribute('aria-pressed'),'false');
    assert.equal(new URL(page.url()).searchParams.get('theme'),'dark');
+   // The settings control is an actual user-facing button in the settings
+   // view, so navigate there instead of clicking a hidden tab panel.
+   if(size.width<=740){
+     await page.locator('.mobile-menu-button').click();
+     await page.locator('.nav-item[data-view="settings"]').click();
+   }else await page.locator('.nav-item[data-view="settings"]').click();
+   await page.waitForFunction(()=>document.documentElement.dataset.activeView==='settings',null,{timeout:7000});
    await page.locator('#ui2-theme-settings-toggle').click();
    await page.waitForFunction(()=>document.documentElement.dataset.ui2Theme==='light');
    assert.equal(await top.getAttribute('aria-pressed'),'true');

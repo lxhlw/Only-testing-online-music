@@ -975,6 +975,10 @@ html.modern-web.fy-ui2.fy-ui2-light .global-search input{
   color:#214535!important;background:transparent!important;caret-color:#168458;
 }
 html.modern-web.fy-ui2.fy-ui2-light .global-search input::placeholder{color:#607e6d!important}
+html.modern-web.fy-ui2.fy-ui2-light #quality-summary{
+  color:#1a6545!important;background:#e0f1e7!important;
+  border:1px solid #a6d3b6!important;
+}
 html.modern-web.fy-ui2.fy-ui2-light .global-search button{
   color:#fff!important;background:linear-gradient(125deg,#258760,#176f58)!important;
 }
