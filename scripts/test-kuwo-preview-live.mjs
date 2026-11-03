@@ -13,7 +13,7 @@ for(let i=0;i<3;i++){
  try{
   const response=await fetch(base+'/api/kuwo-song-meta?id=440613',{
    signal:AbortSignal.timeout(14000)});
-  if(!response.ok)throw new Error('metadata status '+response.status);
+  if(!response.ok){const body=await response.json().catch(()=>({}));throw new Error('metadata HTTP '+response.status+' reason='+String(body.reason||body.error||'unknown').slice(0,90)+' upstream='+String(body.upstreamStatus||'unknown'));}
   const data=await response.json();
   assert.equal(data.id,'440613');
   assert.equal(data.source,'kw');
@@ -26,7 +26,7 @@ for(let i=0;i<3;i++){
   assert.equal(data.available,true);
   const image=new URL(data.image);
   assert.equal(image.protocol,'https:');
-  assert.match(image.hostname,/^img[0-9]*\.kuwo\.cn$/);
+  assert.match(image.hostname,/^img[0-9]*\.(?:kwcdn\.)?kuwo\.cn$/);
   const request=await fetch(image.href,{signal:AbortSignal.timeout(12000)});
   if(!request.ok)throw new Error('Kuwo cover status '+request.status);
   const type=request.headers.get('content-type')||'';
