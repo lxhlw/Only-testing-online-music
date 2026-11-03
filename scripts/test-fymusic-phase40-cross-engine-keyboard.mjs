@@ -142,7 +142,7 @@ try{
   const snapshot=()=>page.evaluate(()=>{
     const a=document.querySelector('#audio'),z=window.__phase36;
     return {seconds:a.currentTime,writes:z.writes.slice(),
-      changes:z.baseChanges,paused:a.paused,
+      changes:z.baseChanges,paused:a.paused,seeking:a.seeking,
       sliderValue:document.querySelector('#detail-seek')?.value,
       sliderDisabled:document.querySelector('#detail-seek')?.disabled,
       baseValue:document.querySelector('#player-seek')?.value,
@@ -207,6 +207,20 @@ try{
     {key:'ArrowLeft',os:7.4}
   ];
   const results=[],unsupported=[];
+  // The native WebKit getter may briefly report a previous decode position
+  // during outstanding seek; assert exact *committed* setter targets now,
+  // then require a genuinely settled native position at the group boundary.
+  const settleNative=async(expected,label)=>{
+    await page.waitForFunction(target=>{
+      const a=document.querySelector('#audio');
+      return !a.seeking&&Math.abs(a.currentTime-target)<.35;
+    },expected,{timeout:7500,polling:'raf'});
+    const settled=await snapshot();
+    assert.ok(Math.abs(settled.seconds-expected)<.35,
+      ENGINE+' native media must eventually reach '+label+
+      ' setter target '+expected);
+    return settled;
+  };
   const resourceBefore=await page.evaluate(()=>({
     nodes:document.querySelectorAll('#lyrics-overlay *').length,
     audio:document.querySelectorAll('audio').length,
@@ -238,7 +252,7 @@ try{
     await page.keyboard.press(spec.key);
     const afterKey=await snapshot();
     const expected=native.after/1000*duration;
-    if(Math.abs(afterKey.seconds-expected)>=.36){
+    if(Math.abs(afterKey.writes.at(-1)-expected)>=.07){
       console.log('FYMUSIC_PHASE41_KEYBOARD_RACE_'+ENGINE+' '+
         JSON.stringify({i,spec,expected,native,
           beforeOS,atOS,oldFinished,beforeKey,afterKey}));
@@ -246,9 +260,12 @@ try{
     if(native.supported){
       assert.equal(afterKey.writes.length,beforeKey.writes.length+1,
         ENGINE+' supported key must commit exactly once '+spec.key);
-      assert.ok(Math.abs(afterKey.seconds-expected)<.36,
-        ENGINE+' '+spec.key+' must act on real OS position, not abandoned thumb: '+
-        JSON.stringify({expected,actual:afterKey.seconds,native}));
+      assert.ok(Math.abs(afterKey.writes.at(-1)-expected)<.07,
+        ENGINE+' '+spec.key+' must WRITE latest OS target, not abandoned thumb: '+
+        JSON.stringify({expected,actualWrite:afterKey.writes.at(-1),
+          nativeGetter:afterKey.seconds,native}));
+      assert.ok(Math.abs(Number(afterKey.sliderValue)-native.after)<=1,
+        ENGINE+' UI thumb must follow the commanded OS seek keyboard step');
     } else {
       unsupported.push(spec.key);
       assert.equal(afterKey.writes.length,beforeKey.writes.length,
@@ -265,6 +282,7 @@ try{
   report.nativeKeyboardCases=results.length;
   report.nativeUnsupportedKeys=unsupported;
   report.keyboardFromLatestOS=true;
+  await settleNative(results.at(-1).expected,'eight OS-key interleavings');
 
   // A held key is genuinely repeated by browser-generated trusted keydown
   // events (keyboard.down for the same key repeats, then keyboard.up).
@@ -279,10 +297,10 @@ try{
   for(let n=0;n<6;n++)await page.keyboard.down('ArrowRight');
   await page.keyboard.up('ArrowRight');
   const repeatAfter=await snapshot();
-  assert.ok(repeatAfter.writes.length>repeatBefore.writes.length,
-    ENGINE+' repeated native ArrowRight must affect real audio time');
-  assert.ok(repeatAfter.seconds>4.6&&repeatAfter.seconds<6.1,
-    ENGINE+' repeating key must not start at old ~87% thumb');
+  assert.equal(repeatAfter.writes.length-repeatBefore.writes.length,6,
+    ENGINE+' each repeated native ArrowRight must write once');
+  assert.ok(repeatAfter.writes.at(-1)>4.6&&repeatAfter.writes.at(-1)<6.1,
+    ENGINE+' repeated key must write latest OS intent, not abandoned thumb');
   console.log('FYMUSIC_PHASE40_REPEAT_'+ENGINE+' '+
     JSON.stringify({repeatBefore:repeatBefore.seconds,
       repeatAfter:repeatAfter.seconds,
@@ -295,23 +313,33 @@ try{
   // an application handler that inappropriately steals keyboard focus.
   await slider.focus();
   const consecutive=[];
+  let previousCommand=repeatAfter.writes.at(-1);
   for(let i=0;i<4;i++){
     const prior=await snapshot();
     await page.keyboard.press('ArrowRight');
     const next=await snapshot();
     const focused=await slider.evaluate(el=>document.activeElement===el);
     consecutive.push({i,from:prior.seconds,to:next.seconds,
+      committedTarget:next.writes.at(-1),thumb:next.sliderValue,
+      seeking:next.seeking,
       writesDelta:next.writes.length-prior.writes.length,focused});
     console.log('FYMUSIC_PHASE40_CONSECUTIVE_KEY_'+ENGINE+' '+
       JSON.stringify(consecutive.at(-1)));
     assert.equal(next.writes.length,prior.writes.length+1,
       ENGINE+' each consecutive ArrowRight must write exactly once '+i);
-    assert.ok(next.seconds>prior.seconds&&next.seconds<prior.seconds+.5,
-      ENGINE+' consecutive keyboard must follow current native media time');
+    const nextCommand=next.writes.at(-1);
+    assert.ok(nextCommand>previousCommand&&
+      Math.abs(nextCommand-previousCommand-duration/1000)<.045,
+      ENGINE+' repeated keyboard must advance from last COMMITTED target, not lagging getter');
+    assert.ok(Math.abs(Number(next.sliderValue)/1000*duration-nextCommand)<.05,
+      ENGINE+' thumb must preserve latest keyboard seek intent');
+    previousCommand=nextCommand;
     assert.equal(focused,true,
       ENGINE+' native seek slider must retain keyboard focus after change');
   }
   report.consecutiveKeyboard=consecutive.length;
+  await settleNative(previousCommand,'four consecutive keyboard commands');
+  report.nativeSeekEventSettled=true;
 
   // Old A pointer must never commit to B. More importantly, the first
   // keyboard action on B must start from B's media time, not A's old thumb.
