@@ -15,7 +15,16 @@
 | Stage 4 full browser/security | PASS: https://github.com/lxhlw/Only-testing-online-music/actions/runs/41684265856 |
 | Stage 4 playlist / privacy | PASS: https://github.com/lxhlw/Only-testing-online-music/actions/runs/41684265845 and https://github.com/lxhlw/Only-testing-online-music/actions/runs/41684265860 |
 | Production baseline regression | Latest main #41686835515 FAILED real Migu lyric HTTP 502; #41685131793 SUCCESS; older #41682617224 also FAILED same route |
-| Remaining macro-stages | 2: (5) provider reliability; (6) human-approved final release |
+| Remaining macro-stages | 1: (6) user/device-approved final release; Stage 5 tested source recovery implemented |
+
+### 2026-11-04 — Integrated release candidate passed automated verification (NOT deployed)
+
+- **Final automated integrated RC:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41691565640 **attempt 2 SUCCESS** at `deb461c5d553c5141bce150a63bcc56eeb029d73`. In this exact Cloudflare preview: Chromium/WebKit desktop/tablet/phone UI2 tests, both themes, keyboard/reduced-motion checks, no horizontal overflow, 404 guard, one audio node; real Kugou Daoxiang→Kuwo alternate music progress/cover/timed lyrics and real Migu Sun Yanzi audio progress/55 timed lyrics/cover/pause/resume all passed.
+- **Independent integrated CI:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41691576704 full browser/audio/security SUCCESS; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41691576698 playlist SUCCESS. Candidate visuals were generated in clean browsers, artifact #13256519117. Sampled automated title contrast 10.81:1. CI frame gaps are not device performance measurements.
+- **Observed flakiness remains:** The exact same integrated run attempt 1 FAILED strict Daoxiang auto-fallback, while direct Kuwo control actually played; attempt 2 passed. Earlier Migu LRC 502 also occurred intermittently. Never claim every third-party track/source will always succeed. Exact high-confidence song metadata, actual audio progress and lyric verification remain mandatory.
+- **Release status:** [PR #122](https://github.com/lxhlw/Only-testing-online-music/pull/122) is READY FOR HUMAN REVIEW, not merged. No UI2 production rollout; main production remains v0.4.33. Human visual/screen-reader inspection and physical-device FPS/CPU/memory evidence cannot be substituted by CI. Before release, synchronize version.json/package/src/app-version.js/HTML cache bust parameters, rerun release CI, merge only after visual signoff and verify Cloudflare production. Maintain non-destructive revert rollback; never force push. The separate PR #116 still has conflicts; use the clean integrated PR #122 for review.
+- **Remaining milestone:** Source Stage 5 implementation + automated acceptance is complete for tested cases; **Stage 6 production signoff and deployment remain open**. User asked for a single end-to-end execution, but no device-level result or human visual approval was supplied; do not mislabel these as completed.
+- **Next actual operation:** Obtain actual-device/visual acceptance of the preview, prepare v0.4.34 version/cache bump on PR #122, verify strict final commit, merge only after gates, confirm production and rollback.
 
 ### 2026-11-04 — Stage 5/6 integrated RC tested, production release blocked
 
@@ -51,7 +60,7 @@
 4. Previous Daoxiang live recovery sometimes succeeds and sometimes fails when upstream alternative musicUrl resolution is unavailable (for example preview #41681089874 failed). Preserve strict real playback-progress acceptance and report transient upstream failure explicitly.
 5. Main release workflow #41685131793 was still running when checked; re-read its final status at the start of the next operation instead of treating IN PROGRESS as success.
 
-## Next goal — Stage 5/6: close real-source blocker and finish release gates
+## Next goal — Stage 6: visual/device signoff and controlled production rollout
 
 1. Re-read main and PR heads plus latest Actions. Locate the real Migu 502 response boundary (provider endpoint, edge relay or application parsing), classify without recording raw signed media URLs, tokens, cookies, personal headers or response payloads.
 2. Add bounded, observable retry and/or correctly matched cross-platform fallback ONLY when supported by source semantics. Do not misrepresent a resolved URL as playing; require media progress and keep existing lyric/artwork consistency.

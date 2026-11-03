@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Integrated RC acceptance passed; ready for human review, production held
+
+- **Goal:** Finish automated provider and UI2 regression on the same release candidate, then preserve exact evidence and rollback plan.
+- **Changes:** PR #122 promoted from draft to READY FOR REVIEW after automation gates passed, not merged. The combined source/UI code remains on isolated branch SHA `deb461c5d553c5141bce150a63bcc56eeb029d73`; no production code mutation.
+- **Tests:** Cloudflare integrated preview #41691565640 attempt 1 FAILED real Daoxiang fallback; rerun attempt 2 SUCCESS, including real Daoxiang Kuwo recovery and real Migu audio/55 timed lyrics/cover/pause/resume, plus both themes and responsive Chromium/WebKit/UI2 security. Independent full browser/security #41691576704 SUCCESS, playlist #41691576698 SUCCESS. Clean screenshot artifact #13256519117. Tests don't establish universal media reliability or physical-device FPS.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41691565640 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41691576704 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41691576698 ; https://github.com/lxhlw/Only-testing-online-music/pull/122 .
+- **Not done:** Human device visual/real screen-reader review, physical FPS/CPU/memory acceptance, v0.4.34 release bump/cache-busters, production merge, production retest and rollback exercise. Source fluctuation means periodic verification remains useful.
+- **Status:** Stage 5 automated gate PASSED for tested recordings. Stage 6 remains **RELEASE HOLD** until manual/device signoff; main stays v0.4.33.
+- **Next action:** User or authorized reviewer inspects Cloudflare RC preview and real devices; then version bump on RC, re-run final CI and live-source checks, merge the approved PR, verify production and keep revert-ready baseline.
+
 ## 2026-11-04 · Stage 5/6 integrated RC, strict real-source release blocker
 
 - **Goal:** Execute source-reliability and UI2 final acceptance together, without premature production promotion.
