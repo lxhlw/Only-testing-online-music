@@ -1,0 +1,45 @@
+name: FyMusic · Actual Production UI Screenshot Visual Review
+on:
+  push:
+    branches: [audit/fymusic-production-ui-matrix-20261103]
+    paths:
+      - 'scripts/audit-production-ui-thumbnails.mjs'
+      - '.github/workflows/fymusic-production-ui-visual-review.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visual-review:
+    if: github.ref == 'refs/heads/audit/fymusic-production-ui-matrix-20261103'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm immutable v0.4.27 production baseline
+        run: |
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = 586f592dc994b0868886bcb42b1213c3580f278b
+          node --check scripts/audit-production-ui-thumbnails.mjs
+      - name: Install browser/thumbnail dependencies
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Screenshot real desktop and phone interface for visual inspection
+        run: node scripts/audit-production-ui-thumbnails.mjs
+      - name: Preserve original PNG screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fymusic-v0427-production-ui-original-screenshots
+          path: audit-ui-thumbnails/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Check no production changes
+        if: always()
+        run: |
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = 586f592dc994b0868886bcb42b1213c3580f278b
+          echo FYMUSIC_SCREENSHOT_AUDIT_READ_ONLY
