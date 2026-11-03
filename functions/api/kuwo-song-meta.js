@@ -44,7 +44,13 @@ export async function onRequestGet({request}){
   // controls a URL, origin, HTTP method, or authorization header.
   const endpoints=[
     'https://m.kuwo.cn/newh5/singles/songinfoandlrc?musicId='+id,
-    'https://www.kuwo.cn/newh5/singles/songinfoandlrc?musicId='+id
+    'https://www.kuwo.cn/newh5/singles/songinfoandlrc?musicId='+id,
+    // Cloudflare's Kuwo HTTPS H5 endpoint can reply with a short empty
+    // sentinel; its fixed public HTTP variant has returned real metadata.
+    // This is server-side, no user data, credentials, or signed audio URLs.
+    'http://m.kuwo.cn/newh5/singles/songinfoandlrc?musicId='+id,
+    // Prefer correct-source lyrics even when album art metadata is unavailable.
+    'https://www.kuwo.cn/openapi/v1/www/lyric/getlyric?musicId='+id
   ];
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),8500);
@@ -52,12 +58,10 @@ export async function onRequestGet({request}){
   try{
     for(const endpoint of endpoints){
       try{
-        const host=new URL(endpoint).hostname;
-        const response=await fetch(endpoint,{redirect:'error',signal:controller.signal,headers:{
-          'Accept':'application/json, text/plain, */*',
-          'Referer':'https://'+host+'/',
-          'User-Agent':'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 Version/16.0 Mobile/15E148 Safari/604.1'
-        }});
+        // Do not spoof UA/Referer: Cloudflare Workers may reject these
+        // restricted outgoing headers. The fixed endpoints accept plain GET.
+        const response=await fetch(endpoint,{redirect:'manual',
+          signal:controller.signal});
         lastHttp=response.status;
         if(!response.ok){lastFailure='upstream-http';continue;}
         const announced=Number(response.headers.get('content-length')||0);
