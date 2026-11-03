@@ -25,6 +25,8 @@ jobs:
           node --check src/ui2-preview.js
           node --check scripts/test-ui2-desktop-browser.mjs
           node scripts/test-ui2-contract.mjs
+          node scripts/test-ui2-phase2-style.mjs
+          node --check scripts/test-ui2-phase2-browser.mjs
           node scripts/check-handoff-privacy.mjs
           node scripts/test-version.mjs
           node scripts/build-pages-dist.mjs
@@ -42,6 +44,7 @@ jobs:
           done
           if [ "$ready" != 1 ]; then cat /tmp/fymusic-ui2-pages.log; exit 1; fi
           node scripts/test-ui2-desktop-browser.mjs
+          node scripts/test-ui2-phase2-browser.mjs
           node scripts/test-now-playing-kuwo-browser.mjs
       - name: Deploy isolated Cloudflare Pages preview (never production)
         env:
@@ -66,5 +69,6 @@ jobs:
           code=$(curl -sSL -o /tmp/ui2-public-guard -w '%{http_code}' "$TEST_BASE_URL/README.md")
           test "$code" = 404
           node scripts/test-ui2-desktop-browser.mjs
+          node scripts/test-ui2-phase2-browser.mjs
       - name: Test real Kugou failure recovery on isolated preview
         run: node scripts/test-seamless-live-daoxiang-preview.mjs
