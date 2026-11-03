@@ -1,0 +1,128 @@
+name: FyMusic Phase43 - Integrated Stability and Render Acceptance
+on:
+  push:
+    branches: [feature/fymusic-playback-verifier]
+    paths:
+      - '.github/workflows/fymusic-phase43-integrated-acceptance.yml'
+      - 'scripts/test-fymusic-phase43-render-interaction.mjs'
+      - 'src/now-playing-experience.js'
+      - 'src/modern-ui.js'
+      - 'src/player-controls.js'
+      - 'src/app.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fymusic-phase43-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cross-engine:
+    name: Render and real MP3 ownership (${{ matrix.engine }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Guard production and syntax
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/feature/fymusic-playback-verifier'
+          node --check scripts/test-fymusic-phase43-render-interaction.mjs
+      - name: Install browser and original MP3 fixture
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps ${{ matrix.engine }}
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          node scripts/generate-fymusic-phase25-fixtures.mjs
+      - name: Start isolated Pages test server
+        shell: bash
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/phase43-cross-engine.log 2>&1 &
+          for i in {1..40}; do
+            if curl -fsSL http://127.0.0.1:8788/api/audio-selftest > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/phase43-cross-engine.log
+          exit 1
+      - name: Independent native UI and frame-gap acceptance sessions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for trial in 1 2 3; do
+            echo "FYMUSIC_PHASE43_RENDER=${{ matrix.engine }}_TRIAL=$trial"
+            BROWSER_ENGINE=${{ matrix.engine }} node scripts/test-fymusic-phase43-render-interaction.mjs
+          done
+      - name: Independent real decoded MP3, OS and keyboard sessions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for trial in 1 2; do
+            echo "FYMUSIC_PHASE43_NATIVE=${{ matrix.engine }}_TRIAL=$trial"
+            BROWSER_ENGINE=${{ matrix.engine }} node scripts/test-fymusic-phase40-cross-engine-keyboard.mjs
+          done
+      - name: Log diagnostics only on failure
+        if: failure()
+        run: cat /tmp/phase43-cross-engine.log || true
+
+  resource-and-quality:
+    name: Chromium memory, resources and high-quality source ownership
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Guard production
+        run: test "$GITHUB_REF" = 'refs/heads/feature/fymusic-playback-verifier'
+      - name: Install browser and original codecs
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          node scripts/generate-fymusic-phase25-fixtures.mjs
+          node scripts/generate-fymusic-phase26-fixtures.mjs
+      - name: Start isolated local Pages test server
+        shell: bash
+        run: |
+          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 > /tmp/phase43-resources.log 2>&1 &
+          for i in {1..40}; do
+            if curl -fsSL http://127.0.0.1:8788/api/audio-selftest > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/phase43-resources.log
+          exit 1
+      - name: Three independent animation, memory and playlist stress sessions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for trial in 1 2 3; do
+            echo "FYMUSIC_PHASE43_RESOURCES_TRIAL=$trial"
+            node scripts/test-fymusic-frame-coherence-browser.mjs
+            node scripts/test-fymusic-long-session-memory-browser.mjs
+            node scripts/test-fymusic-cover-error-resource-stress.mjs
+            node scripts/test-fymusic-playlist-incremental-browser.mjs
+          done
+      - name: Two independent real codec, source, quality and OS regression sessions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for trial in 1 2; do
+            echo "FYMUSIC_PHASE43_QUALITY_TRIAL=$trial"
+            node scripts/test-fymusic-phase28-quality-platform-os-browser.mjs
+            node scripts/test-fymusic-fast-track-metadata-browser.mjs
+            node scripts/test-fymusic-weak-network-recovery-browser.mjs
+          done
+      - name: Log diagnostics only on failure
+        if: failure()
+        run: cat /tmp/phase43-resources.log || true
