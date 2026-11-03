@@ -8,18 +8,29 @@
 > [the handoff/privacy policy](HANDOFF_POLICY.md), `version.json`, and current GitHub
 > Actions results. Repository contents and tests are authoritative over old chat claims.
 
-## Snapshot (2026-11-03, Asia/Singapore)
+## Snapshot (2026-11-04, Asia/Singapore)
 
 | Field | Verified state |
 | --- | --- |
 | Project | FyMusic, modern browser-only streaming/music player |
 | Code repository | `lxhlw/Only-testing-online-music` (PUBLIC) |
 | Main release | v0.4.33, `version.json` |
-| Baseline main commit | `e67071ddc755fcc5f37200db892f9a0cb9ac1118` |
+| Baseline main commit | `217973faa12b659432a214eeaf88bb1e697c56de` (v0.4.33; handoff docs) |
 | Official site | `https://only-testing-online-music.pages.dev/` |
 | Baseline CI | [Modern Web Verify and Deploy #41650815801](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41650815801): **completed / success** |
-| Design exploration | Separate FyMusic UI 2.0 Figma file with five editable screens and a motion handoff board; **NOT implemented in source or deployed** |
-| Next execution priority | UI 2.0 isolated preview, starting with dark desktop immersive now-playing and player Dock; keep audio behavior intact |
+| Design exploration | Five editable Figma screens and motion handoff created; UI 2.0 **desktop feature preview branch started**, not merged or production deployed |
+| Next execution priority | Validate the isolated desktop UI 2.0 preview in Chromium/WebKit and Cloudflare; keep audio behavior intact |
+
+### Work-in-progress: UI 2.0 desktop preview (2026-11-04)
+
+- **Branch:** `feature/fymusic-ui2-desktop-preview-20261104` (not `main`).
+- **First implementation commit:** `5cb35551279b366244bf0558ff10ba01942ed17e`.
+- **Access switch:** Preview only, add `?ui2=1` to its isolated preview URL. Without this query param the existing v0.4.33 appearance and behavior remain unchanged.
+- **Implemented in feature branch:** `src/ui2-preview.css`, `src/ui2-preview.js` and opt-in links in `index.html`. Dark desktop palette, floating player Dock, immersive album/lyrics screen, artwork-based static ambient backdrop that clears when closed, reduced motion styling. Mobile layout intentionally retained for the next stage.
+- **Functional boundary:** Existing audio element, source manager, playlist, seek, playback state, comments and lyric event handlers remain owned by their original modules. New UI layer only observes loaded artwork and media presentation state.
+- **Test fixtures added:** `scripts/test-ui2-contract.mjs`, `scripts/test-ui2-desktop-browser.mjs` (Chromium/WebKit, desktop/mobile, artwork, playback pause/resume, lyrics, reduced motion, no second audio).
+- **Evidence status:** Build/CI/browser/Cloudflare preview **pending** at initial checkpoint. Do not claim deployed or approved until URLs and test conclusions are recorded.
+- **Next:** Run static privacy and version checks, Pages build, browser tests and real source recovery on an isolated Cloudflare Pages preview. Fix any failures; update this handoff with real results and new SHA before requesting merge.
 
 ### Confirmed implementation milestones
 
@@ -45,17 +56,17 @@
 - The v0.4.33 production CI was successful at the baseline commit, but external providers are not permanently guaranteed.
 - A screenshot from the prior v0.4.32 UI showed `浏览器阻止自动播放` and 0:00, and fixed `flac32bit` downgrading immediately to 128k. v0.4.33 addresses the rejection classifier and selection policy; real user-device reproduction should still be part of later acceptance.
 - The recent Daoxiang live provider fallback still requested **128k** in the tested source configuration; real output bitrate is unmeasured. Higher-quality capability must be verified source by source.
-- **UI 2.0 is design-only**, with no live code or real animations wired. Do not claim it shipped.
+- **UI 2.0 is feature-branch preview only**. Initial desktop CSS and ambient artwork bindings are implemented on `feature/fymusic-ui2-desktop-preview-20261104` but not merged or released, and active test status must be checked. The five-screen Figma document remains design-only.
 - The public GitHub handoff is intentionally restricted to public-safe technical facts. No private conversational memory is stored; full confidential backups require a separate PRIVATE GitHub repository.
 
-## Next goal: UI 2.0, preview first
+## Next goal: UI 2.0 preview validation, then expand
 
-1. Inspect source layout contracts in `index.html`, `modern.css`, `src/mobile-shell.css`, `src/app.js` and `src/player-controls.js`; keep the production working-tree baseline.
-2. Start an isolated feature branch with **desktop now-playing + floating transport** and dark theme tokens; maintain existing DOM IDs and event hooks.
-3. Implement cover-derived ambient effects with bounded work, lyrics motion with correct timestamps, explicit pause/play icon state, responsive sizes and reduced-motion fallback.
-4. Expand to search/list/library and mobile. No regression to source, lyrics, actual play progress, seek, autoplay recovery or quality selection.
-5. Run local and Cloudflare preview checks: browser UI (desktop/mobile), Playwright audio state, cover/lyrics sync, actual Kugou→Kuwo `稻香` recovery, 404 guard, build allowlist and performance. **Merge only after passing**.
-6. After EVERY meaningful operation or milestone, update **this file** and append to `HANDOFF_LOG.md` in the SAME GitHub change, with evidence, remaining work and next action.
+1. **In progress:** Verify the new `?ui2=1` desktop UI skin in Chromium/WebKit desktop + mobile baseline, including native play/pause state, seek, artwork/lyrics and reduced-motion behavior.
+2. **In progress:** Deploy a nonproduction Cloudflare Pages preview and verify the strict static allowlist, sensitive-path 404, and real-source `稻香` fallback; keep the main production domain unchanged.
+3. Review UI snapshots and performance. Fix visual clipping, contrast, animation timing, focus order or unintended second media loading.
+4. After UI 2.0 desktop preview passes, extend the new system to search/list/library and mobile, with a user-visible review before any main release.
+5. `main` is stable. Merge only once strict tests pass and user accepts the visual direction.
+6. After every meaningful operation update **this file** and append to `HANDOFF_LOG.md` in the same GitHub change, keeping private information out.
 
 ## Next chat: recovery procedure
 

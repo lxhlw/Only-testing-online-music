@@ -36,3 +36,14 @@
 - **Code:** [PR #113](https://github.com/lxhlw/Only-testing-online-music/pull/113).
 - **Verified:** Public README and old repository paths receive protected 404 responses in preview and production, normal player app files continue static delivery.
 - **Next action:** Retain the strict allowlist and guard during UI 2.0 changes.
+
+## 2026-11-04 · UI 2.0 desktop isolated implementation (testing pending)
+
+- **Goal:** Create the first real UI 2.0 preview: cinematic desktop now-playing, floating mini-player and artwork-linked ambient visual; do not disturb audio or production.
+- **Baseline:** v0.4.33 `main` at `217973fa`, last verified release `#41650815801`; public-safe handoff/privacy CI on `main` passed.
+- **Code:** `feature/fymusic-ui2-desktop-preview-20261104`, initial feature commit `5cb35551`. Added `src/ui2-preview.css` and `src/ui2-preview.js`, behind explicit `?ui2=1`; no source, audio or lyric engine changes.
+- **Features implemented:** dark desktop theme, elevated player Dock, dedicated immersive artwork/lyric layout, softened cover-image backdrop with no repeated timers, reduced-motion support and mobile layout isolation.
+- **Tests added:** deterministic Playwright desktop/mobile Chromium/WebKit UI+real audio progress tests; presentation contract check; isolated Cloudflare Pages preview workflow.
+- **Evidence:** New checks and live Preview **pending** at checkpoint time. Do not infer success without the actual GitHub workflow conclusions.
+- **Not done:** UI 2.0 search/library design refinement, responsive mobile redesign, final performance acceptance, `main` merge and production deployment.
+- **Next action:** Run CI, fix preview failures, record the isolated URL/run IDs and verified results; then request visual review before expanding.
