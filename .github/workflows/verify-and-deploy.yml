@@ -60,6 +60,9 @@ jobs:
           node --check src/modern-ui.js
           node --check src/mobile-shell.js
           node --check src/now-playing-experience.js
+          node --check functions/api/kuwo-song-meta.js
+          node --check scripts/test-kuwo-preview-live.mjs
+          node --check scripts/test-now-playing-kuwo-browser.mjs
           node --check functions/api/netease-song-meta.js
           node --check functions/api/netease-comments.js
           node --check functions/api/qq-catalog.js
@@ -111,12 +114,13 @@ jobs:
           node scripts/test-music-lyrics.mjs
           node scripts/test-netease-lyrics.mjs
           node scripts/test-now-playing-apis.mjs
+          node scripts/test-kuwo-track-info.mjs
           node scripts/test-chart-catalog.mjs
       - name: Compare original LX Desktop NetEase EAPI search with Web (diagnostic)
         continue-on-error: true
         run: node scripts/test-desktop-netease-eapi-parity.mjs
       - name: Install Chromium
-        run: npx playwright install chromium
+        run: npx playwright install --with-deps chromium webkit
       - name: Start Cloudflare Pages emulator and run modern web browser regression
         run: |
           set -euo pipefail
@@ -128,6 +132,7 @@ jobs:
           done
           if [ "$READY" != "1" ]; then cat /tmp/lx-modern-pages.log; exit 1; fi
           node scripts/test-modern-web-browser.mjs
+          node scripts/test-now-playing-kuwo-browser.mjs
           node scripts/test-playlist-infinite-browser.mjs
           node scripts/test-mobile-interaction-qa-browser.mjs
           node scripts/test-web-source-selection-browser.mjs
@@ -206,7 +211,7 @@ jobs:
             console.log("Production version verified:", remote.version);
           '
       - name: Install Chromium for production browser acceptance
-        run: npx playwright install chromium
+        run: npx playwright install --with-deps chromium webkit
       - name: Browser acceptance against the actual Cloudflare Pages site
         env:
           TEST_BASE_URL: https://only-testing-online-music.pages.dev
@@ -215,6 +220,11 @@ jobs:
           node scripts/test-modern-web-browser.mjs
           node scripts/test-playlist-infinite-browser.mjs
           node scripts/test-mobile-interaction-qa-browser.mjs
+      - name: Real Kuwo cover metadata and timed lyrics against the deployed website
+        env:
+          TEST_BASE_URL: https://only-testing-online-music.pages.dev
+          FYMUSIC_ACCEPT_PRODUCTION: '1'
+        run: node scripts/test-kuwo-preview-live.mjs
       - name: Explicit Huibq LX source real-media feasibility (informational)
         continue-on-error: true
         timeout-minutes: 3
