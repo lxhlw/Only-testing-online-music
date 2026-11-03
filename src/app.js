@@ -431,25 +431,38 @@
       // Fall back to a fixed-host API for *this song's own platform* only.
       // Kuwo has its own numeric song ID and lyric timeline; never substitute
       // another provider's recording with a coincidentally similar title.
+      var isMigu=state.source==='mg';
       var rawId=state.source==='kw'
         ?(track.id||track.songId||track.songmid||'')
-        :(track.lyricId||track.id||track.songId||track.songmid||'');
+        :(isMigu?(track.copyrightId||track.id||''):
+          (track.lyricId||track.id||track.songId||track.songmid||''));
       var id=String(rawId);
+      // Migu's search result exposes a platform-owned timed LRC CDN URL.
+      // The same-origin endpoint validates the exact official host and file
+      // path; a copyrightId, not the unrelated numeric songmid, identifies it.
+      var miguLrc=isMigu?String(track.lyricId||
+        (track.raw&&(track.raw.lrcUrl||track.raw.lyricUrl))||''):'';
       var endpoint=state.source==='kw'?'/api/kuwo-song-meta?id=':
-        (state.source==='wy'?'/api/netease-lyrics?id=':'');
-      if(!endpoint||!/^[0-9]{1,20}$/.test(id)){
+        (state.source==='wy'?'/api/netease-lyrics?id=':
+          (isMigu?'/api/migu-lyrics?id=':''));
+      var validId=isMigu?/^[A-Za-z0-9_-]{1,80}$/.test(id):
+        /^[0-9]{1,20}$/.test(id);
+      if(!endpoint||!validId||(isMigu&&!miguLrc)){
         if(lyricsLinesEl)lyricsLinesEl.innerHTML='<div class="lyrics-empty">这首歌曲暂时没有可获取的歌词</div>';
         setLyricsStatus('当前歌曲暂无可用歌词','warn');return;
       }
+      var requestUrl=endpoint+encodeURIComponent(id)+
+        (isMigu?'&url='+encodeURIComponent(miguLrc):'');
       var controller=typeof AbortController==='function'?new AbortController():null;
-      var timer=global.setTimeout(function(){if(controller)controller.abort();},8500);
-      global.fetch(endpoint+encodeURIComponent(id),
+      var timer=global.setTimeout(function(){if(controller)controller.abort();},10000);
+      global.fetch(requestUrl,
         controller?{signal:controller.signal}:{})
         .then(function(res){if(!res.ok)throw new Error('歌词服务暂不可用');return res.json();})
         .then(function(data){
           if(!valid())return;
-          if(state.source==='kw'&&(data.source!=='kw'||String(data.id)!==id)){
-            throw new Error('Kuwo lyric identity mismatch');
+          if((state.source==='kw'&&(data.source!=='kw'||String(data.id)!==id))||
+             (isMigu&&(data.source!=='mg'||String(data.id)!==id))){
+            throw new Error('Platform lyric identity mismatch');
           }
           renderLyricsResult(track,data);
         })
