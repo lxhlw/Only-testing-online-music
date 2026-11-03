@@ -2684,30 +2684,6 @@
       searchAndRender(keyword);
     };
 
-    document.getElementById('quick-test-btn').onclick = function () {
-      if (!selectedChannel) {
-        return setStatus('当前音源没有可用的播放渠道。', 'fail');
-      }
-
-      var channel = selectedChannel;
-      var token = ++searchToken;
-      global.__LXLastSearchResults = [];
-      setStatus('正在按 ' + escapeHtml(CHANNEL_NAMES[channel] || channel.toUpperCase()) +
-        ' 搜索「成都」……');
-      resultsEl.innerHTML = '';
-      global.LXMusicSearch.search(channel, '成都', 1, 3, function (err, result) {
-        if (token !== searchToken || channel !== selectedChannel) return;
-        if (err) return setStatus('搜索「成都」失败：' + escapeHtml(err.message || err), 'fail');
-        if (!result.list || !result.list.length) return setStatus('搜索「成都」没有返回结果。', 'fail');
-
-        global.__LXLastSearchResults = result.list.slice();
-        renderSearchResults(result.list);
-        setStatus('已找到「成都」结果，正在测试第一首。', 'ready');
-        testMusic(result.list[0], true);
-      });
-    };
-
-
     var versionCurrentEl = document.getElementById('version-current');
     var versionDateEl = document.getElementById('version-release-date');
     var versionStatusEl = document.getElementById('version-status');

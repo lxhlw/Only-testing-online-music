@@ -12,11 +12,11 @@
     "test:lyrics": "node scripts/test-music-lyrics.mjs",
     "test:import-ui": "node scripts/test-import-ui.mjs",
     "test:babel-proxy": "node scripts/test-babel-proxy.mjs",
-    "test:legacy-transpiler": "node scripts/test-legacy-transpiler.mjs",
     "test:huibq-browser": "node scripts/test-huibq-browser.mjs",
     "test:playlist": "node scripts/test-playlist-browser.mjs",
     "test:version": "node scripts/test-version.mjs",
-    "test:legacy-web": "node scripts/test-legacy-web.mjs"
+    "build:pages": "node scripts/build-pages-dist.mjs",
+    "test:pages": "node scripts/test-pages-dist.mjs"
   },
   "devDependencies": {
     "acorn": "8.15.0",

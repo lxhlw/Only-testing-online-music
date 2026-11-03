@@ -23,10 +23,9 @@ jobs:
 
       - name: Check core JavaScript syntax
         run: |
-          node --check src/promise-lite.js
           node --check src/app-version.js
           node --check src/version-check.js
-          node --check src/source-transpiler.js
+          node --check src/source-transpiler-modern.js
           node --check src/app.js
           node --check src/lx-runtime.js
           node --check src/music-library.js
@@ -36,14 +35,10 @@ jobs:
           node --check src/sha1.js
           node --check src/source-manager.js
 
-      - name: Validate legacy page syntax
-        run: node scripts/check-legacy-test.mjs
-
-      - name: Test Promise compatibility
-        run: node scripts/test-promise-lite.mjs
-
-      - name: Test source transpilation
-        run: node scripts/test-source-transpiler.mjs
+      - name: Build and validate clean Pages assets
+        run: |
+          npm run build:pages
+          npm run test:pages
 
       - name: Test native LX search
         run: node scripts/test-music-search-native.mjs

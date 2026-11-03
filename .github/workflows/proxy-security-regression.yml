@@ -35,7 +35,9 @@ jobs:
           node scripts/test-modern-flower-proxy.mjs
       - name: Start local Cloudflare Pages
         run: |
-          npx wrangler pages dev . --ip 127.0.0.1 --port 8788 >/tmp/lx-proxy.log 2>&1 &
+          node scripts/build-pages-dist.mjs
+          node scripts/test-pages-dist.mjs
+          npx wrangler pages dev dist --ip 127.0.0.1 --port 8788 >/tmp/lx-proxy.log 2>&1 &
           for i in {1..45}; do
             if curl -fsS http://127.0.0.1:8788/ >/dev/null; then exit 0; fi
             sleep 1
