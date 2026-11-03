@@ -5,6 +5,15 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Handoff checkpoint gate fix
+
+- **Goal:** Restore the mandatory public-handoff privacy workflow after the Stage 4 review checkpoint.
+- **Changes:** Aligned CURRENT headings with the literal privacy-check contract (Snapshot / Current limitations / Next goal / Next chat) without weakening any secret scan or changing player code.
+- **Tests:** Initial main privacy run #41686615247 FAILED only on missing literal Next goal heading; log at scripts/check-handoff-privacy.mjs:29, not a detected secret. New revision re-check PENDING at commit time.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41686615247 ; check source scripts/check-handoff-privacy.mjs.
+- **Status:** Fix committed; await latest CI privacy result. Prior production release #41685131793 completed SUCCESS at its docs-only code baseline.
+- **Next action:** Confirm the next privacy run PASS, then start Stage 5 Migu HTTP 502 and Kuwo live musicUrl reliability diagnostics.
+
 ## 2026-11-04 · Stage 4 automated verification closed; source-reliability triage opened
 
 - **Goal:** Reconcile pending Stage 4 CI, visually inspect retained synthetic screenshots, check latest production failures and refresh a safe cross-chat checkpoint.

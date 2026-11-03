@@ -2,7 +2,7 @@
 
 > Repository is PUBLIC. Keep only sanitized engineering facts. Read HANDOFF_LOG.md and HANDOFF_POLICY.md before each operation. GitHub branch SHA, workflow results and deployed-site behavior override stale notes.
 
-## Verified snapshot — 2026-11-04 01:40 Asia/Singapore
+## Snapshot — 2026-11-04 01:40 Asia/Singapore
 
 | Area | Current evidence |
 | --- | --- |
@@ -25,7 +25,7 @@
 - CI screenshot artifact fymusic-ui2-visual-audit (ID 13254972843), produced by #41684255301, was retrieved and visually inspected (synthetic clean-browser screenshots only). Desktop, tablet and 390/320px light and dark layouts appear coherent. In the initial 320px screenshot, the floating player visually overlaps the lower part of the discovery card; verify scroll-to-reveal and accessible hit targets before final user approval. This is a visual review observation, not a proved permanent interaction block.
 - Separate stage-3 CI rAF samples at 12 Chromium/WebKit viewports reported P95 around 16.7–17ms and zero gaps >50ms in those short CI runs. THESE ARE NOT physical-device FPS, CPU, battery or memory benchmarks.
 
-## Unresolved acceptance gates
+## Current limitations and unresolved acceptance gates
 
 1. UI 2.0 has not been merged into main or deployed to the production domain. PR #116 remains DRAFT. GitHub reported mergeable=false / mergeable_state=dirty at this audit: resolve conflicts deliberately on the feature branch before any eventual merge.
 2. A human still must approve desktop/tablet/mobile visual design, 320px scroll and dock reachability, keyboard navigation and actual screen-reader behavior. Physical-device FPS/CPU/memory measurements are not available. Do not claim these checks passed.
@@ -33,7 +33,7 @@
 4. Previous Daoxiang live recovery sometimes succeeds and sometimes fails when upstream alternative musicUrl resolution is unavailable (for example preview #41681089874 failed). Preserve strict real playback-progress acceptance and report transient upstream failure explicitly.
 5. Main release workflow #41685131793 was still running when checked; re-read its final status at the start of the next operation instead of treating IN PROGRESS as success.
 
-## NEXT execution target — Stage 5: source reliability diagnostics (not yet implemented)
+## Next goal — Stage 5: source reliability diagnostics (not yet implemented)
 
 1. Re-read main and PR heads plus latest Actions. Locate the real Migu 502 response boundary (provider endpoint, edge relay or application parsing), classify without recording raw signed media URLs, tokens, cookies, personal headers or response payloads.
 2. Add bounded, observable retry and/or correctly matched cross-platform fallback ONLY when supported by source semantics. Do not misrepresent a resolved URL as playing; require media progress and keep existing lyric/artwork consistency.
@@ -49,7 +49,7 @@
 - Use isolated preview/development PR for code changes; do not deploy unapproved UI 2.0. Every operation updates this CURRENT and the history LOG with exact tests, risks, SHA and next objective.
 - This public repository and its Git history are world-readable. Never store private chat history, user identities, private design URLs/IDs, account information, secrets, cookies, signed media URLs, browser profiles or local user paths. For confidential continuity, separately provision and verify a PRIVATE repository before writing any confidential note.
 
-## Recovery in a fresh conversation
+## Next chat — recovery in a fresh conversation
 
 Continue FyMusic. Read docs/HANDOFF_CURRENT.md, docs/HANDOFF_LOG.md, docs/HANDOFF_POLICY.md on main of lxhlw/Only-testing-online-music, verify the main and feature branch SHAs and the latest Actions. Follow NEXT execution target and update both handoff documents after a tested milestone. Protect privacy; do not merge UI2 without explicit design acceptance.
 
