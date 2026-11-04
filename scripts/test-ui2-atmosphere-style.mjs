@@ -6,6 +6,8 @@ const marker='/* FYMUSIC ATMOSPHERE DESIGN / v0.4.35 CANDIDATE';
 assert.ok(css.includes(marker),'Atmosphere theme is missing');
 const addition=css.slice(css.indexOf(marker));
 for(const token of [
+  '--fy-spatial-edge','STAGE 3 — SPATIAL MUSIC POLISH',
+  'now-playing-cover-box','player-main-toggle','playlist-card:hover',
   '--fy-atmosphere-accent','search-inspiration::after',
   'repeating-radial-gradient','player-bar','playlist-card',
   'fy-ui2-light','(max-width:740px)',

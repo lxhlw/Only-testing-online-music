@@ -1590,3 +1590,311 @@ html.modern-web.fy-ui2.fy-ui2-light .global-search{
     animation:none!important;
   }
 }
+
+/* FYMUSIC ATMOSPHERE / STAGE 3 — SPATIAL MUSIC POLISH
+   Quiet, layered interface depth. All existing semantic controls and layout
+   metrics remain intact: no audio/DOM changes, remote imagery, perpetual motion,
+   backdrop filters or scroll effects. */
+html.modern-web.fy-ui2{
+  --fy-spatial-edge:rgba(139,225,186,.23);
+  --fy-spatial-glint:rgba(203,255,232,.08);
+  --fy-spatial-shadow:0 15px 38px rgba(0,0,0,.18);
+  --fy-spatial-ease:cubic-bezier(.2,.8,.2,1);
+}
+@media(min-width:741px){
+  /* Navigation remains legible and crisp against the listening workspace. */
+  html.modern-web.fy-ui2 .brand{
+    font-weight:840;
+    letter-spacing:-.045em;
+  }
+  html.modern-web.fy-ui2 .nav-item.active{
+    border-color:rgba(121,237,185,.34);
+    background-color:#1c3d38;
+    background-image:linear-gradient(95deg,rgba(81,178,128,.24),rgba(25,82,89,.12));
+    box-shadow:inset 3px 0 #9af8cc,inset 0 1px rgba(255,255,255,.055);
+  }
+  html.modern-web.fy-ui2 .view-header h1{
+    letter-spacing:-.055em;
+    font-weight:850;
+    text-wrap:balance;
+  }
+  html.modern-web.fy-ui2 .view-header .panel-kicker{
+    color:#8befc2;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
+  /* Design-only musical art direction, pseudo-elements are pointer inert. */
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration{
+    background-color:#152b33;
+    background-image:
+      radial-gradient(ellipse 70% 103% at -3% 3%,rgba(73,191,143,.28),transparent 67%),
+      radial-gradient(ellipse 43% 97% at 106% 110%,rgba(92,117,199,.16),transparent 82%),
+      linear-gradient(115deg,#183b3a,#162d36 54%,#162333);
+    border-color:rgba(146,242,195,.44);
+    box-shadow:0 22px 55px rgba(0,0,0,.26),inset 0 1px rgba(245,255,251,.10);
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration-icon{
+    background:radial-gradient(circle at 29% 18%,#79efbb,#2b896e 62%,#21495d);
+    color:#092a25;
+    border:1px solid rgba(192,255,226,.47);
+    box-shadow:0 9px 19px rgba(11,34,38,.2),inset 0 1px rgba(255,255,255,.18);
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration h2{
+    color:#f5fff9;
+    font-weight:820;
+    letter-spacing:-.06em;
+    text-shadow:0 2px 20px rgba(12,49,42,.22);
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration p{
+    color:#c2dcd3;
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration-foot{
+    color:#a7c8bc;
+    letter-spacing:.012em;
+  }
+  html.modern-web.fy-ui2 .search-suggestions button{
+    background-color:#254b42;
+    background-image:linear-gradient(130deg,rgba(134,255,195,.1),transparent);
+    border:1px solid rgba(137,235,186,.50);
+    box-shadow:inset 0 1px rgba(255,255,255,.06);
+    font-weight:680;
+    transition:background-color .18s ease,border-color .18s ease,transform .2s var(--fy-spatial-ease);
+  }
+  html.modern-web.fy-ui2 .search-suggestions button:hover{
+    background-color:#347256;
+    border-color:#a4ffd1;
+    color:#f8fffb;
+  }
+  /* A rich but low-cost glass-like dock: no backdrop-filter / paint loop. */
+  html.modern-web.fy-ui2 .player-bar{
+    background-color:#1d3238;
+    background-image:linear-gradient(118deg,rgba(45,84,75,.92),rgba(28,51,59,.96) 58%,rgba(24,39,55,.98));
+    border-color:rgba(164,238,208,.34);
+    box-shadow:0 23px 55px rgba(0,0,0,.32),inset 0 1px rgba(244,255,248,.09);
+  }
+  html.modern-web.fy-ui2 .player-art{
+    border:1px solid rgba(192,245,211,.23);
+    box-shadow:0 10px 24px rgba(0,0,0,.23),0 0 0 1px rgba(255,255,255,.025);
+    transition:box-shadow .2s ease,border-color .2s ease;
+  }
+  html.modern-web.fy-ui2 .player-art:hover{
+    border-color:rgba(157,252,201,.7);
+    box-shadow:0 10px 24px rgba(0,0,0,.23),0 0 0 2px rgba(157,252,201,.15);
+  }
+  html.modern-web.fy-ui2 #player-title{
+    font-weight:800;
+    letter-spacing:-.025em;
+  }
+  html.modern-web.fy-ui2 #player-artist{
+    color:#b3d3c8;
+  }
+  html.modern-web.fy-ui2 .player-main-toggle,
+  html.modern-web.fy-ui2 .player-main-toggle:hover{
+    background-color:#91f4bf!important;
+    background-image:linear-gradient(130deg,#b0f9d3,#75eab3)!important;
+    box-shadow:0 7px 22px rgba(100,238,171,.27),inset 0 1px rgba(255,255,255,.5)!important;
+  }
+  html.modern-web.fy-ui2 .player-icon-btn:not(.player-main-toggle):hover{
+    background-color:rgba(106,224,167,.14)!important;
+    color:#f1fff8!important;
+  }
+  html.modern-web.fy-ui2 #player-seek{
+    background-color:#456b62;
+    accent-color:#97f6c9;
+  }
+  /* Music library depth and small-state interaction language. */
+  html.modern-web.fy-ui2 .playlist-card{
+    background-color:#1b3139;
+    background-image:linear-gradient(155deg,rgba(68,111,93,.24),transparent 62%);
+    border-color:rgba(147,219,186,.28);
+    box-shadow:0 12px 30px rgba(0,0,0,.13),inset 0 1px rgba(255,255,255,.03);
+  }
+  html.modern-web.fy-ui2 .playlist-cover{
+    box-shadow:0 10px 22px rgba(0,0,0,.2);
+    border:1px solid rgba(192,239,216,.15);
+  }
+  html.modern-web.fy-ui2 .playlist-name{
+    letter-spacing:-.018em;
+    font-weight:760;
+  }
+  html.modern-web.fy-ui2 :is(#search-results>.search-song-row,.search-row,#ranking-songs>.chart-song-row){
+    background-color:#1a2d35;
+    background-image:linear-gradient(95deg,rgba(71,117,96,.06),transparent 70%);
+    border-color:rgba(138,203,184,.21);
+    box-shadow:inset 0 1px rgba(255,255,255,.018);
+  }
+  html.modern-web.fy-ui2 :is(#search-results>.search-song-row,.search-row,#ranking-songs>.chart-song-row):hover{
+    background-color:#23413f;
+    border-color:rgba(138,238,186,.55);
+  }
+  html.modern-web.fy-ui2 .player-timeline input:focus-visible{
+    outline-color:#a0f7c9;
+  }
+  /* The now-playing space should feel like an album sleeve, not a settings pane. */
+  html.modern-web.fy-ui2 .lyrics-sheet.now-playing-screen{
+    background-color:#111f29;
+    background-image:radial-gradient(ellipse 75% 89% at 18% 44%,rgba(40,117,92,.38),transparent 74%),
+      radial-gradient(ellipse 47% 69% at 100% 0%,rgba(53,85,128,.19),transparent 78%),
+      linear-gradient(135deg,#0b1b24,#121d2d);
+  }
+  html.modern-web.fy-ui2 .now-playing-cover-box{
+    border:1px solid rgba(194,252,215,.21);
+    box-shadow:0 32px 73px rgba(0,0,0,.39),0 0 0 5px rgba(157,255,198,.035);
+  }
+  html.modern-web.fy-ui2 .now-playing-screen #lyrics-title{
+    letter-spacing:-.055em;
+    font-weight:850;
+  }
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-line.active{
+    background-color:rgba(83,176,137,.10);
+    background-image:linear-gradient(90deg,rgba(112,233,169,.17),transparent 80%);
+    color:#f7fffb;
+    box-shadow:inset 3px 0 #a5ffd0;
+  }
+}
+@media(min-width:1101px){
+  /* Vinyl motif is completely static and decorative. */
+  html.modern-web.fy-ui2 .search-inspiration::after{
+    opacity:.69;
+    box-shadow:0 23px 44px rgba(0,0,0,.21),inset 0 0 0 1px rgba(255,255,255,.025);
+  }
+}
+@media(max-width:740px){
+  /* Refine small-screen colors without touching 320px sizes, flow or dock offsets. */
+  html.modern-web.fy-ui2.mobile-shell-ready .player-bar{
+    border-color:rgba(155,237,200,.58)!important;
+    box-shadow:0 12px 33px rgba(0,0,0,.28)!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready #player-title{
+    font-weight:790;
+    letter-spacing:-.02em;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .search-inspiration-icon{
+    background:linear-gradient(145deg,#376f60,#1c5556);
+    border-color:rgba(166,250,204,.35);
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .search-suggestions button{
+    border-color:rgba(142,233,193,.45);
+    box-shadow:inset 0 1px rgba(255,255,255,.05);
+  }
+}
+/* The light skin gets its own ink/paper treatments, not washed-out dark colors. */
+html.modern-web.fy-ui2.fy-ui2-light{
+  --fy-spatial-edge:rgba(67,135,94,.24);
+  --fy-spatial-glint:rgba(255,255,255,.76);
+  --fy-spatial-shadow:0 12px 28px rgba(49,108,72,.08);
+}
+html.modern-web.fy-ui2.fy-ui2-light #search-song-view .search-inspiration{
+  background-color:#eff8f2!important;
+  background-image:
+    radial-gradient(ellipse 66% 103% at 0% 5%,rgba(149,221,169,.36),transparent 72%),
+    radial-gradient(ellipse 40% 85% at 100% 94%,rgba(164,205,221,.16),transparent 78%),
+    linear-gradient(120deg,#f7fcf8,#e7f4ed 66%,#f6f9f1)!important;
+  border-color:#b5d9c5!important;
+  box-shadow:0 14px 35px rgba(35,103,71,.10),inset 0 1px rgba(255,255,255,.90)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #search-song-view .search-inspiration-icon{
+  color:#124c37!important;
+  background-color:#c6edda!important;
+  background-image:linear-gradient(138deg,#d4f5e3,#a6dec3)!important;
+  border-color:#a0ceb4!important;
+  box-shadow:0 8px 19px rgba(42,105,68,.12)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #search-song-view .search-inspiration h2{
+  color:#1c4c36!important;
+  text-shadow:none!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #search-song-view .search-inspiration p{
+  color:#587869!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #search-song-view .search-inspiration-foot{
+  color:#5c806b!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .search-suggestions button{
+  background-color:#d7f0e1!important;
+  background-image:linear-gradient(140deg,#ecfaef,#d3eede)!important;
+  border-color:#9dc8ae!important;
+  color:#215f43!important;
+  box-shadow:inset 0 1px #fff!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .search-suggestions button:hover{
+  background-color:#c5e9d5!important;
+  border-color:#68b48a!important;
+  color:#154c33!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .player-bar{
+  /* Preserve computed light-mode base, not only a translucent image layer. */
+  background-color:#fdfffb!important;
+  background-image:linear-gradient(118deg,#fffdfb,#f2faf4 60%,#eef8f2)!important;
+  border-color:#b7d9c4!important;
+  box-shadow:0 16px 36px rgba(37,97,68,.16),inset 0 1px #fff!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #player-title{color:#204b37!important}
+html.modern-web.fy-ui2.fy-ui2-light #player-artist{color:#55715f!important}
+html.modern-web.fy-ui2.fy-ui2-light .player-main-toggle,
+html.modern-web.fy-ui2.fy-ui2-light .player-main-toggle:hover{
+  color:#fff!important;
+  background-color:#237c55!important;
+  background-image:linear-gradient(140deg,#309a70,#18734f)!important;
+  box-shadow:0 6px 19px rgba(29,118,72,.25)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .playlist-card{
+  background-color:#fff!important;
+  background-image:linear-gradient(155deg,#fff,#f4fbf7)!important;
+  border-color:#d0e6d8!important;
+  box-shadow:0 11px 27px rgba(43,100,64,.09)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(#search-results>.search-song-row,.search-row,#ranking-songs>.chart-song-row){
+  background-color:#fff!important;
+  background-image:linear-gradient(95deg,#fff,#f9fcfa)!important;
+  border-color:#d7e8dc!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(#search-results>.search-song-row,.search-row,#ranking-songs>.chart-song-row):hover{
+  background-color:#f0f8f3!important;
+  background-image:none!important;
+  border-color:#8fcbac!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .nav-item.active{
+  color:#145238!important;
+  background-color:#d3eddb!important;
+  background-image:linear-gradient(95deg,#d4efdf,#e1f3e6)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-cover-box{
+  border-color:rgba(195,249,215,.22);
+}
+/* Focus and motion fidelity across themes and devices. */
+html.modern-web.fy-ui2 :is(.search-suggestions button,.playlist-card,.player-art,.player-main-toggle,.now-playing-tab):focus-visible{
+  outline:3px solid #98ffcd!important;
+  outline-offset:3px!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.search-suggestions button,.playlist-card,.player-art,.player-main-toggle,.now-playing-tab):focus-visible{
+  outline-color:#217a54!important;
+}
+@media(hover:hover) and (pointer:fine) and (min-width:741px){
+  html.modern-web.fy-ui2 .playlist-card:hover{
+    transform:translateY(-3px);
+    box-shadow:0 20px 40px rgba(0,0,0,.22);
+  }
+  html.modern-web.fy-ui2.fy-ui2-light .playlist-card:hover{
+    box-shadow:0 18px 35px rgba(48,108,76,.12)!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  html.modern-web.fy-ui2 :is(.search-suggestions button,.playlist-card,.player-art,.player-main-toggle,.now-playing-tab,.lyrics-line){
+    animation:none!important;
+    transition:none!important;
+    transform:none!important;
+  }
+}
+@media(hover:none),(pointer:coarse){
+  html.modern-web.fy-ui2 .playlist-card:hover{
+    transform:none!important;
+  }
+}
+@media(forced-colors:active){
+  html.modern-web.fy-ui2 :is(.playlist-card,.player-bar,.search-inspiration,.now-playing-cover-box){
+    box-shadow:none!important;
+    border:1px solid CanvasText!important;
+  }
+  html.modern-web.fy-ui2 .search-inspiration::after{display:none!important}
+}

@@ -44,6 +44,9 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
        accent:getComputedStyle(root).getPropertyValue('--fy-atmosphere-accent').trim(),
        searchBackground:getComputedStyle(document.querySelector('.global-search')).backgroundColor,
        playerBase:getComputedStyle(dock).backgroundColor,
+       focusRing:getComputedStyle(document.querySelector('.search-suggestions button'),':focus-visible').outlineStyle,
+       dockShadow:getComputedStyle(dock).boxShadow,
+       titleWeight:getComputedStyle(document.querySelector('.view-header h1')).fontWeight,
        heroBackground:heroCSS.backgroundImage,recordDisplay:discCSS.display,
        recordContent:discCSS.content,playerBackground:getComputedStyle(dock).backgroundImage,
        audioNodes:document.querySelectorAll('audio').length,
@@ -65,6 +68,10 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
      assert.ok(audit.accent.startsWith('#'));
      assert.ok(audit.heroBackground.includes('gradient'),'Hero has no editorial atmosphere');
      assert.ok(audit.playerBackground.includes('gradient'),'Dock has no atmospheric surface');
+     assert.notEqual(audit.dockShadow,'none','Player lacks visual elevation');
+     if(viewport.width>=741){
+      assert.ok(+audit.titleWeight>=700,'Desktop headline hierarchy weakened');
+     }
      assert.equal(audit.audioNodes,1);
      assert.ok(audit.scrollWidth<=audit.screenWidth+2,'Horizontal overflow');
      if(viewport.width>=741){

@@ -20,6 +20,19 @@ Upgrade the existing v0.4.35 music website without changing playback, lyrics, ca
 - `.github/workflows/fymusic-ui2-atmosphere-rc.yml`: nonproduction Cloudflare Preview and existing strict unmocked real Kagou-to-Kuwo and original Migu audio/timed lyrics tests. Includes short-lived public-safe screenshot artifact.
 - Both handoff documents: new operation checkpoint with accurate pending/verified release state.
 
+## Stage 3 — Spatial Music Polish (2026-11-04, candidate only)
+
+Second aesthetic pass on the existing `Atmosphere` branch, requested as a genuine beauty upgrade rather than merely repairing layout. The aim is a distinctive **album-first, cinematic yet quiet** music identity:
+
+- **Discovery hero:** deeper but controlled aurora lighting, brighter song-focused headline, small sculptural note icon, readable left-aligned copy, more tactile music-suggestion chips. The Stage 2 desktop width/height/12px dock clearance remain unchanged.
+- **Player dock:** refined translucent-*looking* (but not actually blurred) emerald/slate gradient, subtle border light, premium artwork framing, stronger central play CTA, clean song typography and progress rail. Exactly the same `audio`, seek, mute, pause/next/previous DOM and events.
+- **Songs and collections:** consistent low-depth cards with delicate bright borders and responsive fine-pointer hover only; preserve touch behavior, card size, scrolling and existing actions. Product-like visual hierarchy rather than uniform rectangles.
+- **Immersive listening:** album-sleeve background with static directional lighting; artwork and active lyric treatment reinforce focus without changing lyric line dimensions or playback timing.
+- **Equal-quality light mode:** real opaque background-color (preserves contrast tests), porcelain/jade surfaces and matching green CTA. No copied dark text colors on light surfaces.
+- **Performance/accessibility:** all visual art via CSS gradients; no external fonts/images, persistent animated effects, event listeners, `backdrop-filter`, layout recomputation loops or extra audio. Reduced-motion, pointer-coarse and forced-colors respected. Existing 16 Chromium/WebKit 1440/820/390/320 dark/light screenshots and strict original KG→KW/MG media tests retained.
+
+**Risk & release boundary:** Stage 3 is a CSS-only candidate. Browser/style contracts gain checks for the spatial theme, dock elevation and stronger desktop headline hierarchy; this does not claim a new screenshot review, green exact-head CI, physical-device FPS, real screen reader, or production deploy until independently verified. Main remains v0.4.35; draft PR #124 is not authorized for merge.
+
 ## Stage 2 final automated verification and screenshot review
 
 Candidate code [`76c2b541`](https://github.com/lxhlw/Only-testing-online-music/commit/76c2b5413104ae30e044c518c6d397561fa208c9) passed [isolated Preview #41843790180](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41843790180) and independent [PR browser/security #41843800517](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41843800517). Both browser engines passed **16/16** dark/light screen layouts (1440, 820, 390, 320); new first-screen hero-width and above-player clearance assertions passed; strict real original KG→KW recovery and original MG audio+cover+timed LRC+pause/resume were successful in this run. The latest [screenshot artifact 13329279643](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41843790180/artifacts/13329279643) was downloaded and visually inspected. The 1440 screenshots now show all suggestion chips and footnote above the player, while 820 and 320 remain unobstructed. This does not constitute real hardware accessibility or performance acceptance.

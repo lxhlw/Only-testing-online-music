@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Atmosphere Stage 3 second-round aesthetic enhancement, nonproduction candidate
+
+- **Goal:** Build a stronger professional music-product aesthetic than Stage 2 while preserving player reliability, responsive geometry and accessible light/dark themes.
+- **Changes:** CSS-only `STAGE 3 — SPATIAL MUSIC POLISH` layer for richer static hero ambiance, elevated dock/cover/play CTA, consistent music suggestion chips, collection/search rows and immersive lyrics active focus; separate porcelain/jade light-mode treatment with **opaque** player base. Fine-pointer hover only; reduced-motion/pointer-coarse/forced-colors respected. Enhanced style gate for new scope/tokens, 16-case browser gate for shadow and desktop heading hierarchy. No DOM/audio/source/lyric/data JS or external assets. Recorded scope/safeguards in design report.
+- **Tests:** Prior Stage 2 `76c2b541` isolated Preview [#41843790180](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41843790180) SUCCESS, and docs-only branch-head [PR browser #41845091745](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41845091745) SUCCESS; latest docs-only Preview #41845083255 was in progress when this stage started. **Stage 3 exact-HEAD tests NOT YET VERIFIED** at checkpoint creation; leave pending. Physical FPS/CPU/memory/screen-reader tests still not run.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/124 and [design report](FYMUSIC_UI2_ATMOSPHERE_DESIGN_20261104.md).
+- **Not done:** New immutable Preview, screenshots/new changes inspected, strict real MG pass, PR merge, production deploy, true hardware tests.
+- **Status:** Draft PR #124 only, official main v0.4.35 unchanged.
+- **Next action:** Inspect exact Stage 3 CI/browser screenshot artifacts, correct only observed issues, then seek explicit design/release approval.
+
 ## 2026-11-04 · Atmosphere Stage 2 screenshot-driven desktop overlap fix verified, production not changed
 
 - **Goal:** Inspect real synthetic dark/light screenshots and eliminate desktop first-screen welcome-card collision with the fixed mini-player while preserving all music features.
