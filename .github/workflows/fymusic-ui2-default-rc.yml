@@ -66,7 +66,15 @@ jobs:
       - name: Verify immutable Preview version and protected assets, both UI modes
         run: |
           set -euo pipefail
-          curl -fsSL "$TEST_BASE_URL/" -o /tmp/ui2-default-index.html
+          # Bounded readiness for transient Cloudflare Preview HTTP 500.
+          # Continue only on HTTP 200; all real music gates remain strict.
+          homepage_ready=0
+          for attempt in {1..12}; do
+            code=$(curl -sSL --max-time 12 -o /tmp/ui2-default-index.html -w '%{http_code}' "$TEST_BASE_URL/" || true)
+            if test "$code" = 200; then homepage_ready=1; break; fi
+            sleep 2
+          done
+          test "$homepage_ready" = 1
           grep -Fq 'v0.4.35' /tmp/ui2-default-index.html
           grep -Fq 'ui2-preview.css?v=0.4.35' /tmp/ui2-default-index.html
           code=$(curl -sSL -o /tmp/ui2-default-guard -w '%{http_code}' "$TEST_BASE_URL/README.md")

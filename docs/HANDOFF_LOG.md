@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · UI2 default release acceptance: targeted Preview harness stabilization
+
+- **Goal:** Advance explicitly authorized PR #123 without bypassing mandatory observed failures; isolate theme-only visual checks from intentionally blocked third-party network traffic.
+- **Changes:** PR #123 release authority already recorded with physical/a11y measurement uncertainty accepted. Three unchanged-code strict Preview attempts [#41819811661](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41819811661) FAILED for documented reasons: transient initial root 500; real KG/KW and MG playback progress; and a blocked-network 320px theme test `AggregateError`, respectively. In attempt 3 original MG real audio, 55 timed lyrics/cover/pause-resume passed. Added local-only LX fixture to the theme/keyboard test, no exception suppression, matching pre-existing default visual harness. Added bounded immutable Preview homepage HTTP-200 readiness checking. Kept real KG `稻香`→KW and MG `开始懂了` unmocked mandatory.
+- **Tests:** Last known exact old HEAD `f84a090d` mandatory integrated Preview FAILED attempts 1–3, not green. New HEAD CI is PENDING. The change does not modify application runtime, media resolver or lyric logic; no production promotion.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/123 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41819811661 .
+- **Not done:** Exact candidate HEAD fully green, production merge/deploy, actual physical device/screen-reader measurements, rollback drill and guaranteed provider availability.
+- **Status:** RELEASE HOLD on nonproduction test-harness candidate. Physical-device unknowns approved as risks, observed real-source errors not waived.
+- **Next action:** Read new exact HEAD Actions. Merge only if green; after merge verify official version/site/audio/security then checkpoint actual results.
+
 ## 2026-11-04T19:14:36+08:00 · PR #123 v0.4.35 exact-head strict live acceptance recovered without code changes
 
 - **Goal:** Resolve the latest exact-head strict real-source gate, preserve prior failure evidence, verify all candidate browser/playlist/privacy checks, and prepare release review without silently deploying.
