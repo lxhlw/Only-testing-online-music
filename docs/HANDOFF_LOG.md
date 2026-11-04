@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 12:36 Asia/Singapore · Resolved release PR documentation conflict without production changes
+
+- **Goal:** Remove an observed PR #122 merge blocker while retaining all source/UI tests and the current public-safe recovery state.
+- **Changes:** Compared PR baseline `b1dd0adda` with public main `a802705f`: only three documentation files differed. Created a legitimate two-parent merge on the release candidate `115ca174`, with the candidate application tree retained and three current public documentation files synchronized from main. No app code edited, no production release.
+- **Tests:** GitHub returned `mergeable=true` and `unstable` (checks pending, not a pass). Exact SHA handoff privacy #41774137469 and #41774132280 SUCCESS; full browser #41774137444, playlist #41774137620 and integrated preview #41774132268 still running or pending at checkpoint creation. Older SHA automated passes are not transferable.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/commit/115ca174a1b66fab1b1cbd3cf499f297262f66ce ; https://github.com/lxhlw/Only-testing-online-music/pull/122 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41774132268 .
+- **Not done:** Exact new HEAD CI completion, physical-device and real screen-reader review, human visual signoff, production merge, production verification or rollback exercise.
+- **Status:** RELEASE HOLD; candidate merge conflict resolved, main remains v0.4.33.
+- **Next action:** Verify latest exact-head Actions and test evidence, then obtain real-device/human acceptance before any release.
+
 ## 2026-11-04 12:28 Asia/Singapore · Stage 6 simulated touch preflight and release acceptance checklist
 
 - **Goal:** Continue the single remaining UI2 release gate safely without inventing physical-device results.
