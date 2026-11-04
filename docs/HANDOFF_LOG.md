@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · PR #123 v0.4.35 strict Preview green, preserved release hold
+
+- **Goal:** Reconcile latest nonproduction UI2-default work against authoritative GitHub commits, actual Actions and handoff/privacy policy; advance review-readiness without prematurely publishing.
+- **Changes:** Audited PR #123 at code SHA `bbc6ccf5`, its UI2 default/legacy `?ui2=0` feature and version/cache bump; verified isolated Preview URL. Updated CURRENT and appended LOG together as public-safe checkpoint on release branch; no player/media/lyrics runtime change, no production merge/deploy or rollback. Prepare PR for review, not automatic merge.
+- **Tests:** RC [#41795393252](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41795393252) run attempt 2 **SUCCESS** on `bbc6ccf5`: local/deployed Chromium+WebKit, dark/light, 1440/320, simulation touch, classic opt-out/reload, single audio, route guard; real original KG `稻香`→KW playable fallback with 48 timed lines; real original MG `开始懂了` with 55 timed lines, cover, real playback and pause/resume. Full browser/security [#41795397792](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41795397792), playlist [#41795397783](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41795397783), privacy [#41795397744](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41795397744) **SUCCESS** at that exact code HEAD. Official main [#41791887065](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41791887065) **FAILURE** in strict Migu live acceptance after browser/security passed; previous successful main run [#41786525697](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41786525697) run attempt 2. New docs-only commit requires its own post-write privacy/exact-head check; do not pre-label it passed.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/123 ; https://fae3f8f8.only-testing-online-music.pages.dev/ ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41795393252 .
+- **Not done:** Production merge/deploy, human/device 320px actual-touch, physical real-screen-reader, hardware FPS/CPU/memory/battery, tested rollback, guaranteed music-provider uptime.
+- **Status:** All independently checked **candidate code-head** automated tests green; only v0.4.34 on production. PR review and controlled release remain pending.
+- **Next action:** Verify fresh branch HEAD Actions after this handoff commit, obtain explicit review/release approval with open manual evidence separated, then consider controlled merge and exact-production regression; never bypass strict live music gates.
+
 ## 2026-11-04 · v0.4.35 default UI2 isolated candidate; initial CI contract/continuity fixes
 
 - **Goal:** Deliver reviewed modern UI2 as default homepage with `?ui2=0` classic opt-out, version/cache-safe assets and strict browser/music/release checks.
