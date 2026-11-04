@@ -76,6 +76,14 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
       const menu=await touchTarget('.mobile-menu-button',32);
       await page.touchscreen.tap(menu.x,menu.y);
       await page.waitForFunction(()=>document.querySelector('.mobile-menu-button')?.getAttribute('aria-expanded')==='true');
+      // The drawer announces expanded before its CSS slide-in finishes.
+      // Require the destination to be actually on screen before tapping;
+      // never weaken the subsequent center-hit and min-size assertions.
+      await page.waitForFunction(()=>{
+        const node=document.querySelector('.nav-item[data-view="settings"]');
+        const r=node?.getBoundingClientRect();
+        return !!r&&r.width>=28&&r.left>=0&&r.right<=innerWidth+2;
+      },null,{timeout:5000});
       const settings=await touchTarget('.nav-item[data-view="settings"]',28);
       await page.touchscreen.tap(settings.x,settings.y);
       await page.waitForFunction(()=>document.documentElement.dataset.activeView==='settings');
