@@ -14,7 +14,16 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
     {path:'/?ui2=0&theme=light',ui2:false,light:false,label:'classic-opt-out'}
    ]){
     const page=await browser.newPage({viewport,hasTouch:viewport.width===320});
-    const errors=[];page.on('pageerror',e=>errors.push(e.name));
+    const errors=[];
+    page.on('pageerror',e=>{
+     // The visual-only harness explicitly blocks all external URLs, which
+     // makes the legacy XMLHttpRequest adapter throw an expected browser
+     // network exception. Audio/provider correctness is gated separately
+     // by strict real-source CI. Do not mask unrelated JS exceptions.
+     const message=String(e.message||'');
+     if(/^XMLHttpRequest cannot load https?:/.test(message))return;
+     errors.push(e.name+':'+message.slice(0,100));
+    });
     await page.addInitScript(()=>localStorage.setItem('only-testing-online-music.default-source-disabled','1'));
     await page.route('**/*',route=>new URL(route.request().url()).origin===new URL(base).origin?
       route.continue():route.abort('blockedbyclient'));
