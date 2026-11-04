@@ -2,6 +2,15 @@
 
 > Repository is PUBLIC. Keep only sanitized engineering facts. Read HANDOFF_LOG.md and HANDOFF_POLICY.md before each operation. GitHub branch SHA, workflow results and deployed-site behavior override stale notes.
 
+### 2026-11-05 — Stage 5.2 immediate test-contract syntax correction (CI PENDING)
+
+- **Defect found by readback:** Source commit `ff999ef7ffbabdf4ab2dd65a404b3883625aa28b` introduced two malformed escaped JavaScript regular-expression literals in the **new static style test only** (`scripts/test-ui2-atmosphere-style.mjs`). Independent parsing reported a `SyntaxError`. This is an **unverified CI blocker**, not proof that audio playback or UI runtime failed.
+- **Correction:** Replace those two malformed regexes with explicit exact forbidden-call string checks for native media re-routing, source/CORS/volume writes or a new Audio element. Source `src/ui2-preview.js`, styling, source resolver and user media remain unchanged. The corrected test now **parses successfully in an independent JavaScript compile check**; actual Node/GitHub check and strict Preview are **PENDING** until observed.
+- **Status:** STAGE 5.2 TEST SYNTAX FIX COMMITTED / FULL CI PENDING / PRODUCTION v0.4.35 UNCHANGED; PR #124 still draft.
+- **Next goal:** Verify newly triggered privacy, playlist, browser, live KG/MG and visual preview CI on the corrected exact HEAD; then finish Stage 5.3 screenshot/compatibility/performance acceptance with explicit owner release authorization.
+- **Next chat:** Read the branch handoff and new exact GitHub SHA, not an older successful Preview.
+
+
 ### 2026-11-05 — Stage 5.2 capture-only audio visualizer and album breathing IMPLEMENTED / exact CI PENDING
 
 - **Snapshot:** Public production main remains `a8aafde80e18d76c03952680f7378a8eea93ae1c` **v0.4.35**; unmerged [draft PR #124](https://github.com/lxhlw/Only-testing-online-music/pull/124) maintains nonproduction **v0.4.36**. Stage 5.1 previous branch HEAD `21054cdcb17a4dbaa286af35585406b32eede934` only. Stage 5.1 exact-head workflows #41880049507/#41880049559/#41880049651/#41880034752/#41880034814 were queued when inspected; **no success inferred**.

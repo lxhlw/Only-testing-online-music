@@ -92,10 +92,10 @@ for(const term of ['ui2-audio-spectrum','fy-album-breath','fy-ui2-light',
 assert.ok(!viz.includes('createMediaElementSource') || 
  viz.includes('Never call createMediaElementSource'),
  'Do not reroute the existing native media element through Web Audio');
-assert.equal(/\\.connect\\(\\s*(?:ac|context)\\.destination/.test(viz),false,
- 'Visualization audio graph must never connect to output destination');
-assert.equal(/(?:audio\\.(?:src|crossOrigin|volume)\\s*=|new Audio\\()/i.test(viz),false,
- 'Visualizer cannot replace native media, change CORS, or change volume');
+for(const forbidden of ['.connect(ac.destination)', '.connect(context.destination)',
+ 'audio.src =', 'audio.src=', 'audio.crossOrigin =', 'audio.crossOrigin=',
+ 'audio.volume =', 'audio.volume=', 'new Audio('])
+ assert.ok(!viz.includes(forbidden),'Visualizer must not reroute or modify native playback: '+forbidden);
 assert.equal(/@import\b|backdrop-filter\s*:|url\(\s*['"]?https?:/i.test(vizCss),false,
  'No remote assets / heavy backdrop for Stage 5.2');
 

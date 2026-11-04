@@ -5,6 +5,17 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Stage 5.2 style-contract JavaScript syntax fix
+
+- **Goal:** Remove a new test-only JavaScript parse blocker detected in post-commit source audit.
+- **Changes:** Replace two incorrectly escaped regex literals in `scripts/test-ui2-atmosphere-style.mjs` with explicit forbidden-call checks; app JS/CSS and player/resolver unchanged. Add public-safe documentation checkpoint.
+- **Tests:** Independent `Function` compilation of the corrected test body **PASS**; prior script syntax **FAILED**. GitHub automated Node/Playwright/live-source/Preview tests on the new exact head remain PENDING, not automatically successful.
+- **Evidence:** Draft [PR #124](https://github.com/lxhlw/Only-testing-online-music/pull/124); source parent `ff999ef7ffbabdf4ab2dd65a404b3883625aa28b`.
+- **Not done:** Full exact-head CI, preview screenshots, source-capture reliability test, official deployment and physical device benchmarks.
+- **Status:** Static syntax error addressed, pending CI. Production main v0.4.35 unchanged.
+- **Next action:** Verify new GitHub Actions outcomes, repair further proven failures if any, then Stage 5.3 acceptance.
+
+
 ## 2026-11-05 · Stage 5.2 safe spectrum and cover breathing implementation
 
 - **Goal:** Add music-reactive visual feedback to the working FyMusic Web player without risking audio silence caused by Web Audio re-routing of third-party media.
