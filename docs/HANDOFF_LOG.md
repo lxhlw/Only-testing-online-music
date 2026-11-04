@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 12:28 Asia/Singapore · Stage 6 simulated touch preflight and release acceptance checklist
+
+- **Goal:** Continue the single remaining UI2 release gate safely without inventing physical-device results.
+- **Changes:** Candidate-only new browser test `scripts/test-ui2-touch-reachability-browser.mjs` (`aee22337`), CI integration (`45b44b15`), covering Chromium/WebKit 320/390 dark/light dock and scroll-to-reveal hit-testing plus mobile navigation/settings theme taps. Docs-only main checkpoint provides a public-safe manual release checklist. No player runtime modified.
+- **Tests:** Baseline RC #41694637948 SUCCESS at `e6745688`; new exact-head RC #41773345937 PENDING at writing. Latest main #41695690319 FAILED real Migu LRC HTTP 502; main public handoff privacy #41695690297 SUCCESS. Do not claim the candidate touch test has passed yet.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/commit/45b44b15e7d6eb1fc6d6afd8d6ac332e3659b979 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41773345937 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41695690319 .
+- **Not done:** New touch-gate CI outcome; physical-device tap/FPS/CPU/memory, actual screen reader, human visual acceptance, production merge/deploy and postrelease verification. Provider quality never equates to actual measured bitrate.
+- **Status:** RELEASE HOLD, production v0.4.33 unchanged by this documentation operation.
+- **Next action:** Inspect exact-head candidate CI and remedy any observable hit-target failures; request human device acceptance from sanitized checklist; merge and production verify only after signoff.
+
 ## 2026-11-04 · v0.4.34 final integrated candidate all automated gates green; release held for device approval
 
 - **Goal:** Run final v0.4.34 UI2/source candidate with coherent versioned assets, strict live providers, security and privacy, then prepare safe user-reviewable release.

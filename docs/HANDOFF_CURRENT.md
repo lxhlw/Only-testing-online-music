@@ -2,6 +2,15 @@
 
 > Repository is PUBLIC. Keep only sanitized engineering facts. Read HANDOFF_LOG.md and HANDOFF_POLICY.md before each operation. GitHub branch SHA, workflow results and deployed-site behavior override stale notes.
 
+### 2026-11-04 12:28 Asia/Singapore — Stage 6 narrow-screen reachability audit (candidate only)
+
+- **Authority:** The public production `main` before this docs-only checkpoint is `db8e7ce1d79b6f790195e57dd0152770620652b6` and version **v0.4.33**. UI 2.0 remains unmerged; [review PR #122](https://github.com/lxhlw/Only-testing-online-music/pull/122) is a nonproduction **v0.4.34** candidate.
+- **New isolated candidate work:** Added `scripts/test-ui2-touch-reachability-browser.mjs` in commit `aee22337`, and wired its Chromium/WebKit 320px/390px dark/light simulated hit testing to local and deployed preview CI in `45b44b15`. It covers floating dock controls, scroll-to-reveal of a discovery suggestion, mobile drawer navigation, settings action and theme toggle. This is automated browser-simulated touch, NOT real-device testing.
+- **Exact-head check:** [candidate preview run #41773345937](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41773345937) was **PENDING** at checkpoint creation; inspect latest outcome before claiming pass or progressing to release. Last completed baseline exact-head [#41694637948](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41694637948) was SUCCESS at `e6745688`, before this touch-gate change.
+- **Production diagnostic:** Newest main [#41695690319](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41695690319) FAILED the strict real Migu timed-lyrics API with HTTP 502, correctId=false and zero lines; browser/audio/security job itself passed. The candidate previously passed real Migu at its isolated preview SHA. Upstream intermittence remains, never downgrade strict live acceptance or claim source guaranteed.
+- **Human release gates:** Follow [docs/FYMUSIC_RELEASE_ACCEPTANCE.md](FYMUSIC_RELEASE_ACCEPTANCE.md): actual desktop/phone visual approval, 320px touch on physical device, keyboard+real screen reader, physical-device FPS/CPU/memory; document acceptance without sensitive device identifiers. **No merge, no production UI2 release** before explicit human acceptance and green exact-head checks.
+- **Next goal:** (1) Resolve any candidate simulated touch failures without weakening assertions; (2) rerun exact-head local+Cloudflare preview with real music tests; (3) request human/device design acceptance; (4) only after signoff merge PR #122, confirm official v0.4.34 production and retain revert rollback. Never force push.
+
 ## Snapshot — 2026-11-04 01:40 Asia/Singapore
 
 | Area | Current evidence |
