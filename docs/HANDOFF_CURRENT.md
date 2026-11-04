@@ -2,6 +2,12 @@
 
 > Repository is PUBLIC. Keep only sanitized engineering facts. Read HANDOFF_LOG.md and HANDOFF_POLICY.md before each operation. GitHub branch SHA, workflow results and deployed-site behavior override stale notes.
 
+### 2026-11-05 — UI3 Stage A final first-fold 24px spacing fix (CI PENDING)
+
+- **Observed:** [UI3 candidate #41892785073](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41892785073) locally FAILED strict 1440 desktop discovery clearance after non-flow GPU fix: card bottom **796.9px**, dock top **791px**, required max **779px**. Improvement from 1054px proves flow issue resolved but an additional ~18px first-fold spacing is still needed. Real Migu test was skipped due to absent Preview, not a tested provider failure.
+- **Change:** Eliminate redundant desktop Search header's 24px bottom margin only (other pages and mobile untouched). This gives card expected bottom ~772.9px, preserving 18px dock clearance; maintain original search content/controls, WebGL effect dimensions and all player code. Strict existing first-fold assertion remains in place. New exact-head CI PENDING; predicted geometry is not proof until browser test.
+- **Next:** Verify UI3 local Chromium/WebKit, shader initialization and first-fold, isolated Preview, original KG/MG gates. Continue high-fidelity audio Stage B only after stable source.
+
 ### 2026-11-05 — UI3 Stage A shader surface decoupled from layout flow (CI PENDING)
 
 - **Proven regression:** UI3 isolated [#41892234308](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41892234308) FAILED old desktop first-fold check: discovery card bottom 1054px vs fixed dock top 791px. Smaller 104px header improved but did not solve layout conflict; the UI must not sacrifice reachable content for animation. Strict original MG was skipped because no isolated Preview was deployed, not because the provider failed.

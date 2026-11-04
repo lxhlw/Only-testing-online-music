@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · UI3 search header spacing after near-pass first-fold check
+
+- **Goal:** Complete desktop discovery card clearance under original 900px-height player dock contract.
+- **Changes:** Desktop Search header margin-bottom 24px→0 only. No user controls/audio/GL fragment changes, other scenes retain spacing.
+- **Tests:** Prior #41892785073 card 796.9 vs dock791; required ≤779. New result PENDING. Keep old browser assertion intact.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41892785073 .
+- **Not done:** Real WebGL screenshot/Preview, new source KG/MG, advanced audio Stage B.
+- **Status:** UI3 candidate layout fix committed, no production release.
+- **Next action:** Re-run current head exact CI.
+
 ## 2026-11-05 · Decouple GPU cinematic scene from document flow
 
 - **Goal:** Fix reproducible discovery first-fold overlap with dock without cutting shader visual richness.

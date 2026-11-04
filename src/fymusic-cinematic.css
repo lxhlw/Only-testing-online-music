@@ -119,3 +119,8 @@ html.modern-web.fy-ui2 #lyrics-overlay .now-playing-album-column>.fy3-scene-imme
  }
  html.modern-web.fy-ui2 .view-container>.view-panel>.view-header h1{color:CanvasText!important}
 }
+/* Final 1440x900 search first-fold: recovered 24px of redundant margin.
+   Audio dock and discovery content must never overlap. No GPU effect changes. */
+@media(min-width:741px){
+ html.modern-web.fy-ui2 #view-search>.view-header{margin-bottom:0}
+}
