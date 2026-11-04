@@ -4,6 +4,17 @@ import {readFileSync} from 'node:fs';
 const css=readFileSync('src/ui2-preview.css','utf8');
 const version=JSON.parse(readFileSync('version.json','utf8')).version;
 const marker='/* FYMUSIC ATMOSPHERE DESIGN / v'+version+' CANDIDATE';
+const professionalMarker='/* FYMUSIC / STAGE 4 — REAL WEB PRODUCT DESIGN REPAIR';
+assert.ok(css.includes(professionalMarker),'Missing Stage 4 implementation');
+const professional=css.slice(css.indexOf(professionalMarker));
+for(const token of [
+ 'background-size:contain!important','view-ranking #ranking-title',
+ 'library-list:empty::after','global-search-btn',
+ 'player-volume-wrap','player-lyric','min-width:741px',
+ 'fy-ui2-light','prefers-reduced-motion:reduce','forced-colors:active'
+])assert.ok(professional.includes(token),'Missing Stage 4 design/UX contract: '+token);
+assert.ok(!/\@import\b|backdrop-filter\s*:|animation-iteration-count\s*:\s*infinite/i.test(professional),
+ 'No remote font pulls, heavy blur or indefinite animation');
 assert.ok(css.includes(marker),'Atmosphere theme is missing');
 const addition=css.slice(css.indexOf(marker));
 for(const token of [

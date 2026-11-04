@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Stage 4 actual FyMusic website redesign (not an image-only mockup)
+
+- **Goal:** Respond to defects shown on the live v0.4.35 interface with editable website source code rather than a decorative mockup. Avoid premature v0.4.36 release.
+- **Changes:** Implemented a scoped Stage 4 CSS design system for Search, Playlist Gallery, Ranking, Library and desktop Player. Corrected search button alignment, removed redundant context label, gave cards two-line titles, used full original playlist covers without forced CSS cropping, matched dark/light chart and empty-list surfaces to their themes, aligned volume/lyric region and styled speaker icon. `src/player-controls.js` now renders a static SVG speaker/mute pictogram in the existing button, keeping audio volume/mute actions unchanged. Navigation anchor resets scroll on actual top-level page switch, addressing clipped chart headings. Extended 1440 dark/light Chromium/WebKit screenshot/geometry checks across Playlist/Ranking/MyList in addition to existing home and immersive tests; syntax gate expanded.
+- **Tests:** Prior v0.4.36 code `c5985ef3` isolated strict Preview #41855336495 was GREEN, but did not cover this Stage 4 implementation. **New Stage 4 exact SHA tests are PENDING** and must include strict unmocked provider playback (KG《稻香》→KW, native MG《开始懂了》+55 timed LRC+art/pause/resume), PR/browser, privacy, new screenshot contact review. No source logic changed.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/124 . Actual screenshot feedback was analyzed but not committed publicly.
+- **Not done:** New exact-head CI, Stage 4 real browser screenshot review, real physical device FPS/screen reader, user visual approval, production merge/deploy.
+- **Status:** Stage 4 implementation on isolated draft PR; official `main` v0.4.35 unchanged.
+- **Next:** Verify checks on exact new branch HEAD; review real app screenshot output and repair observed issues; only then invite owner to inspect real Preview. Final production release remains explicitly gated.
+
 ## 2026-11-04 · Step 2 v0.4.36 Stage 3 RC strictly verified; one production step remains
 
 - **Goal:** Finish version/cache release preparation without altering the official v0.4.35 website.

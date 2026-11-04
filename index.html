@@ -1305,7 +1305,11 @@
     }
 
     function navigateFromNav(view,event){
+      // New top-level page, new reading position. A preserved scroll offset
+      // previously hid ranking/library headings behind the sticky header.
+      var changed=view!==currentView;
       showView(view);
+      if(changed) try{global.scrollTo(0,0);}catch(e){}
       try{
         if(event&&event.preventDefault) event.preventDefault();
       }catch(e){}

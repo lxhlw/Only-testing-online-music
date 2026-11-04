@@ -22,6 +22,7 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REF" = refs/heads/design/fymusic-ui2-atmosphere-20261104
           npm install --no-audit --no-fund
+          node --check src/player-controls.js
           node --check src/ui2-preview.js
           node --check scripts/test-ui2-default-browser.mjs
           node scripts/test-version.mjs

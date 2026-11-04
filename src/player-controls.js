@@ -310,7 +310,12 @@
     volume.value = String(level);
     try { audio.volume = level / 100; } catch (e) {}
     function syncVolume() {
-      volumeButton.textContent = audio.muted || audio.volume === 0 ? '♪̸' : '♫';
+      // Speaker pictogram is presentation only; the real mute/volume semantics
+      // stay on the existing audio element, input and button.
+      var muted = audio.muted || audio.volume === 0;
+      volumeButton.innerHTML = muted ?
+        '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9v6h4l5 4V5L8 9H4Z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/><path d="m17 9 5 6m0-6-5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' :
+        '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9v6h4l5 4V5L8 9H4Z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/><path d="M17 9a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round"/></svg>';
       volumeButton.title = audio.muted || audio.volume === 0 ? '取消静音' : '静音';
       volumeButton.setAttribute('aria-label', volumeButton.title);
     }

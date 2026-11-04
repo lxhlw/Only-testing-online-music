@@ -92,6 +92,49 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
      assert.deepEqual(errors,[],'Uncaught JS errors: '+engine+'/'+viewport.width+'/'+light);
      const label=engine+'-'+viewport.width+(light?'-light':'-dark');
      await page.screenshot({path:path.join(out,label+'.png'),animations:'disabled'});
+     // Real web navigation acceptance. Previous audits only examined the
+     // discovery page, missing chart and empty-library theme collisions.
+     if(viewport.width===1440){
+      const inputCheck=await page.evaluate(()=>{
+       const input=document.querySelector('.global-search'),button=document.querySelector('#global-search-btn');
+       const x=input.getBoundingClientRect(),b=button.getBoundingClientRect();
+       return {within:b.right<=x.right+1,center:Math.abs((b.top+b.bottom)/2-(x.top+x.bottom)/2),contextHidden:getComputedStyle(document.querySelector('.search-context')).display==='none'};
+      });
+      assert.equal(inputCheck.within,true,'Search button escaped field');
+      assert.ok(inputCheck.center<4,'Search button is off-center');
+      assert.equal(inputCheck.contextHidden,true,'Redundant search hint wastes width');
+      for(const view of ['playlist','ranking','mylist']){
+       await page.locator('.nav-item[data-view="'+view+'"]').click();
+       await page.waitForFunction(v=>document.getElementById('view-'+v).classList.contains('active'),view);
+       const state=await page.evaluate(v=>{
+        const color=x=>getComputedStyle(document.querySelector(x)).backgroundColor;
+        const title=document.querySelector('#ranking-title');
+        const cover=document.querySelector('.playlist-cover');
+        return {active:document.querySelector('.view-panel.active')?.id,
+         darkRankingText:getComputedStyle(title).color,
+         rankingBackground:color('#ranking-title'),
+         libraryBackground:color('#view-mylist .music-library-content'),
+         coverFit:cover?getComputedStyle(cover).backgroundSize:null,
+         audio:document.querySelectorAll('audio').length,
+         overflow:document.documentElement.scrollWidth>innerWidth+2};
+       },view);
+       assert.equal(state.active,'view-'+view);
+       assert.equal(state.audio,1,'Navigating must not introduce audio');
+       assert.equal(state.overflow,false,'Horizontal overflow on '+view);
+       if(view==='ranking'){
+        const rgb=state.rankingBackground.match(/\d+/g)?.slice(0,3).map(Number)||[];
+        const sum=rgb.reduce((a,b)=>a+b,0);
+        assert.ok(light?sum>450:sum<390,'Ranking header wrong-theme slab: '+state.rankingBackground);
+       }
+       if(view==='mylist'){
+        const rgb=state.libraryBackground.match(/\d+/g)?.slice(0,3).map(Number)||[];
+        const sum=rgb.reduce((a,b)=>a+b,0);
+        assert.ok(light?sum>500:sum<360,'Library panel wrong-theme surface: '+state.libraryBackground);
+       }
+       if(view==='playlist'&&state.coverFit)assert.equal(state.coverFit,'contain','Playlist covers should not be cropped');
+       await page.screenshot({path:path.join(out,label+'-'+view+'.png'),animations:'disabled'});
+      }
+     }
      rows.push({engine,width:viewport.width,theme:light?'light':'dark',oneAudio:true,noOverflow:true,desktopDockClear:viewport.width>=741?true:null});
     }finally{await page.close()}
    }
