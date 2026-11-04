@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Stage 5.3 full strict preview QA green, 48 screenshots human reviewed; release permission pending
+
+- **Goal:** Finish final visual and cross-platform playback acceptance of the v0.4.36 nonproduction atmosphere + safe spectrum candidate, without weakening existing tests or publishing.
+- **Changes:** Reconciled exact PR/source head and all GitHub CI, downloaded 48 actual Chromium/WebKit visual artifact screenshots, inspected desktop Search/Playlist/Ranking/Library in dark/light, 320 responsive and immersive/Canvas visual fixture cases. Verified corrected tall pine silhouette now reads as forest, quiet mountains, vinyl empty state, search/mute/lyrics layout with no obvious clipping in inspected screenshots. This checkpoint updates only public-safe handoff docs; no app/audio/release files changed.
+- **Tests:** Source SHA `079d13b9b1abc1f5acfef8729ebabf07b7e12d1f`: #41886155758 strict isolated Preview COMPLETE SUCCESS including local/Preview browser, deterministic 28-bin FFT synthetic oscillator versus static fallback and pause/reduced-motion, real KG→KW playable, real MG audio+cover+55 timed LRC/pause-resume; #41886164163 modern security SUCCESS; #41886164164 playlist SUCCESS; #41886164196/#41886155978 privacy SUCCESS. 48 screenshots artifact #13352521003 visual review completed. Earlier MG #41884752902 FAIL is retained as intermittent source risk and not re-labeled. The new docs-only handoff commit may launch new CI and must be checked separately.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41886155758 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41886155758/artifacts/13352521003 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41886164163 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41886164164 ; https://08aa107f.only-testing-online-music.pages.dev/ .
+- **Not done:** User-specific visual preference approval, explicit official production authorization, actual release/production QA, physical device FPS/battery/real screen-reader, long-term third-party uptime and full rollback rehearsal.
+- **Status:** v0.4.36 candidate tested in Preview and original audio gates green; live v0.4.35 main unmodified; PR #124 draft/unmerged.
+- **Next action:** Ask owner to inspect Preview. Only with distinct explicit production authorization may v0.4.36 be released after fresh preflight; otherwise refine UI in candidate branch.
+
 ## 2026-11-05 · Fix Stage 5.3B false forest CSS assertion
 
 - **Goal:** Repair double-escaped regex in newly added style test before relying on CI.
