@@ -73,6 +73,32 @@ assert.equal(/width:\s*100vw|overflow:\s*hidden\s*!important/i.test(breathing),f
 assert.equal((breathing.match(/animation:fy-scene-/g)||[]).length,2,
  'Only two compositor-friendly background breathing animations allowed');
 
+
+const visualizerSource=readFileSync('src/ui2-preview.js','utf8');
+const vizMarker='/* FYMUSIC STAGE 5.2 — CAPTURE-ONLY AUDIO VISUALIZER';
+const vizStyleMarker='/* FYMUSIC / STAGE 5.2 — SAFE LIVE AUDIO SPECTRUM';
+assert.ok(visualizerSource.includes(vizMarker)&&css.includes(vizStyleMarker),
+ 'Stage 5.2 capture-only visualizer and presentation layer missing');
+const viz=visualizerSource.slice(visualizerSource.indexOf(vizMarker));
+const vizCss=css.slice(css.indexOf(vizStyleMarker));
+for(const term of ['captureStream','createMediaStreamSource','createAnalyser','getByteFrequencyData',
+ 'requestAnimationFrame','cancelAnimationFrame','prefers-reduced-motion: reduce',
+ 'forced-colors: active','visibilitychange','loadstart','pagehide',
+ 'playing','pause','ui2-audio-spectrum','fy-ui2-audio-live','originalAudio'])
+ assert.ok(viz.includes(term),'Visual lifecycle contract missing: '+term);
+for(const term of ['ui2-audio-spectrum','fy-album-breath','fy-ui2-light',
+ 'max-width:1100px','prefers-reduced-motion:reduce','forced-colors:active'])
+ assert.ok(vizCss.includes(term),'Visualization design/accessibility contract missing: '+term);
+assert.ok(!viz.includes('createMediaElementSource') || 
+ viz.includes('Never call createMediaElementSource'),
+ 'Do not reroute the existing native media element through Web Audio');
+assert.equal(/\\.connect\\(\\s*(?:ac|context)\\.destination/.test(viz),false,
+ 'Visualization audio graph must never connect to output destination');
+assert.equal(/(?:audio\\.(?:src|crossOrigin|volume)\\s*=|new Audio\\()/i.test(viz),false,
+ 'Visualizer cannot replace native media, change CORS, or change volume');
+assert.equal(/@import\b|backdrop-filter\s*:|url\(\s*['"]?https?:/i.test(vizCss),false,
+ 'No remote assets / heavy backdrop for Stage 5.2');
+
 console.log('FYMUSIC_UI2_ATMOSPHERE_STYLE_PASS',{
   visualOnly:true,remoteAssets:false,continuousAnimation:false,
   themePair:true,reducedMotion:true,forcedColors:true

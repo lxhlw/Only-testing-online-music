@@ -55,6 +55,14 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
    }));
    assert.equal(theme.root,true);
    assert.equal(theme.audioNodes,1,'Only the original audio element may exist');
+
+   const vizBefore=await page.evaluate(()=>({
+    mode:window.FyMusicUI2AudioVisualizer?.mode(),
+    count:document.querySelectorAll('#ui2-audio-spectrum canvas').length
+   }));
+   assert.equal(vizBefore.count,1,'Exactly one visualizer canvas');
+   assert.equal(vizBefore.mode,'idle','Visualizer should be idle before playback');
+
    assert.equal(theme.overflow,false,'UI2 must not create horizontal overflow');
    if(desktop){
      assert.equal(theme.dockPos,'fixed');
@@ -74,6 +82,19 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
    });
    await page.locator('#ui2-start').click();
    await page.waitForFunction(()=>document.getElementById('audio')?.currentTime>.35,null,{timeout:18000});
+
+   const afterPlay=await page.evaluate(()=>({
+    mode:window.FyMusicUI2AudioVisualizer?.mode(),
+    oneAudio:window.FyMusicUI2AudioVisualizer?.originalAudio(),
+    originalCurrentTime:document.getElementById('audio').currentTime,
+    visible:getComputedStyle(document.getElementById('ui2-audio-spectrum')).display!=='none'
+   }));
+   assert.equal(afterPlay.oneAudio,true,'Capture must not replace native audio');
+   assert.ok(afterPlay.originalCurrentTime>.35,'Real native audio playback must advance');
+   assert.equal(afterPlay.visible,desktop,'Spectrum remains hidden on narrow screens');
+   assert.ok(['ambient','live','idle'].includes(afterPlay.mode),
+     'Visualizer must label its state without claiming unsupported FFT');
+
    await page.locator('#player-cover-button').click();
    await page.locator('#lyrics-overlay').waitFor({state:'visible',timeout:5000});
    await page.waitForFunction(()=>document.querySelectorAll('#lyrics-lines .lyrics-line').length>=2&&

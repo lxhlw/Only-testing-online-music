@@ -73,6 +73,26 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
       assert.ok(+audit.titleWeight>=700,'Desktop headline hierarchy weakened');
      }
      assert.equal(audit.audioNodes,1);
+
+     const spectrum=await page.evaluate(()=>{
+       const node=document.getElementById('ui2-audio-spectrum');
+       const analyzer=window.FyMusicUI2AudioVisualizer;
+       return {
+         present:Boolean(node),count:document.querySelectorAll('#ui2-audio-spectrum').length,
+         canvas:node?.querySelectorAll('canvas').length,
+         mode:analyzer?.mode(),originalAudio:analyzer?.originalAudio(),
+         width:node?.getBoundingClientRect().width,
+         hidden:getComputedStyle(node).display==='none'
+       };
+     });
+     assert.equal(spectrum.present,true,'UI2 should install one canvas spectrum');
+     assert.equal(spectrum.count,1);
+     assert.equal(spectrum.canvas,1);
+     assert.equal(spectrum.originalAudio,true,'Never replace the original media element');
+     assert.equal(spectrum.mode,'idle','Do not animate before music plays');
+     assert.equal(spectrum.hidden,viewport.width<=1100,
+       'Frequency bars are desktop-only to preserve the 320px dock');
+
      assert.ok(audit.scrollWidth<=audit.screenWidth+2,'Horizontal overflow');
      if(viewport.width>=741){
       const minWidth=viewport.width>=1100?800:470;

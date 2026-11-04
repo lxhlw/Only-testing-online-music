@@ -2777,3 +2777,67 @@ html.modern-web.fy-ui2.fy-ui2-light #view-mylist :is(.library-list,#playlist-fav
     border:1px solid CanvasText!important;
   }
 }
+
+
+/* FYMUSIC / STAGE 5.2 — SAFE LIVE AUDIO SPECTRUM & ALBUM BREATHING
+   Canvas is an optional captured-stream tap, never an audio output node.
+   Protected/CORS audio produces a truthful static spectrum; no fake FFT. */
+html.modern-web.fy-ui2 .ui2-audio-spectrum{
+  display:none;align-self:flex-start;flex:0 0 auto;
+  width:112px;height:15px;max-width:100%;
+  overflow:hidden;pointer-events:none;
+  opacity:.92;
+}
+html.modern-web.fy-ui2 .ui2-audio-spectrum-canvas{
+  display:block;width:112px;height:15px;
+  max-width:100%;border:0;pointer-events:none;
+}
+@media(min-width:1101px){
+  html.modern-web.fy-ui2 .player-song .player-meta{
+    min-width:0;display:flex;flex-direction:column;
+    align-items:flex-start;justify-content:center;
+  }
+  html.modern-web.fy-ui2 .player-song .ui2-audio-spectrum{
+    display:block;margin-top:2px;
+  }
+}
+html.modern-web.fy-ui2 #lyrics-overlay .now-playing-album-column{
+  position:relative;isolation:isolate;
+}
+html.modern-web.fy-ui2 #lyrics-overlay .now-playing-album-column::before{
+  content:"";position:absolute;z-index:0;
+  width:92%;height:56%;left:4%;top:12%;
+  background:radial-gradient(ellipse,rgba(108,236,176,.26),rgba(40,130,113,.11) 40%,transparent 74%);
+  border-radius:50%;pointer-events:none;
+  opacity:0;transform:scale(.96);
+  transition:opacity .3s ease,transform .3s ease;
+}
+html.modern-web.fy-ui2 #lyrics-overlay .now-playing-album-column > *{
+  position:relative;z-index:1;
+}
+html.modern-web.fy-ui2.fy-ui2-playing #lyrics-overlay:not(.hidden) .now-playing-album-column::before{
+  opacity:.60;animation:fy-album-breath 9s ease-in-out infinite;
+}
+@keyframes fy-album-breath{
+  0%,100%{transform:scale(.97);opacity:.42}
+  50%{transform:scale(1.045);opacity:.67}
+}
+html.modern-web.fy-ui2.fy-ui2-audio-live #lyrics-overlay:not(.hidden) .now-playing-album-column::before{
+  animation:none;opacity:.62;
+  transform:scale(calc(.97 + var(--fy-audio-energy,0) * .09));
+}
+html.modern-web.fy-ui2.fy-ui2-light #lyrics-overlay .now-playing-album-column::before{
+  background:radial-gradient(ellipse,rgba(86,178,119,.23),rgba(140,197,167,.09) 48%,transparent 75%);
+}
+@media(max-width:1100px){
+  html.modern-web.fy-ui2 .ui2-audio-spectrum{display:none!important}
+}
+@media(prefers-reduced-motion:reduce){
+  html.modern-web.fy-ui2 #lyrics-overlay .now-playing-album-column::before{
+    animation:none!important;transition:none!important;transform:none!important;
+  }
+}
+@media(forced-colors:active){
+  html.modern-web.fy-ui2 .ui2-audio-spectrum{display:none!important}
+  html.modern-web.fy-ui2 #lyrics-overlay .now-playing-album-column::before{display:none!important}
+}

@@ -5,6 +5,17 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Stage 5.2 safe spectrum and cover breathing implementation
+
+- **Goal:** Add music-reactive visual feedback to the working FyMusic Web player without risking audio silence caused by Web Audio re-routing of third-party media.
+- **Changes:** Added UI2-only canvas/frequency logic inside existing `src/ui2-preview.js` (no extra static script), appended theme-aware scoped player/canvas/cover CSS. Uses safe capture-only `MediaStream` analysis when tracks and CORS allow it, with no output connection and no modifications to the original audio. Unsupported/no-data environments get static/clearly labeled bars; cover breathes softly only while playing. Canvas only 1101px+; energy sampling and animations stop on page hidden/reduced motion and source changes.
+- **Tests:** Extended source/style contract and existing Chromium/WebKit 1440/820/390/320 browser regressions plus synthetic local WAV playback assertions. Exact new SHA Actions CI, isolation Preview, visual screenshot review and real-source cross-provider capture proof are **PENDING**. Previous branch Stage 5.1 CI was queued at initial check and must not be misrepresented as passed. No real-time FFT guarantee on opaque third-party streams.
+- **Evidence:** [Draft PR #124](https://github.com/lxhlw/Only-testing-online-music/pull/124); [prior Stage 4.2B green Preview](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41874004682) only as historical evidence; exact new commit/CI to check after write.
+- **Not done:** Stage 5.3 screenshot-based geometry and performance acceptance, provider-specific FFT live-data characterization, physical mobile/screen-reader/CPU tests, production merge/deployment or rollback exercise. Intermittent external provider failures remain open.
+- **Status:** STAGE 5.2 CODE/TARGETED REGRESSION PREPARED; NEW CI PENDING; PR draft and main v0.4.35 unchanged.
+- **Next action:** Check exact-head Playwright and strict real KG/MG actions, inspect screenshot artifacts, correct any mismatch, then explicit owner approval before controlled production publishing.
+
+
 ## 2026-11-05 · Stage 5.1 native SVG scenic atmosphere & gentle breathing candidate
 
 - **Goal:** Enrich blank top-right and sidebar corners, chart hero and empty-library UI with restrained music atmosphere without hurting performance, accessibility, playback or mobile reachability.
