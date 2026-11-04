@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04T19:14:36+08:00 · PR #123 v0.4.35 exact-head strict live acceptance recovered without code changes
+
+- **Goal:** Resolve the latest exact-head strict real-source gate, preserve prior failure evidence, verify all candidate browser/playlist/privacy checks, and prepare release review without silently deploying.
+- **Changes:** Confirmed PR #123 READY FOR REVIEW (OPEN, unmerged), main remains production v0.4.34; inspected exact code/documentation SHA `1efe5cdced0f599dce34e4c9a09df2aa7a6b86a9` and Actions steps/logs. Started precisely one same-code rerun of the failed isolated Preview workflow, performed no runtime or assertion change, and recorded public-safe failure/success distinction in PR body. Updated CURRENT and append-only LOG as one docs-only candidate-branch checkpoint; newly created HEAD checks must be reverified.
+- **Tests:** At exact code SHA `1efe5cdc`, full browser/security [#41818175238](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41818175238), playlist [#41818175190](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41818175190) and privacy [#41818175165](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41818175165) all SUCCESS. Strict Preview [#41818168130](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41818168130) **attempt 1 FAILURE** at real alternate KG→KW audio and original MG real audio, while UI/static local+deployed checks passed. Same code run **attempt 2 SUCCESS**: all UI browser/opt-out/assets, strict real KG `稻香` recovery and strict MG `开始懂了` audio, cover, 55 timed lyrics and pause/resume passed; deployed isolated Preview https://ec2509b0.only-testing-online-music.pages.dev/ . Failures were never reclassified as passes. The new documentation HEAD is not claimed CI-green until observed.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/123 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41818168130 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41818175238 ; https://ec2509b0.only-testing-online-music.pages.dev/ .
+- **Not done:** Production merge/deploy, device-based 320px touch, real screen reader, physical FPS/CPU/memory, provider SLA/root cause, actual rollback test. Official main earlier [#41791887065](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41791887065) still failed mandatory Migu playback in an independent earlier run.
+- **Status:** Latest tested candidate exact code-head mandatory automation GREEN after one rerun, **production release still HOLD** awaiting remaining approvals and checks; v0.4.34 official unchanged.
+- **Next action:** Verify new docs checkpoint Actions, request explicit production release authorization with unverified physical tests acknowledged, then controlled non-force merge and actual production v0.4.35 regression or halt if tests fail.
+
 ## 2026-11-04 · PR #123 v0.4.35 strict Preview green, preserved release hold
 
 - **Goal:** Reconcile latest nonproduction UI2-default work against authoritative GitHub commits, actual Actions and handoff/privacy policy; advance review-readiness without prematurely publishing.
