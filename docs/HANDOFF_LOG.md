@@ -5,15 +5,45 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
-## 2026-11-04 · Prepared v0.4.34 integrated candidate for final approval (NOT released)
+## 2026-11-04 12:28 Asia/Singapore · Stage 6 simulated touch preflight and release acceptance checklist
 
-- **Goal:** Make the fully tested UI2/source code releaseable with consistent asset cache versions while preserving official v0.4.33.
-- **Changes:** Updated only release-candidate branch version metadata and index/settings asset references to v0.4.34, plus matching nonproduction workflow check. Added public-safe handoff for new exact SHA.
-- **Tests:** Prior v0.4.33 integrated RC #41691565640 ATTEMPT 2 SUCCESS on real Migu + Daoxiang and all UI2 browsers. The new v0.4.34 candidate tests PENDING and must be checked independently; old pass does not cover the new SHA. Main production CI remains separate.
-- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/122 ; https://github.com/lxhlw/Only-testing-online-music/commit/0c5177f8c2420eb662a4353bf1887a5a2573e31f .
-- **Not done:** Physical device performance and screen-reader evidence, human visual acceptance, actual merge and deployed production recheck.
-- **Status:** RELEASE HOLD; no main code or official site changed.
-- **Next action:** Verify exact RC SHA CI and strict media real-browser gates, resolve any failed checks, then get human/device signoff before production rollout.
+- **Goal:** Continue the single remaining UI2 release gate safely without inventing physical-device results.
+- **Changes:** Candidate-only new browser test `scripts/test-ui2-touch-reachability-browser.mjs` (`aee22337`), CI integration (`45b44b15`), covering Chromium/WebKit 320/390 dark/light dock and scroll-to-reveal hit-testing plus mobile navigation/settings theme taps. Docs-only main checkpoint provides a public-safe manual release checklist. No player runtime modified.
+- **Tests:** Baseline RC #41694637948 SUCCESS at `e6745688`; new exact-head RC #41773345937 PENDING at writing. Latest main #41695690319 FAILED real Migu LRC HTTP 502; main public handoff privacy #41695690297 SUCCESS. Do not claim the candidate touch test has passed yet.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/commit/45b44b15e7d6eb1fc6d6afd8d6ac332e3659b979 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41773345937 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41695690319 .
+- **Not done:** New touch-gate CI outcome; physical-device tap/FPS/CPU/memory, actual screen reader, human visual acceptance, production merge/deploy and postrelease verification. Provider quality never equates to actual measured bitrate.
+- **Status:** RELEASE HOLD, production v0.4.33 unchanged by this documentation operation.
+- **Next action:** Inspect exact-head candidate CI and remedy any observable hit-target failures; request human device acceptance from sanitized checklist; merge and production verify only after signoff.
+
+## 2026-11-04 · v0.4.34 final integrated candidate all automated gates green; release held for device approval
+
+- **Goal:** Run final v0.4.34 UI2/source candidate with coherent versioned assets, strict live providers, security and privacy, then prepare safe user-reviewable release.
+- **Changes:** Branch `release/fymusic-stage5-stage6-rc-20261104` head `e6745688` contains UI2 light/dark desktop/tablet/mobile, bounded Migu LRC and provider recovery, version.json/package/app-version/HTML v0.4.34 plus updated UI2 contract assertions. PR #122 marked READY FOR REVIEW and evidence documented; no production code merge.
+- **Tests:** Exact head preview #41694637948 SUCCESS: local/deployed Chromium+WebKit UI2, theme a11y, keyboard, reduced motion, no overflow, 404/static asset guard, single audio; real KG `稻香`→KW playable audio/cover/48 timed LRC and Migu `开始懂了` audio/cover/55 timed LRC/pause/resume. Prior v0.4.34 full browser/security #41694285132 SUCCESS, playlist #41694285353 SUCCESS, privacy #41694404264 SUCCESS. First earlier v0.4.33 integrated live Daoxiang attempt failed then rerun passed; upstream flakiness remains.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41694637948 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41694285132 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41694285353 ; https://github.com/lxhlw/Only-testing-online-music/pull/122 . Synthetic screenshots artifact #13261185210.
+- **Not done:** Physical-device FPS/memory/CPU, real screen-reader and 320px touch reachability, human design approval, production merge, production version/site verification or rollback exercise. Do NOT call Stage 6 production completed.
+- **Status:** Stage 5 technical and Stage 6 AUTOMATED acceptance completed; Stage 6 official RELEASE HOLD. Main remains v0.4.33.
+- **Next action:** Human/device review of https://d8b9d8d9.only-testing-online-music.pages.dev/?ui2=1 ; only after acceptance merge PR #122, validate official production and preserve revert rollback.
+
+## 2026-11-04 · Integrated RC acceptance passed; ready for human review, production held
+
+- **Goal:** Finish automated provider and UI2 regression on the same release candidate, then preserve exact evidence and rollback plan.
+- **Changes:** PR #122 promoted from draft to READY FOR REVIEW after automation gates passed, not merged. The combined source/UI code remains on isolated branch SHA `deb461c5d553c5141bce150a63bcc56eeb029d73`; no production code mutation.
+- **Tests:** Cloudflare integrated preview #41691565640 attempt 1 FAILED real Daoxiang fallback; rerun attempt 2 SUCCESS, including real Daoxiang Kuwo recovery and real Migu audio/55 timed lyrics/cover/pause/resume, plus both themes and responsive Chromium/WebKit/UI2 security. Independent full browser/security #41691576704 SUCCESS, playlist #41691576698 SUCCESS. Clean screenshot artifact #13256519117. Tests don't establish universal media reliability or physical-device FPS.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41691565640 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41691576704 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41691576698 ; https://github.com/lxhlw/Only-testing-online-music/pull/122 .
+- **Not done:** Human device visual/real screen-reader review, physical FPS/CPU/memory acceptance, v0.4.34 release bump/cache-busters, production merge, production retest and rollback exercise. Source fluctuation means periodic verification remains useful.
+- **Status:** Stage 5 automated gate PASSED for tested recordings. Stage 6 remains **RELEASE HOLD** until manual/device signoff; main stays v0.4.33.
+- **Next action:** User or authorized reviewer inspects Cloudflare RC preview and real devices; then version bump on RC, re-run final CI and live-source checks, merge the approved PR, verify production and keep revert-ready baseline.
+
+## 2026-11-04 · Stage 5/6 integrated RC, strict real-source release blocker
+
+- **Goal:** Execute source-reliability and UI2 final acceptance together, without premature production promotion.
+- **Changes:** Staged Migu LRC bounded retry and metadata-gated Migu/Kugou→Kuwo recovery with UI2 dark/light desktop/tablet/mobile on isolated RC draft PR #122. CI workflow deploys immutable Cloudflare preview and saves synthetic design screenshots. Source fix PR #121 and UI2 PR #116 remain independent drafts.
+- **Tests:** Integrated RC full browser/audio/security #41691576704 SUCCESS; playlist #41691576698 SUCCESS. Preview #41691565640 passed UI2 Chromium/WebKit screen, theme/a11y, 404 and Migu audio/55 timed lyric acceptance. The strict real Daoxiang KG→KW test FAILED despite direct Kuwo control playing; retry attempt #2 pending. Prior source preview #41690937874 separately recorded Migu and Daoxiang real pass lines but overall cancelled due later branch update.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/122 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41691565640 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41691576704 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41691576698 .
+- **Not done:** Reconcile intermittent provider identity/playback, pass live Daoxiang without reducing strictness, physical-device FPS/memory, real screen-reader/manual visual signoff, release version bump, main merge and production acceptance.
+- **Status:** SAFE RELEASE HOLD — production remains v0.4.33; only docs checkpoint committed on main.
+- **Next action:** Inspect exact rerun status; diagnose candidate metadata/recovery ordering; rerun both real-provider checks and full CI. Only after acceptance and device/user signoff merge and verify production with rollback.
 
 ## 2026-11-04 · Stage 5A live preview: LRC restored in one sample, audio progress blocked
 
