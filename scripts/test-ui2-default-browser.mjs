@@ -24,7 +24,22 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
      if(/^XMLHttpRequest cannot load https?:/.test(message))return;
      errors.push(e.name+':'+message.slice(0,100));
     });
-    await page.addInitScript(()=>localStorage.setItem('only-testing-online-music.default-source-disabled','1'));
+    // Seed a deterministic, local-only LX source to prevent the visual
+    // layout test from contacting external catalogs. Live real-source tests
+    // remain strict and entirely separate.
+    await page.addInitScript(()=>{
+     const fixture=[
+      '/** @name UI2 fixture source */',
+      '(function(){',
+      ' var api=globalThis.lx;',
+      ' api.on(api.EVENT_NAMES.request,function(){return Promise.resolve({url:"https://media.example.test/song.wav"});});',
+      ' api.send(api.EVENT_NAMES.inited,{status:true,sources:{kw:{name:"Kuwo",type:"music",actions:["musicUrl"],qualitys:["128k"]}}});',
+      '})();'
+     ].join('\\n');
+     localStorage.setItem('only-testing-online-music.lx-sources',
+      JSON.stringify([{id:'ui2-layout-test',name:'UI2 fixture',code:fixture,url:'https://example.com/source.js'}]));
+     localStorage.setItem('only-testing-online-music.active-source-id','ui2-layout-test');
+    });
     await page.route('**/*',route=>new URL(route.request().url()).origin===new URL(base).origin?
       route.continue():route.abort('blockedbyclient'));
     try{
