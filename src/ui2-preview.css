@@ -1483,7 +1483,9 @@ html.modern-web.fy-ui2.fy-ui2-light .playlist-card{
   box-shadow:0 11px 26px rgba(52,112,74,.07)!important;
 }
 html.modern-web.fy-ui2.fy-ui2-light .player-bar{
-  background:linear-gradient(115deg,rgba(255,255,253,.99),rgba(244,252,247,.99))!important;
+  /* Opaque base for the existing light-mode contrast/accessibility contract. */
+  background-color:#fdfffb!important;
+  background-image:linear-gradient(115deg,rgba(255,255,253,.99),rgba(244,252,247,.99))!important;
   box-shadow:0 16px 37px rgba(40,102,65,.14),inset 0 1px #fff!important;
 }
 html.modern-web.fy-ui2.fy-ui2-light .global-search{
@@ -1498,7 +1500,8 @@ html.modern-web.fy-ui2.fy-ui2-light .global-search{
     border-color:#bedfcb!important;
   }
   html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .player-bar{
-    background:linear-gradient(115deg,rgba(255,255,252,.99),rgba(243,250,245,.99))!important;
+    background-color:#fdfffb!important;
+    background-image:linear-gradient(115deg,rgba(255,255,252,.99),rgba(243,250,245,.99))!important;
     border-color:#b4d6c2!important;
   }
 }

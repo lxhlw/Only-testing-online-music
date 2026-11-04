@@ -20,6 +20,10 @@ Upgrade the existing v0.4.35 music website without changing playback, lyrics, ca
 - `.github/workflows/fymusic-ui2-atmosphere-rc.yml`: nonproduction Cloudflare Preview and existing strict unmocked real Kagou-to-Kuwo and original Migu audio/timed lyrics tests. Includes short-lived public-safe screenshot artifact.
 - Both handoff documents: new operation checkpoint with accurate pending/verified release state.
 
+## Second verification finding
+
+The next [PR browser #41839795150](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41839795150) and [Preview #41839786465](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41839786465) found the same computed-color issue on the **light floating player**. The color contract remained strict; the candidate now sets an opaque white/mint background-color before the gradient background-image in desktop and mobile variants. The new visual test now checks the computed brightness of both search and player surfaces. This remains candidate-only pending exact-head tests.
+
 ## First verification finding
 
 Initial candidate CI [#41839250683](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41839250683) caught a light-search CSS computed-color regression: `background` shorthand made the computed base transparent despite a bright gradient. Existing light contrast test **FAILED**, while new 12-case visual matrix **PASSED**. Corrected the light search to explicit white `background-color` plus separate gradient image and added a computed-color assertion to the visual matrix. New exact-head tests remain pending; no claim of public preview or real music pass yet.

@@ -43,6 +43,7 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
        ui2:root.classList.contains('fy-ui2'),light:root.classList.contains('fy-ui2-light'),
        accent:getComputedStyle(root).getPropertyValue('--fy-atmosphere-accent').trim(),
        searchBackground:getComputedStyle(document.querySelector('.global-search')).backgroundColor,
+       playerBase:getComputedStyle(dock).backgroundColor,
        heroBackground:heroCSS.backgroundImage,recordDisplay:discCSS.display,
        recordContent:discCSS.content,playerBackground:getComputedStyle(dock).backgroundImage,
        audioNodes:document.querySelectorAll('audio').length,
@@ -56,6 +57,9 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
       const match=audit.searchBackground.match(/rgba?\((\d+)[, ]+(\d+)[, ]+(\d+)/);
       assert.ok(match&&(+match[1])+(+match[2])+(+match[3])>540,
        'Light search needs an opaque high-luminance base: '+audit.searchBackground);
+      const playerMatch=audit.playerBase.match(/rgba?\((\d+)[, ]+(\d+)[, ]+(\d+)/);
+      assert.ok(playerMatch&&(+playerMatch[1])+(+playerMatch[2])+(+playerMatch[3])>540,
+       'Light player needs an opaque high-luminance base: '+audit.playerBase);
      }
      assert.ok(audit.accent.startsWith('#'));
      assert.ok(audit.heroBackground.includes('gradient'),'Hero has no editorial atmosphere');

@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · UI2 Atmosphere light player background regression fixed in candidate
+
+- **Goal:** Preserve existing strict light-theme contrast tests after layered gradients.
+- **Changes:** Candidate PR #124 `3100195c` [browser #41839795150](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41839795150) and [Preview #41839786465](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41839786465) failed `chromium/desktop player should be light: rgba(0,0,0,0)`. Added opaque computed player background-color while preserving gradient image, including mobile light variant; added browser luminance assertion for search and player. All application playback and lyric logic remains unchanged.
+- **Tests:** New 12-case Atmosphere browser check passed before this change, but the separate existing light theme check was FAILED; new exact HEAD checks PENDING. No production UI2 design release.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/124 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41839795150 .
+- **Not done:** Fresh exact-head full browser and strict real-provider acceptance, screenshot review, device tests or production release.
+- **Status:** Nonproduction candidate correction awaiting CI.
+- **Next action:** Check exact HEAD CI and inspect real code failure evidence; do not bypass light/a11y assertions.
+
 ## 2026-11-04 · Atmosphere design CI light-search computed base regression corrected
 
 - **Goal:** Keep strict light-theme accessibility checks while layering a gradient onto the homepage search field.
