@@ -2329,3 +2329,75 @@ html.modern-web.fy-ui2.fy-ui2-light .player-extras #player-lyric{
   border:1px solid CanvasText!important;box-shadow:none!important;background-image:none!important;
  }
 }
+
+/* FYMUSIC / STAGE 4.1 — CROSS-VIEW SCREENSHOT DEFECT FIX
+   Verified on the first exact Stage 4 browser screenshots: dark filters were
+   white because of #view-playlist child selectors; light chart empty-state
+   retained a dark ::after paint from the original atmosphere layer. */
+html.modern-web.fy-ui2 #view-playlist>.playlist-filter-stack{
+ background-color:#122a2f!important;
+ border:1px solid #355c52!important;border-radius:17px;
+ box-shadow:0 8px 26px rgba(0,0,0,.11)!important;
+}
+html.modern-web.fy-ui2 #view-playlist>.playlist-filter-stack>.sub-toolbar,
+html.modern-web.fy-ui2 #view-playlist>.playlist-filter-stack>.category-row{
+ background-color:#182f34!important;
+ background-image:none!important;
+ border:0!important;border-bottom:1px solid #35594f!important;
+ color:#c6e4d7!important;
+}
+html.modern-web.fy-ui2 #view-playlist>.playlist-filter-stack>.category-row{
+ border-bottom:0!important;
+}
+html.modern-web.fy-ui2 #view-playlist>.playlist-filter-stack :is(.sub-toolbar,.category-row)>span:first-child{
+ color:#adccbd!important;
+}
+html.modern-web.fy-ui2 #view-ranking #ranking-songs:empty::after,
+html.modern-web.fy-ui2 #view-ranking #ranking-songs>.empty-note{
+ display:flex;align-items:center;justify-content:center;
+ min-height:112px;box-sizing:border-box;
+ margin:15px 0;padding:25px;
+ border:1px dashed #3c675a;border-radius:15px;
+ color:#bddace!important;
+ background-color:#1b3938!important;
+ background-image:linear-gradient(125deg,#19343b,#1c3c34)!important;
+ text-align:center;font-size:13px;line-height:1.6;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-playlist>.playlist-filter-stack{
+ background-color:#f6fbf7!important;
+ border-color:#d4e6da!important;
+ box-shadow:0 8px 25px rgba(35,104,65,.055)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-playlist>.playlist-filter-stack>.sub-toolbar,
+html.modern-web.fy-ui2.fy-ui2-light #view-playlist>.playlist-filter-stack>.category-row{
+ background-color:#f7fbf8!important;
+ background-image:none!important;
+ border-color:#d9e9df!important;
+ color:#486f57!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-playlist>.playlist-filter-stack :is(.sub-toolbar,.category-row)>span:first-child{
+ color:#567b66!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking #ranking-songs:empty::after,
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking #ranking-songs>.empty-note{
+ border-color:#bfdccb!important;
+ color:#527460!important;
+ background-color:#f2faf5!important;
+ background-image:linear-gradient(130deg,#f3faf5,#e6f4eb)!important;
+}
+@media(max-width:740px){
+ html.modern-web.fy-ui2.mobile-shell-ready #view-playlist>.playlist-filter-stack{
+  box-shadow:none!important;border-radius:13px;
+ }
+ html.modern-web.fy-ui2.mobile-shell-ready #view-ranking #ranking-songs:empty::after,
+ html.modern-web.fy-ui2.mobile-shell-ready #view-ranking #ranking-songs>.empty-note{
+  min-height:95px;padding:17px;
+ }
+}
+@media(forced-colors:active){
+ html.modern-web.fy-ui2 #view-playlist>.playlist-filter-stack,
+ html.modern-web.fy-ui2 #view-ranking #ranking-songs:empty::after,
+ html.modern-web.fy-ui2 #view-ranking #ranking-songs>.empty-note{
+  background:Canvas!important;color:CanvasText!important;border:1px solid CanvasText!important;box-shadow:none!important;
+ }
+}

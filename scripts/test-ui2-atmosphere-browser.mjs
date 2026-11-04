@@ -121,10 +121,40 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
        assert.equal(state.active,'view-'+view);
        assert.equal(state.audio,1,'Navigating must not introduce audio');
        assert.equal(state.overflow,false,'Horizontal overflow on '+view);
+       if(view==='playlist'){
+        const filter=await page.evaluate(()=>{
+         const s=getComputedStyle(document.querySelector('#view-playlist>.playlist-filter-stack>.sub-toolbar'));
+         const c=getComputedStyle(document.querySelector('#view-playlist>.playlist-filter-stack>.category-row'));
+         return {source:s.backgroundColor,category:c.backgroundColor};
+        });
+        for(const [name,value] of Object.entries(filter)){
+         const rgb=value.match(/\d+/g)?.slice(0,3).map(Number)||[];
+         assert.equal(rgb.length,3,'Filter color missing for '+name+': '+value);
+         const sum=rgb.reduce((a,b)=>a+b,0);
+         assert.ok(light?sum>540:sum<280,
+          'Wrong-theme playlist filter '+name+': '+value);
+        }
+       }
        if(view==='ranking'){
         const rgb=state.rankingBackground.match(/\d+/g)?.slice(0,3).map(Number)||[];
         const sum=rgb.reduce((a,b)=>a+b,0);
         assert.ok(light?sum>450:sum<390,'Ranking header wrong-theme slab: '+state.rankingBackground);
+        // Explicitly probe the actual empty results pseudo-element, which is
+        // where a hidden dark gradient survived earlier light-mode checks.
+        const emptyState=await page.evaluate(()=>{
+         const host=document.querySelector('#ranking-songs');
+         const markup=host.innerHTML;
+         host.replaceChildren();
+         const styles=getComputedStyle(host,'::after');
+         const result={color:styles.backgroundColor,foreground:styles.color};
+         host.innerHTML=markup;
+         return result;
+        });
+        const color=emptyState.color.match(/\d+/g)?.slice(0,3).map(Number)||[];
+        assert.equal(color.length,3,'Chart empty-state lacks opaque theme surface');
+        const total=color.reduce((a,b)=>a+b,0);
+        assert.ok(light?total>540:total<290,
+         'Wrong-theme chart empty-state '+JSON.stringify(emptyState));
        }
        if(view==='mylist'){
         const rgb=state.libraryBackground.match(/\d+/g)?.slice(0,3).map(Number)||[];

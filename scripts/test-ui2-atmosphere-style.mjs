@@ -5,6 +5,15 @@ const css=readFileSync('src/ui2-preview.css','utf8');
 const version=JSON.parse(readFileSync('version.json','utf8')).version;
 const marker='/* FYMUSIC ATMOSPHERE DESIGN / v'+version+' CANDIDATE';
 const professionalMarker='/* FYMUSIC / STAGE 4 — REAL WEB PRODUCT DESIGN REPAIR';
+const screenshotFix='/* FYMUSIC / STAGE 4.1 — CROSS-VIEW SCREENSHOT DEFECT FIX';
+assert.ok(css.includes(screenshotFix),'Actual browser screenshot corrections missing');
+const screenshotLayer=css.slice(css.indexOf(screenshotFix));
+for(const item of [
+ '#view-playlist>.playlist-filter-stack>.sub-toolbar',
+ '#view-playlist>.playlist-filter-stack>.category-row',
+ '#view-ranking #ranking-songs:empty::after',
+ 'fy-ui2-light','forced-colors:active'
+])assert.ok(screenshotLayer.includes(item),'Screenshot regression contract absent: '+item);
 assert.ok(css.includes(professionalMarker),'Missing Stage 4 implementation');
 const professional=css.slice(css.indexOf(professionalMarker));
 for(const token of [

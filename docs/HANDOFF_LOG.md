@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Stage 4.1 confirmed visual defects in real screenshots, fixed targeted CSS and tests
+
+- **Goal:** Close search/playlist/chart/library screenshot defects rather than relying on superficially green home-only automated checks.
+- **Changes:** Downloaded 36 PNGs from [exact initial Stage 4 Preview #41861872946](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41861872946/artifacts/13339837999) and inspected light/dark 1440 Playlist/Ranking/Library. Observed **white playlist filter child bars in dark mode** and **dark chart empty pseudo-element in light mode**. Fixed `src/ui2-preview.css` via targeted UI2 dark/light `#view-playlist>.playlist-filter-stack>...` and `#ranking-songs:empty::after`/real child `.empty-note`, including mobile and forced-colors. Strengthened Chromium/WebKit dark/light browser tests to assert computed filter surface colors and the actual chart empty pseudo-element, and static style contract.
+- **Tests:** Initial exact `586916e0` strict Preview #41861872946 **FAILED original native MG lyrics**: API HTTP 502 upstream timeout and 0 timed lines, not a CSS-specific failure. Same run confirmed 16 home + 12 cross-view visual browser gates and 8 immersive fixture captures, actual original KG→KW playable recovery, 404/asset checks passed. Independent PR browser/security #41861884246 SUCCESS, playlist #41861884241 SUCCESS, privacy #41861872866/#41861884322 SUCCESS. **New Stage 4.1 exact-head tests PENDING** at commit time, not yet screenshot-reviewed.
+- **Evidence:** [Draft PR #124](https://github.com/lxhlw/Only-testing-online-music/pull/124); [Stage 4 visual artifact](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41861872946/artifacts/13339837999). No user-provided screenshots or private details committed.
+- **Not done:** Confirm corrected screenshot appearance on new exact SHA, strict original MG real LRC pass, user visual signoff, physical device performance/screen-reader audit, official merge/deployment.
+- **Status:** Stage 4.1 candidate CSS/test changes, main v0.4.35 untouched and PR draft.
+- **Next:** Get new CI and actual browser screenshot evidence, fix if necessary, then request authorized production release only after visual approval.
+
 ## 2026-11-04 · Stage 4 actual FyMusic website redesign (not an image-only mockup)
 
 - **Goal:** Respond to defects shown on the live v0.4.35 interface with editable website source code rather than a decorative mockup. Avoid premature v0.4.36 release.
