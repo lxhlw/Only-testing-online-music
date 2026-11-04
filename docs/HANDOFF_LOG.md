@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Atmosphere design screenshot audit: desktop welcome card covered by player; Stage 2 fix
+
+- **Goal:** Continue PR #124 professional visual review rather than assume twelve assertions equal human design quality.
+- **Changes:** Downloaded and examined synthetic CI screenshots from public [artifact #13329412765](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41842016635/artifacts/13329412765). Chromium/WebKit 1440×900 dark/light desktop welcome card was a narrow ~437px vertical panel whose lower action/footnote area lay behind the fixed 93px player; 320px preview was visually unobstructed. Added CSS-only desktop/tablet first-screen layout with width min(100%,950px), compact welcome hierarchy and left alignment; no functional player or mobile geometry changes. Augmented synthetic browser test from 12 to **16 cases** (adds 820px dark/light in Chromium/WebKit) and introduced strict hero-width and `heroBottom <= dockTop - 12px` assertions for desktop/tablet.
+- **Tests:** Prior docs-head [PR CI #41842025611](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41842025611) and privacy #41842025581 SUCCESS, while strict [Preview #41842016635](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41842016635) FAILED original Migu real playback. New exact Stage 2 branch HEAD CI **PENDING / NOT CLAIMED PASS**.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/124 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41842016635/artifacts/13329412765 .
+- **Not done:** New screenshot/geometry review, strict MG green, physical phone/screen-reader/FPS/CPU or production merge/deploy.
+- **Status:** Candidate design fix, official v0.4.35 unchanged and PR #124 DRAFT.
+- **Next action:** Verify exact-head 16-case assertions and screenshot visibility, then revisit strict live music gate separately; maintain release hold.
+
 ## 2026-11-04 · Atmosphere visual RC reached full UI/browser pass; native Migu live gate blocked two attempts
 
 - **Goal:** Test refined UI2 look across dark/light and 320px without losing music reliability or hiding actual upstream errors; checkpoint accurate evidence for future sessions.

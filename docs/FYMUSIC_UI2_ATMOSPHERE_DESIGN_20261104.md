@@ -20,6 +20,12 @@ Upgrade the existing v0.4.35 music website without changing playback, lyrics, ca
 - `.github/workflows/fymusic-ui2-atmosphere-rc.yml`: nonproduction Cloudflare Preview and existing strict unmocked real Kagou-to-Kuwo and original Migu audio/timed lyrics tests. Includes short-lived public-safe screenshot artifact.
 - Both handoff documents: new operation checkpoint with accurate pending/verified release state.
 
+## Stage 2: human screenshot audit and desktop viewport correction
+
+Actual inspection of the synthetic Chromium/WebKit screenshot artifact [#13329412765](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41842016635/artifacts/13329412765) revealed that the desktop 1440×900 discovery welcome card was too narrow (~437px), resulting in the lower suggestions/footnote being covered by the floating music dock. This had **not** been covered by the initial 12-case automation, which checked only 320px card/dock clearance.
+
+This candidate adds explicit responsive desktop/tablet hero width (up to 950px), compact 246px welcome treatment, left editorial alignment with record groove ornament on the right, without changing mobile dock or player geometry. The browser gate now tests desktop 1440×900 and tablet 820×900 plus mobile 390/320 in Chromium/WebKit with both themes: **16 cases**, including strict card width and above-dock geometry. New HEAD still requires observed verification; screenshots are local-fixture browser samples, not physical-device testing.
+
 ## Latest exact-code acceptance status
 
 Final tested visual code HEAD `7df4d72c4eb29d42ed1d0ce632970e299817cffc`: **all 12/12** new synthetic browser design cases, existing Chromium/WebKit light/dark/mobile reachability/keyboard/a11y, one-audio/404/asset restrictions and independent PR browser/security passed. Strict original KG `稻香` real Kuwo recovery also played. Nonproduction immutable Preview: https://945132e1.only-testing-online-music.pages.dev/ ; light `?theme=light`. Synthetic screenshots are attached to GitHub Actions [artifact 13328403131](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41840351705/artifacts/13328403131) and are NOT physical-device results.

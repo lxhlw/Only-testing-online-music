@@ -11,7 +11,7 @@ const rows=[];
 for(const [engine,adapter] of Object.entries({chromium,webkit})){
  const browser=await adapter.launch({headless:true});
  try{
-  for(const viewport of [{width:1440,height:900},{width:390,height:844},{width:320,height:640}]){
+  for(const viewport of [{width:1440,height:900},{width:820,height:900},{width:390,height:844},{width:320,height:640}]){
    for(const light of [false,true]){
     const page=await browser.newPage({viewport,hasTouch:viewport.width<=740});
     const errors=[];
@@ -48,6 +48,7 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
        recordContent:discCSS.content,playerBackground:getComputedStyle(dock).backgroundImage,
        audioNodes:document.querySelectorAll('audio').length,
        scrollWidth:root.scrollWidth,screenWidth:innerWidth,scrollY:scrollY,
+       cardWidth:hero.getBoundingClientRect().width,
        cardBottom:hero.getBoundingClientRect().bottom,dockTop:dock.getBoundingClientRect().top
       };
      });
@@ -66,6 +67,13 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
      assert.ok(audit.playerBackground.includes('gradient'),'Dock has no atmospheric surface');
      assert.equal(audit.audioNodes,1);
      assert.ok(audit.scrollWidth<=audit.screenWidth+2,'Horizontal overflow');
+     if(viewport.width>=741){
+      const minWidth=viewport.width>=1100?800:470;
+      assert.ok(audit.cardWidth>=minWidth,
+       'Discovery hero should use editorial content width: '+JSON.stringify(audit));
+      assert.ok(audit.cardBottom<=audit.dockTop-12,
+       'Desktop discovery content hidden behind fixed player: '+JSON.stringify(audit));
+     }
      if(viewport.width===1440){
       assert.notEqual(audit.recordDisplay,'none');
       assert.notEqual(audit.recordContent,'none');
@@ -77,7 +85,7 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
      assert.deepEqual(errors,[],'Uncaught JS errors: '+engine+'/'+viewport.width+'/'+light);
      const label=engine+'-'+viewport.width+(light?'-light':'-dark');
      await page.screenshot({path:path.join(out,label+'.png'),animations:'disabled'});
-     rows.push({engine,width:viewport.width,theme:light?'light':'dark',oneAudio:true,noOverflow:true});
+     rows.push({engine,width:viewport.width,theme:light?'light':'dark',oneAudio:true,noOverflow:true,desktopDockClear:viewport.width>=741?true:null});
     }finally{await page.close()}
    }
   }

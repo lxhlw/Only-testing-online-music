@@ -1529,3 +1529,64 @@ html.modern-web.fy-ui2.fy-ui2-light .global-search{
   }
   html.modern-web.fy-ui2 .search-inspiration::after{display:none!important}
 }
+
+/* FYMUSIC ATMOSPHERE / STAGE 2 — desktop discovery first-screen composition.
+   1440x900 screenshots exposed a 437px shrink-to-fit hero whose final
+   actions/footnote were obscured by the fixed 93px player. Set an explicit
+   grid-item width, reduce excess vertical chrome, and preserve all hit targets.
+   Desktop/tablet only; existing mobile 320px geometry remains untouched. */
+@media(min-width:741px){
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration{
+    box-sizing:border-box;
+    width:min(100%,950px);
+    max-width:950px;
+    min-height:246px;
+    margin:10px auto 0;
+    padding:22px clamp(24px,3.1vw,38px);
+    align-items:flex-start;
+    justify-content:center;
+    text-align:left;
+    border-radius:25px;
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration-icon{
+    width:50px;
+    height:50px;
+    margin:0 0 7px;
+    border-radius:15px;
+    font-size:26px;
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration h2{
+    margin:0 0 4px;
+    font-size:clamp(28px,2.6vw,34px);
+    line-height:1.12;
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration p{
+    margin:0 0 10px;
+    max-width:520px;
+    line-height:1.45;
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-suggestions{
+    justify-content:flex-start;
+    gap:7px;
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-suggestions button{
+    min-height:38px;
+    padding:7px 14px;
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration-foot{
+    margin-top:11px;
+    line-height:1.4;
+  }
+}
+@media(min-width:741px) and (max-width:980px){
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration{
+    min-height:238px;
+    padding:17px 22px;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration{
+    transition:none!important;
+    animation:none!important;
+  }
+}
