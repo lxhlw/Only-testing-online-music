@@ -6,6 +6,17 @@ const version=JSON.parse(readFileSync('version.json','utf8')).version;
 const marker='/* FYMUSIC ATMOSPHERE DESIGN / v'+version+' CANDIDATE';
 const professionalMarker='/* FYMUSIC / STAGE 4 — REAL WEB PRODUCT DESIGN REPAIR';
 const screenshotFix='/* FYMUSIC / STAGE 4.1 — CROSS-VIEW SCREENSHOT DEFECT FIX';
+const playerComposition='/* FYMUSIC / STAGE 4.2 — PLAYER COMPOSITION & SEARCH FOCUS';
+assert.ok(css.includes(playerComposition),'Missing actual focused-search and music player implementation');
+const playerLayer=css.slice(css.indexOf(playerComposition));
+for(const part of [
+ '#global-search-input:focus-visible','.global-search:focus-within',
+ '#global-search-btn','.player-center','.player-volume-btn',
+ '#player-lyric','.player-extras','fy-ui2-light',
+ 'prefers-reduced-motion:reduce','forced-colors:active'
+])assert.ok(playerLayer.includes(part),'Stage 4.2 source style contract missing: '+part);
+assert.ok(!/backdrop-filter\s*:|animation-iteration-count\s*:\s*infinite|\@import\b/i.test(playerLayer),
+ 'Performance budget prohibits blur, indefinite loops and remote fonts');
 assert.ok(css.includes(screenshotFix),'Actual browser screenshot corrections missing');
 const screenshotLayer=css.slice(css.indexOf(screenshotFix));
 for(const item of [

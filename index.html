@@ -443,6 +443,7 @@
           </button>
           
         </div>
+        <button id="player-lyric" type="button" class="player-lyric" aria-label="打开完整歌词" title="打开正在播放查看完整歌词">歌词：—</button>
         <div class="player-timeline" aria-label="播放进度调整">
           <span id="player-current-time" class="player-time" aria-live="off">00:00</span>
           <div class="player-seek-wrap">
@@ -458,7 +459,6 @@
           <button id="player-volume-btn" type="button" class="player-icon-btn player-volume-btn" aria-label="静音" title="静音">♫</button>
           <input id="player-volume" type="range" min="0" max="100" step="1" value="80" aria-label="音量">
         </div>
-        <span id="player-lyric" class="player-lyric" aria-live="off">歌词：—</span>
       </div>
       <div class="player-status">
         <span id="bottom-play-status">就绪</span>
@@ -1358,6 +1358,11 @@
         global.OnlyTestingMusicApp.replayCurrentWithSettings();
       else setStatus('当前歌曲尚未准备好重播。','warn');
     };
+    // Keep the full lyrics one action away from the expanded dock preview.
+    el('player-lyric').onclick=function(){
+      var cover=el('player-cover-button');
+      if(cover)cover.click();
+    };
     el('global-search-btn').onclick=doGlobalSearch;
     el('global-search-input').onkeydown=function(e){e=e||global.event;if(e&&e.keyCode===13)doGlobalSearch();};
     var cats=all('.category-pill');
@@ -1429,7 +1434,12 @@
     var audio=el('audio');
     if(audio)audio.ontimeupdate=function(){
       var active= document.querySelector('.lyrics-line.active');
-      el('player-lyric').innerHTML=active?'歌词：'+active.innerHTML:'歌词：—';
+      var preview=el('player-lyric');
+      if(preview){
+        var line=active?(active.textContent||'').trim():'';
+        preview.textContent=line?'歌词：'+line:'歌词：—';
+        preview.title=line||'打开正在播放查看完整歌词';
+      }
     };
     // Status, lyrics and playback UI now update via events / observers in modern-ui.js.
     function stripHtml(v){var d=document.createElement('div');d.innerHTML=v;return d.textContent||d.innerText||'';}

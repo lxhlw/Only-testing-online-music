@@ -92,6 +92,60 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
      assert.deepEqual(errors,[],'Uncaught JS errors: '+engine+'/'+viewport.width+'/'+light);
      const label=engine+'-'+viewport.width+(light?'-light':'-dark');
      await page.screenshot({path:path.join(out,label+'.png'),animations:'disabled'});
+     // Stage 4.2: test actual focused input and mute/lyric dock together.
+     // Earlier screenshot checks missed the dark inner focus ring and the
+     // right-player focus outline being clipped by overflow:hidden.
+     if(viewport.width===1440){
+      await page.locator('#global-search-input').focus();
+      const focus=await page.evaluate(()=>{
+       const field=document.querySelector('#global-search-input');
+       const button=document.querySelector('#global-search-btn');
+       const search=document.querySelector('.global-search');
+       const f=field.getBoundingClientRect(),b=button.getBoundingClientRect();
+       const fs=getComputedStyle(field),os=getComputedStyle(search);
+       return {gap:b.left-f.right,outline:fs.outlineStyle,shadow:fs.boxShadow,
+        parentFocus:os.borderColor};
+      });
+      assert.ok(focus.gap>=8,'Focused input touches Search button: '+JSON.stringify(focus));
+      assert.equal(focus.outline,'none','Focused input has an inner conflicting outline');
+      assert.equal(focus.shadow,'none','Focused input has a second focus shadow');
+      await page.locator('#player-lyric').evaluate(el=>{
+       el.textContent='歌词：也许时间是一种解药，也是我现在正服下的毒药';
+      });
+      const layout=await page.evaluate(()=>{
+       const bounds=sel=>document.querySelector(sel).getBoundingClientRect();
+       const extras=document.querySelector('.player-extras');
+       const volume=bounds('#player-volume-btn'),container=bounds('.player-extras');
+       const lyric=bounds('#player-lyric'),center=bounds('.player-center');
+       const cs=getComputedStyle(extras);
+       return {volumeLeft:volume.left,volumeRight:volume.right,
+        containerLeft:container.left,containerRight:container.right,
+        extrasOverflow:cs.overflow,lyricWidth:lyric.width,
+        lyricVisible:getComputedStyle(document.querySelector('#player-lyric')).display!=='none',
+        lyricWithinCenter:lyric.left>=center.left-2&&lyric.right<=center.right+2,
+        oneAudio:document.querySelectorAll('audio').length};
+      });
+      assert.equal(layout.oneAudio,1);
+      assert.equal(layout.extrasOverflow,'visible','Volume focus ring is clipped');
+      assert.ok(layout.volumeLeft>=layout.containerLeft+5 &&
+       layout.volumeRight<=layout.containerRight-5,
+       'Volume mute circle touches a clipping edge: '+JSON.stringify(layout));
+      assert.ok(layout.lyricVisible&&layout.lyricWidth>=180&&layout.lyricWithinCenter,
+       'Inline lyrics must have a real readable center column: '+JSON.stringify(layout));
+      await page.screenshot({path:path.join(out,label+'-search-focus-player.png'),animations:'disabled'});
+      await page.locator('#player-volume-btn').click();
+      const mute=await page.evaluate(()=>({
+       muted:document.querySelector('#audio').muted,
+       label:document.querySelector('#player-volume-btn').getAttribute('aria-label'),
+       svg:document.querySelectorAll('#player-volume-btn svg').length
+      }));
+      assert.deepEqual(mute,{muted:true,label:'取消静音',svg:1},
+       'Mute state, aria label and speaker SVG must stay synchronized');
+      await page.screenshot({path:path.join(out,label+'-muted-player.png'),animations:'disabled'});
+      await page.locator('#player-volume-btn').click();
+      assert.equal(await page.locator('#audio').evaluate(x=>x.muted),false,
+       'Unmuting must restore the audio');
+     }
      // Real web navigation acceptance. Previous audits only examined the
      // discovery page, missing chart and empty-library theme collisions.
      if(viewport.width===1440){

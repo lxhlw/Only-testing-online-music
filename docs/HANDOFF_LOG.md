@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Stage 4.2 real music UI: search focus, accessible speaker controls, lyric positioning and visual polish
+
+- **Goal:** Implement screenshot-reported visual faults and improve actual FyMusic website UX, not generate a design mockup.
+- **Changes:** Search focus now has one unified outer ring; native input focus outline removed without losing outer keyboard indicator, and Search button has a safe gap. Moved `#player-lyric` button to wide center transport grid on desktop, two-line preview with click opening existing album/lyrics overlay. Kept real mute button/volume control at far right with no clipped overflow, focus-safe padding and real speaker pictogram. Upgraded light/dark background depth, typography, card surface and playback dock with low-cost gradients. Added responsive hide of extra lyric at narrower widths and reduced-motion/forced-colors guards. Preserved single native audio, actual music provider API, replay/seek/queue/lyrics sync and classic fallback.
+- **Tests:** New Chromium/WebKit 1440 dark/light focus-input/search-gap, visible lyric column, volume focus ring, actual audio mute/unmute and SVG assertions + **8 synthetic interaction screenshots** added to original 16 homepage, 12 cross-view, 8 immersive. **New code SHA CI PENDING**. Before changes, docs-only `3f833cb7` Preview #41868997491 failed original KG fallback timed LRC requirement; original MG passed. Independent PR browser/security/playlist/privacy checks all passed at that docs HEAD. Earlier `45f96d93` full real KG/MG gate passed once, not source uptime guarantee.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/124 ; Stage 4.2 code commit & new exact runs to be verified. Architecture draws on mainstream music product hierarchy, not copied branding/assets. User screenshot files are not stored publicly.
+- **Not done:** New exact-CI result, visual screenshot inspection, real populated live album cover catalog audit, physical-device performance/screen-reader, production deploy, user design approval.
+- **Status:** Design candidate on draft PR, official main still v0.4.35.
+- **Next:** Validate exact-head UI and all strict real music/lyrics tests, fix detected issues, obtain owner visual signoff, then explicitly authorized final production release.
+
 ## 2026-11-05 · Stage 4.1 strict real-preview browser and music acceptance complete; exactly 1 step remaining
 
 - **Goal:** Close screenshot-proven UI contrast failures in the real editable website before asking for the final production release.
