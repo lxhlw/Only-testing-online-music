@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Stage 4.2B screenshot-found max-width regression and muted speaker contrast
+
+- **Goal:** Avoid falsely calling the real website visually finished merely because geometry tests are green.
+- **Changes:** Inspected 44 real browser PNGs from exact `81ddf8b7` strict [Preview #41872524101](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41872524101). Search focus/button separation and unclipped mute ring fixed; **found inherited `max-width:190px` still limits center lyric preview and light-mode mute speaker icon is too pale**. CSS Stage 4.2B releases center lyric to full available grid width at >=1280px and increases light/dark mute control color contrast; no player/source/lyric data-flow changes. New Playwright asserts desktop lyric width >=330px and muted SVG contrast by computed color (both themes); static style contract updated.
+- **Tests:** Stage 4.2 `81ddf8b7` strict Preview #41872524101 SUCCESS, independent browser #41872534147 SUCCESS, Playlist #41872533921 SUCCESS, privacy #41872533868/#41872524118 SUCCESS. New Stage 4.2B exact-head strict Preview/browser/privacy **PENDING** and must confirm 16+12+8+8 screenshot cases, real KG→KW and native MG unmocked music/cover/timed lyrics.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41872524101/artifacts/13345756251 ; https://github.com/lxhlw/Only-testing-online-music/pull/124 . No private screenshots attached to public repo.
+- **Not done:** New exact corrected preview visual check, visual owner approval, actual mobile hardware/frame-rate/energy/screen reader, release to live main v0.4.36.
+- **Status:** Code/test correction staged on draft PR; production still v0.4.35.
+- **Next:** Verify new screenshots + strict source tests and close owner review; explicit-authorized final release later.
+
 ## 2026-11-05 · Stage 4.2 real music UI: search focus, accessible speaker controls, lyric positioning and visual polish
 
 - **Goal:** Implement screenshot-reported visual faults and improve actual FyMusic website UX, not generate a design mockup.

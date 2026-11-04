@@ -2633,3 +2633,40 @@ html.modern-web.fy-ui2.fy-ui2-light .player-volume-btn:focus-visible{
   outline:2px solid Highlight!important;
  }
 }
+
+/* FYMUSIC / STAGE 4.2B — ACTUAL SCREENSHOT REVIEW CORRECTIONS
+   The inherited .player-lyric max-width:190px still constrained the new
+   center column; the light mute SVG inherited an overly pale focus color. */
+@media(min-width:1280px){
+ html.modern-web.fy-ui2 #player-lyric{
+  max-width:100%!important;
+  width:100%!important;
+  min-width:0;
+  padding:6px 14px;
+  font-size:12px;line-height:1.4;
+  border-radius:12px;
+ }
+}
+html.modern-web.fy-ui2 #player-volume-btn{
+ color:#c8f4db!important;
+ background-color:rgba(111,210,159,.08)!important;
+}
+html.modern-web.fy-ui2 #player-volume-btn:hover,
+html.modern-web.fy-ui2 #player-volume-btn:focus-visible{
+ color:#f1fff7!important;
+ background-color:rgba(131,231,182,.15)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #player-volume-btn{
+ color:#24694b!important;
+ background-color:rgba(54,143,94,.08)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #player-volume-btn:hover,
+html.modern-web.fy-ui2.fy-ui2-light #player-volume-btn:focus-visible{
+ color:#165b3e!important;
+ background-color:rgba(44,152,95,.15)!important;
+}
+@media(forced-colors:active){
+ html.modern-web.fy-ui2 #player-volume-btn{
+  color:ButtonText!important;background:ButtonFace!important;
+ }
+}

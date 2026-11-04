@@ -7,6 +7,11 @@ const marker='/* FYMUSIC ATMOSPHERE DESIGN / v'+version+' CANDIDATE';
 const professionalMarker='/* FYMUSIC / STAGE 4 — REAL WEB PRODUCT DESIGN REPAIR';
 const screenshotFix='/* FYMUSIC / STAGE 4.1 — CROSS-VIEW SCREENSHOT DEFECT FIX';
 const playerComposition='/* FYMUSIC / STAGE 4.2 — PLAYER COMPOSITION & SEARCH FOCUS';
+const visualCorrection='/* FYMUSIC / STAGE 4.2B — ACTUAL SCREENSHOT REVIEW CORRECTIONS';
+assert.ok(css.includes(visualCorrection),'Missing screenshot-corrected lyric width and mute contrast');
+const correction=css.slice(css.indexOf(visualCorrection));
+for(const term of ['max-width:100%!important','#player-volume-btn','fy-ui2-light','forced-colors:active'])
+ assert.ok(correction.includes(term),'Missing Stage 4.2B contrast/width rule: '+term);
 assert.ok(css.includes(playerComposition),'Missing actual focused-search and music player implementation');
 const playerLayer=css.slice(css.indexOf(playerComposition));
 for(const part of [

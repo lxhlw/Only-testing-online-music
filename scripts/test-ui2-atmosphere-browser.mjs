@@ -130,8 +130,8 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
       assert.ok(layout.volumeLeft>=layout.containerLeft+5 &&
        layout.volumeRight<=layout.containerRight-5,
        'Volume mute circle touches a clipping edge: '+JSON.stringify(layout));
-      assert.ok(layout.lyricVisible&&layout.lyricWidth>=180&&layout.lyricWithinCenter,
-       'Inline lyrics must have a real readable center column: '+JSON.stringify(layout));
+      assert.ok(layout.lyricVisible&&layout.lyricWidth>=330&&layout.lyricWithinCenter,
+       'Inline lyrics must use the available center column, not the old 190px max-width: '+JSON.stringify(layout));
       await page.screenshot({path:path.join(out,label+'-search-focus-player.png'),animations:'disabled'});
       await page.locator('#player-volume-btn').click();
       const mute=await page.evaluate(()=>({
@@ -141,6 +141,12 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
       }));
       assert.deepEqual(mute,{muted:true,label:'取消静音',svg:1},
        'Mute state, aria label and speaker SVG must stay synchronized');
+      const muteColor=await page.locator('#player-volume-btn').evaluate(node=>{
+       const c=getComputedStyle(node).color.match(/\d+/g)?.slice(0,3).map(Number)||[];
+       return {color:getComputedStyle(node).color,total:c.reduce((a,b)=>a+b,0)};
+      });
+      assert.ok(light?muteColor.total<410:muteColor.total>500,
+       'Muted speaker icon has insufficient theme contrast: '+JSON.stringify(muteColor));
       await page.screenshot({path:path.join(out,label+'-muted-player.png'),animations:'disabled'});
       await page.locator('#player-volume-btn').click();
       assert.equal(await page.locator('#audio').evaluate(x=>x.muted),false,
