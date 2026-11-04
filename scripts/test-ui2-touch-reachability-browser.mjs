@@ -54,6 +54,22 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
       assert.ok(dock&&dock.x>=0&&dock.x+dock.width<=width+2&&
         dock.y>=0&&dock.y+dock.height<=640,
         engine+'/'+width+'/'+theme+' dock outside viewport '+JSON.stringify(dock));
+      // Stronger than scroll reachability: at 320x640, the entire initial
+      // welcome card must be visible above the fixed mini dock without scroll.
+      if(width===320){
+       const initial=await page.evaluate(()=>{
+        const hero=document.querySelector('.search-inspiration');
+        const dock=document.querySelector('.player-bar');
+        const h=hero?.getBoundingClientRect(),d=dock?.getBoundingClientRect();
+        return {scrollY:window.scrollY,cardBottom:h?.bottom??null,
+         dockTop:d?.top??null,viewportHeight:innerHeight};
+       });
+       assert.equal(initial.scrollY,0,engine+'/'+theme+' unexpected initial scroll');
+       assert.ok(Number.isFinite(initial.cardBottom)&&
+        Number.isFinite(initial.dockTop)&&initial.cardBottom<=initial.dockTop-8,
+        engine+'/'+theme+' initial welcome card obscured by fixed player '+
+         JSON.stringify(initial));
+      }
       await touchTarget('#player-cover-button',32);
       await touchTarget('#player-toggle-btn',40);
       await touchTarget('.search-suggestions button:last-child',28);
