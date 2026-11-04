@@ -1,4 +1,12 @@
-# FyMusic v0.4.34 — Human Release Acceptance Checklist (Public-Safe)
+# FyMusic — Release Acceptance History (Public-Safe)
+
+## Current v0.4.35 acceptance — 2026-11-04T20:32:15+08:00
+
+- **OFFICIAL v0.4.35 DEPLOYED and green on main merge `c879eb6f`.** Exact main [#41827353768](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41827353768) attempt 3 SUCCESS, after attempt 1 cancelled and attempt 2 mandatory native Migu audio progress failed. Run 3 strict Migu `开始懂了` same-platform audio+cover+55 timed lyrics/pause/resume, deployed browser UI/security and 404/version checks passed. Official homepage defaults to UI2; `?ui2=0` restores classic appearance.
+- **Consent:** The authorized release explicitly accepted the absence of real phone 320px touch, actual screen reader and measured device FPS/CPU/memory/battery as **unverified risks**, not passed test cases. Main v0.4.34 code baseline `781c133e`; do not force push. No rollback conducted. Keep monitoring intermittently unavailable music sources.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/123 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41827353768 ; https://only-testing-online-music.pages.dev/ .
+
+## Historical v0.4.34 checklist (archived context, not current release)
 
 **Status (2026-11-04T15:20:45+08:00):** v0.4.34 DEPLOYED, **STRICT REAL Migu production acceptance PASSED on original main runtime SHA** `98b1dfd386d2509f0821ec634ed610c02866f144` in [Actions #41786525697](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41786525697) run attempt 2. Earlier failures preserved; upstream intermittence remains. **UI2 still opt-in `?ui2=1`, NOT homepage-default.** Visual/basic-experience accepted, but physical phone touch, real-screen-reader and physical FPS/CPU/memory remain NOT VERIFIED. No rollback performed.
 
