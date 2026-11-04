@@ -58,6 +58,21 @@ assert.equal(/width:\s*100vw|overflow:\s*hidden\s*!important/i.test(addition),fa
 assert.match(addition,/\.fy-ui2-light[\s\S]+\.search-inspiration/);
 assert.ok(css.indexOf(marker)>css.indexOf('Stage 6 narrow phone review'),
   'Design layer must follow the existing 320px reachability fix');
+
+const breathingMarker='/* FYMUSIC / STAGE 5.1 — BREATHING LANDSCAPE & MUSIC SCENE';
+assert.ok(css.includes(breathingMarker),'Stage 5.1 scenery layer missing');
+const breathing=css.slice(css.indexOf(breathingMarker));
+for(const part of ['.nav-rail::after','.nav-rail::before','.view-header::after','#view-ranking #ranking-title',
+ '.library-list,#playlist-favorite-list','data:image/svg+xml','fy-ui2-light',
+ 'fy-scene-breathe','fy-scene-mist','prefers-reduced-motion:reduce','forced-colors:active'])
+ assert.ok(breathing.includes(part),'Stage 5.1 scenic contract missing '+part);
+assert.equal(/@import\b|backdrop-filter\s*:|url\(\s*['"]?https?:/i.test(breathing),false,
+ 'Stage 5.1 must not add network artwork, CSS imports or backdrop filters');
+assert.equal(/width:\s*100vw|overflow:\s*hidden\s*!important/i.test(breathing),false,
+ 'Stage 5.1 cannot clip or force viewport overflow');
+assert.equal((breathing.match(/animation:fy-scene-/g)||[]).length,2,
+ 'Only two compositor-friendly background breathing animations allowed');
+
 console.log('FYMUSIC_UI2_ATMOSPHERE_STYLE_PASS',{
   visualOnly:true,remoteAssets:false,continuousAnimation:false,
   themePair:true,reducedMotion:true,forcedColors:true

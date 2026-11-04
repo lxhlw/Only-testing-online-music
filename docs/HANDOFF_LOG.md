@@ -5,6 +5,17 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Stage 5.1 native SVG scenic atmosphere & gentle breathing candidate
+
+- **Goal:** Enrich blank top-right and sidebar corners, chart hero and empty-library UI with restrained music atmosphere without hurting performance, accessibility, playback or mobile reachability.
+- **Changes:** Scoped SVG data-URI landscapes/forest/vinyl artwork appended to `src/ui2-preview.css`; quiet opacity/transform header and mist breathing only on >=1101px desktop, static ranking panorama on >=741px and empty-library artwork with narrow-screen layout; distinct light/dark and reduced-motion/forced-colors paths. Strengthened existing style and 1440 Chromium/WebKit cross-view browser tests. No new fetched assets, player logic, HTML DOM, music resolver, lyric provider or audio elements; no published version bump.
+- **Tests:** Code and public-safe handoff prepared for new SHA. Static source invariants checked in creation operation. GitHub exact-head privacy/style/browser/isolated Preview strict real KG→KW and native MG media+55 timed lyrics are **PENDING** and cannot be marked passed. Previous v0.4.36 #41874004682 success is old code only; earlier last branch head `0d4e0b20` privacy green, other CI were still unsettled at initial inspection.
+- **Evidence:** [Draft PR #124](https://github.com/lxhlw/Only-testing-online-music/pull/124); [prior exact-code green Preview](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41874004682) (historical only). This operation's GitHub commit/CI will be verified after write.
+- **Not done:** Real Web Audio spectrum and immersive cover pulse; new screenshot review; actual phone accessibility/performance tests; production merge/release or rollback rehearsal. Upstream provider intermittent failures remain unresolved.
+- **Status:** STAGE 5.1 CANDIDATE SOURCE IMPLEMENTED; CI PENDING; official main v0.4.35 untouched.
+- **Next action:** Verify strict Preview/PR CI, examine screenshot artifacts, then implement Stage 5.2 real audio analyzer with safe fallback; obtain explicit production authorization only after final acceptance.
+
+
 ## 2026-11-05 · Stage 4.2B release-preflight review, explicit owner gate retained
 
 - **Goal:** Reconcile latest public handoff, official main/production and candidate v0.4.36 PR checks without accidentally merging a draft preview.

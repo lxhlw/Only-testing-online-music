@@ -195,6 +195,29 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
           'Wrong-theme playlist filter '+name+': '+value);
         }
        }
+       // Stage 5.1: actual computed decorative surfaces. They must not
+       // replace audio or interactive content or overflow the viewport.
+       const scenery=await page.evaluate(v=>{
+        const header=document.querySelector('#view-'+v+'>.view-header');
+        const scene=getComputedStyle(header,'::after');
+        const nav=getComputedStyle(document.querySelector('.nav-rail'),'::after');
+        const chart=getComputedStyle(document.querySelector('#ranking-title'));
+        const empty=document.querySelector('#history-list');
+        const previous=empty.innerHTML;
+        empty.replaceChildren();
+        const vinyl=getComputedStyle(empty,'::after').backgroundImage;
+        empty.innerHTML=previous;
+        return {header:scene.backgroundImage,forest:nav.backgroundImage,
+         ranking:chart.backgroundImage,vinyl};
+       },view);
+       assert.ok(scenery.header.includes('data:image/svg+xml'),
+        'Header mountain scene missing '+view);
+       assert.ok(scenery.forest.includes('data:image/svg+xml'),
+        'Sidebar forest scene missing '+view);
+       if(view==='ranking')assert.ok(scenery.ranking.includes('data:image/svg+xml'),
+        'Chart hero landscape missing');
+       if(view==='mylist')assert.ok(scenery.vinyl.includes('data:image/svg+xml'),
+        'Empty-library vinyl illustration missing');
        if(view==='ranking'){
         const rgb=state.rankingBackground.match(/\d+/g)?.slice(0,3).map(Number)||[];
         const sum=rgb.reduce((a,b)=>a+b,0);
