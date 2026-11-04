@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Stage 5.3 playlist mock media validity correction
+
+- **Goal:** Recover deterministic queue-end test after an invalid synthetic MP3 body could produce background playback errors during final status assertion.
+- **Changes:** Replace two empty-body MP3 responses in test-only `scripts/test-playlist-playall-browser.mjs` with valid RIFF/WAV and correct MIME; add inline generated wave bytes. Preserve every actual queue/automatic-paging/last-track assertion, native controls and production implementation. No test relaxation.
+- **Tests:** JavaScript async syntax compilation PASS, local fixture RIFF signature assertion inserted. Candidate playlist #41883747190 FAILED with audio-connect status (source-supported mock flaw, not yet confirmed); new exact-head CI PENDING. Preview #41883742980 had passed local Chromium/WebKit and deployed isolated candidate, but remote checks were not completed at last inspection. Privacy #41883746997/#41883743027 passed for prior source.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41883747190 ; https://github.com/lxhlw/Only-testing-online-music/pull/124 .
+- **Not done:** New playlist pass, strict live KG/MG on updated head, rendered screenshot manual review, production deployment, physical mobile/audio performance measurements.
+- **Status:** Scoped playlist test fixture corrected in draft branch; official v0.4.35 untouched.
+- **Next action:** Verify current PR head Actions and artifact, then final owner review and authorized deployment.
+
 ## 2026-11-05 · Stage 5.3 deterministic visualizer/browser acceptance checkpoint
 
 - **Goal:** Add deterministic real Canvas/FFT data-path and pause/motion/native-player regressions to the final UI2 validation, without weakening any real-provider gates.
