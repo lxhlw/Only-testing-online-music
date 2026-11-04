@@ -20,6 +20,8 @@ function wav(seconds=12,rate=8000){
 }
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a8X0AAAAASUVORK5CYII=','base64');
 const results=[];
+// Synthetic artwork/lyrics snapshots are CI fixtures, never real provider evidence.
+fs.mkdirSync('.artifacts/ui2-atmosphere/immersive',{recursive:true});
 for(const [engine,adapter] of Object.entries({chromium,webkit})){
  const browser=await adapter.launch({headless:true,...(engine==='chromium'?{args:['--autoplay-policy=no-user-gesture-required']}:{})});
  try{
@@ -43,6 +45,7 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
    await page.goto(base+'/?ui2=1',{waitUntil:'domcontentloaded',timeout:35000});
    await page.waitForFunction(()=>Boolean(window.OnlyTestingMusicApp?.playMusic)&&
      window.LXSourceManager?.getActive?.()?.inited&&window.FyMusicUI2Preview?.enabled,null,{timeout:22000});
+   await page.waitForFunction(()=>window.FyMusicUI2AudioVisualizer?.spectrumPresent()===true,null,{timeout:8000});
    const theme=await page.evaluate(()=>({
     root:document.documentElement.classList.contains('fy-ui2'),
     bg:getComputedStyle(document.querySelector('.lyrics-sheet.now-playing-screen')).backgroundColor,
@@ -53,6 +56,14 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
    }));
    assert.equal(theme.root,true);
    assert.equal(theme.audioNodes,1,'Only the original audio element may exist');
+
+   const vizBefore=await page.evaluate(()=>({
+    mode:window.FyMusicUI2AudioVisualizer?.mode(),
+    count:document.querySelectorAll('#ui2-audio-spectrum canvas').length
+   }));
+   assert.equal(vizBefore.count,1,'Exactly one visualizer canvas');
+   assert.equal(vizBefore.mode,'idle','Visualizer should be idle before playback');
+
    assert.equal(theme.overflow,false,'UI2 must not create horizontal overflow');
    if(desktop){
      assert.equal(theme.dockPos,'fixed');
@@ -72,6 +83,19 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
    });
    await page.locator('#ui2-start').click();
    await page.waitForFunction(()=>document.getElementById('audio')?.currentTime>.35,null,{timeout:18000});
+
+   const afterPlay=await page.evaluate(()=>({
+    mode:window.FyMusicUI2AudioVisualizer?.mode(),
+    oneAudio:window.FyMusicUI2AudioVisualizer?.originalAudio(),
+    originalCurrentTime:document.getElementById('audio').currentTime,
+    visible:getComputedStyle(document.getElementById('ui2-audio-spectrum')).display!=='none'
+   }));
+   assert.equal(afterPlay.oneAudio,true,'Capture must not replace native audio');
+   assert.ok(afterPlay.originalCurrentTime>.35,'Real native audio playback must advance');
+   assert.equal(afterPlay.visible,desktop,'Spectrum remains hidden on narrow screens');
+   assert.ok(['ambient','live','idle'].includes(afterPlay.mode),
+     'Visualizer must label its state without claiming unsupported FFT');
+
    await page.locator('#player-cover-button').click();
    await page.locator('#lyrics-overlay').waitFor({state:'visible',timeout:5000});
    await page.waitForFunction(()=>document.querySelectorAll('#lyrics-lines .lyrics-line').length>=2&&
@@ -89,6 +113,34 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
     };
    });
    assert.deepEqual([state.open,state.lyricCount,state.artwork,state.play],[true,2,true,'暂停']);
+   // Capture both themes while the real single audio element is playing the
+   // local WAV fixture. Explicitly mark these as synthetic visual snapshots.
+   await page.locator('#ui2-start').evaluate(el=>el.remove());
+   const immersion=await page.evaluate(()=>{
+    const box=document.getElementById('lyrics-overlay');
+    const sleeve=document.querySelector('.now-playing-cover-box');
+    const detail=document.querySelector('.now-playing-detail-column');
+    return {
+     overlayWidth:box.clientWidth,
+     overlayScrollWidth:box.scrollWidth,
+     coverWidth:sleeve.getBoundingClientRect().width,
+     lyricsWidth:detail.getBoundingClientRect().width,
+     audioNodes:document.querySelectorAll('audio').length
+    };
+   });
+   assert.equal(immersion.audioNodes,1);
+   assert.ok(immersion.coverWidth>0&&immersion.lyricsWidth>0,'Immersive album and lyrics must be visible');
+   assert.ok(immersion.overlayScrollWidth<=immersion.overlayWidth+3,
+    'Immersive screen must not overflow horizontally: '+JSON.stringify(immersion));
+   const shot='.artifacts/ui2-atmosphere/immersive/'+engine+'-'+mode;
+   await page.screenshot({path:shot+'-dark.png',animations:'disabled'});
+   await page.evaluate(()=>document.getElementById('ui2-theme-toggle').click());
+   await page.waitForFunction(()=>document.documentElement.classList.contains('fy-ui2-light'));
+   assert.equal(await page.locator('#lyrics-overlay').isVisible(),true);
+   assert.equal(await page.locator('#audio').count(),1);
+   await page.screenshot({path:shot+'-light.png',animations:'disabled'});
+   await page.evaluate(()=>document.getElementById('ui2-theme-toggle').click());
+   await page.waitForFunction(()=>!document.documentElement.classList.contains('fy-ui2-light'));
    await page.locator('#detail-toggle-btn').click();
    await page.waitForFunction(()=>document.getElementById('audio')?.paused===true,null,{timeout:6000});
    assert.equal(await page.locator('#detail-toggle-btn').getAttribute('aria-label'),'播放');

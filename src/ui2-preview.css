@@ -1303,3 +1303,1541 @@ html.modern-web.fy-ui2.fy-ui2-light :is(button,input,select,textarea,a):focus-vi
     font-size:10px;line-height:1.3;margin-top:9px;
   }
 }
+
+/* FYMUSIC ATMOSPHERE DESIGN / v0.4.36 CANDIDATE
+   A visual-only editorial layer: no DOM changes, playback JS, fetched assets,
+   infinite animations, heavy backdrop blur or additional media instances. */
+html.modern-web.fy-ui2{
+  --fy-atmosphere-accent:#80f2bc;
+  --fy-atmosphere-edge:rgba(134,237,193,.24);
+  --fy-atmosphere-ease:cubic-bezier(.22,1,.36,1);
+}
+@media (min-width:741px){
+  html.modern-web.fy-ui2 .main-stage{
+    background:radial-gradient(ellipse 70% 48% at 93% 4%,rgba(52,140,116,.16),transparent 72%),
+               radial-gradient(ellipse 57% 36% at 12% 85%,rgba(32,85,108,.13),transparent 80%),#091218;
+  }
+  html.modern-web.fy-ui2 .topbar{
+    background:linear-gradient(90deg,#0c1a22,#10242a 62%,#0d1924);
+    border-bottom-color:rgba(151,238,205,.17);
+  }
+  html.modern-web.fy-ui2 .nav-rail{
+    background:linear-gradient(165deg,#12242b 0%,#0e1b27 64%,#101b28);
+    border-right:1px solid rgba(143,231,194,.16);
+  }
+  html.modern-web.fy-ui2 .nav-item{
+    border-radius:13px;
+  }
+  html.modern-web.fy-ui2 .nav-item.active{
+    background:linear-gradient(95deg,rgba(58,133,98,.31),rgba(31,82,84,.24));
+    box-shadow:inset 3px 0 #88f5c1,0 0 0 1px rgba(126,231,182,.12);
+  }
+  html.modern-web.fy-ui2 .view-header h1{
+    font-size:clamp(33px,3vw,46px);
+    letter-spacing:-.048em;
+    line-height:1.12;
+  }
+  html.modern-web.fy-ui2 .view-header .panel-kicker{
+    font-size:11px;
+    letter-spacing:.16em;
+    font-weight:760;
+  }
+  html.modern-web.fy-ui2 .global-search{
+    background:linear-gradient(120deg,#1b3138,#172832);
+    border-color:rgba(146,220,191,.28);
+    box-shadow:0 10px 30px rgba(0,0,0,.16),inset 0 1px rgba(255,255,255,.035);
+    transition:border-color .22s ease,box-shadow .22s ease;
+  }
+  html.modern-web.fy-ui2 .global-search:focus-within{
+    border-color:#83f1c0;
+    box-shadow:0 0 0 3px rgba(111,238,180,.14),0 12px 32px rgba(0,0,0,.18);
+  }
+  html.modern-web.fy-ui2 .search-inspiration{
+    position:relative;
+    isolation:isolate;
+    overflow:hidden;
+    background:radial-gradient(ellipse 65% 100% at 0% 8%,rgba(63,181,138,.32),transparent 71%),
+               radial-gradient(ellipse 52% 70% at 100% 100%,rgba(55,105,150,.2),transparent 78%),
+               linear-gradient(118deg,#123035 0%,#14252f 63%,#1b2134 100%);
+    border-color:rgba(125,227,188,.37);
+    box-shadow:0 23px 52px rgba(0,0,0,.23),inset 0 1px rgba(220,255,237,.06);
+  }
+  html.modern-web.fy-ui2 .search-inspiration::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    z-index:0;
+    background:linear-gradient(115deg,rgba(225,255,237,.055),transparent 36%,transparent 72%,rgba(129,197,226,.04));
+  }
+  html.modern-web.fy-ui2 .search-inspiration>*{
+    position:relative;
+    z-index:1;
+  }
+  html.modern-web.fy-ui2 .search-inspiration h2{
+    font-size:clamp(28px,2.7vw,37px);
+    letter-spacing:-.04em;
+    line-height:1.13;
+    font-weight:790;
+  }
+  html.modern-web.fy-ui2 .search-inspiration-icon{
+    background:linear-gradient(145deg,rgba(94,205,155,.46),rgba(27,79,81,.78));
+    border-color:rgba(154,246,202,.56);
+    box-shadow:inset 0 1px rgba(255,255,255,.1),0 12px 23px rgba(0,0,0,.17);
+  }
+  html.modern-web.fy-ui2 .search-suggestions button{
+    border-radius:999px;
+    min-height:40px;
+    background:rgba(36,81,69,.79);
+    border-color:rgba(127,237,188,.42);
+    transition:background-color .18s,border-color .18s,transform .22s var(--fy-atmosphere-ease);
+  }
+  html.modern-web.fy-ui2 .playlist-card{
+    background:linear-gradient(145deg,#1c343c,#172b35 72%);
+    border-color:rgba(149,217,186,.22);
+    box-shadow:0 12px 28px rgba(0,0,0,.14),inset 0 1px rgba(255,255,255,.027);
+  }
+  html.modern-web.fy-ui2 .playlist-card:hover{
+    background:linear-gradient(145deg,#22413f,#1b343b 72%);
+    box-shadow:0 19px 35px rgba(0,0,0,.21);
+    border-color:rgba(126,237,183,.58);
+  }
+  html.modern-web.fy-ui2 .playlist-cover{
+    background:linear-gradient(145deg,#2c6758,#173d4a);
+    box-shadow:0 9px 23px rgba(0,0,0,.17);
+  }
+  html.modern-web.fy-ui2 .player-bar{
+    background:linear-gradient(125deg,rgba(30,54,59,.985),rgba(22,40,50,.985) 72%);
+    border-color:rgba(140,237,195,.32);
+    box-shadow:0 23px 50px rgba(0,0,0,.33),inset 0 1px rgba(210,255,233,.09);
+  }
+  html.modern-web.fy-ui2.is-playing .player-bar{
+    border-color:rgba(144,248,193,.65);
+  }
+  html.modern-web.fy-ui2 .player-main-toggle{
+    box-shadow:0 7px 21px rgba(93,226,165,.25);
+  }
+  html.modern-web.fy-ui2 .now-playing-cover-box{
+    box-shadow:0 31px 70px rgba(0,0,0,.43),0 0 0 1px rgba(189,247,215,.17);
+  }
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-line.active{
+    background:linear-gradient(90deg,rgba(92,202,151,.22),rgba(92,202,151,.04) 70%,transparent);
+  }
+}
+@media (min-width:1101px){
+  /* Static record-groove illustration adds music identity without image fetches. */
+  html.modern-web.fy-ui2 .search-inspiration::after{
+    content:"";
+    position:absolute;
+    z-index:0;
+    pointer-events:none;
+    width:240px;
+    aspect-ratio:1;
+    right:-56px;
+    top:35px;
+    border-radius:50%;
+    background:radial-gradient(circle at center,#a2edcb 0 4%,#17363e 4.5% 11%,#74cba9 11.5% 12.5%,#122c35 13% 18%,transparent 19%),
+               repeating-radial-gradient(circle at center,rgba(178,248,217,.13) 0 1px,transparent 2px 8px),
+               linear-gradient(140deg,#315c59,#0b1b2a);
+    border:1px solid rgba(140,224,188,.18);
+    opacity:.54;
+    box-shadow:0 18px 39px rgba(0,0,0,.17);
+  }
+}
+@media (max-width:740px){
+  /* Mobile keeps existing 320px geometry and dock clearance unchanged. */
+  html.modern-web.fy-ui2.mobile-shell-ready .search-inspiration{
+    background:radial-gradient(ellipse 95% 68% at 8% 0%,rgba(65,168,131,.31),transparent 74%),
+               linear-gradient(130deg,#17323a,#162838 66%,#202b40)!important;
+    border-color:rgba(123,229,188,.44)!important;
+    box-shadow:0 13px 29px rgba(0,0,0,.18)!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .player-bar{
+    background:linear-gradient(120deg,rgba(33,62,63,.99),rgba(26,46,59,.99))!important;
+    border-color:rgba(138,231,190,.56)!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .playlist-card{
+    border-color:rgba(140,218,188,.3)!important;
+  }
+}
+html.modern-web.fy-ui2.fy-ui2-light{
+  --fy-atmosphere-accent:#19794e;
+  --fy-atmosphere-edge:rgba(49,126,89,.26);
+}
+html.modern-web.fy-ui2.fy-ui2-light .search-inspiration{
+  background:radial-gradient(ellipse 72% 95% at 4% 9%,rgba(132,211,165,.4),transparent 77%),
+             radial-gradient(ellipse 54% 80% at 96% 96%,rgba(156,195,216,.17),transparent 82%),
+             linear-gradient(120deg,#f0faf3,#e9f5f1 64%,#f5f8ef)!important;
+  border-color:#afd4be!important;
+  box-shadow:0 16px 35px rgba(38,106,68,.09),inset 0 1px #fff!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .search-inspiration::before{
+  background:linear-gradient(118deg,rgba(255,255,255,.23),transparent 55%);
+}
+html.modern-web.fy-ui2.fy-ui2-light .search-inspiration::after{
+  opacity:.17;
+  border-color:rgba(35,126,83,.24);
+}
+html.modern-web.fy-ui2.fy-ui2-light .playlist-card{
+  background:linear-gradient(135deg,#fff,#f5fbf7 94%)!important;
+  box-shadow:0 11px 26px rgba(52,112,74,.07)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .player-bar{
+  /* Opaque base for the existing light-mode contrast/accessibility contract. */
+  background-color:#fdfffb!important;
+  background-image:linear-gradient(115deg,rgba(255,255,253,.99),rgba(244,252,247,.99))!important;
+  box-shadow:0 16px 37px rgba(40,102,65,.14),inset 0 1px #fff!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .global-search{
+  /* Keep a real opaque CSS background-color for contrast/a11y queries. */
+  background-color:#fff!important;
+  background-image:linear-gradient(120deg,#fff,#f8fcfa)!important;
+}
+@media (max-width:740px){
+  html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .search-inspiration{
+    background:radial-gradient(ellipse 85% 78% at 8% 8%,#d2ebdd,transparent 78%),
+               linear-gradient(135deg,#f2faf4,#eaf6f0 72%,#f6f8f0)!important;
+    border-color:#bedfcb!important;
+  }
+  html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .player-bar{
+    background-color:#fdfffb!important;
+    background-image:linear-gradient(115deg,rgba(255,255,252,.99),rgba(243,250,245,.99))!important;
+    border-color:#b4d6c2!important;
+  }
+}
+@media (hover:none), (pointer:coarse){
+  html.modern-web.fy-ui2 .playlist-card:hover,
+  html.modern-web.fy-ui2 .search-suggestions button:hover{
+    transform:none!important;
+  }
+}
+@media (prefers-reduced-motion:reduce){
+  html.modern-web.fy-ui2 .search-suggestions button,
+  html.modern-web.fy-ui2 .global-search,
+  html.modern-web.fy-ui2 .playlist-card{
+    transition:none!important;
+    animation:none!important;
+    transform:none!important;
+  }
+}
+@media (forced-colors:active){
+  html.modern-web.fy-ui2 .search-inspiration,
+  html.modern-web.fy-ui2 .playlist-card,
+  html.modern-web.fy-ui2 .player-bar{
+    border:1px solid CanvasText!important;
+    box-shadow:none!important;
+  }
+  html.modern-web.fy-ui2 .search-inspiration::after{display:none!important}
+}
+
+/* FYMUSIC ATMOSPHERE / STAGE 2 — desktop discovery first-screen composition.
+   1440x900 screenshots exposed a 437px shrink-to-fit hero whose final
+   actions/footnote were obscured by the fixed 93px player. Set an explicit
+   grid-item width, reduce excess vertical chrome, and preserve all hit targets.
+   Desktop/tablet only; existing mobile 320px geometry remains untouched. */
+@media(min-width:741px){
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration{
+    box-sizing:border-box;
+    width:min(100%,950px);
+    max-width:950px;
+    min-height:246px;
+    margin:10px auto 0;
+    padding:22px clamp(24px,3.1vw,38px);
+    align-items:flex-start;
+    justify-content:center;
+    text-align:left;
+    border-radius:25px;
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration-icon{
+    width:50px;
+    height:50px;
+    margin:0 0 7px;
+    border-radius:15px;
+    font-size:26px;
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration h2{
+    margin:0 0 4px;
+    font-size:clamp(28px,2.6vw,34px);
+    line-height:1.12;
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration p{
+    margin:0 0 10px;
+    max-width:520px;
+    line-height:1.45;
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-suggestions{
+    justify-content:flex-start;
+    gap:7px;
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-suggestions button{
+    min-height:38px;
+    padding:7px 14px;
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration-foot{
+    margin-top:11px;
+    line-height:1.4;
+  }
+}
+@media(min-width:741px) and (max-width:980px){
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration{
+    min-height:238px;
+    padding:17px 22px;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration{
+    transition:none!important;
+    animation:none!important;
+  }
+}
+
+/* FYMUSIC ATMOSPHERE / STAGE 3 — SPATIAL MUSIC POLISH
+   Quiet, layered interface depth. All existing semantic controls and layout
+   metrics remain intact: no audio/DOM changes, remote imagery, perpetual motion,
+   backdrop filters or scroll effects. */
+html.modern-web.fy-ui2{
+  --fy-spatial-edge:rgba(139,225,186,.23);
+  --fy-spatial-glint:rgba(203,255,232,.08);
+  --fy-spatial-shadow:0 15px 38px rgba(0,0,0,.18);
+  --fy-spatial-ease:cubic-bezier(.2,.8,.2,1);
+}
+@media(min-width:741px){
+  /* Navigation remains legible and crisp against the listening workspace. */
+  html.modern-web.fy-ui2 .brand{
+    font-weight:840;
+    letter-spacing:-.045em;
+  }
+  html.modern-web.fy-ui2 .nav-item.active{
+    border-color:rgba(121,237,185,.34);
+    background-color:#1c3d38;
+    background-image:linear-gradient(95deg,rgba(81,178,128,.24),rgba(25,82,89,.12));
+    box-shadow:inset 3px 0 #9af8cc,inset 0 1px rgba(255,255,255,.055);
+  }
+  html.modern-web.fy-ui2 .view-header h1{
+    letter-spacing:-.055em;
+    font-weight:850;
+    text-wrap:balance;
+  }
+  html.modern-web.fy-ui2 .view-header .panel-kicker{
+    color:#8befc2;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
+  /* Design-only musical art direction, pseudo-elements are pointer inert. */
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration{
+    background-color:#152b33;
+    background-image:
+      radial-gradient(ellipse 70% 103% at -3% 3%,rgba(73,191,143,.28),transparent 67%),
+      radial-gradient(ellipse 43% 97% at 106% 110%,rgba(92,117,199,.16),transparent 82%),
+      linear-gradient(115deg,#183b3a,#162d36 54%,#162333);
+    border-color:rgba(146,242,195,.44);
+    box-shadow:0 22px 55px rgba(0,0,0,.26),inset 0 1px rgba(245,255,251,.10);
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration-icon{
+    background:radial-gradient(circle at 29% 18%,#79efbb,#2b896e 62%,#21495d);
+    color:#092a25;
+    border:1px solid rgba(192,255,226,.47);
+    box-shadow:0 9px 19px rgba(11,34,38,.2),inset 0 1px rgba(255,255,255,.18);
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration h2{
+    color:#f5fff9;
+    font-weight:820;
+    letter-spacing:-.06em;
+    text-shadow:0 2px 20px rgba(12,49,42,.22);
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration p{
+    color:#c2dcd3;
+  }
+  html.modern-web.fy-ui2 #search-song-view .search-inspiration-foot{
+    color:#a7c8bc;
+    letter-spacing:.012em;
+  }
+  html.modern-web.fy-ui2 .search-suggestions button{
+    background-color:#254b42;
+    background-image:linear-gradient(130deg,rgba(134,255,195,.1),transparent);
+    border:1px solid rgba(137,235,186,.50);
+    box-shadow:inset 0 1px rgba(255,255,255,.06);
+    font-weight:680;
+    transition:background-color .18s ease,border-color .18s ease,transform .2s var(--fy-spatial-ease);
+  }
+  html.modern-web.fy-ui2 .search-suggestions button:hover{
+    background-color:#347256;
+    border-color:#a4ffd1;
+    color:#f8fffb;
+  }
+  /* A rich but low-cost glass-like dock: no backdrop-filter / paint loop. */
+  html.modern-web.fy-ui2 .player-bar{
+    background-color:#1d3238;
+    background-image:linear-gradient(118deg,rgba(45,84,75,.92),rgba(28,51,59,.96) 58%,rgba(24,39,55,.98));
+    border-color:rgba(164,238,208,.34);
+    box-shadow:0 23px 55px rgba(0,0,0,.32),inset 0 1px rgba(244,255,248,.09);
+  }
+  html.modern-web.fy-ui2 .player-art{
+    border:1px solid rgba(192,245,211,.23);
+    box-shadow:0 10px 24px rgba(0,0,0,.23),0 0 0 1px rgba(255,255,255,.025);
+    transition:box-shadow .2s ease,border-color .2s ease;
+  }
+  html.modern-web.fy-ui2 .player-art:hover{
+    border-color:rgba(157,252,201,.7);
+    box-shadow:0 10px 24px rgba(0,0,0,.23),0 0 0 2px rgba(157,252,201,.15);
+  }
+  html.modern-web.fy-ui2 #player-title{
+    font-weight:800;
+    letter-spacing:-.025em;
+  }
+  html.modern-web.fy-ui2 #player-artist{
+    color:#b3d3c8;
+  }
+  html.modern-web.fy-ui2 .player-main-toggle,
+  html.modern-web.fy-ui2 .player-main-toggle:hover{
+    background-color:#91f4bf!important;
+    background-image:linear-gradient(130deg,#b0f9d3,#75eab3)!important;
+    box-shadow:0 7px 22px rgba(100,238,171,.27),inset 0 1px rgba(255,255,255,.5)!important;
+  }
+  html.modern-web.fy-ui2 .player-icon-btn:not(.player-main-toggle):hover{
+    background-color:rgba(106,224,167,.14)!important;
+    color:#f1fff8!important;
+  }
+  html.modern-web.fy-ui2 #player-seek{
+    background-color:#456b62;
+    accent-color:#97f6c9;
+  }
+  /* Music library depth and small-state interaction language. */
+  html.modern-web.fy-ui2 .playlist-card{
+    background-color:#1b3139;
+    background-image:linear-gradient(155deg,rgba(68,111,93,.24),transparent 62%);
+    border-color:rgba(147,219,186,.28);
+    box-shadow:0 12px 30px rgba(0,0,0,.13),inset 0 1px rgba(255,255,255,.03);
+  }
+  html.modern-web.fy-ui2 .playlist-cover{
+    box-shadow:0 10px 22px rgba(0,0,0,.2);
+    border:1px solid rgba(192,239,216,.15);
+  }
+  html.modern-web.fy-ui2 .playlist-name{
+    letter-spacing:-.018em;
+    font-weight:760;
+  }
+  html.modern-web.fy-ui2 :is(#search-results>.search-song-row,.search-row,#ranking-songs>.chart-song-row){
+    background-color:#1a2d35;
+    background-image:linear-gradient(95deg,rgba(71,117,96,.06),transparent 70%);
+    border-color:rgba(138,203,184,.21);
+    box-shadow:inset 0 1px rgba(255,255,255,.018);
+  }
+  html.modern-web.fy-ui2 :is(#search-results>.search-song-row,.search-row,#ranking-songs>.chart-song-row):hover{
+    background-color:#23413f;
+    border-color:rgba(138,238,186,.55);
+  }
+  html.modern-web.fy-ui2 .player-timeline input:focus-visible{
+    outline-color:#a0f7c9;
+  }
+  /* The now-playing space should feel like an album sleeve, not a settings pane. */
+  html.modern-web.fy-ui2 .lyrics-sheet.now-playing-screen{
+    background-color:#111f29;
+    background-image:radial-gradient(ellipse 75% 89% at 18% 44%,rgba(40,117,92,.38),transparent 74%),
+      radial-gradient(ellipse 47% 69% at 100% 0%,rgba(53,85,128,.19),transparent 78%),
+      linear-gradient(135deg,#0b1b24,#121d2d);
+  }
+  html.modern-web.fy-ui2 .now-playing-cover-box{
+    border:1px solid rgba(194,252,215,.21);
+    box-shadow:0 32px 73px rgba(0,0,0,.39),0 0 0 5px rgba(157,255,198,.035);
+  }
+  html.modern-web.fy-ui2 .now-playing-screen #lyrics-title{
+    letter-spacing:-.055em;
+    font-weight:850;
+  }
+  html.modern-web.fy-ui2 .now-playing-screen .lyrics-line.active{
+    background-color:rgba(83,176,137,.10);
+    background-image:linear-gradient(90deg,rgba(112,233,169,.17),transparent 80%);
+    color:#f7fffb;
+    box-shadow:inset 3px 0 #a5ffd0;
+  }
+}
+@media(min-width:1101px){
+  /* Vinyl motif is completely static and decorative. */
+  html.modern-web.fy-ui2 .search-inspiration::after{
+    opacity:.69;
+    box-shadow:0 23px 44px rgba(0,0,0,.21),inset 0 0 0 1px rgba(255,255,255,.025);
+  }
+}
+@media(max-width:740px){
+  /* Refine small-screen colors without touching 320px sizes, flow or dock offsets. */
+  html.modern-web.fy-ui2.mobile-shell-ready .player-bar{
+    border-color:rgba(155,237,200,.58)!important;
+    box-shadow:0 12px 33px rgba(0,0,0,.28)!important;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready #player-title{
+    font-weight:790;
+    letter-spacing:-.02em;
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .search-inspiration-icon{
+    background:linear-gradient(145deg,#376f60,#1c5556);
+    border-color:rgba(166,250,204,.35);
+  }
+  html.modern-web.fy-ui2.mobile-shell-ready .search-suggestions button{
+    border-color:rgba(142,233,193,.45);
+    box-shadow:inset 0 1px rgba(255,255,255,.05);
+  }
+}
+/* The light skin gets its own ink/paper treatments, not washed-out dark colors. */
+html.modern-web.fy-ui2.fy-ui2-light{
+  --fy-spatial-edge:rgba(67,135,94,.24);
+  --fy-spatial-glint:rgba(255,255,255,.76);
+  --fy-spatial-shadow:0 12px 28px rgba(49,108,72,.08);
+}
+html.modern-web.fy-ui2.fy-ui2-light #search-song-view .search-inspiration{
+  background-color:#eff8f2!important;
+  background-image:
+    radial-gradient(ellipse 66% 103% at 0% 5%,rgba(149,221,169,.36),transparent 72%),
+    radial-gradient(ellipse 40% 85% at 100% 94%,rgba(164,205,221,.16),transparent 78%),
+    linear-gradient(120deg,#f7fcf8,#e7f4ed 66%,#f6f9f1)!important;
+  border-color:#b5d9c5!important;
+  box-shadow:0 14px 35px rgba(35,103,71,.10),inset 0 1px rgba(255,255,255,.90)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #search-song-view .search-inspiration-icon{
+  color:#124c37!important;
+  background-color:#c6edda!important;
+  background-image:linear-gradient(138deg,#d4f5e3,#a6dec3)!important;
+  border-color:#a0ceb4!important;
+  box-shadow:0 8px 19px rgba(42,105,68,.12)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #search-song-view .search-inspiration h2{
+  color:#1c4c36!important;
+  text-shadow:none!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #search-song-view .search-inspiration p{
+  color:#587869!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #search-song-view .search-inspiration-foot{
+  color:#5c806b!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .search-suggestions button{
+  background-color:#d7f0e1!important;
+  background-image:linear-gradient(140deg,#ecfaef,#d3eede)!important;
+  border-color:#9dc8ae!important;
+  color:#215f43!important;
+  box-shadow:inset 0 1px #fff!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .search-suggestions button:hover{
+  background-color:#c5e9d5!important;
+  border-color:#68b48a!important;
+  color:#154c33!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .player-bar{
+  /* Preserve computed light-mode base, not only a translucent image layer. */
+  background-color:#fdfffb!important;
+  background-image:linear-gradient(118deg,#fffdfb,#f2faf4 60%,#eef8f2)!important;
+  border-color:#b7d9c4!important;
+  box-shadow:0 16px 36px rgba(37,97,68,.16),inset 0 1px #fff!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #player-title{color:#204b37!important}
+html.modern-web.fy-ui2.fy-ui2-light #player-artist{color:#55715f!important}
+html.modern-web.fy-ui2.fy-ui2-light .player-main-toggle,
+html.modern-web.fy-ui2.fy-ui2-light .player-main-toggle:hover{
+  color:#fff!important;
+  background-color:#237c55!important;
+  background-image:linear-gradient(140deg,#309a70,#18734f)!important;
+  box-shadow:0 6px 19px rgba(29,118,72,.25)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .playlist-card{
+  background-color:#fff!important;
+  background-image:linear-gradient(155deg,#fff,#f4fbf7)!important;
+  border-color:#d0e6d8!important;
+  box-shadow:0 11px 27px rgba(43,100,64,.09)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(#search-results>.search-song-row,.search-row,#ranking-songs>.chart-song-row){
+  background-color:#fff!important;
+  background-image:linear-gradient(95deg,#fff,#f9fcfa)!important;
+  border-color:#d7e8dc!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(#search-results>.search-song-row,.search-row,#ranking-songs>.chart-song-row):hover{
+  background-color:#f0f8f3!important;
+  background-image:none!important;
+  border-color:#8fcbac!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .nav-item.active{
+  color:#145238!important;
+  background-color:#d3eddb!important;
+  background-image:linear-gradient(95deg,#d4efdf,#e1f3e6)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .now-playing-cover-box{
+  border-color:rgba(195,249,215,.22);
+}
+/* Focus and motion fidelity across themes and devices. */
+html.modern-web.fy-ui2 :is(.search-suggestions button,.playlist-card,.player-art,.player-main-toggle,.now-playing-tab):focus-visible{
+  outline:3px solid #98ffcd!important;
+  outline-offset:3px!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(.search-suggestions button,.playlist-card,.player-art,.player-main-toggle,.now-playing-tab):focus-visible{
+  outline-color:#217a54!important;
+}
+@media(hover:hover) and (pointer:fine) and (min-width:741px){
+  html.modern-web.fy-ui2 .playlist-card:hover{
+    transform:translateY(-3px);
+    box-shadow:0 20px 40px rgba(0,0,0,.22);
+  }
+  html.modern-web.fy-ui2.fy-ui2-light .playlist-card:hover{
+    box-shadow:0 18px 35px rgba(48,108,76,.12)!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  html.modern-web.fy-ui2 :is(.search-suggestions button,.playlist-card,.player-art,.player-main-toggle,.now-playing-tab,.lyrics-line){
+    animation:none!important;
+    transition:none!important;
+    transform:none!important;
+  }
+}
+@media(hover:none),(pointer:coarse){
+  html.modern-web.fy-ui2 .playlist-card:hover{
+    transform:none!important;
+  }
+}
+@media(forced-colors:active){
+  html.modern-web.fy-ui2 :is(.playlist-card,.player-bar,.search-inspiration,.now-playing-cover-box){
+    box-shadow:none!important;
+    border:1px solid CanvasText!important;
+  }
+  html.modern-web.fy-ui2 .search-inspiration::after{display:none!important}
+}
+
+/* FYMUSIC / STAGE 4 — REAL WEB PRODUCT DESIGN REPAIR
+   Scope: actual responsive app, not an illustration. Original navigation,
+   catalog data, playback and provider API remain functional and unmodified. */
+html.modern-web.fy-ui2{
+ --fy4-radius:18px;
+ --fy4-ink:#e9f6f1;
+ --fy4-soft:#a4c3b9;
+ --fy4-edge:rgba(139,216,185,.21);
+ --fy4-page:#0b171c;
+ --fy4-surface:#13272b;
+ --fy4-raised:#193139;
+ --fy4-green:#83ecc0;
+ --fy4-shadow:0 14px 34px rgba(0,0,0,.16);
+}
+@media(min-width:741px){
+ html.modern-web.fy-ui2 :is(.view-header,.results-head){
+  min-width:0;
+ }
+ html.modern-web.fy-ui2 .view-container{
+  padding-top:27px;padding-bottom:158px;
+ }
+ html.modern-web.fy-ui2 .view-header{
+  margin-bottom:24px;align-items:flex-end;
+ }
+ html.modern-web.fy-ui2 .view-header h1{
+  font-size:clamp(34px,2.9vw,44px);font-weight:820;letter-spacing:-.052em;
+ }
+ html.modern-web.fy-ui2 .view-note{
+  max-width:340px;line-height:1.5;text-align:right;
+ }
+ html.modern-web.fy-ui2 .topbar{
+  background-color:#0d1d24;border-bottom-color:var(--fy4-edge);
+ }
+ html.modern-web.fy-ui2 .nav-rail{
+  background-color:#101f26;background-image:linear-gradient(155deg,#10242a,#0e1d25 77%);
+ }
+ html.modern-web.fy-ui2 .nav-item{
+  font-size:13px;font-weight:630;letter-spacing:.005em;border-radius:12px;
+ }
+ html.modern-web.fy-ui2 .nav-item.active{
+  background-color:#1a3d35;border-color:#38705a;
+  box-shadow:inset 3px 0 #8af1c1;
+ }
+ html.modern-web.fy-ui2 .persistent-top-stack{
+  background-color:#0b171c;box-shadow:none;
+ }
+ html.modern-web.fy-ui2 .global-search-bar{
+  padding:15px clamp(20px,2.8vw,40px) 7px;gap:0;
+ }
+ html.modern-web.fy-ui2 .global-search{
+  height:55px;min-height:55px;min-width:0;padding:5px;
+  border-radius:17px;background-color:#182b32;border:1px solid #365b53;
+  box-shadow:0 6px 19px rgba(0,0,0,.12);
+  display:flex;align-items:center;overflow:hidden;
+ }
+ html.modern-web.fy-ui2 .global-search .search-icon{
+  width:45px;flex:0 0 45px;font-size:23px;
+ }
+ html.modern-web.fy-ui2 .global-search input{
+  height:100%;min-height:0;line-height:normal;padding:0 9px;
+  border-radius:0;font-size:14px;min-width:0;
+ }
+ html.modern-web.fy-ui2 #global-search-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  height:43px;min-height:43px;flex:0 0 82px;
+  margin:0;padding:0 17px;border-radius:12px;
+  font-size:13px;font-weight:780;line-height:1;
+ }
+ html.modern-web.fy-ui2 .search-context{display:none!important}
+ html.modern-web.fy-ui2 #status.status:not(.warn):not(.fail){
+  min-height:0!important;max-height:56px!important;
+  margin:0 clamp(20px,2.8vw,40px) 10px!important;
+  padding:4px 10px!important;border-radius:9px!important;
+  font-size:11px!important;line-height:1.5!important;
+  color:#a9cec0!important;background:#15332f!important;
+  border:1px solid #2d5446!important;
+ }
+ html.modern-web.fy-ui2 .sub-toolbar,
+ html.modern-web.fy-ui2 .category-row,
+ html.modern-web.fy-ui2 .ranking-source-switch{
+  min-width:0;padding:13px 17px;
+  border-radius:15px;border-color:var(--fy4-edge);
+  background-color:#142a30;
+ }
+ html.modern-web.fy-ui2 .channel-button,
+ html.modern-web.fy-ui2 .category-pill,
+ html.modern-web.fy-ui2 .catalog-source,
+ html.modern-web.fy-ui2 .platform-pill{
+  min-height:36px;border-radius:11px;padding-inline:13px;
+  font-weight:660;
+ }
+ html.modern-web.fy-ui2 .playlist-grid{
+  grid-template-columns:repeat(auto-fill,minmax(207px,1fr));
+  column-gap:17px;row-gap:18px;padding-top:10px;
+ }
+ html.modern-web.fy-ui2 .playlist-card{
+  display:flex;flex-direction:column;min-width:0;
+  padding:10px;border-radius:18px;
+  border:1px solid #33524b;background-color:#162c31;
+  background-image:linear-gradient(160deg,rgba(86,151,118,.075),transparent 61%);
+  box-shadow:0 9px 23px rgba(0,0,0,.12);
+  transition:border-color .18s ease,background-color .18s ease,box-shadow .18s ease,transform .2s ease;
+ }
+ html.modern-web.fy-ui2 .playlist-cover{
+  aspect-ratio:1/1;height:auto;min-height:0;width:100%;
+  border-radius:13px;
+  background-color:#21403b!important;
+  background-size:contain!important;background-repeat:no-repeat!important;
+  background-position:center!important;
+  box-shadow:0 7px 18px rgba(0,0,0,.15);
+ }
+ html.modern-web.fy-ui2 .playlist-name{
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+  white-space:normal;overflow:hidden;text-overflow:ellipsis;
+  min-height:2.9em;margin:12px 2px 0;
+  font-size:14px;line-height:1.45;font-weight:740;letter-spacing:-.012em;
+ }
+ html.modern-web.fy-ui2 .playlist-meta{
+  color:#a8c4b8;margin:5px 2px 0;
+  font-size:11px;line-height:1.45;
+  overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+ }
+ html.modern-web.fy-ui2 .playlist-card-actions{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.78fr);
+  gap:8px;margin-top:auto;padding-top:14px;
+ }
+ html.modern-web.fy-ui2 .playlist-card-actions button{
+  min-height:38px;border-radius:10px;font-weight:740;
+ }
+ html.modern-web.fy-ui2 .playlist-detail-cover{
+  background-size:contain!important;background-repeat:no-repeat!important;
+  background-position:center;background-color:#1c4139;
+ }
+ html.modern-web.fy-ui2 #view-ranking .ranking-layout{
+  min-height:480px;border:1px solid #34564b;border-radius:20px;
+  box-shadow:var(--fy4-shadow);background-color:#11262b;
+ }
+ html.modern-web.fy-ui2 #view-ranking .ranking-sidebar{
+  background-color:#132d31;border-color:#35584e;
+  width:216px;flex:0 0 216px;padding:16px 12px;
+ }
+ html.modern-web.fy-ui2 #view-ranking .ranking-content,
+ html.modern-web.fy-ui2 #view-ranking #ranking-songs{
+  background-color:#11262b;color:#e9f6ef;
+ }
+ html.modern-web.fy-ui2 #view-ranking #ranking-title{
+  background-color:#153b38!important;
+  background-image:linear-gradient(98deg,rgba(77,154,113,.20),transparent 77%);
+  border:0;border-bottom:1px solid #396153!important;
+  color:#edfff5!important;
+  padding:21px 22px;font-size:21px;font-weight:810;
+  letter-spacing:-.025em;line-height:1.38;
+ }
+ html.modern-web.fy-ui2 #view-ranking .ranking-play-hint{
+  color:#a6c5b9!important;padding:12px 23px 4px;
+ }
+ html.modern-web.fy-ui2 #view-ranking .ranking-item{
+  min-height:43px;margin:3px 0;border-radius:11px;
+  color:#b2d2c3;
+ }
+ html.modern-web.fy-ui2 #view-ranking .ranking-item.active{
+  background-color:#235343;border-color:#457d61;color:#d8ffe8;
+ }
+ html.modern-web.fy-ui2 #view-ranking #ranking-songs>.chart-song-row{
+  min-height:63px;border-radius:12px;border-color:#2b4e45;
+ }
+ html.modern-web.fy-ui2 #view-ranking .chart-song-info b{
+  color:#f0fff7!important;font-weight:730;
+ }
+ html.modern-web.fy-ui2 #view-ranking .chart-song-info span,
+ html.modern-web.fy-ui2 #view-ranking .chart-song-number{
+  color:#a7c8b9!important;
+ }
+ html.modern-web.fy-ui2 #view-ranking .chart-song-info:hover{
+  background-color:#254c42;
+ }
+ html.modern-web.fy-ui2 #view-mylist .music-library-workspace{
+  height:clamp(460px,calc(100dvh - 285px),850px);
+  border:1px solid #34554c;border-radius:20px;
+  background-color:#11272d;box-shadow:var(--fy4-shadow);
+ }
+ html.modern-web.fy-ui2 #view-mylist .music-library-sidebar{
+  background-color:#142d31;border-color:#34584e;
+ }
+ html.modern-web.fy-ui2 #view-mylist .music-library-content{
+  background-color:#10252b;padding:0 22px 24px;
+ }
+ html.modern-web.fy-ui2 #view-mylist .my-tab{
+  min-height:47px;border-radius:11px;
+ }
+ html.modern-web.fy-ui2 #view-mylist .my-tab.active{
+  background-color:#285849;border:1px solid #478368;color:#e5fff0;
+ }
+ html.modern-web.fy-ui2 #view-mylist .list-toolbar{
+  min-height:74px;border-color:#315349;background-color:transparent;
+ }
+ html.modern-web.fy-ui2 #view-mylist .library-column-header{
+  background-color:#19352f;color:#b5d1c2;
+  border-color:#31564b;border-radius:10px;
+ }
+ html.modern-web.fy-ui2 #view-mylist .library-list:empty::after{
+  display:flex;align-items:center;justify-content:center;
+  min-height:235px;margin:24px 4px;padding:32px;
+  border:1px dashed #406e5b;border-radius:18px;
+  color:#c2ddce;background-color:#18392f;
+  background-image:radial-gradient(ellipse 60% 60% at 50% 0%,rgba(104,205,149,.12),transparent);
+  font-size:14px;line-height:1.7;letter-spacing:.015em;
+ }
+ html.modern-web.fy-ui2 #view-mylist #history-list:empty::after{
+  content:"还没有试听记录 · 从搜索页开始播放一首歌";
+ }
+ html.modern-web.fy-ui2 #view-mylist #favorite-list:empty::after{
+  content:"还没有收藏的歌曲 · 点击歌曲旁的收藏按钮保存喜欢的音乐";
+ }
+ html.modern-web.fy-ui2 #view-mylist #queue-list:empty::after{
+  content:"播放队列为空 · 在歌曲操作中选择加入队列";
+ }
+ html.modern-web.fy-ui2 #view-mylist .empty-note{
+  border:1px dashed #456b59;border-radius:16px;margin:17px 4px;
+  background:#18382e;color:#bfdcca;padding:45px 15px;font-size:14px;
+ }
+ html.modern-web.fy-ui2 .player-bar{
+  padding:12px 20px;column-gap:17px;
+ }
+ html.modern-web.fy-ui2 .player-song{flex:0 1 229px;min-width:0}
+ html.modern-web.fy-ui2 .player-center{flex:1 1 0;min-width:170px}
+ html.modern-web.fy-ui2 .player-extras{
+  display:flex;align-items:center;justify-content:flex-end;
+  flex:0 0 244px;min-width:0;max-width:244px;
+  gap:12px;overflow:hidden;
+ }
+ html.modern-web.fy-ui2 .player-volume-wrap{
+  display:flex;align-items:center;flex:0 0 120px;gap:5px;min-width:0;
+ }
+ html.modern-web.fy-ui2 #player-volume{
+  display:block;flex:1 1 auto;width:74px;min-width:52px;max-width:79px;
+  height:6px;margin:0;accent-color:#8ff6c1;cursor:pointer;
+ }
+ html.modern-web.fy-ui2 .player-volume-btn{
+  width:36px;min-width:36px;height:36px;min-height:36px;line-height:1;
+ }
+ html.modern-web.fy-ui2 .player-volume-btn svg{
+  width:20px;height:20px;display:block;
+ }
+ html.modern-web.fy-ui2 .player-extras #player-lyric{
+  display:block;flex:1 1 auto;min-width:0;max-width:116px;margin:0;
+  padding:7px 0 7px 12px;border-left:1px solid #42645a;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font-size:11px;line-height:1.35;color:#b7d3c5;
+ }
+ html.modern-web.fy-ui2 .player-timeline{
+  align-self:center;max-width:810px;gap:9px;
+ }
+}
+@media(min-width:741px) and (max-width:1200px){
+ html.modern-web.fy-ui2 .player-extras{flex-basis:135px;max-width:135px}
+ html.modern-web.fy-ui2 .player-volume-wrap{flex-basis:112px}
+ html.modern-web.fy-ui2 .player-extras #player-lyric{display:none}
+ html.modern-web.fy-ui2 .player-song{flex-basis:172px}
+ html.modern-web.fy-ui2 .playlist-grid{
+  grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:13px;
+ }
+}
+@media(min-width:741px) and (max-width:980px){
+ html.modern-web.fy-ui2 .player-extras{display:none}
+ html.modern-web.fy-ui2 .playlist-grid{grid-template-columns:repeat(auto-fill,minmax(164px,1fr))}
+}
+@media(hover:hover) and (pointer:fine) and (min-width:741px){
+ html.modern-web.fy-ui2 .playlist-card:hover{
+  transform:translateY(-3px);border-color:#65ae8a;
+  box-shadow:0 18px 35px rgba(0,0,0,.20);
+ }
+}
+html.modern-web.fy-ui2.fy-ui2-light{
+ --fy4-page:#f6f9f6;
+ --fy4-surface:#ffffff;
+ --fy4-raised:#e9f4ec;
+ --fy4-ink:#1b4634;
+ --fy4-soft:#567666;
+ --fy4-edge:#d2e4d8;
+ --fy4-green:#19764e;
+ --fy4-shadow:0 12px 28px rgba(40,95,62,.07);
+}
+html.modern-web.fy-ui2.fy-ui2-light .topbar{
+ background-color:#fffefa!important;background-image:none!important;
+ border-bottom:1px solid #d7e9de!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .nav-rail{
+ background:#f0f7f2!important;border-color:#d8e9dc!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .persistent-top-stack{
+ background:#f6f9f6!important;border-bottom-color:#dceae0!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .global-search{
+ background-color:#fff!important;background-image:none!important;
+ border:1px solid #afd7c0!important;
+ box-shadow:0 7px 20px rgba(27,90,54,.085)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .global-search:focus-within{
+ box-shadow:0 0 0 3px rgba(55,161,104,.13),0 7px 20px rgba(27,90,54,.085)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #global-search-btn{
+ background:#207c58!important;color:#fff!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #status.status:not(.warn):not(.fail){
+ background:#eaf5ed!important;color:#3a7152!important;border-color:#d0e5d7!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .sub-toolbar,
+html.modern-web.fy-ui2.fy-ui2-light .category-row,
+html.modern-web.fy-ui2.fy-ui2-light .ranking-source-switch{
+ background:#fff!important;border-color:#d5e7da!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .playlist-card{
+ background-color:#fff!important;
+ background-image:linear-gradient(150deg,#fff,#fafdfb 85%)!important;
+ border-color:#d7e7dc!important;
+ box-shadow:0 9px 24px rgba(43,94,57,.075)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .playlist-card:hover{
+ border-color:#7bbb95!important;box-shadow:0 17px 30px rgba(39,100,61,.11)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .playlist-cover{
+ background-color:#edf4ee!important;background-size:contain!important;
+ box-shadow:0 7px 15px rgba(43,82,59,.09);
+}
+html.modern-web.fy-ui2.fy-ui2-light .playlist-meta{color:#668072!important}
+html.modern-web.fy-ui2.fy-ui2-light .playlist-detail-cover{
+ background-color:#eff7f0!important;background-size:contain!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking .ranking-layout{
+ background:#fff!important;border-color:#d5e7dc!important;
+ box-shadow:0 11px 27px rgba(40,92,60,.065)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking .ranking-sidebar{
+ background:#f3f9f5!important;border-color:#d4e7da!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking .ranking-content,
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking #ranking-songs{
+ background:#fff!important;color:#1e4935!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking #ranking-title{
+ background-color:#edf7f0!important;
+ background-image:linear-gradient(100deg,#e6f4eb,#f4faf6)!important;
+ color:#194832!important;border-bottom:1px solid #cee5d6!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking .ranking-play-hint{
+ color:#617d69!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking .ranking-item{color:#496d56!important}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking .ranking-item.active{
+ background:#d6eedc!important;border-color:#89bc9b!important;color:#185d3e!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking .chart-song-info b{
+ color:#214937!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking .chart-song-info span,
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking .chart-song-number{
+ color:#607b6c!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking .chart-song-info:hover{
+ background:#edf7f0!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist .music-library-workspace{
+ background:#fff!important;border-color:#d9e9de!important;
+ box-shadow:0 10px 27px rgba(37,97,57,.07)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist .music-library-sidebar{
+ background:#eef7f0!important;border-color:#d4e6da!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist .music-library-content{
+ background:#fff!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist .my-tab.active{
+ background:#d7eee0!important;color:#165c3d!important;
+ border-color:#8fc8a4!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist .list-toolbar{
+ background:transparent!important;border-color:#d9e8de!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist .library-column-header{
+ background:#f3f8f4!important;color:#557160!important;
+ border-color:#e2eee5!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist .library-list:empty::after{
+ color:#567664!important;background-color:#f5fbf7!important;
+ background-image:radial-gradient(ellipse 55% 65% at 50% 0%,#e3f5e9,transparent)!important;
+ border-color:#bfddc9!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist .empty-note{
+ background:#f4fbf6!important;color:#50725c!important;border-color:#c7e1cf!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .player-extras #player-lyric{
+ color:#507361!important;border-left-color:#d7e7dc!important;
+}
+@media(max-width:740px){
+ html.modern-web.fy-ui2.mobile-shell-ready .global-search{padding:3px!important}
+ html.modern-web.fy-ui2.mobile-shell-ready #global-search-btn{
+  display:inline-flex;justify-content:center;align-items:center;
+  min-height:35px;height:35px;margin:0;border-radius:10px!important;
+ }
+ html.modern-web.fy-ui2.mobile-shell-ready .playlist-cover{
+  background-size:contain!important;background-repeat:no-repeat!important;
+  background-position:center!important;
+ }
+ html.modern-web.fy-ui2.mobile-shell-ready #view-ranking #ranking-title{
+  color:#edfff5!important;background-color:#163b37!important;
+  border-color:#315848!important;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready #view-ranking #ranking-title{
+  color:#194832!important;background:#eaf7ee!important;
+  border-color:#cee5d6!important;
+ }
+ html.modern-web.fy-ui2.mobile-shell-ready #view-mylist .library-list:empty::after{
+  min-height:155px;padding:23px 15px;margin:12px 0;
+  border-radius:14px;
+ }
+ html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready #view-mylist .library-list:empty::after{
+  background:#f4fbf6!important;color:#52715e!important;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ html.modern-web.fy-ui2 :is(.playlist-card,.global-search,.nav-item){
+  transition:none!important;animation:none!important;transform:none!important;
+ }
+}
+@media(forced-colors:active){
+ html.modern-web.fy-ui2 :is(.playlist-card,.ranking-layout,.music-library-workspace,.global-search){
+  border:1px solid CanvasText!important;box-shadow:none!important;background-image:none!important;
+ }
+}
+
+/* FYMUSIC / STAGE 4.1 — CROSS-VIEW SCREENSHOT DEFECT FIX
+   Verified on the first exact Stage 4 browser screenshots: dark filters were
+   white because of #view-playlist child selectors; light chart empty-state
+   retained a dark ::after paint from the original atmosphere layer. */
+html.modern-web.fy-ui2 #view-playlist>.playlist-filter-stack{
+ background-color:#122a2f!important;
+ border:1px solid #355c52!important;border-radius:17px;
+ box-shadow:0 8px 26px rgba(0,0,0,.11)!important;
+}
+html.modern-web.fy-ui2 #view-playlist>.playlist-filter-stack>.sub-toolbar,
+html.modern-web.fy-ui2 #view-playlist>.playlist-filter-stack>.category-row{
+ background-color:#182f34!important;
+ background-image:none!important;
+ border:0!important;border-bottom:1px solid #35594f!important;
+ color:#c6e4d7!important;
+}
+html.modern-web.fy-ui2 #view-playlist>.playlist-filter-stack>.category-row{
+ border-bottom:0!important;
+}
+html.modern-web.fy-ui2 #view-playlist>.playlist-filter-stack :is(.sub-toolbar,.category-row)>span:first-child{
+ color:#adccbd!important;
+}
+html.modern-web.fy-ui2 #view-ranking #ranking-songs:empty::after,
+html.modern-web.fy-ui2 #view-ranking #ranking-songs>.empty-note{
+ display:flex;align-items:center;justify-content:center;
+ min-height:112px;box-sizing:border-box;
+ margin:15px 0;padding:25px;
+ border:1px dashed #3c675a;border-radius:15px;
+ color:#bddace!important;
+ background-color:#1b3938!important;
+ background-image:linear-gradient(125deg,#19343b,#1c3c34)!important;
+ text-align:center;font-size:13px;line-height:1.6;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-playlist>.playlist-filter-stack{
+ background-color:#f6fbf7!important;
+ border-color:#d4e6da!important;
+ box-shadow:0 8px 25px rgba(35,104,65,.055)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-playlist>.playlist-filter-stack>.sub-toolbar,
+html.modern-web.fy-ui2.fy-ui2-light #view-playlist>.playlist-filter-stack>.category-row{
+ background-color:#f7fbf8!important;
+ background-image:none!important;
+ border-color:#d9e9df!important;
+ color:#486f57!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-playlist>.playlist-filter-stack :is(.sub-toolbar,.category-row)>span:first-child{
+ color:#567b66!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking #ranking-songs:empty::after,
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking #ranking-songs>.empty-note{
+ border-color:#bfdccb!important;
+ color:#527460!important;
+ background-color:#f2faf5!important;
+ background-image:linear-gradient(130deg,#f3faf5,#e6f4eb)!important;
+}
+@media(max-width:740px){
+ html.modern-web.fy-ui2.mobile-shell-ready #view-playlist>.playlist-filter-stack{
+  box-shadow:none!important;border-radius:13px;
+ }
+ html.modern-web.fy-ui2.mobile-shell-ready #view-ranking #ranking-songs:empty::after,
+ html.modern-web.fy-ui2.mobile-shell-ready #view-ranking #ranking-songs>.empty-note{
+  min-height:95px;padding:17px;
+ }
+}
+@media(forced-colors:active){
+ html.modern-web.fy-ui2 #view-playlist>.playlist-filter-stack,
+ html.modern-web.fy-ui2 #view-ranking #ranking-songs:empty::after,
+ html.modern-web.fy-ui2 #view-ranking #ranking-songs>.empty-note{
+  background:Canvas!important;color:CanvasText!important;border:1px solid CanvasText!important;box-shadow:none!important;
+ }
+}
+
+/* FYMUSIC / STAGE 4.2 — PLAYER COMPOSITION & SEARCH FOCUS
+   Product-level source CSS: one focus affordance, unclipped mute control,
+   readable inline lyric preview, refined light and dark layout.
+   No third-party fonts, images, heavy blur or continuous animations. */
+html.modern-web.fy-ui2{
+ --fy42-accent:#8bf3c0;
+ --fy42-line:rgba(160,227,195,.22);
+ --fy42-muted:#9bc6b8;
+}
+html.modern-web.fy-ui2 .global-search{
+ position:relative;isolation:isolate;
+ border-width:1px;outline:none;
+}
+html.modern-web.fy-ui2 #global-search-input,
+html.modern-web.fy-ui2 #global-search-input:focus,
+html.modern-web.fy-ui2 #global-search-input:focus-visible{
+ border:0!important;outline:none!important;outline-offset:0!important;
+ box-shadow:none!important;background:transparent!important;
+ -webkit-appearance:none;appearance:none;
+}
+html.modern-web.fy-ui2 .global-search:focus-within{
+ border-color:#7de0b1!important;
+ box-shadow:0 0 0 3px rgba(91,216,159,.16),0 10px 27px rgba(0,0,0,.12)!important;
+}
+html.modern-web.fy-ui2 #global-search-btn{
+ margin-left:12px!important;
+ border:0!important;outline-offset:2px;
+ box-shadow:inset 0 1px rgba(255,255,255,.18);
+ transition:background-color .16s ease,box-shadow .16s ease;
+}
+html.modern-web.fy-ui2 #global-search-btn:focus-visible{
+ outline:2px solid #a2f5ce!important;outline-offset:2px!important;
+}
+@media(min-width:741px){
+ html.modern-web.fy-ui2{
+  --fy42-subtle:rgba(84,160,122,.08);
+ }
+ html.modern-web.fy-ui2 body{
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;
+ }
+ html.modern-web.fy-ui2 .main-stage{
+  background-image:radial-gradient(ellipse 68% 38% at 84% 0%,rgba(60,143,111,.075),transparent 76%);
+ }
+ html.modern-web.fy-ui2 .view-header{
+  padding-bottom:9px;
+  border-bottom:1px solid var(--fy42-line);
+ }
+ html.modern-web.fy-ui2 .view-header .panel-kicker{
+  color:#77c4a0;letter-spacing:.19em;
+ }
+ html.modern-web.fy-ui2 .view-header h1{
+  font-weight:790;letter-spacing:-.045em;
+ }
+ html.modern-web.fy-ui2 .playlist-card{
+  background-image:linear-gradient(153deg,rgba(98,166,128,.105),transparent 75%);
+  border-color:rgba(163,223,192,.22);
+ }
+ html.modern-web.fy-ui2 .playlist-card-actions button{
+  border-radius:11px;letter-spacing:.01em;
+ }
+ html.modern-web.fy-ui2 .player-bar{
+  padding:10px 18px;
+  column-gap:17px;
+  border-radius:21px;
+  background-image:linear-gradient(112deg,#1e3637,#182b34 58%,#152b31);
+  border:1px solid #45665c;
+  box-shadow:0 19px 46px rgba(1,20,21,.25),inset 0 1px rgba(220,255,237,.08);
+  overflow:visible;
+ }
+ html.modern-web.fy-ui2 .player-song{
+  flex:0 1 219px;width:219px;
+ }
+ html.modern-web.fy-ui2 .player-center{
+  display:grid;grid-template-columns:218px minmax(0,1fr);
+  grid-template-rows:40px 24px;
+  column-gap:11px;row-gap:3px;
+  align-content:center;align-items:center;
+  min-width:0;gap:3px 11px;
+ }
+ html.modern-web.fy-ui2 .player-transport{
+  grid-column:1;grid-row:1;
+  width:218px;max-width:100%;
+  height:42px;min-height:42px;
+  justify-content:center;gap:10px;
+ }
+ html.modern-web.fy-ui2 #player-lyric{
+  grid-column:2;grid-row:1;
+  align-self:center;min-width:0;width:100%;
+  height:auto;max-height:40px;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+  overflow:hidden;text-overflow:ellipsis;white-space:normal;
+  padding:5px 12px;margin:0;
+  background:rgba(132,209,172,.075);
+  color:#bfe6d3;border:1px solid rgba(158,224,192,.19);
+  border-radius:11px;
+  text-align:left;font-size:11px;line-height:1.4;
+  cursor:pointer;
+ }
+ html.modern-web.fy-ui2 #player-lyric:hover{
+  color:#eafff2;background:rgba(111,209,162,.14);
+  border-color:rgba(145,226,187,.34);
+  text-decoration:none;
+ }
+ html.modern-web.fy-ui2 #player-lyric:focus-visible{
+  outline:2px solid #99f3c5;outline-offset:2px;
+ }
+ html.modern-web.fy-ui2 .player-timeline{
+  grid-column:1 / -1;grid-row:2;
+  width:100%;max-width:100%;min-width:0;
+  align-self:center;padding-inline:4px;
+ }
+ html.modern-web.fy-ui2 .player-extras{
+  flex:0 0 154px;width:154px;max-width:none;min-width:154px;
+  padding:4px 6px;
+  display:flex;align-items:center;justify-content:flex-end;
+  overflow:visible;gap:0;
+  border-left:1px solid var(--fy42-line);
+ }
+ html.modern-web.fy-ui2 .player-volume-wrap{
+  display:flex;align-items:center;justify-content:flex-end;
+  flex:1 1 auto;width:auto;min-width:0;
+  padding:2px 1px 2px 5px;
+  gap:9px;overflow:visible;
+ }
+ html.modern-web.fy-ui2 .player-volume-btn{
+  position:relative;flex:0 0 38px;
+  width:38px;min-width:38px;height:38px;min-height:38px;
+  border-radius:50%;margin:0;
+  outline-offset:1px!important;
+ }
+ html.modern-web.fy-ui2 .player-volume-btn:focus,
+ html.modern-web.fy-ui2 .player-volume-btn:focus-visible{
+  outline:2px solid #86f3be!important;outline-offset:1px!important;
+ }
+ html.modern-web.fy-ui2 .player-volume-btn svg{
+  width:20px;height:20px;max-width:20px;
+ }
+ html.modern-web.fy-ui2 #player-volume{
+  display:block;min-width:52px;width:72px;max-width:80px;
+  flex:1 1 72px;margin:0;height:6px;
+ }
+ html.modern-web.fy-ui2 .player-extras #player-lyric{display:none!important}
+}
+@media(min-width:741px) and (max-width:1279px){
+ html.modern-web.fy-ui2 .player-center{
+  grid-template-columns:minmax(0,1fr);
+ }
+ html.modern-web.fy-ui2 .player-transport{
+  grid-column:1;width:100%;justify-content:center;
+ }
+ html.modern-web.fy-ui2 #player-lyric{display:none}
+ html.modern-web.fy-ui2 .player-timeline{grid-column:1}
+ html.modern-web.fy-ui2 .player-song{flex-basis:175px;width:175px}
+ html.modern-web.fy-ui2 .player-extras{
+  flex:0 0 132px;width:132px;min-width:132px;
+ }
+ html.modern-web.fy-ui2 .player-volume-wrap{gap:5px}
+}
+@media(min-width:741px) and (max-width:980px){
+ html.modern-web.fy-ui2 .player-extras{display:none}
+}
+@media(max-width:740px){
+ html.modern-web.fy-ui2.mobile-shell-ready #global-search-input,
+ html.modern-web.fy-ui2.mobile-shell-ready #global-search-input:focus,
+ html.modern-web.fy-ui2.mobile-shell-ready #global-search-input:focus-visible{
+  outline:none!important;border:0!important;box-shadow:none!important;
+ }
+ html.modern-web.fy-ui2.mobile-shell-ready #global-search-btn{
+  margin-left:5px!important;
+ }
+ html.modern-web.fy-ui2.mobile-shell-ready #player-lyric{
+  display:none!important;
+ }
+}
+/* Give the new dock an elegant light appearance without introducing white
+   or washed-out surfaces into the dark theme. */
+html.modern-web.fy-ui2.fy-ui2-light{
+ --fy42-accent:#207b56;
+ --fy42-line:rgba(56,120,78,.17);
+ --fy42-muted:#6b8a77;
+}
+html.modern-web.fy-ui2.fy-ui2-light #global-search-input:focus,
+html.modern-web.fy-ui2.fy-ui2-light #global-search-input:focus-visible{
+ background:transparent!important;outline:none!important;box-shadow:none!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .global-search:focus-within{
+ border-color:#3c9c6c!important;
+ box-shadow:0 0 0 3px rgba(47,154,99,.12),0 9px 25px rgba(37,95,61,.09)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .view-header{
+ border-bottom-color:#d9e9de;
+}
+html.modern-web.fy-ui2.fy-ui2-light .view-header .panel-kicker{
+ color:#418767!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light .player-bar{
+ background-color:#fffefa!important;
+ background-image:linear-gradient(112deg,#fffefa,#f2faf5 69%,#ecf6ef)!important;
+ border-color:#c3e1ce!important;
+ box-shadow:0 16px 32px rgba(40,92,60,.12),inset 0 1px #fff!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #player-lyric{
+ background-color:#e9f4ec;color:#36664a;
+ border-color:#d2e6d7;
+}
+html.modern-web.fy-ui2.fy-ui2-light #player-lyric:hover{
+ color:#155c39;background:#dff0e6;border-color:#a6d1b6;
+}
+html.modern-web.fy-ui2.fy-ui2-light .player-volume-btn:focus,
+html.modern-web.fy-ui2.fy-ui2-light .player-volume-btn:focus-visible{
+ outline-color:#338b60!important;
+}
+@media(prefers-reduced-motion:reduce){
+ html.modern-web.fy-ui2 :is(.global-search,#global-search-btn,#player-lyric,.player-volume-btn,.playlist-card){
+  transition:none!important;animation:none!important;transform:none!important;
+ }
+}
+@media(forced-colors:active){
+ html.modern-web.fy-ui2 .global-search,
+ html.modern-web.fy-ui2 #player-lyric,
+ html.modern-web.fy-ui2 .player-bar{
+  border:1px solid CanvasText!important;background-image:none!important;
+ }
+ html.modern-web.fy-ui2 #global-search-input:focus-visible{
+  outline:none!important;
+ }
+ html.modern-web.fy-ui2 .global-search:focus-within{
+  outline:2px solid Highlight!important;
+ }
+}
+
+/* FYMUSIC / STAGE 4.2B — ACTUAL SCREENSHOT REVIEW CORRECTIONS
+   The inherited .player-lyric max-width:190px still constrained the new
+   center column; the light mute SVG inherited an overly pale focus color. */
+@media(min-width:1280px){
+ html.modern-web.fy-ui2 #player-lyric{
+  max-width:100%!important;
+  width:100%!important;
+  min-width:0;
+  padding:6px 14px;
+  font-size:12px;line-height:1.4;
+  border-radius:12px;
+ }
+}
+html.modern-web.fy-ui2 #player-volume-btn{
+ color:#c8f4db!important;
+ background-color:rgba(111,210,159,.08)!important;
+}
+html.modern-web.fy-ui2 #player-volume-btn:hover,
+html.modern-web.fy-ui2 #player-volume-btn:focus-visible{
+ color:#f1fff7!important;
+ background-color:rgba(131,231,182,.15)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #player-volume-btn{
+ color:#24694b!important;
+ background-color:rgba(54,143,94,.08)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #player-volume-btn:hover,
+html.modern-web.fy-ui2.fy-ui2-light #player-volume-btn:focus-visible{
+ color:#165b3e!important;
+ background-color:rgba(44,152,95,.15)!important;
+}
+@media(forced-colors:active){
+ html.modern-web.fy-ui2 #player-volume-btn{
+  color:ButtonText!important;background:ButtonFace!important;
+ }
+}
+
+/* FYMUSIC / STAGE 5.1 — BREATHING LANDSCAPE & MUSIC SCENE (CANDIDATE ONLY)
+   Decorative data-URI SVG: no network, DOM, audio, font or canvas work.
+   Only two slow compositor animations; real playback visualization is Stage 5.2. */
+@keyframes fy-scene-breathe{
+  0%,100%{transform:translate3d(0,0,0);opacity:.64}
+  50%{transform:translate3d(0,-5px,0);opacity:.84}
+}
+@keyframes fy-scene-mist{
+  0%,100%{transform:translate3d(0,0,0);opacity:.24}
+  50%{transform:translate3d(0,-4px,0);opacity:.38}
+}
+@media (min-width:1101px){
+  html.modern-web.fy-ui2 .nav-rail{isolation:isolate;}
+  html.modern-web.fy-ui2 .nav-rail .nav-brand,
+  html.modern-web.fy-ui2 .nav-rail .main-nav{position:relative;z-index:1;}
+  html.modern-web.fy-ui2 .nav-rail::after{
+    content:"";position:absolute;left:0;right:0;bottom:95px;height:166px;
+    pointer-events:none;z-index:0;opacity:.63;
+    background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20280%20180%22%20width%3D%22280%22%20height%3D%22180%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22mist%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%220%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%2339b78a%22%20stop-opacity%3D%220%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%2339b78a%22%20stop-opacity%3D%22.33%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20d%3D%22M0%20136Q63%2083%20121%20132T280%20109V180H0Z%22%20fill%3D%22%23257f6a%22%20opacity%3D%22.16%22%2F%3E%3Cpath%20d%3D%22M0%20153Q49%20117%20108%20141T220%20135Q252%20116%20280%20131V180H0Z%22%20fill%3D%22%23105a51%22%20opacity%3D%22.2%22%2F%3E%3Cpath%20d%3D%22M0.0%20106.0%20L-4.2%20126.4%20L-2.1%20126.4%20L-9.6%20146.9%20L-4.7%20146.9%20L-15.2%20168.8%20L-4.2%20168.8%20L-4.2%20179.0%20L4.2%20179.0%20L4.2%20168.8%20L15.2%20168.8%20L4.7%20146.9%20L9.6%20146.9%20L2.1%20126.4%20L4.2%20126.4%20Z%22%20fill%3D%22%23257f6a%22%20opacity%3D%22.7%22%2F%3E%3Cpath%20d%3D%22M21.0%2087.0%20L15.7%20112.8%20L18.4%20112.8%20L8.9%20138.5%20L15.0%20138.5%20L1.8%20166.1%20L15.7%20166.1%20L15.7%20179.0%20L26.3%20179.0%20L26.3%20166.1%20L40.2%20166.1%20L27.0%20138.5%20L33.1%20138.5%20L23.6%20112.8%20L26.3%20112.8%20Z%22%20fill%3D%22%23257f6a%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M42.0%20103.0%20L37.6%20124.3%20L39.8%20124.3%20L32.0%20145.6%20L37.1%20145.6%20L26.1%20168.4%20L37.6%20168.4%20L37.6%20179.0%20L46.4%20179.0%20L46.4%20168.4%20L57.9%20168.4%20L46.9%20145.6%20L52.0%20145.6%20L44.2%20124.3%20L46.4%20124.3%20Z%22%20fill%3D%22%23257f6a%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M59.0%2065.0%20L52.4%2096.9%20L55.7%2096.9%20L44.0%20128.8%20L51.6%20128.8%20L35.2%20163.0%20L52.4%20163.0%20L52.4%20179.0%20L65.6%20179.0%20L65.6%20163.0%20L82.8%20163.0%20L66.4%20128.8%20L74.0%20128.8%20L62.3%2096.9%20L65.6%2096.9%20Z%22%20fill%3D%22%23257f6a%22%20opacity%3D%22.7%22%2F%3E%3Cpath%20d%3D%22M88.0%20116.0%20L84.4%20133.6%20L86.2%20133.6%20L79.7%20151.3%20L83.9%20151.3%20L74.8%20170.2%20L84.4%20170.2%20L84.4%20179.0%20L91.6%20179.0%20L91.6%20170.2%20L101.2%20170.2%20L92.1%20151.3%20L96.3%20151.3%20L89.8%20133.6%20L91.6%20133.6%20Z%22%20fill%3D%22%23257f6a%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M108.0%2079.0%20L102.2%20107.0%20L105.1%20107.0%20L94.8%20135.0%20L101.5%20135.0%20L87.1%20165.0%20L102.2%20165.0%20L102.2%20179.0%20L113.8%20179.0%20L113.8%20165.0%20L128.9%20165.0%20L114.5%20135.0%20L121.2%20135.0%20L110.9%20107.0%20L113.8%20107.0%20Z%22%20fill%3D%22%23257f6a%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M131.0%20104.0%20L126.7%20125.0%20L128.8%20125.0%20L121.1%20146.0%20L126.1%20146.0%20L115.3%20168.5%20L126.7%20168.5%20L126.7%20179.0%20L135.3%20179.0%20L135.3%20168.5%20L146.7%20168.5%20L135.9%20146.0%20L140.9%20146.0%20L133.2%20125.0%20L135.3%20125.0%20Z%22%20fill%3D%22%23257f6a%22%20opacity%3D%22.7%22%2F%3E%3Cpath%20d%3D%22M159.0%2061.0%20L152.2%2094.0%20L155.6%2094.0%20L143.4%20127.1%20L151.4%20127.1%20L134.4%20162.5%20L152.2%20162.5%20L152.2%20179.0%20L165.8%20179.0%20L165.8%20162.5%20L183.6%20162.5%20L166.6%20127.1%20L174.6%20127.1%20L162.4%2094.0%20L165.8%2094.0%20Z%22%20fill%3D%22%23257f6a%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M185.0%2089.0%20L179.8%20114.2%20L182.4%20114.2%20L173.1%20139.4%20L179.2%20139.4%20L166.2%20166.4%20L179.8%20166.4%20L179.8%20179.0%20L190.2%20179.0%20L190.2%20166.4%20L203.8%20166.4%20L190.8%20139.4%20L196.9%20139.4%20L187.6%20114.2%20L190.2%20114.2%20Z%22%20fill%3D%22%23257f6a%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M212.0%2064.0%20L205.4%2096.2%20L208.7%2096.2%20L196.8%20128.4%20L204.5%20128.4%20L188.0%20162.9%20L205.4%20162.9%20L205.4%20179.0%20L218.6%20179.0%20L218.6%20162.9%20L236.0%20162.9%20L219.5%20128.4%20L227.2%20128.4%20L215.3%2096.2%20L218.6%2096.2%20Z%22%20fill%3D%22%23257f6a%22%20opacity%3D%22.7%22%2F%3E%3Cpath%20d%3D%22M239.0%2091.0%20L233.9%20115.6%20L236.5%20115.6%20L227.4%20140.3%20L233.3%20140.3%20L220.6%20166.7%20L233.9%20166.7%20L233.9%20179.0%20L244.1%20179.0%20L244.1%20166.7%20L257.4%20166.7%20L244.7%20140.3%20L250.6%20140.3%20L241.5%20115.6%20L244.1%20115.6%20Z%22%20fill%3D%22%23257f6a%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M272.0%2074.0%20L266.0%20103.4%20L269.0%20103.4%20L258.1%20132.8%20L265.2%20132.8%20L250.1%20164.3%20L266.0%20164.3%20L266.0%20179.0%20L278.0%20179.0%20L278.0%20164.3%20L293.9%20164.3%20L278.8%20132.8%20L285.9%20132.8%20L275.0%20103.4%20L278.0%20103.4%20Z%22%20fill%3D%22%23257f6a%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M9.0%2075.0%20L2.8%20104.1%20L5.9%20104.1%20L-5.3%20133.2%20L2.0%20133.2%20L-13.6%20164.4%20L2.8%20164.4%20L2.8%20179.0%20L15.2%20179.0%20L15.2%20164.4%20L31.6%20164.4%20L16.0%20133.2%20L23.3%20133.2%20L12.1%20104.1%20L15.2%20104.1%20Z%22%20fill%3D%22%23105a51%22%20opacity%3D%22.95%22%2F%3E%3Cpath%20d%3D%22M39.0%2037.0%20L30.5%2076.8%20L34.7%2076.8%20L19.5%20116.5%20L29.4%20116.5%20L8.1%20159.1%20L30.5%20159.1%20L30.5%20179.0%20L47.5%20179.0%20L47.5%20159.1%20L69.9%20159.1%20L48.6%20116.5%20L58.5%20116.5%20L43.3%2076.8%20L47.5%2076.8%20Z%22%20fill%3D%22%23105a51%22%20opacity%3D%22.8%22%2F%3E%3Cpath%20d%3D%22M77.0%2077.0%20L70.9%20105.6%20L73.9%20105.6%20L63.0%20134.1%20L70.1%20134.1%20L54.8%20164.7%20L70.9%20164.7%20L70.9%20179.0%20L83.1%20179.0%20L83.1%20164.7%20L99.2%20164.7%20L83.9%20134.1%20L91.0%20134.1%20L80.1%20105.6%20L83.1%20105.6%20Z%22%20fill%3D%22%23105a51%22%20opacity%3D%22.95%22%2F%3E%3Cpath%20d%3D%22M114.0%2049.0%20L106.2%2085.4%20L110.1%2085.4%20L96.1%20121.8%20L105.2%20121.8%20L85.7%20160.8%20L106.2%20160.8%20L106.2%20179.0%20L121.8%20179.0%20L121.8%20160.8%20L142.3%20160.8%20L122.8%20121.8%20L131.9%20121.8%20L117.9%2085.4%20L121.8%2085.4%20Z%22%20fill%3D%22%23105a51%22%20opacity%3D%22.8%22%2F%3E%3Cpath%20d%3D%22M153.0%2068.0%20L146.3%2099.1%20L149.7%2099.1%20L137.7%20130.2%20L145.5%20130.2%20L128.9%20163.5%20L146.3%20163.5%20L146.3%20179.0%20L159.7%20179.0%20L159.7%20163.5%20L177.1%20163.5%20L160.5%20130.2%20L168.3%20130.2%20L156.3%2099.1%20L159.7%2099.1%20Z%22%20fill%3D%22%23105a51%22%20opacity%3D%22.95%22%2F%3E%3Cpath%20d%3D%22M189.0%2042.0%20L180.8%2080.4%20L184.9%2080.4%20L170.2%20118.7%20L179.8%20118.7%20L159.2%20159.8%20L180.8%20159.8%20L180.8%20179.0%20L197.2%20179.0%20L197.2%20159.8%20L218.8%20159.8%20L198.2%20118.7%20L207.8%20118.7%20L193.1%2080.4%20L197.2%2080.4%20Z%22%20fill%3D%22%23105a51%22%20opacity%3D%22.8%22%2F%3E%3Cpath%20d%3D%22M225.0%2058.0%20L217.7%2091.9%20L221.4%2091.9%20L208.4%20125.8%20L216.8%20125.8%20L198.7%20162.1%20L217.7%20162.1%20L217.7%20179.0%20L232.3%20179.0%20L232.3%20162.1%20L251.3%20162.1%20L233.2%20125.8%20L241.6%20125.8%20L228.6%2091.9%20L232.3%2091.9%20Z%22%20fill%3D%22%23105a51%22%20opacity%3D%22.95%22%2F%3E%3Cpath%20d%3D%22M262.0%2027.0%20L252.9%2069.6%20L257.4%2069.6%20L241.1%20112.1%20L251.7%20112.1%20L228.9%20157.7%20L252.9%20157.7%20L252.9%20179.0%20L271.1%20179.0%20L271.1%20157.7%20L295.1%20157.7%20L272.3%20112.1%20L282.9%20112.1%20L266.6%2069.6%20L271.1%2069.6%20Z%22%20fill%3D%22%23105a51%22%20opacity%3D%22.8%22%2F%3E%3Cpath%20d%3D%22M0%20153Q70%20139%20141%20153T280%20148V180H0Z%22%20fill%3D%22url(%23mist)%22%2F%3E%3C%2Fsvg%3E") center bottom / auto 166px no-repeat;
+  }
+  html.modern-web.fy-ui2 .nav-rail::before{
+    content:"";position:absolute;left:0;right:0;bottom:93px;height:115px;
+    z-index:0;pointer-events:none;
+    background:radial-gradient(ellipse 95% 68% at 48% 90%,rgba(103,221,174,.25),transparent 84%);
+    animation:fy-scene-mist 11s ease-in-out infinite;
+  }
+  html.modern-web.fy-ui2.fy-ui2-light .nav-rail::after{
+    background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20280%20180%22%20width%3D%22280%22%20height%3D%22180%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22mist%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%220%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%23a2dac4%22%20stop-opacity%3D%220%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23a2dac4%22%20stop-opacity%3D%22.33%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20d%3D%22M0%20136Q63%2083%20121%20132T280%20109V180H0Z%22%20fill%3D%22%2381bba9%22%20opacity%3D%22.16%22%2F%3E%3Cpath%20d%3D%22M0%20153Q49%20117%20108%20141T220%20135Q252%20116%20280%20131V180H0Z%22%20fill%3D%22%23578f7e%22%20opacity%3D%22.2%22%2F%3E%3Cpath%20d%3D%22M0.0%20106.0%20L-4.2%20126.4%20L-2.1%20126.4%20L-9.6%20146.9%20L-4.7%20146.9%20L-15.2%20168.8%20L-4.2%20168.8%20L-4.2%20179.0%20L4.2%20179.0%20L4.2%20168.8%20L15.2%20168.8%20L4.7%20146.9%20L9.6%20146.9%20L2.1%20126.4%20L4.2%20126.4%20Z%22%20fill%3D%22%2381bba9%22%20opacity%3D%22.7%22%2F%3E%3Cpath%20d%3D%22M21.0%2087.0%20L15.7%20112.8%20L18.4%20112.8%20L8.9%20138.5%20L15.0%20138.5%20L1.8%20166.1%20L15.7%20166.1%20L15.7%20179.0%20L26.3%20179.0%20L26.3%20166.1%20L40.2%20166.1%20L27.0%20138.5%20L33.1%20138.5%20L23.6%20112.8%20L26.3%20112.8%20Z%22%20fill%3D%22%2381bba9%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M42.0%20103.0%20L37.6%20124.3%20L39.8%20124.3%20L32.0%20145.6%20L37.1%20145.6%20L26.1%20168.4%20L37.6%20168.4%20L37.6%20179.0%20L46.4%20179.0%20L46.4%20168.4%20L57.9%20168.4%20L46.9%20145.6%20L52.0%20145.6%20L44.2%20124.3%20L46.4%20124.3%20Z%22%20fill%3D%22%2381bba9%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M59.0%2065.0%20L52.4%2096.9%20L55.7%2096.9%20L44.0%20128.8%20L51.6%20128.8%20L35.2%20163.0%20L52.4%20163.0%20L52.4%20179.0%20L65.6%20179.0%20L65.6%20163.0%20L82.8%20163.0%20L66.4%20128.8%20L74.0%20128.8%20L62.3%2096.9%20L65.6%2096.9%20Z%22%20fill%3D%22%2381bba9%22%20opacity%3D%22.7%22%2F%3E%3Cpath%20d%3D%22M88.0%20116.0%20L84.4%20133.6%20L86.2%20133.6%20L79.7%20151.3%20L83.9%20151.3%20L74.8%20170.2%20L84.4%20170.2%20L84.4%20179.0%20L91.6%20179.0%20L91.6%20170.2%20L101.2%20170.2%20L92.1%20151.3%20L96.3%20151.3%20L89.8%20133.6%20L91.6%20133.6%20Z%22%20fill%3D%22%2381bba9%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M108.0%2079.0%20L102.2%20107.0%20L105.1%20107.0%20L94.8%20135.0%20L101.5%20135.0%20L87.1%20165.0%20L102.2%20165.0%20L102.2%20179.0%20L113.8%20179.0%20L113.8%20165.0%20L128.9%20165.0%20L114.5%20135.0%20L121.2%20135.0%20L110.9%20107.0%20L113.8%20107.0%20Z%22%20fill%3D%22%2381bba9%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M131.0%20104.0%20L126.7%20125.0%20L128.8%20125.0%20L121.1%20146.0%20L126.1%20146.0%20L115.3%20168.5%20L126.7%20168.5%20L126.7%20179.0%20L135.3%20179.0%20L135.3%20168.5%20L146.7%20168.5%20L135.9%20146.0%20L140.9%20146.0%20L133.2%20125.0%20L135.3%20125.0%20Z%22%20fill%3D%22%2381bba9%22%20opacity%3D%22.7%22%2F%3E%3Cpath%20d%3D%22M159.0%2061.0%20L152.2%2094.0%20L155.6%2094.0%20L143.4%20127.1%20L151.4%20127.1%20L134.4%20162.5%20L152.2%20162.5%20L152.2%20179.0%20L165.8%20179.0%20L165.8%20162.5%20L183.6%20162.5%20L166.6%20127.1%20L174.6%20127.1%20L162.4%2094.0%20L165.8%2094.0%20Z%22%20fill%3D%22%2381bba9%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M185.0%2089.0%20L179.8%20114.2%20L182.4%20114.2%20L173.1%20139.4%20L179.2%20139.4%20L166.2%20166.4%20L179.8%20166.4%20L179.8%20179.0%20L190.2%20179.0%20L190.2%20166.4%20L203.8%20166.4%20L190.8%20139.4%20L196.9%20139.4%20L187.6%20114.2%20L190.2%20114.2%20Z%22%20fill%3D%22%2381bba9%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M212.0%2064.0%20L205.4%2096.2%20L208.7%2096.2%20L196.8%20128.4%20L204.5%20128.4%20L188.0%20162.9%20L205.4%20162.9%20L205.4%20179.0%20L218.6%20179.0%20L218.6%20162.9%20L236.0%20162.9%20L219.5%20128.4%20L227.2%20128.4%20L215.3%2096.2%20L218.6%2096.2%20Z%22%20fill%3D%22%2381bba9%22%20opacity%3D%22.7%22%2F%3E%3Cpath%20d%3D%22M239.0%2091.0%20L233.9%20115.6%20L236.5%20115.6%20L227.4%20140.3%20L233.3%20140.3%20L220.6%20166.7%20L233.9%20166.7%20L233.9%20179.0%20L244.1%20179.0%20L244.1%20166.7%20L257.4%20166.7%20L244.7%20140.3%20L250.6%20140.3%20L241.5%20115.6%20L244.1%20115.6%20Z%22%20fill%3D%22%2381bba9%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M272.0%2074.0%20L266.0%20103.4%20L269.0%20103.4%20L258.1%20132.8%20L265.2%20132.8%20L250.1%20164.3%20L266.0%20164.3%20L266.0%20179.0%20L278.0%20179.0%20L278.0%20164.3%20L293.9%20164.3%20L278.8%20132.8%20L285.9%20132.8%20L275.0%20103.4%20L278.0%20103.4%20Z%22%20fill%3D%22%2381bba9%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M9.0%2075.0%20L2.8%20104.1%20L5.9%20104.1%20L-5.3%20133.2%20L2.0%20133.2%20L-13.6%20164.4%20L2.8%20164.4%20L2.8%20179.0%20L15.2%20179.0%20L15.2%20164.4%20L31.6%20164.4%20L16.0%20133.2%20L23.3%20133.2%20L12.1%20104.1%20L15.2%20104.1%20Z%22%20fill%3D%22%23578f7e%22%20opacity%3D%22.95%22%2F%3E%3Cpath%20d%3D%22M39.0%2037.0%20L30.5%2076.8%20L34.7%2076.8%20L19.5%20116.5%20L29.4%20116.5%20L8.1%20159.1%20L30.5%20159.1%20L30.5%20179.0%20L47.5%20179.0%20L47.5%20159.1%20L69.9%20159.1%20L48.6%20116.5%20L58.5%20116.5%20L43.3%2076.8%20L47.5%2076.8%20Z%22%20fill%3D%22%23578f7e%22%20opacity%3D%22.8%22%2F%3E%3Cpath%20d%3D%22M77.0%2077.0%20L70.9%20105.6%20L73.9%20105.6%20L63.0%20134.1%20L70.1%20134.1%20L54.8%20164.7%20L70.9%20164.7%20L70.9%20179.0%20L83.1%20179.0%20L83.1%20164.7%20L99.2%20164.7%20L83.9%20134.1%20L91.0%20134.1%20L80.1%20105.6%20L83.1%20105.6%20Z%22%20fill%3D%22%23578f7e%22%20opacity%3D%22.95%22%2F%3E%3Cpath%20d%3D%22M114.0%2049.0%20L106.2%2085.4%20L110.1%2085.4%20L96.1%20121.8%20L105.2%20121.8%20L85.7%20160.8%20L106.2%20160.8%20L106.2%20179.0%20L121.8%20179.0%20L121.8%20160.8%20L142.3%20160.8%20L122.8%20121.8%20L131.9%20121.8%20L117.9%2085.4%20L121.8%2085.4%20Z%22%20fill%3D%22%23578f7e%22%20opacity%3D%22.8%22%2F%3E%3Cpath%20d%3D%22M153.0%2068.0%20L146.3%2099.1%20L149.7%2099.1%20L137.7%20130.2%20L145.5%20130.2%20L128.9%20163.5%20L146.3%20163.5%20L146.3%20179.0%20L159.7%20179.0%20L159.7%20163.5%20L177.1%20163.5%20L160.5%20130.2%20L168.3%20130.2%20L156.3%2099.1%20L159.7%2099.1%20Z%22%20fill%3D%22%23578f7e%22%20opacity%3D%22.95%22%2F%3E%3Cpath%20d%3D%22M189.0%2042.0%20L180.8%2080.4%20L184.9%2080.4%20L170.2%20118.7%20L179.8%20118.7%20L159.2%20159.8%20L180.8%20159.8%20L180.8%20179.0%20L197.2%20179.0%20L197.2%20159.8%20L218.8%20159.8%20L198.2%20118.7%20L207.8%20118.7%20L193.1%2080.4%20L197.2%2080.4%20Z%22%20fill%3D%22%23578f7e%22%20opacity%3D%22.8%22%2F%3E%3Cpath%20d%3D%22M225.0%2058.0%20L217.7%2091.9%20L221.4%2091.9%20L208.4%20125.8%20L216.8%20125.8%20L198.7%20162.1%20L217.7%20162.1%20L217.7%20179.0%20L232.3%20179.0%20L232.3%20162.1%20L251.3%20162.1%20L233.2%20125.8%20L241.6%20125.8%20L228.6%2091.9%20L232.3%2091.9%20Z%22%20fill%3D%22%23578f7e%22%20opacity%3D%22.95%22%2F%3E%3Cpath%20d%3D%22M262.0%2027.0%20L252.9%2069.6%20L257.4%2069.6%20L241.1%20112.1%20L251.7%20112.1%20L228.9%20157.7%20L252.9%20157.7%20L252.9%20179.0%20L271.1%20179.0%20L271.1%20157.7%20L295.1%20157.7%20L272.3%20112.1%20L282.9%20112.1%20L266.6%2069.6%20L271.1%2069.6%20Z%22%20fill%3D%22%23578f7e%22%20opacity%3D%22.8%22%2F%3E%3Cpath%20d%3D%22M0%20153Q70%20139%20141%20153T280%20148V180H0Z%22%20fill%3D%22url(%23mist)%22%2F%3E%3C%2Fsvg%3E");opacity:.51;
+  }
+  html.modern-web.fy-ui2.fy-ui2-light .nav-rail::before{
+    background:radial-gradient(ellipse 95% 68% at 48% 90%,rgba(87,163,119,.2),transparent 84%);
+  }
+  html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header{
+    position:relative;isolation:isolate;
+  }
+  html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header>*{
+    position:relative;z-index:1;
+  }
+  html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header::after{
+    content:"";position:absolute;right:2px;top:-17px;width:min(31vw,365px);height:104px;
+    pointer-events:none;z-index:0;
+    background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22760%22%20height%3D%22220%22%20viewBox%3D%220%200%20760%20220%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22m%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%220%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%23267e68%22%20stop-opacity%3D%22.58%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%234eab93%22%20stop-opacity%3D%22.03%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cellipse%20cx%3D%22568%22%20cy%3D%2272%22%20rx%3D%22163%22%20ry%3D%2267%22%20fill%3D%22url(%23m)%22%2F%3E%3Ccircle%20cx%3D%22587%22%20cy%3D%2269%22%20r%3D%2238%22%20fill%3D%22%234eab93%22%20opacity%3D%22.23%22%2F%3E%3Cpath%20d%3D%22M0%20169%20Q80%20123%20160%20148%20T310%20143%20Q389%2069%20464%20117%20T605%20115%20Q674%2065%20760%20116%20V220%20H0Z%22%20fill%3D%22%23247b70%22%20opacity%3D%22.51%22%2F%3E%3Cpath%20d%3D%22M0%20189%20Q94%20131%20187%20174%20T378%20153%20Q451%20127%20531%20148%20T760%20144%20V220H0Z%22%20fill%3D%22%23135a61%22%20opacity%3D%22.57%22%2F%3E%3Cpath%20d%3D%22M0%20216%20Q105%20163%20216%20199%20T454%20191%20Q586%20160%20760%20195%20V220H0Z%22%20fill%3D%22%23174650%22%20opacity%3D%22.82%22%2F%3E%3Cpath%20d%3D%22M245%20135%20Q392%20113%20545%20142%20T760%20117%22%20fill%3D%22none%22%20stroke%3D%22%234eab93%22%20opacity%3D%22.27%22%20stroke-width%3D%222%22%2F%3E%3Cpath%20d%3D%22M320%20174%20Q475%20159%20630%20172%20T760%20160%22%20fill%3D%22none%22%20stroke%3D%22%234eab93%22%20opacity%3D%22.26%22%20stroke-width%3D%222%22%2F%3E%3C%2Fsvg%3E") center / cover no-repeat;
+    animation:fy-scene-breathe 13s ease-in-out infinite;
+  }
+  html.modern-web.fy-ui2.fy-ui2-light :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header::after{
+    background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22760%22%20height%3D%22220%22%20viewBox%3D%220%200%20760%20220%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22m%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%220%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%23cdeee2%22%20stop-opacity%3D%22.58%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23e7f7ed%22%20stop-opacity%3D%22.03%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cellipse%20cx%3D%22568%22%20cy%3D%2272%22%20rx%3D%22163%22%20ry%3D%2267%22%20fill%3D%22url(%23m)%22%2F%3E%3Ccircle%20cx%3D%22587%22%20cy%3D%2269%22%20r%3D%2238%22%20fill%3D%22%23e7f7ed%22%20opacity%3D%22.23%22%2F%3E%3Cpath%20d%3D%22M0%20169%20Q80%20123%20160%20148%20T310%20143%20Q389%2069%20464%20117%20T605%20115%20Q674%2065%20760%20116%20V220%20H0Z%22%20fill%3D%22%23a9d4c5%22%20opacity%3D%22.51%22%2F%3E%3Cpath%20d%3D%22M0%20189%20Q94%20131%20187%20174%20T378%20153%20Q451%20127%20531%20148%20T760%20144%20V220H0Z%22%20fill%3D%22%237cadab%22%20opacity%3D%22.57%22%2F%3E%3Cpath%20d%3D%22M0%20216%20Q105%20163%20216%20199%20T454%20191%20Q586%20160%20760%20195%20V220H0Z%22%20fill%3D%22%23d2e9e0%22%20opacity%3D%22.82%22%2F%3E%3Cpath%20d%3D%22M245%20135%20Q392%20113%20545%20142%20T760%20117%22%20fill%3D%22none%22%20stroke%3D%22%23e7f7ed%22%20opacity%3D%22.27%22%20stroke-width%3D%222%22%2F%3E%3Cpath%20d%3D%22M320%20174%20Q475%20159%20630%20172%20T760%20160%22%20fill%3D%22none%22%20stroke%3D%22%23e7f7ed%22%20opacity%3D%22.26%22%20stroke-width%3D%222%22%2F%3E%3C%2Fsvg%3E");
+  }
+}
+@media (min-width:741px){
+  /* The chart title is the existing dynamic title, with artwork behind text. */
+  html.modern-web.fy-ui2 #view-ranking #ranking-title{
+    box-sizing:border-box;min-height:116px;display:flex;align-items:flex-end;
+    padding:19px 24px 20px;isolation:isolate;
+    background-color:#153935!important;
+    background-image:linear-gradient(90deg,#153935 0%,rgba(21,57,53,.95) 35%,rgba(21,57,53,.43) 100%),url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22760%22%20height%3D%22220%22%20viewBox%3D%220%200%20760%20220%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22m%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%220%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%23267e68%22%20stop-opacity%3D%22.58%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%234eab93%22%20stop-opacity%3D%22.03%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cellipse%20cx%3D%22568%22%20cy%3D%2272%22%20rx%3D%22163%22%20ry%3D%2267%22%20fill%3D%22url(%23m)%22%2F%3E%3Ccircle%20cx%3D%22587%22%20cy%3D%2269%22%20r%3D%2238%22%20fill%3D%22%234eab93%22%20opacity%3D%22.23%22%2F%3E%3Cpath%20d%3D%22M0%20169%20Q80%20123%20160%20148%20T310%20143%20Q389%2069%20464%20117%20T605%20115%20Q674%2065%20760%20116%20V220%20H0Z%22%20fill%3D%22%23247b70%22%20opacity%3D%22.51%22%2F%3E%3Cpath%20d%3D%22M0%20189%20Q94%20131%20187%20174%20T378%20153%20Q451%20127%20531%20148%20T760%20144%20V220H0Z%22%20fill%3D%22%23135a61%22%20opacity%3D%22.57%22%2F%3E%3Cpath%20d%3D%22M0%20216%20Q105%20163%20216%20199%20T454%20191%20Q586%20160%20760%20195%20V220H0Z%22%20fill%3D%22%23174650%22%20opacity%3D%22.82%22%2F%3E%3Cpath%20d%3D%22M245%20135%20Q392%20113%20545%20142%20T760%20117%22%20fill%3D%22none%22%20stroke%3D%22%234eab93%22%20opacity%3D%22.27%22%20stroke-width%3D%222%22%2F%3E%3Cpath%20d%3D%22M320%20174%20Q475%20159%20630%20172%20T760%20160%22%20fill%3D%22none%22%20stroke%3D%22%234eab93%22%20opacity%3D%22.26%22%20stroke-width%3D%222%22%2F%3E%3C%2Fsvg%3E")!important;
+    background-position:center,right center!important;
+    background-size:cover,auto 160%!important;
+    background-repeat:no-repeat!important;
+    color:#e9fff4!important;
+  }
+  html.modern-web.fy-ui2.fy-ui2-light #view-ranking #ranking-title{
+    background-color:#eaf6f0!important;
+    background-image:linear-gradient(90deg,#eaf6f0 0%,rgba(234,246,240,.93) 38%,rgba(234,246,240,.27) 100%),url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22760%22%20height%3D%22220%22%20viewBox%3D%220%200%20760%20220%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22m%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%220%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%23cdeee2%22%20stop-opacity%3D%22.58%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23e7f7ed%22%20stop-opacity%3D%22.03%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cellipse%20cx%3D%22568%22%20cy%3D%2272%22%20rx%3D%22163%22%20ry%3D%2267%22%20fill%3D%22url(%23m)%22%2F%3E%3Ccircle%20cx%3D%22587%22%20cy%3D%2269%22%20r%3D%2238%22%20fill%3D%22%23e7f7ed%22%20opacity%3D%22.23%22%2F%3E%3Cpath%20d%3D%22M0%20169%20Q80%20123%20160%20148%20T310%20143%20Q389%2069%20464%20117%20T605%20115%20Q674%2065%20760%20116%20V220%20H0Z%22%20fill%3D%22%23a9d4c5%22%20opacity%3D%22.51%22%2F%3E%3Cpath%20d%3D%22M0%20189%20Q94%20131%20187%20174%20T378%20153%20Q451%20127%20531%20148%20T760%20144%20V220H0Z%22%20fill%3D%22%237cadab%22%20opacity%3D%22.57%22%2F%3E%3Cpath%20d%3D%22M0%20216%20Q105%20163%20216%20199%20T454%20191%20Q586%20160%20760%20195%20V220H0Z%22%20fill%3D%22%23d2e9e0%22%20opacity%3D%22.82%22%2F%3E%3Cpath%20d%3D%22M245%20135%20Q392%20113%20545%20142%20T760%20117%22%20fill%3D%22none%22%20stroke%3D%22%23e7f7ed%22%20opacity%3D%22.27%22%20stroke-width%3D%222%22%2F%3E%3Cpath%20d%3D%22M320%20174%20Q475%20159%20630%20172%20T760%20160%22%20fill%3D%22none%22%20stroke%3D%22%23e7f7ed%22%20opacity%3D%22.26%22%20stroke-width%3D%222%22%2F%3E%3C%2Fsvg%3E")!important;
+    color:#1d533d!important;
+  }
+}
+/* Empty library illustrations are purely CSS; populated lists remain untouched. */
+html.modern-web.fy-ui2 #view-mylist :is(.library-list,#playlist-favorite-list):empty::after{
+  content:"还没有内容 · 发现喜欢的音乐，随时回来聆听";
+  display:block;box-sizing:border-box;text-align:center;
+  min-height:226px;padding:176px 12px 20px;margin:12px 0;
+  border-radius:16px;border:1px solid rgba(105,191,158,.19);
+  color:#b4d6c6;font-size:13px;line-height:1.55;
+  background-color:rgba(21,64,57,.24);
+  background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22560%22%20height%3D%22240%22%20viewBox%3D%220%200%20560%20240%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22s%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%233f9a88%22%20stop-opacity%3D%22.68%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23338c79%22%20stop-opacity%3D%22.17%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cellipse%20cx%3D%22280%22%20cy%3D%22211%22%20rx%3D%22202%22%20ry%3D%2214%22%20fill%3D%22%23b3dfcd%22%20opacity%3D%22.10%22%2F%3E%3Crect%20x%3D%22130%22%20y%3D%2234%22%20width%3D%22210%22%20height%3D%22164%22%20rx%3D%2212%22%20fill%3D%22url(%23s)%22%20stroke%3D%22%23b3dfcd%22%20stroke-opacity%3D%22.12%22%20transform%3D%22rotate(-6%20220%20116)%22%2F%3E%3Cpath%20d%3D%22M143%20161Q177%20111%20210%20146T282%20134Q308%20108%20334%20150V189H143Z%22%20fill%3D%22%23338c79%22%20opacity%3D%22.56%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%2288%22%20r%3D%2221%22%20fill%3D%22%233f9a88%22%20opacity%3D%22.6%22%2F%3E%3Ccircle%20cx%3D%22331%22%20cy%3D%22132%22%20r%3D%2287%22%20fill%3D%22%23093e3a%22%20stroke%3D%22%23b3dfcd%22%20stroke-opacity%3D%22.28%22%20stroke-width%3D%222%22%2F%3E%3Ccircle%20cx%3D%22331%22%20cy%3D%22132%22%20r%3D%2271%22%20fill%3D%22none%22%20stroke%3D%22%23b3dfcd%22%20stroke-opacity%3D%22.17%22%20stroke-width%3D%221.5%22%2F%3E%3Ccircle%20cx%3D%22331%22%20cy%3D%22132%22%20r%3D%2260%22%20fill%3D%22none%22%20stroke%3D%22%23b3dfcd%22%20stroke-opacity%3D%22.14%22%20stroke-width%3D%221.6%22%2F%3E%3Ccircle%20cx%3D%22331%22%20cy%3D%22132%22%20r%3D%2246%22%20fill%3D%22none%22%20stroke%3D%22%23b3dfcd%22%20stroke-opacity%3D%22.15%22%20stroke-width%3D%221.6%22%2F%3E%3Ccircle%20cx%3D%22331%22%20cy%3D%22132%22%20r%3D%2226%22%20fill%3D%22%23338c79%22%2F%3E%3Ccircle%20cx%3D%22331%22%20cy%3D%22132%22%20r%3D%225%22%20fill%3D%22%23093e3a%22%2F%3E%3Cpath%20d%3D%22M417%20186Q445%20143%20461%2089%22%20fill%3D%22none%22%20stroke%3D%22%23338c79%22%20stroke-width%3D%224%22%20stroke-linecap%3D%22round%22%2F%3E%3Cpath%20d%3D%22M449%20115Q425%2091%20429%2070Q458%2071%20449%20115ZM456%2092Q470%2057%20496%2058Q488%2090%20456%2092ZM436%20146Q408%20133%20405%20111Q432%20111%20436%20146Z%22%20fill%3D%22%23338c79%22%20opacity%3D%22.83%22%2F%3E%3C%2Fsvg%3E");
+  background-position:center 8px;background-size:min(98%,440px) auto;
+  background-repeat:no-repeat;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist :is(.library-list,#playlist-favorite-list):empty::after{
+  color:#527d68;background-color:#f5fbf7!important;
+  border-color:#d9ebe0;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22560%22%20height%3D%22240%22%20viewBox%3D%220%200%20560%20240%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22s%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%23c3e5d5%22%20stop-opacity%3D%22.68%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%2387bdab%22%20stop-opacity%3D%22.17%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cellipse%20cx%3D%22280%22%20cy%3D%22211%22%20rx%3D%22202%22%20ry%3D%2214%22%20fill%3D%22%231f4e42%22%20opacity%3D%22.10%22%2F%3E%3Crect%20x%3D%22130%22%20y%3D%2234%22%20width%3D%22210%22%20height%3D%22164%22%20rx%3D%2212%22%20fill%3D%22url(%23s)%22%20stroke%3D%22%231f4e42%22%20stroke-opacity%3D%22.12%22%20transform%3D%22rotate(-6%20220%20116)%22%2F%3E%3Cpath%20d%3D%22M143%20161Q177%20111%20210%20146T282%20134Q308%20108%20334%20150V189H143Z%22%20fill%3D%22%2387bdab%22%20opacity%3D%22.56%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%2288%22%20r%3D%2221%22%20fill%3D%22%23c3e5d5%22%20opacity%3D%22.6%22%2F%3E%3Ccircle%20cx%3D%22331%22%20cy%3D%22132%22%20r%3D%2287%22%20fill%3D%22%23174c41%22%20stroke%3D%22%231f4e42%22%20stroke-opacity%3D%22.28%22%20stroke-width%3D%222%22%2F%3E%3Ccircle%20cx%3D%22331%22%20cy%3D%22132%22%20r%3D%2271%22%20fill%3D%22none%22%20stroke%3D%22%231f4e42%22%20stroke-opacity%3D%22.17%22%20stroke-width%3D%221.5%22%2F%3E%3Ccircle%20cx%3D%22331%22%20cy%3D%22132%22%20r%3D%2260%22%20fill%3D%22none%22%20stroke%3D%22%231f4e42%22%20stroke-opacity%3D%22.14%22%20stroke-width%3D%221.6%22%2F%3E%3Ccircle%20cx%3D%22331%22%20cy%3D%22132%22%20r%3D%2246%22%20fill%3D%22none%22%20stroke%3D%22%231f4e42%22%20stroke-opacity%3D%22.15%22%20stroke-width%3D%221.6%22%2F%3E%3Ccircle%20cx%3D%22331%22%20cy%3D%22132%22%20r%3D%2226%22%20fill%3D%22%2387bdab%22%2F%3E%3Ccircle%20cx%3D%22331%22%20cy%3D%22132%22%20r%3D%225%22%20fill%3D%22%23174c41%22%2F%3E%3Cpath%20d%3D%22M417%20186Q445%20143%20461%2089%22%20fill%3D%22none%22%20stroke%3D%22%2387bdab%22%20stroke-width%3D%224%22%20stroke-linecap%3D%22round%22%2F%3E%3Cpath%20d%3D%22M449%20115Q425%2091%20429%2070Q458%2071%20449%20115ZM456%2092Q470%2057%20496%2058Q488%2090%20456%2092ZM436%20146Q408%20133%20405%20111Q432%20111%20436%20146Z%22%20fill%3D%22%2387bdab%22%20opacity%3D%22.83%22%2F%3E%3C%2Fsvg%3E")!important;
+}
+@media (max-width:740px){
+  html.modern-web.fy-ui2 #view-mylist :is(.library-list,#playlist-favorite-list):empty::after{
+    min-height:166px;padding:130px 8px 12px;
+    background-size:300px auto;background-position:center 1px;
+  }
+}
+@media (prefers-reduced-motion:reduce){
+  html.modern-web.fy-ui2 .nav-rail::before,
+  html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header::after{
+    animation:none!important;transform:none!important;
+  }
+}
+@media (forced-colors:active){
+  html.modern-web.fy-ui2 .nav-rail::before,
+  html.modern-web.fy-ui2 .nav-rail::after,
+  html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header::after{
+    display:none!important;
+  }
+  html.modern-web.fy-ui2 #view-ranking #ranking-title,
+  html.modern-web.fy-ui2 #view-mylist :is(.library-list,#playlist-favorite-list):empty::after{
+    background-image:none!important;background-color:Canvas!important;color:CanvasText!important;
+    border:1px solid CanvasText!important;
+  }
+}
+
+
+/* FYMUSIC / STAGE 5.2 — SAFE LIVE AUDIO SPECTRUM & ALBUM BREATHING
+   Canvas is an optional captured-stream tap, never an audio output node.
+   Protected/CORS audio produces a truthful static spectrum; no fake FFT. */
+html.modern-web.fy-ui2 .ui2-audio-spectrum{
+  display:none;align-self:flex-start;flex:0 0 auto;
+  width:112px;height:15px;max-width:100%;
+  overflow:hidden;pointer-events:none;
+  opacity:.92;
+}
+html.modern-web.fy-ui2 .ui2-audio-spectrum-canvas{
+  display:block;width:112px;height:15px;
+  max-width:100%;border:0;pointer-events:none;
+}
+@media(min-width:1101px){
+  html.modern-web.fy-ui2 .player-song .player-meta{
+    min-width:0;display:flex;flex-direction:column;
+    align-items:flex-start;justify-content:center;
+  }
+  html.modern-web.fy-ui2 .player-song .ui2-audio-spectrum{
+    display:block;margin-top:2px;
+  }
+}
+html.modern-web.fy-ui2 #lyrics-overlay .now-playing-album-column{
+  position:relative;isolation:isolate;
+}
+html.modern-web.fy-ui2 #lyrics-overlay .now-playing-album-column::before{
+  content:"";position:absolute;z-index:0;
+  width:92%;height:56%;left:4%;top:12%;
+  background:radial-gradient(ellipse,rgba(108,236,176,.26),rgba(40,130,113,.11) 40%,transparent 74%);
+  border-radius:50%;pointer-events:none;
+  opacity:0;transform:scale(.96);
+  transition:opacity .3s ease,transform .3s ease;
+}
+html.modern-web.fy-ui2 #lyrics-overlay .now-playing-album-column > *{
+  position:relative;z-index:1;
+}
+html.modern-web.fy-ui2.fy-ui2-playing #lyrics-overlay:not(.hidden) .now-playing-album-column::before{
+  opacity:.60;animation:fy-album-breath 9s ease-in-out infinite;
+}
+@keyframes fy-album-breath{
+  0%,100%{transform:scale(.97);opacity:.42}
+  50%{transform:scale(1.045);opacity:.67}
+}
+html.modern-web.fy-ui2.fy-ui2-audio-live #lyrics-overlay:not(.hidden) .now-playing-album-column::before{
+  animation:none;opacity:.62;
+  transform:scale(calc(.97 + var(--fy-audio-energy,0) * .09));
+}
+html.modern-web.fy-ui2.fy-ui2-light #lyrics-overlay .now-playing-album-column::before{
+  background:radial-gradient(ellipse,rgba(86,178,119,.23),rgba(140,197,167,.09) 48%,transparent 75%);
+}
+@media(max-width:1100px){
+  html.modern-web.fy-ui2 .ui2-audio-spectrum{display:none!important}
+}
+@media(prefers-reduced-motion:reduce){
+  html.modern-web.fy-ui2 #lyrics-overlay .now-playing-album-column::before{
+    animation:none!important;transition:none!important;transform:none!important;
+  }
+}
+@media(forced-colors:active){
+  html.modern-web.fy-ui2 .ui2-audio-spectrum{display:none!important}
+  html.modern-web.fy-ui2 #lyrics-overlay .now-playing-album-column::before{display:none!important}
+}

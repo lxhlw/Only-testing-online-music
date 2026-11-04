@@ -20,10 +20,10 @@
   if(meta)meta.setAttribute("content",mode==="light"?"#f4faf6":"#091218");
 })();</script>
   <title>FyMusic — 现代音乐空间</title>
-  <link rel="stylesheet" href="styles.css?v=0.4.35">
-  <link rel="stylesheet" href="modern.css?v=0.4.35">
-  <link rel="stylesheet" href="src/mobile-shell.css?v=0.4.35">
-  <link rel="stylesheet" href="src/ui2-preview.css?v=0.4.35">
+  <link rel="stylesheet" href="styles.css?v=0.4.36">
+  <link rel="stylesheet" href="modern.css?v=0.4.36">
+  <link rel="stylesheet" href="src/mobile-shell.css?v=0.4.36">
+  <link rel="stylesheet" href="src/ui2-preview.css?v=0.4.36">
 </head>
 <body>
   <div id="app">
@@ -31,7 +31,7 @@
       <div class="topbar-inner">
         <div class="brand-block">
           <div class="brand">FyMusic</div>
-          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.35</span></div>
+          <div class="subtitle">轻盈 · 舒适 · 好音乐 · <span id="app-version">v0.4.36</span></div>
         </div>
         <div class="topbar-actions">
           <span class="topbar-chip">护眼淡绿模式</span>
@@ -320,7 +320,7 @@
 
             <div class="settings-section">
               <h2>版本信息</h2>
-              <div class="version-detail"><strong id="version-current">v0.4.35</strong><span id="version-release-date">2026-11-04</span></div>
+              <div class="version-detail"><strong id="version-current">v0.4.36</strong><span id="version-release-date">2026-11-04</span></div>
               <div id="version-status" class="muted">尚未检查最新版</div>
               <button id="check-update-btn" type="button" class="secondary compact-button">检查最新版</button>
             </div>
@@ -443,6 +443,7 @@
           </button>
           
         </div>
+        <button id="player-lyric" type="button" class="player-lyric" aria-label="打开完整歌词" title="打开正在播放查看完整歌词">歌词：—</button>
         <div class="player-timeline" aria-label="播放进度调整">
           <span id="player-current-time" class="player-time" aria-live="off">00:00</span>
           <div class="player-seek-wrap">
@@ -458,7 +459,6 @@
           <button id="player-volume-btn" type="button" class="player-icon-btn player-volume-btn" aria-label="静音" title="静音">♫</button>
           <input id="player-volume" type="range" min="0" max="100" step="1" value="80" aria-label="音量">
         </div>
-        <span id="player-lyric" class="player-lyric" aria-live="off">歌词：—</span>
       </div>
       <div class="player-status">
         <span id="bottom-play-status">就绪</span>
@@ -467,20 +467,20 @@
   </div>
 
   <script src="vendor/forge.min.js"></script>
-  <script src="src/app-version.js?v=0.4.35"></script>
+  <script src="src/app-version.js?v=0.4.36"></script>
   <script src="src/version-check.js"></script>
   <script src="src/source-transpiler-modern.js"></script>
   <script src="src/sha1.js"></script>
   <script src="src/play-settings.js"></script>
-  <script src="src/fymusic-cross-platform-match.js?v=0.4.35"></script>
-  <script src="src/music-search.js?v=0.4.35"></script>
+  <script src="src/fymusic-cross-platform-match.js?v=0.4.36"></script>
+  <script src="src/music-search.js?v=0.4.36"></script>
   <script src="src/lx-runtime.js"></script>
-  <script src="src/source-manager.js?v=0.4.35"></script>
-  <script src="src/music-library.js?v=0.4.35"></script>
-  <script src="src/music-lyrics.js?v=0.4.35"></script>
-  <script src="src/player-controls.js?v=0.4.35"></script>
-  <script src="src/app.js?v=0.4.35"></script>
-  <script type="module" src="src/fymusic-playback-verifier.js?v=0.4.35"></script>
+  <script src="src/source-manager.js?v=0.4.36"></script>
+  <script src="src/music-library.js?v=0.4.36"></script>
+  <script src="src/music-lyrics.js?v=0.4.36"></script>
+  <script src="src/player-controls.js?v=0.4.36"></script>
+  <script src="src/app.js?v=0.4.36"></script>
+  <script type="module" src="src/fymusic-playback-verifier.js?v=0.4.36"></script>
   <script>
   (function (global) {
     'use strict';
@@ -1305,7 +1305,11 @@
     }
 
     function navigateFromNav(view,event){
+      // New top-level page, new reading position. A preserved scroll offset
+      // previously hid ranking/library headings behind the sticky header.
+      var changed=view!==currentView;
       showView(view);
+      if(changed) try{global.scrollTo(0,0);}catch(e){}
       try{
         if(event&&event.preventDefault) event.preventDefault();
       }catch(e){}
@@ -1353,6 +1357,11 @@
       if(global.OnlyTestingMusicApp?.replayCurrentWithSettings)
         global.OnlyTestingMusicApp.replayCurrentWithSettings();
       else setStatus('当前歌曲尚未准备好重播。','warn');
+    };
+    // Keep the full lyrics one action away from the expanded dock preview.
+    el('player-lyric').onclick=function(){
+      var cover=el('player-cover-button');
+      if(cover)cover.click();
     };
     el('global-search-btn').onclick=doGlobalSearch;
     el('global-search-input').onkeydown=function(e){e=e||global.event;if(e&&e.keyCode===13)doGlobalSearch();};
@@ -1425,7 +1434,12 @@
     var audio=el('audio');
     if(audio)audio.ontimeupdate=function(){
       var active= document.querySelector('.lyrics-line.active');
-      el('player-lyric').innerHTML=active?'歌词：'+active.innerHTML:'歌词：—';
+      var preview=el('player-lyric');
+      if(preview){
+        var line=active?(active.textContent||'').trim():'';
+        preview.textContent=line?'歌词：'+line:'歌词：—';
+        preview.title=line||'打开正在播放查看完整歌词';
+      }
     };
     // Status, lyrics and playback UI now update via events / observers in modern-ui.js.
     function stripHtml(v){var d=document.createElement('div');d.innerHTML=v;return d.textContent||d.innerText||'';}
@@ -1447,9 +1461,10 @@
     };
   })(window);
   </script>
-  <script type="module" src="src/modern-ui.js?v=0.4.35"></script>
-  <script type="module" src="src/now-playing-experience.js?v=0.4.35"></script>
-  <script type="module" src="src/ui2-preview.js?v=0.4.35"></script>
-  <script type="module" src="src/mobile-shell.js?v=0.4.35"></script>
+  <script type="module" src="src/modern-ui.js?v=0.4.36"></script>
+  <script type="module" src="src/now-playing-experience.js?v=0.4.36"></script>
+  <script type="module" src="src/ui2-preview.js?v=0.4.36"></script>
+  <script type="module" src="src/ui2-audio-visualizer.js?v=0.4.36"></script>
+  <script type="module" src="src/mobile-shell.js?v=0.4.36"></script>
 </body>
 </html>

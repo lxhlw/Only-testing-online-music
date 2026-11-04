@@ -3,6 +3,22 @@ import { chromium } from 'playwright'
 
 const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:8788'
 const browser = await chromium.launch({ headless: true })
+
+/* Stage 5.3: decodable queue-media fixture. Empty MP3 bytes previously
+ * triggered asynchronous media errors which could mask last-track status. */
+function makeQueueWav(seconds=12,rate=8000){
+ const samples=seconds*rate,buffer=Buffer.alloc(44+samples*2);
+ buffer.write('RIFF',0);buffer.writeUInt32LE(buffer.length-8,4);
+ buffer.write('WAVE',8);buffer.write('fmt ',12);
+ buffer.writeUInt32LE(16,16);buffer.writeUInt16LE(1,20);
+ buffer.writeUInt16LE(1,22);buffer.writeUInt32LE(rate,24);
+ buffer.writeUInt32LE(rate*2,28);buffer.writeUInt16LE(2,32);
+ buffer.write('data',36);buffer.writeUInt32LE(samples*2,40);
+ return buffer;
+}
+const playableQueueMedia=makeQueueWav();
+assert.equal(playableQueueMedia.toString('ascii',0,4),'RIFF');
+
 const page = await browser.newPage({
   viewport: { width: 360, height: 640 },
   userAgent: 'Mozilla/5.0 (Linux; Android 16; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0 Mobile Safari/537.36'
@@ -45,13 +61,13 @@ await page.route('**/api/netease-playlists?*', async route => {
 await page.route('**/api/proxy?url=*', async route => {
   const target = new URL(route.request().url()).searchParams.get('url') || ''
   if (target.includes('playlist-audio.invalid')) {
-    await route.fulfill({ status: 200, contentType: 'audio/mpeg', body: '' })
+    await route.fulfill({ status: 200, contentType: 'audio/wav', body: playableQueueMedia })
     return
   }
   await route.continue()
 })
 await page.route('https://playlist-audio.invalid/**', route =>
-  route.fulfill({ status: 200, contentType: 'audio/mpeg', body: '' }))
+  route.fulfill({ status: 200, contentType: 'audio/wav', body: playableQueueMedia }))
 try {
   await page.goto(base + '/', { waitUntil: 'domcontentloaded' })
   await page.evaluate(() => {
