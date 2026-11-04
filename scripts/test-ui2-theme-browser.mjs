@@ -105,9 +105,9 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
     persisted:true,keyboard:true,oneAudio:true,overflow:false,reducedMotion:true});
    await context.close();
   }
-  // UI2 switch must never render in the legacy website without the explicit opt-in.
+  // Modern mode is default; only ui2=0 keeps the classic website unchanged.
   const page=await browser.newPage();
-  await page.goto(base+'/',{waitUntil:'domcontentloaded',timeout:40000});
+  await page.goto(base+'/?ui2=0',{waitUntil:'domcontentloaded',timeout:40000});
   assert.equal(await page.locator('#ui2-theme-toggle').count(),0);
   assert.equal(await page.locator('#ui2-theme-settings-toggle').count(),0);
   await page.close();

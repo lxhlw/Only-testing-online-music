@@ -10,7 +10,7 @@ for(const label of [
 ])assert.ok(css.includes(label),'Missing Phase 2 presentation: '+label);
 assert.match(css,/@media\(max-width:740px\)/);
 assert.match(css,/@media \(min-width: ?741px\)/);
-assert.match(html,/ui2-preview\.css\?v=0\.4\.34/);
+assert.match(html,/ui2-preview\.css\?v=0\.4\.35/);
 assert.equal((html.match(/<audio\b/g)||[]).length,1);
 assert.ok(!css.includes('@import'),'No remote font or CSS fetches');
 assert.ok(!css.includes('animation-iteration-count:infinite'),'No indefinite animations');
