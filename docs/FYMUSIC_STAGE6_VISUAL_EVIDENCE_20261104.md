@@ -31,3 +31,13 @@
 2. **Release gate (NOT DONE):** After signoff, recheck current candidate HEAD and CI, controlled merge [PR #122](https://github.com/lxhlw/Only-testing-online-music/pull/122) (no force push); verify official v0.4.34, real Migu and Kugou alternate audio progress/cover/timed lyrics, 404/allowlist, and revert-ready previous production baseline. If any gate fails, keep production v0.4.33.
 
 **Conclusion:** Automated visual evidence reviewed; no new runtime change required by these limited samples alone. Human/device acceptance remains pending, so release stays on hold.
+
+## Update: 2026-11-04T13:55:29+08:00 — candidate fix and verified new screenshots
+
+- **Previous observation:** Artifact **13297496074**, tested SHA `f29b946d`, showed the 320×640 dark/light first-screen welcome-card footer underneath the floating player. This remains useful historical evidence, but **does not describe the current candidate screenshot**.
+- **Fix:** [`b83ae5a3`](https://github.com/lxhlw/Only-testing-online-music/commit/b83ae5a3a1a576c7f934f771a8b8ab5c58c5c780) scopes smaller welcome-card whitespace/icon/text to UI2 <=360px portrait, height 600–700px; mini dock unchanged. The browser test now requires the card bottom to be **at least 8px above** the dock on initial 320×640 load *without scrolling*, in both Chromium/WebKit and dark/light modes.
+- **Results:** [integrated run #41781719596](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41781719596) **SUCCESS** on exact SHA. New screenshot artifact `fymusic-ui2-visual-audit`, **13298609705**, contains updated `ui2-mobile-small-search.png` and `ui2-light-small-phone.png`. Both inspected PNGs show the five suggestion buttons and the entire footer clear of the dock in the initial viewport. 12 synthetic Chromium/WebKit metrics rows report max P95/individual gap 17ms, zero >50ms samples, one audio, no horizontal overflow.
+- **Regression evidence:** Same-head full browser/security #41781725591, playlist #41781725549, privacy #41781725539 also **SUCCESS**. Real KG→KW `稻香` recovery and Migu `开始懂了` 55 timed lyrics/audio/cover/pause/resume passed again in #41781719596; all live upstream checks remain subject to intermittence.
+- **Current review URL:** https://395bab85.only-testing-online-music.pages.dev/?ui2=1 (light: add `&theme=light`). Previous preview URL is obsolete for reviewing this specific fix.
+- **Still not approved:** No physical 320px touch/visual signoff, no real screen-reader report or practical FPS/CPU/memory measurements, no production v0.4.34 release. The CSS fix improves only the tested initial portrait viewport; other screens and playback states remain part of manual acceptance.
+

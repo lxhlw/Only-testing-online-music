@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04T13:55:29+08:00 · 320px UI2 initial welcome card no longer behind dock, exact candidate gates green
+
+- **Goal:** Resolve the screenshot-observed 320×640 search-card/footer overlap with the fixed mini player before manual/device release acceptance.
+- **Changes:** Candidate-only commit `b83ae5a3`: ultra-narrow UI2 portrait CSS compact welcome card without changing the mini player/audio; strict browser test ensures that at 320×640 **before scrolling**, the entire card ends at least 8px above the fixed player. Retains existing 8 simulated-touch/browser/theme paths. Added verified before/after notes to visual evidence report and current handoff on main, no production UI2 release.
+- **Tests:** Exact candidate `b83ae5a3` completed integrated local+deployed CI #41781719596 **SUCCESS** with local and Preview Chromium/WebKit 320/390 dark/light touches, visual nonoverlap gate, real KG `稻香`→KW played, real MG `开始懂了` played + 55 timed lyric lines/cover/pause/resume. Full browser/audio/security #41781725591 SUCCESS, playlist #41781725549 SUCCESS, privacy #41781725539 SUCCESS. Inspected refreshed synthetic 320px dark+light screenshots in new artifact **13298609705**: card footer visible before dock. Twelve sampled frame P95/max <=17ms, 0 over50ms; one audio, no overflow. This is CI, not physical-device performance evidence.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/commit/b83ae5a3a1a576c7f934f771a8b8ab5c58c5c780 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41781719596 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41781725591 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41781725549 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41781725539 ; new immutable preview https://395bab85.only-testing-online-music.pages.dev/?ui2=1 ; artifact 13298609705.
+- **Not done:** Human visual/device signoff, real narrow physical touch/real screen reader, realistic device FPS/CPU/memory, production PR merge, official v0.4.34 deployment and live verification/rollback rehearsal. Upstream music is not guaranteed.
+- **Status:** Exact-head automated acceptance GREEN; official production v0.4.33 unchanged. Stage 6 release **HOLD** pending manual consent. Two remaining release gates.
+- **Next action:** Review fixed preview on actual 320px/phone and desktop, verify playable artwork/lyrics/keyboard/real screen reader/physical performance and provide explicit sanitized acceptance. Only then recheck and merge PR #122 and verify official production/revert baseline.
+
 ## 2026-11-04 · Stage 6 visual screenshot evidence review (no human signoff)
 
 - **Goal:** Inspect latest exact-head v0.4.34 CI screenshot artifacts and browser frame measurements before proceeding toward manual design/device acceptance.
