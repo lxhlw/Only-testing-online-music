@@ -13,7 +13,7 @@ async function visit(dir,prefix=''){
 }
 await visit(dist);
 paths.sort();
-assert.ok(paths.length>=20&&paths.length<=32,'Unexpected build size: '+paths.length);
+assert.ok(paths.length>=20&&paths.length<=34,'Unexpected build size: '+paths.length);
 for(const name of ['index.html','404.html','_routes.json','version.json','vendor/forge.min.js'])
  assert.ok(paths.includes(name),'Required static asset absent: '+name);
 assert.equal(JSON.parse(await readFile(join(dist,'version.json'),'utf8')).version,

@@ -1,0 +1,94 @@
+/* FyMusic UI3 Stage A: distinct GPU-backed visual dramaturgy, never one wallpaper. */
+html.modern-web.fy-ui2 .view-container>.view-panel>.view-header{
+ position:relative;isolation:isolate;overflow:hidden;box-sizing:border-box;
+ min-height:176px;padding:27px 30px;margin-bottom:24px;border-radius:28px;
+ display:flex;align-items:center;justify-content:space-between;
+ border:1px solid rgba(180,218,204,.15);
+ box-shadow:inset 0 1px rgba(255,255,255,.12),0 22px 54px rgba(2,10,18,.13);
+}
+html.modern-web.fy-ui2 .view-container>.view-panel>.view-header>*:not(.fy3-scene){
+ position:relative;z-index:2;
+}
+html.modern-web.fy-ui2 .view-container>.view-panel>.view-header:before{
+ content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+ background:linear-gradient(90deg,rgba(7,17,28,.80),rgba(8,19,30,.24) 65%,transparent);
+}
+html.modern-web.fy-ui2.fy-ui2-light .view-container>.view-panel>.view-header:before{
+ background:linear-gradient(90deg,rgba(246,253,249,.9),rgba(246,253,249,.24) 65%,transparent);
+}
+html.modern-web.fy-ui2 .fy3-scene{
+ position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;
+ user-select:none;touch-action:none;display:block;
+}
+html.modern-web.fy-ui2.fy3-gpu .view-container>.view-panel>.view-header:after{display:none!important}
+html.modern-web.fy-ui2 #view-search>.view-header{background:#0b2640}
+html.modern-web.fy-ui2 #view-playlist>.view-header{background:#121944}
+html.modern-web.fy-ui2 #view-ranking>.view-header{background:#371827}
+html.modern-web.fy-ui2 #view-mylist>.view-header{background:#322018}
+html.modern-web.fy-ui2.fy-ui2-light #view-search>.view-header{background:#e9f9f2}
+html.modern-web.fy-ui2.fy-ui2-light #view-playlist>.view-header{background:#ecf0ff}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking>.view-header{background:#faeee3}
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist>.view-header{background:#fbf0e4}
+html.modern-web.fy-ui2 #view-search{--fy3-accent:#79e9ca}
+html.modern-web.fy-ui2 #view-playlist{--fy3-accent:#c5a5ff}
+html.modern-web.fy-ui2 #view-ranking{--fy3-accent:#ffd18a}
+html.modern-web.fy-ui2 #view-mylist{--fy3-accent:#f8c49e}
+html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header .panel-kicker{
+ color:var(--fy3-accent)!important;letter-spacing:.23em;
+}
+html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header h1{
+ color:#f9fffb!important;text-shadow:0 2px 18px rgba(0,0,0,.15);
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header h1{
+ color:#19423d!important;text-shadow:none;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(#view-playlist,#view-ranking,#view-mylist)>.view-header .panel-kicker{
+ color:#6b5084!important;
+}
+html.modern-web.fy-ui2 #view-playlist .playlist-card{
+ transition:transform .35s cubic-bezier(.2,.75,.25,1),box-shadow .35s ease,border-color .35s ease;
+}
+html.modern-web.fy-ui2 #view-playlist .playlist-card:hover{
+ transform:translateY(-6px) rotate(-.35deg);
+ box-shadow:0 24px 48px rgba(28,19,68,.22),0 0 0 1px rgba(182,155,245,.28);
+}
+html.modern-web.fy-ui2 #view-ranking #ranking-title{
+ background-color:#321a37!important;
+ background-image:radial-gradient(ellipse at 95% 12%,rgba(255,156,92,.42),transparent 53%),
+  linear-gradient(115deg,#2b1539,#672a3b)!important;color:#fff6ed!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking #ranking-title{
+ background-color:#f8ebe2!important;
+ background-image:radial-gradient(ellipse at 95% 10%,rgba(244,169,95,.26),transparent 57%),
+  linear-gradient(110deg,#f9eee7,#f5dadd)!important;color:#61383b!important;
+}
+html.modern-web.fy-ui2 #view-mylist .music-library-workspace{
+ background-image:linear-gradient(120deg,rgba(230,159,116,.045),transparent 64%);
+}
+html.modern-web.fy-ui2 #lyrics-overlay .now-playing-album-column>.fy3-scene-immersive{
+ position:absolute;inset:-4%;height:108%;width:108%;z-index:0;opacity:.9;
+ mix-blend-mode:screen;pointer-events:none;
+}
+html.modern-web.fy-ui2.fy-ui2-light #lyrics-overlay .now-playing-album-column>.fy3-scene-immersive{
+ mix-blend-mode:multiply;opacity:.35;
+}
+html.modern-web.fy-ui2 #lyrics-overlay .now-playing-album-column>.fy3-scene-immersive~*{
+ position:relative;z-index:1;
+}
+@media(max-width:740px){
+ html.modern-web.fy-ui2 .view-container>.view-panel>.view-header{
+  min-height:128px;padding:18px 16px;border-radius:20px;margin-bottom:16px;
+ }
+ html.modern-web.fy-ui2 #view-playlist .playlist-card:hover{transform:none}
+}
+@media(prefers-reduced-motion:reduce){
+ html.modern-web.fy-ui2 #view-playlist .playlist-card{transition:none!important}
+ html.modern-web.fy-ui2 #view-playlist .playlist-card:hover{transform:none!important}
+}
+@media(forced-colors:active){
+ html.modern-web.fy-ui2 .fy3-scene{display:none!important}
+ html.modern-web.fy-ui2 .view-container>.view-panel>.view-header{
+  background:Canvas!important;color:CanvasText!important;border:1px solid CanvasText!important;
+ }
+ html.modern-web.fy-ui2 .view-container>.view-panel>.view-header h1{color:CanvasText!important}
+}

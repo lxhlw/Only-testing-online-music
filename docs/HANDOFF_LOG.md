@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · UI3 cinematic visual project fork and Stage A GPU renderer
+
+- **Goal:** Implement the user's new demand for sophisticated graphics in every part of FyMusic, and reject old uniform/weakly reactive aesthetics despite green functional tests.
+- **Changes:** Created isolated UI3 branch; added render-only WebGL2 GLSL scene engine, five distinct page/immersive shader modes, pointer parallax, light/dark, motion/visibility controls, per-page CSS tokens and card behaviors, UI3 isolated workflow and static contract. Assets explicitly allowlisted; full 4-stage plan added.
+- **Tests:** Initial JS source syntax/contract prep, exact source CI and Preview screenshots not yet observed. Old UI2 tests remain historical evidence, not UI3 aesthetic signoff.
+- **Evidence:** Branch `design/fymusic-ui3-cinematic-20261105`; `docs/FYMUSIC_UI3_CINEMATIC_20261105.md`.
+- **Not done:** FFT responsiveness redesign, View Transitions, screenshot review, physical FPS/battery, original KG/MG new-head checks, production deployment.
+- **Status:** Stage A source checkpoint, CI PENDING; main v0.4.35 safe.
+- **Next action:** Verify exact new-head UI3 CI and browser-rendered screenshots, fix defects, then implement Stage B real audio visualizer.
+
 ## 2026-11-05 · Stage 5.3 full strict preview QA green, 48 screenshots human reviewed; release permission pending
 
 - **Goal:** Finish final visual and cross-platform playback acceptance of the v0.4.36 nonproduction atmosphere + safe spectrum candidate, without weakening existing tests or publishing.

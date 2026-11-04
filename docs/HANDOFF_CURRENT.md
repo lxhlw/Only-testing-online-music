@@ -2,6 +2,16 @@
 
 > Repository is PUBLIC. Keep only sanitized engineering facts. Read HANDOFF_LOG.md and HANDOFF_POLICY.md before each operation. GitHub branch SHA, workflow results and deployed-site behavior override stale notes.
 
+### 2026-11-05 — UI3 Stage A: owner rejected UI2 aesthetics, GPU cinematic design launched (CI PENDING)
+
+- **Decision:** Previous v0.4.36 candidate functional QA passed but **visual acceptance FAILED**: repetitive decor, flat page identity, small unreactive frequency spectrum. User allows heavier modern graphics/rendering/interaction across every aspect; optimize performance intelligently, not by removing ambition. **Do not publish UI2 PR #124 based on green CI.**
+- **Fork:** New nonproduction branch `design/fymusic-ui3-cinematic-20261105` from `86512694ccfcef11ed503354b31158ff66fc496b`, while official `main` remains `a8aafde8` v0.4.35. Old PR #124 is draft/unmerged.
+- **Stage A code:** New independent `src/fymusic-cinematic-engine.js` introduces WebGL2/GLSL ES 3.00 GPU scene renderer with distinct shader compositions for Search, Playlists, Rankings, Library and Immersive album, interactive pointer parallax, light/dark variant, 60fps-capable RAF, DPR handling, context loss fallback, reduced-motion/hidden page controls. New `src/fymusic-cinematic.css` gives each page unique color/typographic hierarchy/card treatment instead of uniform green. New assets are versioned in index and distribution guard rises by exactly 2. New static architecture contract and isolated CI workflow `.github/workflows/fymusic-ui3-cinematic-rc.yml`, full specification `docs/FYMUSIC_UI3_CINEMATIC_20261105.md`. No audio/media or provider output changes.
+- **Stage B still required:** Existing 28-column analyzer not yet reworked; larger real 64/96-band FFT, waveform/RMS/onsets/beat+GPU linking remain next, with honest fallback for uncapturable CORS audio. Do not claim real-provider amplitude improvements from this visual stage.
+- **Tests/status:** JavaScript static syntax and source-contract preparation only; exact new UI3 head CI/Preview/screenshots **PENDING**, no browser-verified shader pass yet. Previous UI2 #41887400819 and sibling actions success apply only to baseline. All production release actions blocked.
+- **Next goals:** (1) Check exact UI3 CI, visual screenshots and WebGL2 shader compile, fix any clipping/control issues; (2) advanced audio Stage B; (3) page-specific transitions/UX Stage C; (4) quantitative + aesthetic Stage D and explicit separate publication approval. **4 substantive milestones, Stage A underway.**
+- **Next chat:** Read all handoff files on new UI3 branch, compare main/old draft/CI before working; do not mistake this work for production v0.4.36.
+
 ### 2026-11-05 — STAGE 5.3 FINAL SOURCE QA GREEN; 48 ACTUAL BROWSER SCREENSHOTS REVIEWED; OWNER APPROVAL GATE
 
 - **Authority and release state:** Official `main` `a8aafde80e18d76c03952680f7378a8eea93ae1c` remains live **v0.4.35**. Draft [PR #124](https://github.com/lxhlw/Only-testing-online-music/pull/124) v0.4.36 visual/motion candidate is **OPEN and UNMERGED**. Exact fully tested application/source SHA **`079d13b9b1abc1f5acfef8729ebabf07b7e12d1f`**; latest workflow conclusions are authoritative. This final handoff checkpoint is **DOCS ONLY** and may trigger a separate CI cycle on a new docs-only HEAD; that new cycle's status must not be invented.
