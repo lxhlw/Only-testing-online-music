@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · v0.4.35 default UI2 isolated candidate; initial CI contract/continuity fixes
+
+- **Goal:** Deliver reviewed modern UI2 as default homepage with `?ui2=0` classic opt-out, version/cache-safe assets and strict browser/music/release checks.
+- **Changes:** Nonproduction branch `release/fymusic-ui2-default-v0435-20261104`, code commit `05ae29cf`; updated HTML bootstrap and UI2 presentation JS, version metadata, cache revision, exact UI2 contract/theme tests and new 16-case browser default/legacy gate plus isolated Preview workflow. No change to audio/resolver/lyrics. Corrected a stale hardcoded v0.4.34 test assertion in follow-up `7d5a35ef`. This document-only checkpoint states v0.4.35 so the existing privacy-check version policy remains enforced.
+- **Tests:** Initial RC #41793142739 FAILED stale test-contract version, privacy #41793142733 FAILED missing v0.4.35 handoff mention; both are classified as release-blocking and are addressed on the branch. At checkpoint creation, newer exact-head tests were NOT yet confirmed. Main production v0.4.34 unchanged. Latest official CI #41791887065 FAILED strict intermittent real MG playback even though earlier official #41786525697 run attempt 2 SUCCESS. Do not claim universal provider reliability.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/commit/05ae29cf7240cb3852a31f4f97eddbc8e3fe262f ; https://github.com/lxhlw/Only-testing-online-music/commit/7d5a35ef868de71e3ca9e6c2bd84efe1c5a27924 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41793142739 .
+- **Not done:** Candidate exact-head green CI; live isolated Preview verification; PR merge; default UI2 production activation; real screen-reader/physical-performance measurements.
+- **Status:** v0.4.35 candidate only, not production; CI must turn GREEN before merge.
+- **Next action:** Re-run strict local/deployed Chrome+WebKit default/legacy tests, privacy, real Migu original live audio+lyrics and safe cross-source fallback. Preserve reversible release and clear source provenance.
+
 ## 2026-11-04T15:20:45+08:00 · Official v0.4.34 real Migu production acceptance passed after bounded diagnosis
 
 - **Goal:** Recheck live Migu audio+timed-lyric failures in the official production release without weakening strict assertions; isolate upstream variability before modifying playback.
