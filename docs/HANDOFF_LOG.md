@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Stage 6 visual screenshot evidence review (no human signoff)
+
+- **Goal:** Inspect latest exact-head v0.4.34 CI screenshot artifacts and browser frame measurements before proceeding toward manual design/device acceptance.
+- **Changes:** No candidate/application runtime changes. Downloaded nonproduction visual audit artifact 13297496074, inspected its 11 PNGs and 12 measurement rows, wrote public-safe review document `docs/FYMUSIC_STAGE6_VISUAL_EVIDENCE_20261104.md` and refreshed CURRENT/LOG on main.
+- **Tests:** Candidate `f29b946d` had previously passed exact-head integrated preview #41776071222, browser/security #41776077197, playlist #41776077208 and handoff privacy #41776077220. Latest production-main #41776811441 and handoff privacy #41776811474 were SUCCESS before this docs-only commit. Visual inspection is manual review of **synthetic screenshots**, NOT physical device signoff; 12 CI frame samples P95 <=17ms and 0 samples >50ms, no horizontal overflow or duplicate audio nodes. 320px mini dock visibly covers lower recommendation card in initial viewport; scroll-to-reveal simulation passed in earlier CI, actual touch needs checking.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41776071222 ; screenshot artifact ID 13297496074 ; https://github.com/lxhlw/Only-testing-online-music/pull/122 ; `docs/FYMUSIC_STAGE6_VISUAL_EVIDENCE_20261104.md`.
+- **Not done:** Manual human design acceptance, physical-device 320px tap test, real screen-reader test, real-device FPS/CPU/memory, production merge/deployment/version and audio security smoke or rollback exercise. No claim of universal source availability.
+- **Status:** Candidate automated checks green, **Stage 6 RELEASE HOLD**. Production remains v0.4.33.
+- **Next action:** Authorized reviewer tests the candidate on real desktop/mobile and reports an explicit sanitized pass/fail with any defects. Only after approval merge and verify v0.4.34, keeping revert-ready baseline.
+
 ## 2026-11-04T13:00:36+08:00 · Stage 6 strict candidate automation green, manual release gate still open
 
 - **Goal:** Resolve the previous CI failure, verify current v0.4.34 candidate on actual preview/browser/audio/security without compromising test strictness, and prepare safe release continuity.

@@ -2,6 +2,13 @@
 
 > Repository is PUBLIC. Keep only sanitized engineering facts. Read HANDOFF_LOG.md and HANDOFF_POLICY.md before each operation. GitHub branch SHA, workflow results and deployed-site behavior override stale notes.
 
+### 2026-11-04 — Stage 6 visual evidence inspected; human/device approval still pending
+
+- **Current authority:** Official production **v0.4.33**, main baseline before this docs-only checkpoint `60f4cc88c290f9be5d9c4fefb54c7b972f0b77a9`. Candidate [PR #122](https://github.com/lxhlw/Only-testing-online-music/pull/122) remains **OPEN, UNMERGED**, v0.4.34 at `f29b946d41205b7c9e790129014bfa89a2466682`. The prior exact-head [integrated CI #41776071222](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41776071222), independent browser #41776077197, playlist #41776077208 and privacy #41776077220 all passed; latest main #41776811441 and privacy #41776811474 also passed. No new player or UI code changed in this operation.
+- **Completed review:** Retrieved integrated CI screenshot artifact `fymusic-ui2-visual-audit` **13297496074** and inspected all **11** synthetic PNGs (dark/light desktop/tablet/mobile; 820px library) plus `metrics.json` **12** Chromium/WebKit samples. Tested dark/light search areas look coherent without obvious widespread clipping. Observed 320px initial viewport recommendation-card footer visually under the fixed mini dock; previous simulated scroll-to-reveal and touch checks passed, but real reachability must be checked by a person. Max recorded p95/single frame interval **17ms**, samples >50ms **0**, no horizontal overflow, one audio node per test. **CI samples do not represent physical FPS/CPU/memory or real screen-reader results.**
+- **New complete public-safe report:** [docs/FYMUSIC_STAGE6_VISUAL_EVIDENCE_20261104.md](FYMUSIC_STAGE6_VISUAL_EVIDENCE_20261104.md). Artifacts/screenshot findings are not human design acceptance and do not include all feature views.
+- **Status / Next goal:** **RELEASE HOLD**, remaining **two gates** within **one macro-stage**: (1) obtain user/device visual, 320px physical touch, real screen-reader, practical performance approval; (2) only with affirmative signoff and green exact-head checks, merge PR #122 and verify actual official v0.4.34 production with revert readiness. No production merge or release performed.
+
 ### 2026-11-04 12:28 Asia/Singapore — Stage 6 narrow-screen reachability audit (candidate only)
 
 - **Authority:** The public production `main` before this docs-only checkpoint is `db8e7ce1d79b6f790195e57dd0152770620652b6` and version **v0.4.33**. UI 2.0 remains unmerged; [review PR #122](https://github.com/lxhlw/Only-testing-online-music/pull/122) is a nonproduction **v0.4.34** candidate.
