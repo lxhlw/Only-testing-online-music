@@ -2,6 +2,12 @@
 
 > Repository is PUBLIC. Keep only sanitized engineering facts. Read HANDOFF_LOG.md and HANDOFF_POLICY.md before each operation. GitHub branch SHA, workflow results and deployed-site behavior override stale notes.
 
+### 2026-11-05 — UI3 Stage A style contract updated after proven first-fold fix
+
+- **CI observation:** UI3 [#41892017144](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41892017144) FAILED at **new UI3 static test only**: it still required old `min-height:176px` even though the just-committed code intentionally reduced header to 104px to prevent real fixed-player overlap. Build did not reach local browser/Preview, and original MG test was skipped (no URL). This is **stale test expectation, not a new source media failure**.
+- **Correction:** Update the new UI3 style-contract reference to the actual corrected 104px header. No product CSS/JS changed; prior original UI2 dock-clearance assertion stays strict and unchanged. New exact-head CI PENDING; visual aesthetics still not accepted.
+- **Next goal:** Verify live shader compilation and screenshots with full local/browser/Preview/real KG-MG gates; then advanced audio Stage B.
+
 ### 2026-11-05 — UI3 Stage A first CI layout regression fixed; GPU scene retained
 
 - **Observed actual failure:** [UI3 RC #41891325307](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41891325307) **FAILED** in `scripts/test-ui2-atmosphere-browser.mjs`: 1440 desktop initial search discovery card bottom=1130px while floating dock top=791px. This came from oversized new UI3 hero/header consuming first-fold space. Build/style/privacy tests were green, but local browser failed before isolated Preview, so strict MG step had no Preview URL (not a real Migu media failure).

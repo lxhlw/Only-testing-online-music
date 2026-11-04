@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Correct stale UI3 scene header expectation in static test
+
+- **Goal:** Remove test-only contradiction after intentional desktop first-fold layout fix.
+- **Changes:** UI3 style test now checks corrected `min-height:104px` instead of superseded 176px; no player or visual implementation changes.
+- **Tests:** Previous #41892017144 failed only that stale assertion before real browser. New exact-head actions PENDING.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41892017144 .
+- **Not done:** New GPU browser check, screenshots, Stage B audio redesign.
+- **Status:** Static guard corrected, UI3 preview candidate only.
+- **Next action:** Inspect new CI and visual evidence.
+
 ## 2026-11-05 · Stage A fix proven desktop first-fold overlap and reuse shader context
 
 - **Goal:** Correct actual Chrome/WebKit regression: initial search discovery card hidden behind fixed player after UI3 hero enlargement.
