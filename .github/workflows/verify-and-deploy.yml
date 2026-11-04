@@ -18,6 +18,7 @@ on:
       - 'scripts/test-chart-catalog.mjs'
       - 'scripts/test-playlist-infinite-browser.mjs'
       - 'scripts/test-mobile-interaction-qa-browser.mjs'
+      - 'scripts/test-ui2-default-browser.mjs'
       - 'scripts/test-web-source-selection-browser.mjs'
       - 'scripts/test-huibq-explicit-playback-live.mjs'
       - 'package.json'
@@ -78,6 +79,7 @@ jobs:
           node --check scripts/test-modern-web-browser.mjs
           node --check scripts/test-playlist-infinite-browser.mjs
           node --check scripts/test-mobile-interaction-qa-browser.mjs
+          node --check scripts/test-ui2-default-browser.mjs
           node --check scripts/test-web-source-selection-browser.mjs
           node --check scripts/test-huibq-explicit-playback-live.mjs
           node --check scripts/test-modern-flower-proxy.mjs
@@ -144,6 +146,9 @@ jobs:
           done
           if [ "$READY" != "1" ]; then cat /tmp/lx-modern-pages.log; exit 1; fi
           node scripts/test-modern-web-browser.mjs
+          node scripts/test-ui2-default-browser.mjs
+          node scripts/test-ui2-theme-browser.mjs
+          node scripts/test-ui2-touch-reachability-browser.mjs
           node scripts/test-now-playing-kuwo-browser.mjs
           node scripts/test-seamless-cross-platform-browser.mjs
           node scripts/test-playback-rejection-browser.mjs
@@ -156,7 +161,7 @@ jobs:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: verify
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     environment:
       name: production
       url: https://only-testing-online-music.pages.dev
@@ -191,6 +196,8 @@ jobs:
             sleep 5
           done
           test "$READY" = "1"
+          grep -Fq "src/ui2-preview.css?v=$VERSION" /tmp/lx-modern-index.html
+          grep -Fq 'if(params.get("ui2")==="0")return;' /tmp/lx-modern-index.html
           curl -fsSL https://only-testing-online-music.pages.dev/modern.css -o /tmp/lx-modern.css
           grep -Fq 'LX Music Modern' /tmp/lx-modern.css
           grep -Fq 'Eye-care mint design' /tmp/lx-modern.css
@@ -249,6 +256,9 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/test-modern-web-browser.mjs
+          node scripts/test-ui2-default-browser.mjs
+          node scripts/test-ui2-theme-browser.mjs
+          node scripts/test-ui2-touch-reachability-browser.mjs
           node scripts/test-now-playing-kuwo-browser.mjs
           node scripts/test-seamless-cross-platform-browser.mjs
           node scripts/test-playlist-infinite-browser.mjs
