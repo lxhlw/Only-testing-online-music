@@ -2,6 +2,13 @@
 
 > Repository is PUBLIC. Keep only sanitized engineering facts. Read HANDOFF_LOG.md and HANDOFF_POLICY.md before each operation. GitHub branch SHA, workflow results and deployed-site behavior override stale notes.
 
+### 2026-11-05 — UI3 Stage A real browser scene and screenshot test gate added
+
+- **Test implementation:** New `scripts/test-fymusic-ui3-browser.mjs` verifies each of 5 GPU-scene identities at runtime (4 catalog headers + immersive layer wired), canvas presence matching actual WebGL2 context, dark/light theme, no horizontal overflow at 1440/390/320, one original audio, reduced-motion preference and zero injected canvas in classic `?ui2=0`. Generates actual rendered Chromium/WebKit 1440 screenshot artifacts. Added to new independent UI3 isolated Preview workflow without deleting or weakening existing strict KG→KW and MG media/55-line LRC gates.
+- **Status:** Test source JavaScript syntax PASS; exact SHA CI and screenshot aesthetics **PENDING**. Branch remains nonproduction, former PR #124 not visually accepted.
+- **Next goal:** Run dedicated UI3 CI and inspect actual screenshot artifacts, fix shader/layout problems; then Stage B dynamic multi-band audio rendering.
+
+
 ### 2026-11-05 — UI3 Stage A: owner rejected UI2 aesthetics, GPU cinematic design launched (CI PENDING)
 
 - **Decision:** Previous v0.4.36 candidate functional QA passed but **visual acceptance FAILED**: repetitive decor, flat page identity, small unreactive frequency spectrum. User allows heavier modern graphics/rendering/interaction across every aspect; optimize performance intelligently, not by removing ambition. **Do not publish UI2 PR #124 based on green CI.**

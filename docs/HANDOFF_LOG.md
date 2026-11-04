@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Add UI3 Chromium/WebKit scene and layout screenshot gate
+
+- **Goal:** Prove the five distinct shader scenes actually initialize and render across browsers, themes and mobile widths, not just exist in source.
+- **Changes:** Added `scripts/test-fymusic-ui3-browser.mjs` and CI hook; checks view switching, WebGL canvas presence, no body overflow, original single audio, reduced motion, classic opt-out and screenshot artifacts.
+- **Tests:** JS parse successful, actual CI/preview PENDING.
+- **Evidence:** UI3 branch and isolated workflow.
+- **Not done:** CI screenshots, shader aesthetic acceptance, advanced audio Stage B.
+- **Status:** Browser QA added without changing production code or live site.
+- **Next action:** Check exact-head isolated Actions and screenshots, repair issues.
+
 ## 2026-11-05 · UI3 cinematic visual project fork and Stage A GPU renderer
 
 - **Goal:** Implement the user's new demand for sophisticated graphics in every part of FyMusic, and reject old uniform/weakly reactive aesthetics despite green functional tests.
