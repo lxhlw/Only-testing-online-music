@@ -119,9 +119,10 @@
     const parent=section?.querySelector('.view-header');
     if(!parent)return;
     view=Object.prototype.hasOwnProperty.call(scenes,next)?next:'search';
-    if(!header||header.canvas.parentElement!==parent){
-      header?.canvas.remove();header=create(parent,'header');
-    }
+    if(!header)header=create(parent,'header');
+    else if(header.canvas.parentElement!==parent)parent.prepend(header.canvas);
+    // Reuse one GPU context across all view changes. Repeated allocation
+    // would otherwise cause browser context eviction during long sessions.
     root.dataset.fy3Scene=view;
     root.classList.toggle('fy3-gpu',Boolean(header));
   }

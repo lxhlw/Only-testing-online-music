@@ -2,6 +2,13 @@
 
 > Repository is PUBLIC. Keep only sanitized engineering facts. Read HANDOFF_LOG.md and HANDOFF_POLICY.md before each operation. GitHub branch SHA, workflow results and deployed-site behavior override stale notes.
 
+### 2026-11-05 — UI3 Stage A first CI layout regression fixed; GPU scene retained
+
+- **Observed actual failure:** [UI3 RC #41891325307](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41891325307) **FAILED** in `scripts/test-ui2-atmosphere-browser.mjs`: 1440 desktop initial search discovery card bottom=1130px while floating dock top=791px. This came from oversized new UI3 hero/header consuming first-fold space. Build/style/privacy tests were green, but local browser failed before isolated Preview, so strict MG step had no Preview URL (not a real Migu media failure).
+- **Fix:** Rebalance GPU header to 104px desktop/91px mobile without reducing rendering complexity; tighten existing initial discovery card and footnote only at desktop, keep same content, buttons, responsive widths and focus. Avoid GPU context churn by reparenting/reusing a **single WebGL2 header canvas** across view changes rather than creating another context each navigation. UI3 browser tests now assert GPU shaders actually initialize in Chromium when WebGL2 exists, and validate revised readable header size. Existing strict UI2 first-fold/dock and all music tests unchanged.
+- **Status:** source fix committed; exact new CI/screenshot GPU proof PENDING. Official main v0.4.35 stable, UI3 nonproduction.
+- **Next:** Validate current-head screenshot, GPU compiler across Chromium/WebKit, strict real music, then Stage B advanced audio visualizer.
+
 ### 2026-11-05 — UI3 Stage A real browser scene and screenshot test gate added
 
 - **Test implementation:** New `scripts/test-fymusic-ui3-browser.mjs` verifies each of 5 GPU-scene identities at runtime (4 catalog headers + immersive layer wired), canvas presence matching actual WebGL2 context, dark/light theme, no horizontal overflow at 1440/390/320, one original audio, reduced-motion preference and zero injected canvas in classic `?ui2=0`. Generates actual rendered Chromium/WebKit 1440 screenshot artifacts. Added to new independent UI3 isolated Preview workflow without deleting or weakening existing strict KG→KW and MG media/55-line LRC gates.

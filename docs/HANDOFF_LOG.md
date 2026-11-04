@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Stage A fix proven desktop first-fold overlap and reuse shader context
+
+- **Goal:** Correct actual Chrome/WebKit regression: initial search discovery card hidden behind fixed player after UI3 hero enlargement.
+- **Changes:** Compact header geometry and initial search discovery card padding while retaining full GLSL GPU animation; one persistent shader context follows navigation rather than allocating four contexts; strengthen GPU availability test.
+- **Tests:** Prior #41891325307 failed old first-fold clearance gate, while initial build/style/privacy succeeded; full new exact-head CI PENDING. No playback API changes.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41891325307 .
+- **Not done:** New screenshot/real media pass, Stage B FFT, Stage C transitions.
+- **Status:** Scoped visual layout fix prepared on UI3 development branch.
+- **Next action:** Observe exact GitHub actions and fix any further proven issues.
+
 ## 2026-11-05 · Add UI3 Chromium/WebKit scene and layout screenshot gate
 
 - **Goal:** Prove the five distinct shader scenes actually initialize and render across browsers, themes and mobile widths, not just exist in source.
