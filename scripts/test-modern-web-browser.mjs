@@ -3,7 +3,10 @@ import { chromium } from 'playwright';
 import {readFileSync} from 'node:fs';
 const expectedVersion=JSON.parse(readFileSync('version.json','utf8')).version;
 
-const url = process.env.TEST_BASE_URL || 'http://127.0.0.1:8788';
+// This baseline regression explicitly tests the original mint/legacy UX.
+// UI2 default dark/light is independently verified by the UI2 browser gates.
+const baseUrl = process.env.TEST_BASE_URL || 'http://127.0.0.1:8788';
+const url = baseUrl.endsWith('/') ? baseUrl+'?ui2=0' : baseUrl+'/?ui2=0';
 const browser = await chromium.launch({headless:true,args:['--autoplay-policy=no-user-gesture-required']});
 function makeWav(seconds=8,rate=8000){
   const frames=seconds*rate;

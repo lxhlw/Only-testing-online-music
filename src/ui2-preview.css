@@ -1,5 +1,5 @@
 /*
- * FyMusic UI 2.0 — isolated desktop preview. Query switch: ?ui2=1.
+ * FyMusic UI 2.0 — default responsive theme. Opt-out switch: ?ui2=0.
  * The playback engine, DOM identities, mobile shell, and source logic stay unchanged.
  * No remote fonts, no infinite animations, no canvas polling.
  */

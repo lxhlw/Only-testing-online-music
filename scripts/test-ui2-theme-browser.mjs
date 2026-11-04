@@ -33,6 +33,21 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
    const context=await browser.newContext({viewport:{width:size.width,height:size.height},deviceScaleFactor:1,hasTouch:size.width<=740});
    const page=await context.newPage();
    const errors=[];page.on('pageerror',e=>errors.push(String(e).slice(0,150)));
+   // Theme-only browser visuals use local fixture; independent live-song
+   // acceptance remains unmocked and mandatory. No JS errors are ignored.
+   await page.addInitScript(()=>{
+    const fixture=[
+     '/** @name UI2 fixture source */',
+     '(function(){',
+     ' var api=globalThis.lx;',
+     ' api.on(api.EVENT_NAMES.request,function(){return Promise.resolve({url:"https://media.example.test/song.wav"});});',
+     ' api.send(api.EVENT_NAMES.inited,{status:true,sources:{kw:{name:"Kuwo",type:"music",actions:["musicUrl"],qualitys:["128k"]}}});',
+     '})();'
+    ].join('\n');
+    localStorage.setItem('only-testing-online-music.lx-sources',
+     JSON.stringify([{id:'ui2-layout-test',name:'UI2 fixture',code:fixture,url:'https://example.com/source.js'}]));
+    localStorage.setItem('only-testing-online-music.active-source-id','ui2-layout-test');
+   });
    await page.route('**/*',route=>{
     if(new URL(route.request().url()).origin===new URL(base).origin)return route.continue();
     return route.abort('blockedbyclient');
@@ -105,9 +120,9 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
     persisted:true,keyboard:true,oneAudio:true,overflow:false,reducedMotion:true});
    await context.close();
   }
-  // UI2 switch must never render in the legacy website without the explicit opt-in.
+  // Modern mode is default; only ui2=0 keeps the classic website unchanged.
   const page=await browser.newPage();
-  await page.goto(base+'/',{waitUntil:'domcontentloaded',timeout:40000});
+  await page.goto(base+'/?ui2=0',{waitUntil:'domcontentloaded',timeout:40000});
   assert.equal(await page.locator('#ui2-theme-toggle').count(),0);
   assert.equal(await page.locator('#ui2-theme-settings-toggle').count(),0);
   await page.close();

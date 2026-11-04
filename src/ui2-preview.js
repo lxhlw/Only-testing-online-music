@@ -1,11 +1,11 @@
 /*
- * FyMusic UI 2.0 — presentation-only, opt-in via ?ui2=1.
+ * FyMusic UI 2.0 — presentation-only, default UI2, opt-out via ?ui2=0.
  * Reuse the validated player, metadata and lyric controllers; no timers,
  * network requests, URL re-resolution or additional HTMLMediaElement.
  */
 (() => {
   const params=new URLSearchParams(location.search);
-  if(params.get('ui2')!=='1')return;
+  if(params.get('ui2')==='0')return;
   document.documentElement.classList.add('fy-ui2');
   const themeKey='fymusic-ui2-theme';
   const themeParam=params.get('theme');
