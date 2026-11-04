@@ -2,6 +2,15 @@
 
 > Repository is PUBLIC. Keep only sanitized engineering facts. Read HANDOFF_LOG.md and HANDOFF_POLICY.md before each operation. GitHub branch SHA, workflow results and deployed-site behavior override stale notes.
 
+### 2026-11-05 — Stage 5.3B forest CSS test selector correction
+
+- **Issue:** Immediately after screenshot-led pine SVG commit `255254c2`, independently executing `scripts/test-ui2-atmosphere-style.mjs` found its new forest selector matcher double-escaped the CSS regex and falsely reported missing artwork. This was a **new test-only failure**, not a confirmed runtime/rendering defect.
+- **Fix and proof:** Replace fragile regex with exact Stage 5.1 CSS substring inspection and verify `auto 166px` forest vector. The **complete original + new style contract was independently executed successfully against the actual retrieved CSS/JS/version files**. No application or playback code changed.
+- **Status:** Source test corrected; exact new-head GitHub browser/real music CI PENDING. Draft PR #124 remains unmerged, official v0.4.35 main unchanged.
+- **Next goal:** Full new exact-head Actions and screenshot check, strict KG/MG source playback stability; user visual approval then separate authorization to publish.
+- **Next chat:** Read current PR head and its Actions; preserve historical original Migu failure evidence.
+
+
 ### 2026-11-05 — Stage 5.3B screenshot-derived sidebar forest correction (CI PENDING)
 
 - **Exact screenshot audit:** Downloaded and inspected 48 real-browser visual fixture PNGs from previously SUCCESS [isolated Stage 5.3 Preview #41883742980](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41883742980/artifacts/13349738917), covering Chromium/WebKit dark/light, 1440/820/390/320, immersive cover and synthetic FFT. Functional layout and audio-reactive fixture screenshots looked coherent, no obvious 320 horizontal clipping, but **desktop sidebar bottom scenery visually resembled short grass, not the requested pine forest**. Cross-provider artwork is mocked/synthetic, cannot prove real catalog imagery; visual preference still requires owner review.

@@ -5,6 +5,17 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Fix Stage 5.3B false forest CSS assertion
+
+- **Goal:** Repair double-escaped regex in newly added style test before relying on CI.
+- **Changes:** Use direct CSS substring inspection for scoped navigation pine selector and its fixed 166px height. No runtime code or UI changed.
+- **Tests:** Re-executed whole style-contract source via JavaScript on actual retrieved candidate files, PASS; prior erroneous regex check FAIL. New GitHub CI PENDING.
+- **Evidence:** Prior pine commit `255254c27d0e1922664e57625b44ef99f6d2a34d`, PR #124.
+- **Not done:** exact-head full browser/visual and external MG success.
+- **Status:** Test guard repaired, production untouched.
+- **Next action:** Verify GitHub Actions; no bypassing real media gates.
+
+
 ## 2026-11-05 · Stage 5.3B screenshot-based pine silhouette correction
 
 - **Goal:** Improve an actually observed design shortcoming: left sidebar scenery looked like grass in desktop 1440 screenshots, rather than visible layered forest matching requested musical ambience.
