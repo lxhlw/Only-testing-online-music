@@ -112,8 +112,10 @@
     if(!tracks.some(t=>t.readyState==='live'))return;
     const AudioContext=window.AudioContext||window.webkitAudioContext;
     if(!AudioContext)return;
+    let pendingContext=null;
     try{
       const ac=new AudioContext({latencyHint:'playback'});
+      pendingContext=ac;
       const node=ac.createMediaStreamSource(stream);
       const fft=ac.createAnalyser();
       fft.fftSize=256;fft.smoothingTimeConstant=.77;
@@ -123,7 +125,9 @@
       bins=new Uint8Array(fft.frequencyBinCount);
       startFrame();
     }catch{
-      if(context)try{context.close()?.catch(()=>{});}catch{}
+      // If source creation fails before assignment, the newly allocated context
+      // must still be closed; otherwise uncapturable providers leak contexts.
+      if(pendingContext)try{pendingContext.close()?.catch(()=>{});}catch{}
       context=null;sourceNode=null;analyser=null;bins=null;
       syncMode('ambient');draw(false);
     }

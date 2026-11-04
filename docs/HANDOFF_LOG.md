@@ -5,6 +5,17 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Stage 5.3 deterministic visualizer/browser acceptance checkpoint
+
+- **Goal:** Add deterministic real Canvas/FFT data-path and pause/motion/native-player regressions to the final UI2 validation, without weakening any real-provider gates.
+- **Changes:** New Chromium isolated test `scripts/test-ui2-visualizer-browser.mjs` uses native test WAV playback and TEST-ONLY independent oscillator MediaStream capture; tests live 28-bar analyser and static fallback without CORS, single audio, pause frame stop, reduced-motion without audio interruption, dark/light immersive glow and classic opt-out. Added test to existing isolated Preview workflow. Fixed leak on MediaStreamSource construction failure by closing the pending AudioContext before reset; no third-party provider, audio sink, playback API or media URL change.
+- **Tests:** Static source contract/parse checks to perform before commit; new exact-head GitHub Actions and actual screenshots **PENDING**. Earlier #41882720466 still IN PROGRESS at initial inspection, not green. Synthetic oscillator test is **NOT** evidence of frequency capture for real providers.
+- **Evidence:** Existing [PR #124](https://github.com/lxhlw/Only-testing-online-music/pull/124); original known-good strict music [#41874004682](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41874004682) is historical old code only.
+- **Not done:** New CI and screenshot inspection, real-provider spectrum capture coverage, physical phone/CPU/FPS/battery or screen-reader audits, production merge/deploy, final owner sign-off.
+- **Status:** Final QA hardening committed, candidate-only; main v0.4.35 untouched.
+- **Next action:** Review exact-head Actions and visuals; fix observed issues then seek explicit release consent.
+
+
 ## 2026-11-05 · Stage 5.2 module-ready browser test ordering
 
 - **Goal:** Eliminate a possible race between UI2 presentation initialization and the following separate analyzer module.
