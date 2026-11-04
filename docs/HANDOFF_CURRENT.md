@@ -2,6 +2,15 @@
 
 > Repository is PUBLIC. Keep only sanitized engineering facts. Read HANDOFF_LOG.md and HANDOFF_POLICY.md before each operation. GitHub branch SHA, workflow results and deployed-site behavior override stale notes.
 
+### 2026-11-05 — Stage 5.2 isolated-module test readiness sequencing (CI PENDING)
+
+- **Source/issue:** After splitting the live analyser into `src/ui2-audio-visualizer.js`, the HTML loads the existing UI2 presentation module first and the visualizer module second. The prior Playwright tests waited only for `FyMusicUI2Preview.enabled`, so a fast browser might inspect the Canvas before the subsequent module initialized. This is a test readiness race, not a proven playback issue.
+- **Fix:** Existing real Chromium/WebKit atmosphere and local-WAV desktop/mobile tests now explicitly wait up to 8s for the new module's `spectrumPresent()===true` **before** asserting node count, desktop-only visibility and native playback. All other audio, page geometry, mute, lyric and original real KG/MG assertions remain strict and unchanged.
+- **Status:** TEST WAIT CORRECTED IN SOURCE; exact updated CI pending, no claim of green. Production main **v0.4.35**, draft PR #124 candidate **v0.4.36** unmerged.
+- **Next goal:** Observe exact-head browser/music/security/Preview results; review screenshot artifacts, then final performance and release acceptance.
+- **Next chat:** Read PR-branch handoff and exact latest Actions before continuing.
+
+
 ### 2026-11-05 — Stage 5.2 CI blockers corrected: isolated audio spectrum module + empty-library light artwork (CI PENDING)
 
 - **Evidence-based failures:** Stage 5.1 [isolated RC #41880034752](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41880034752) FAILED local Chromium/WebKit navigation check `Empty-library vinyl illustration missing`; source review proved preexisting light empty-library `background-image: radial-gradient(...)!important` overrode the new light vinyl data-URI. This was a real screenshot/selector style issue, not a media-provider failure. First Stage 5.2 [RC #41881334418](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41881334418) FAILED before browser deployment because preexisting `scripts/test-ui2-contract.mjs` explicitly prohibits `requestAnimationFrame(` in presentation-only `src/ui2-preview.js`. Strict Migu was skipped/blocked because no Preview URL; it was NOT a fresh Migu playback failure. Stage 5.2 test syntax defect in preceding `ff999ef7` commit was corrected by `6117dafb`.

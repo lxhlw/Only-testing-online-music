@@ -34,6 +34,7 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
     try{
      await page.goto(base+(light?'/?theme=light':'/'),{waitUntil:'domcontentloaded',timeout:40000});
      await page.waitForFunction(()=>window.FyMusicUI2Preview?.enabled===true,null,{timeout:23000});
+     await page.waitForFunction(()=>window.FyMusicUI2AudioVisualizer?.spectrumPresent()===true,null,{timeout:8000});
      if(viewport.width<=740)await page.waitForFunction(()=>document.documentElement.classList.contains('mobile-shell-ready'));
      const audit=await page.evaluate(()=>{
       const root=document.documentElement,hero=document.querySelector('.search-inspiration'),

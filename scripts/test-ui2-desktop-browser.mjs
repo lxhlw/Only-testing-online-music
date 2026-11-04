@@ -45,6 +45,7 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
    await page.goto(base+'/?ui2=1',{waitUntil:'domcontentloaded',timeout:35000});
    await page.waitForFunction(()=>Boolean(window.OnlyTestingMusicApp?.playMusic)&&
      window.LXSourceManager?.getActive?.()?.inited&&window.FyMusicUI2Preview?.enabled,null,{timeout:22000});
+   await page.waitForFunction(()=>window.FyMusicUI2AudioVisualizer?.spectrumPresent()===true,null,{timeout:8000});
    const theme=await page.evaluate(()=>({
     root:document.documentElement.classList.contains('fy-ui2'),
     bg:getComputedStyle(document.querySelector('.lyrics-sheet.now-playing-screen')).backgroundColor,

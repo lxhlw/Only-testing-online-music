@@ -5,6 +5,17 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Stage 5.2 module-ready browser test ordering
+
+- **Goal:** Eliminate a possible race between UI2 presentation initialization and the following separate analyzer module.
+- **Changes:** Await `FyMusicUI2AudioVisualizer.spectrumPresent()` in the existing local/isolated Chromium-WebKit tests before asserting Canvas state; no product JS/CSS, player, resolver or lyrics change. No mandatory tests are weakened.
+- **Tests:** Source-level sequencing inspected; new exact-head Actions still pending. Prior Preview failures #41880034752 (light library art) and #41881334418 (old UI2 presentation contract) were documented and corrected in earlier source commit; their runs remain FAILED historically.
+- **Evidence:** Draft PR #124; prior committed fix `b23cc6dcbcb88701ba3e7dd6b3ecedede26abe03`.
+- **Not done:** Fresh Preview, real frequency FFT with capturable audio, physical-device benchmark or production deploy.
+- **Status:** TEST READINESS SOURCE CORRECTION; CI PENDING.
+- **Next action:** Check current source-head Playwright/security/live-music actions and visual artifacts before release review.
+
+
 ## 2026-11-05 · Stage 5.2 isolate analyser JS to uphold original presentation contract; fix light vinyl
 
 - **Goal:** Correct two proven independent PR Preview failures without relaxing strict CI: light empty-library vinyl hidden by inherited important gradient, and requestAnimationFrame forbidden in the presentation-only UI2 JS file.
