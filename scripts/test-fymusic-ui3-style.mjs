@@ -14,7 +14,7 @@ for(const feature of ['webgl2','#version 300 es','getShaderParameter','getProgra
  assert.ok(code.includes(feature),'UI3 GPU scene contract missing: '+feature);
 for(const feature of ['#view-search','#view-playlist','#view-ranking','#view-mylist',
  'fy3-scene-immersive','fy-ui2-light','forced-colors:active',
- 'prefers-reduced-motion:reduce','min-height:104px'])
+ 'prefers-reduced-motion:reduce','height:170px'])
  assert.ok(css.includes(feature),'UI3 scene styling missing: '+feature);
 assert.ok(!/\bnew Audio\s*\(|createMediaElementSource\s*\(|audio\.src\s*=/i.test(code),
  'Cinematic renderer cannot own or reroute native music playback');

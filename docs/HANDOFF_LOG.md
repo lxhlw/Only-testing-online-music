@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Decouple GPU cinematic scene from document flow
+
+- **Goal:** Fix reproducible discovery first-fold overlap with dock without cutting shader visual richness.
+- **Changes:** Restore baseline view-header sizing in normal flow; paint GPU scene in 170px absolute right-side layer, 110px on narrow screens, with no pointer interception. Keep shader and audio unchanged; new tests target actual scene dimension.
+- **Tests:** Prior #41892234308 desktop first-fold FAIL (1054px card vs 791px dock). New exact-head browser/real provider tests PENDING. No regression checks suppressed.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41892234308 .
+- **Not done:** New shader screenshot approval, FFT Stage B, transitions Stage C.
+- **Status:** UI3 Stage A iteration, nonproduction.
+- **Next action:** Check strict current-head CI then screenshot review.
+
 ## 2026-11-05 · Correct stale UI3 scene header expectation in static test
 
 - **Goal:** Remove test-only contradiction after intentional desktop first-fold layout fix.

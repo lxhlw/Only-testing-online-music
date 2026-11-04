@@ -2,6 +2,13 @@
 
 > Repository is PUBLIC. Keep only sanitized engineering facts. Read HANDOFF_LOG.md and HANDOFF_POLICY.md before each operation. GitHub branch SHA, workflow results and deployed-site behavior override stale notes.
 
+### 2026-11-05 — UI3 Stage A shader surface decoupled from layout flow (CI PENDING)
+
+- **Proven regression:** UI3 isolated [#41892234308](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41892234308) FAILED old desktop first-fold check: discovery card bottom 1054px vs fixed dock top 791px. Smaller 104px header improved but did not solve layout conflict; the UI must not sacrifice reachable content for animation. Strict original MG was skipped because no isolated Preview was deployed, not because the provider failed.
+- **Architecture correction:** Restore the original validated `view-header` normal-flow typography/padding/height/spacing, keep WebGL canvas as a **non-flow absolutely positioned 170px right-hand cinematic lens** extending over blank top/right space; pointer-events none and stacking protect controls. Small-screen GPU lens 110px with original compact header spacing. Existing stage-specific shader complexity, unique scenes, pointer parallax, original native audio and high-fps rendering remain intact; 28-band FFT still Stage B. New UI3 browser/style tests validate the separate scene dimensions while the old first-fold contract stays strict.
+- **Status:** CSS/layout corrected, exact new SHA CI/screenshots PENDING. Production remains v0.4.35; old v0.4.36 visual PR not accepted.
+- **Next:** Verify Chromium/WebKit rendering, visual screenshots, original KG/MG test gates; then implement advanced audio/scene transitions.
+
 ### 2026-11-05 — UI3 Stage A style contract updated after proven first-fold fix
 
 - **CI observation:** UI3 [#41892017144](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41892017144) FAILED at **new UI3 static test only**: it still required old `min-height:176px` even though the just-committed code intentionally reduced header to 104px to prevent real fixed-player overlap. Build did not reach local browser/Preview, and original MG test was skipped (no URL). This is **stale test expectation, not a new source media failure**.

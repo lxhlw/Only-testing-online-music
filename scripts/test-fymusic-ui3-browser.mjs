@@ -41,7 +41,7 @@ for(const [engine,launcher] of [['chromium',chromium],['webkit',webkit]]){
          'Available Chromium WebGL2 must compile and display actual shaders');
      }
      assert.equal(snap.headerVisible,true);
-     assert.ok(snap.headerHeight>=(width<=740?86:98));
+     assert.ok(snap.headerHeight>=(width<=740?40:52));
      assert.equal(snap.narrow,false,'No cinematic horizontal scrolling');
      assert.equal(snap.nativeAudio,1,'Original music playback element must be reused');
      scenarios.push({scene,gpu:snap.gpu});
