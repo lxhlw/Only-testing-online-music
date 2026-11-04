@@ -5,6 +5,17 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Stage 5.3B screenshot-based pine silhouette correction
+
+- **Goal:** Improve an actually observed design shortcoming: left sidebar scenery looked like grass in desktop 1440 screenshots, rather than visible layered forest matching requested musical ambience.
+- **Changes:** Replace two embedded, network-free dark/light SVGs with taller 20-pine compositions and distant hills, maintaining fixed noninteractive nav rail background and existing gentle mist animation. Scale at fixed 166px high instead of nav-width-compressed 100%. Strengthen static CSS contract. No playback, source, lyrics, volume, queue, HTML audio, font requests or UI layout element changes.
+- **Tests:** Prior screenshot artifact #13349738917 manually inspected (visual issue confirmed); Stage 5.3 isolated #41883742980 SUCCESS including strict KG→KW & original MG. On latest prior `09d9fca19f`, playlist #41884758923, modern #41884758889, privacy #41884758877/#41884752881 SUCCESS; strict isolated #41884752902 FAILED real MG audio progress (media never started) despite local visual and KG gates green. New pine candidate exact-head CI and screenshots PENDING, no fake pass.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41883742980/artifacts/13349738917 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41884752902 ; https://github.com/lxhlw/Only-testing-online-music/pull/124 .
+- **Not done:** New browser screenshot review, strictly passing MG on new head, actual provider frequency capture, physical device FPS/battery/screen-reader, official release or rollback.
+- **Status:** Forest visual correction source committed, PR still draft. Official v0.4.35 stable.
+- **Next action:** Verify current-head CI/screenshot, investigate MG intermittent failure without weakening assertions, obtain visual and production authorization.
+
+
 ## 2026-11-05 · Stage 5.3 playlist mock media validity correction
 
 - **Goal:** Recover deterministic queue-end test after an invalid synthetic MP3 body could produce background playback errors during final status assertion.

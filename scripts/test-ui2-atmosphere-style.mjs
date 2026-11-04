@@ -70,6 +70,9 @@ assert.equal(/@import\b|backdrop-filter\s*:|url\(\s*['"]?https?:/i.test(breathin
  'Stage 5.1 must not add network artwork, CSS imports or backdrop filters');
 assert.equal(/width:\s*100vw|overflow:\s*hidden\s*!important/i.test(breathing),false,
  'Stage 5.1 cannot clip or force viewport overflow');
+const forestCSS=css.match(/html\\.modern-web\\.fy-ui2 \\.nav-rail::after\\{[^}]+\\}/)?.[0]||'';
+assert.ok(forestCSS.includes('auto 166px'),'Pine forest must fill nav rail rather than shrink to ground grass');
+assert.ok(forestCSS.includes('data:image/svg+xml'),'Pine forest vector artwork missing');
 assert.equal((breathing.match(/animation:fy-scene-/g)||[]).length,2,
  'Only two compositor-friendly background breathing animations allowed');
 
