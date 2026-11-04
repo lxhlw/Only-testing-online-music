@@ -1,6 +1,6 @@
 # FyMusic v0.4.34 — Human Release Acceptance Checklist (Public-Safe)
 
-**Status:** NOT APPROVED / NOT DEPLOYED. Review PR #122, branch `release/fymusic-stage5-stage6-rc-20261104`, not production. This is a process checklist, not test evidence.
+**Status:** PROVISIONAL VISUAL/BASIC-EXPERIENCE ACCEPTANCE RECORDED (2026-11-04); **FULL RELEASE NOT APPROVED / NOT DEPLOYED**. Current reviewed PR #122 candidate commit `b83ae5a3a1a576c7f934f771a8b8ab5c58c5c780`. This checklist documents test categories and results, not unverified device performance.
 
 ## 1. Identify the exact reviewed build
 
@@ -28,4 +28,4 @@
 - Only then recheck mergeability and HEAD, merge reviewed PR #122 without force-push. Verify production version.json/UI/cache assets, official real-source playback, static file 404 protection and user-facing navigation.
 - Keep the last stable v0.4.33 commit as revert baseline. On regression, create a non-destructive revert and retest; never rewrite `main` history.
 
-**Signoff:** Pending. An automated pass does not mark any manual item complete.
+**Signoff status (2026-11-04):** The reviewed v0.4.34 UI2 preview passed preliminary **visual/basic experience acceptance**, including the corrected narrow-screen welcome-card view. This is a limited go-ahead on appearance/usability impressions, **not a declaration of physical 320px tap testing, real screen-reader verification or physical FPS/CPU/memory acceptance**. Those items remain NOT VERIFIED. Production release and rollback exercises have NOT occurred. A separate explicit authorization and current-head checks are required before a controlled main merge. An automated pass does not mark manual device items complete.

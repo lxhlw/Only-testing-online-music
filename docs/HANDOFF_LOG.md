@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Preliminary visual experience accepted; full release signoff remains open
+
+- **Goal:** Record explicit human acceptance of the latest UI2 visual/basic experience, distinguish it from unobserved physical-device/accessibility testing, and preserve a precise release-ready handoff.
+- **Changes:** Sanitized visual-review decision recorded in release checklist, CURRENT and append-only LOG. No changes to candidate source, player, CSS, GitHub Actions requirements, Cloudflare settings, or production application.
+- **Tests:** Existing exact candidate `b83ae5a3` green: integrated preview #41781719596, independent browser/audio/security #41781725591, playlist #41781725549, handoff privacy #41781725539. The 320px first-load welcome card and scroll/touch simulation passed. Last observed latest main run #41782506139 was pending; no invented new CI or hardware/a11y results. Public-safe privacy preflight on these documents passed locally by exact-text policy patterns; a new GitHub privacy run is triggered by this handoff commit.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/122 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41781719596 ; https://395bab85.only-testing-online-music.pages.dev/?ui2=1 ; `docs/FYMUSIC_RELEASE_ACCEPTANCE.md`.
+- **Not done:** Physical 320px tap/actual-device FPS CPU memory evaluation, real screen reader, explicit final release authorization, merge/deploy v0.4.34, official site verification or rollback exercise.
+- **Status:** Human visual/basic-experience: PROVISIONALLY ACCEPTED. Overall production release: HOLD. Production remains v0.4.33; **2 remaining release steps** (device/a11y evidence or explicit acceptance of unknowns, controlled deployment with production checks).
+- **Next action:** Record bounded real-device/accessibility findings without identifying data, then request explicit authorization for the final controlled production release, recheck exact-head checks and retain non-destructive rollback.
+
 ## 2026-11-04T13:55:29+08:00 · 320px UI2 initial welcome card no longer behind dock, exact candidate gates green
 
 - **Goal:** Resolve the screenshot-observed 320×640 search-card/footer overlap with the fixed mini player before manual/device release acceptance.
