@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Atmosphere visual RC reached full UI/browser pass; native Migu live gate blocked two attempts
+
+- **Goal:** Test refined UI2 look across dark/light and 320px without losing music reliability or hiding actual upstream errors; checkpoint accurate evidence for future sessions.
+- **Changes:** Visual-only PR #124 design head `7df4d72c`: CSS static editorial disc/lighting/playlist/dock plus light search/player contrast fixes; independent static and Chromium/WebKit visual tests, strict nonproduction Preview live music workflow, public-safe screenshot design report. No audio/lyrics/source/player runtime code modifications. This entry and CURRENT updated **after** CI attempts to preserve detailed status. Public production unchanged.
+- **Tests:** Independent PR browser/audio/security [#41840359135](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41840359135) SUCCESS; privacy #41840359147 and #41840351880 SUCCESS. Strict Preview [#41840351705](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41840351705) attempt 1 overall FAILURE: native MG LRC HTTP 502 upstream_timeout; attempt 2 FAILURE: original MG exact song matched and LRC step reached, but actual media did not progress by 35s (`readyState=0`). BOTH attempts: local/deployed UI2 + new Atmosphere 12/12 browser/theme/320px a11y/layout tests and strict KG `稻香`→KW real playable recovery SUCCESS. Latest immutable Preview https://945132e1.only-testing-online-music.pages.dev/ . Screenshot artifact 13328403131 is synthetic CI, not user/device signoff.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/124 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41840351705 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41840359135 .
+- **Not done:** Actual human visual/hardware inspection, physical screen reader/FPS/CPU/memory, verified exact-head strict Migu acceptance, PR merge, version bump/cache rollout or official site deployment. Music upstream intermittence persists; cause not proven.
+- **Status:** VISUAL/BROWSER GREEN on tested code; strict native MG RED twice; RELEASE HOLD / official v0.4.35 unchanged.
+- **Next action:** Inspect design Preview and screenshot artifact, get visual acceptance; investigate the strict live MG availability independently without weakening test; only when all exact-head checks green and explicit release approval consider production.
+
 ## 2026-11-04 · UI2 Atmosphere light player background regression fixed in candidate
 
 - **Goal:** Preserve existing strict light-theme contrast tests after layered gradients.
