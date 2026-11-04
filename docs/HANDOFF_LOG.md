@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Atmosphere Stage 2 screenshot-driven desktop overlap fix verified, production not changed
+
+- **Goal:** Inspect real synthetic dark/light screenshots and eliminate desktop first-screen welcome-card collision with the fixed mini-player while preserving all music features.
+- **Changes:** Audited prior [screenshot artifact 13329412765](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41842016635/artifacts/13329412765), confirmed 1440 desktop welcome card too narrow and partly hidden by 93px dock, despite previous 320 checks. Commit `76c2b5413104ae30e044c518c6d397561fa208c9`: CSS-only responsive desktop/tablet welcome card (min width 741px, up to 950px wide; ~246px height, editorial left alignment) and **16** Chromium/WebKit design tests instead of 12, adding 820px tablet and mandatory desktop/tablet `heroBottom <= dockTop - 12px` plus hero width thresholds; original 320 layout and entire audio/lyric/seek runtime unchanged. Reinspected [new screenshot artifact 13329279643](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41843790180/artifacts/13329279643): 1440 dark/light CTA and footer fully visible, clear gap to dock; 820/320 screenshots visually unobstructed.
+- **Tests:** Exact design-code HEAD [Preview #41843790180](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41843790180) **SUCCESS attempt 1**, local+deployed 16/16 UI, all legacy/keyboard/contrast/reduced-motion/asset/404 guards, unmocked real KG `稻香`→KW and exact original MG `开始懂了` real audio+cover+timed lyrics+pause/resume PASS. Independent PR [browser/security #41843800517](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41843800517) SUCCESS, public-safe privacy #41843790568/#41843800470 SUCCESS. Earlier native MG failures (HTTP 502/35s audio stall) remain historical evidence; no guaranteed uptime.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/124 ; https://github.com/lxhlw/Only-testing-online-music/commit/76c2b5413104ae30e044c518c6d397561fa208c9 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41843790180 .
+- **Not done:** Human approval from production owner, production merge/version-bump/deploy, physical 320px finger touch, actual screen reader, hardware FPS/CPU/memory/battery, rollback rehearsal. Docs-only new checkpoint will trigger new Actions; do not prematurely call them green.
+- **Status:** UI visual regression FIXED and verified; candidate PR DRAFT; main still v0.4.35.
+- **Next action:** Collect design approval / targeted feedback, then prepare controlled versioned release candidate with unchanged strict native media gates and real production verification.
+
 ## 2026-11-04 · Atmosphere design screenshot audit: desktop welcome card covered by player; Stage 2 fix
 
 - **Goal:** Continue PR #124 professional visual review rather than assume twelve assertions equal human design quality.

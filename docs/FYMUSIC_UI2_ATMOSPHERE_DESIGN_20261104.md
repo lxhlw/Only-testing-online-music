@@ -20,6 +20,12 @@ Upgrade the existing v0.4.35 music website without changing playback, lyrics, ca
 - `.github/workflows/fymusic-ui2-atmosphere-rc.yml`: nonproduction Cloudflare Preview and existing strict unmocked real Kagou-to-Kuwo and original Migu audio/timed lyrics tests. Includes short-lived public-safe screenshot artifact.
 - Both handoff documents: new operation checkpoint with accurate pending/verified release state.
 
+## Stage 2 final automated verification and screenshot review
+
+Candidate code [`76c2b541`](https://github.com/lxhlw/Only-testing-online-music/commit/76c2b5413104ae30e044c518c6d397561fa208c9) passed [isolated Preview #41843790180](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41843790180) and independent [PR browser/security #41843800517](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41843800517). Both browser engines passed **16/16** dark/light screen layouts (1440, 820, 390, 320); new first-screen hero-width and above-player clearance assertions passed; strict real original KG→KW recovery and original MG audio+cover+timed LRC+pause/resume were successful in this run. The latest [screenshot artifact 13329279643](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41843790180/artifacts/13329279643) was downloaded and visually inspected. The 1440 screenshots now show all suggestion chips and footnote above the player, while 820 and 320 remain unobstructed. This does not constitute real hardware accessibility or performance acceptance.
+
+Production remains **v0.4.35**, no merge. Previous flaky external-Migu failures remain acknowledged, not deleted. Owner approval and a versioned cache/release plan still required.
+
 ## Stage 2: human screenshot audit and desktop viewport correction
 
 Actual inspection of the synthetic Chromium/WebKit screenshot artifact [#13329412765](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41842016635/artifacts/13329412765) revealed that the desktop 1440×900 discovery welcome card was too narrow (~437px), resulting in the lower suggestions/footnote being covered by the floating music dock. This had **not** been covered by the initial 12-case automation, which checked only 320px card/dock clearance.
