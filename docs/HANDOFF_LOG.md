@@ -5,6 +5,17 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Stage 5.2 isolate analyser JS to uphold original presentation contract; fix light vinyl
+
+- **Goal:** Correct two proven independent PR Preview failures without relaxing strict CI: light empty-library vinyl hidden by inherited important gradient, and requestAnimationFrame forbidden in the presentation-only UI2 JS file.
+- **Changes:** Move unchanged analysis-only Canvas/AudioContext code into newly versioned `src/ui2-audio-visualizer.js`; restore `src/ui2-preview.js` to its presentation-only contract. Add script tag to UI2 app entrypoint, Node parse check in isolated candidate workflow, adjust scoped static test to new module; preserve single `<audio>`. Light empty-list SVG uses explicit important image to supersede existing important gradient. No resolver or playback rewrites.
+- **Tests:** Previous Stage 5.1 Preview #41880034752 FAILED actual empty-vinyl computed background; Stage 5.2 #41881334418 FAILED old presentation requestAnimationFrame prohibition at build gate, no actual Preview or live music result from that run. New code checks/CI remain pending at commit; no fake green status. Main remains v0.4.35.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41880034752 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41881334418 ; [PR #124](https://github.com/lxhlw/Only-testing-online-music/pull/124).
+- **Not done:** New exact-head browser/strict Preview/visual screenshot verification, real safe FFT across CORS-protected providers, production merge and physical-device benchmark.
+- **Status:** Both failure causes addressed at source; new workflow pending, not passed.
+- **Next action:** Inspect new CI and screenshots, then Stage 5.3 acceptance and authorized release decision.
+
+
 ## 2026-11-05 · Stage 5.2 style-contract JavaScript syntax fix
 
 - **Goal:** Remove a new test-only JavaScript parse blocker detected in post-commit source audit.

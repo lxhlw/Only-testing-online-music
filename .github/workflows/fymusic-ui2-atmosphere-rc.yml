@@ -24,6 +24,7 @@ jobs:
           npm install --no-audit --no-fund
           node --check src/player-controls.js
           node --check src/ui2-preview.js
+          node --check src/ui2-audio-visualizer.js
           node --check scripts/test-ui2-default-browser.mjs
           node scripts/test-version.mjs
           node scripts/test-ui2-contract.mjs

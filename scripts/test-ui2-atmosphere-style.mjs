@@ -74,7 +74,7 @@ assert.equal((breathing.match(/animation:fy-scene-/g)||[]).length,2,
  'Only two compositor-friendly background breathing animations allowed');
 
 
-const visualizerSource=readFileSync('src/ui2-preview.js','utf8');
+const visualizerSource=readFileSync('src/ui2-audio-visualizer.js','utf8');
 const vizMarker='/* FYMUSIC STAGE 5.2 — CAPTURE-ONLY AUDIO VISUALIZER';
 const vizStyleMarker='/* FYMUSIC / STAGE 5.2 — SAFE LIVE AUDIO SPECTRUM';
 assert.ok(visualizerSource.includes(vizMarker)&&css.includes(vizStyleMarker),
