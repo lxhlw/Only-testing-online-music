@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · UI2 Atmosphere editorial visual polish on isolated development branch
+
+- **Goal:** Make the official UI2 aesthetic more distinctive and refined while keeping performance, music reliability and 320px reachability intact.
+- **Changes:** Created nonproduction `design/fymusic-ui2-atmosphere-20261104` from verified main `a8aafde8`. Appended CSS-only Atmosphere theme (static CSS record/grooves, lighting, typographic rhythm, playlist cards, player dock, matched light/dark, reduced-motion/coarse-pointer/forced-colors); no JS/UI DOM or runtime media changes. Added static style contract, 12 synthetic Chromium/WebKit visual cases and new isolated Cloudflare Preview CI with mandatory strict original KG and MG song tests and sanitized screenshot artifact. Added design report and public-safe CURRENT/LOG checkpoint.
+- **Tests:** Prior production [#41830551679](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41830551679) SUCCESS and privacy [#41830551646](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41830551646) SUCCESS on unchanged main. New design branch tests **PENDING / UNVERIFIED** until observed; no real audio or screenshot claims from this change. Test fixtures are only for synthetic visual runs, never live media acceptance.
+- **Evidence:** `src/ui2-preview.css`, `scripts/test-ui2-atmosphere-style.mjs`, `scripts/test-ui2-atmosphere-browser.mjs`, `docs/FYMUSIC_UI2_ATMOSPHERE_DESIGN_20261104.md`.
+- **Not done:** Candidate exact-head green CI, screenshot review and manual approval, production merge/deploy, real device performance/screen-reader validation.
+- **Status:** Nonproduction design candidate. Official v0.4.35 remains deployed and unchanged.
+- **Next action:** Verify exact branch HEAD tests, review screenshots and fix observed regressions before requesting any release authority.
+
 ## 2026-11-04T20:32:15+08:00 · v0.4.35 UI2 default merged, officially deployed, strict production acceptance GREEN
 
 - **Goal:** Honor explicit approval to ship modern UI2 by default despite acknowledged *unmeasured* physical phone/real screen-reader/hardware performance risks, while keeping strict real music/lyrics/browser/security release gates mandatory.
