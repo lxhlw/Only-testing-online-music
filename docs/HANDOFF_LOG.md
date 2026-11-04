@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04T13:00:36+08:00 · Stage 6 strict candidate automation green, manual release gate still open
+
+- **Goal:** Resolve the previous CI failure, verify current v0.4.34 candidate on actual preview/browser/audio/security without compromising test strictness, and prepare safe release continuity.
+- **Changes:** Candidate-only commit `f29b946d` enhances exact Migu target-search acceptance with event-driven completion/error signals, sanitized bounded diagnostic summary and maximum three title/artist requests. Only the live test script changed; player, source adapters, lyric relay and production runtime are untouched. Previously implemented 320/390 simulated-touch checks remain enforced.
+- **Tests:** Previous integrated RC #41774132268 FAILED because real MG search returned no exact target; browser/security #41774137444, playlist #41774137620 and privacy #41774137469 all passed at older SHA `115ca174`. **Current exact HEAD `f29b946d`:** integrated preview #41776071222 SUCCESS; full browser/security #41776077197 SUCCESS; playlist #41776077208 SUCCESS; privacy #41776077220 SUCCESS. Actual search audit: first title query returned 20 Migu-native rows and exact song. Migu LRC 55 timed lines / HTTP 200 after 2 upstream attempts; real audio progression, cover, correct play/pause and resume passed. Real KG `稻香` → KW recovery played with cover and 48 timed lines. Simulated touch Chromium/WebKit at 320/390 in both themes passed 8 cases on local and deployed preview. CI browser results and short frame-gap samples do NOT establish physical-device FPS/CPU/memory or real screen-reader usability.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/commit/f29b946d41205b7c9e790129014bfa89a2466682 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41776071222 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41776077197 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41776077208 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41776077220 ; preview https://4da74e08.only-testing-online-music.pages.dev/?ui2=1 .
+- **Not done:** Human visual signoff, real 320px physical-device touch reachability, real screen-reader navigation and device FPS/CPU/memory; PR merge, official v0.4.34 deployment, production acceptance or rollback exercise. Provider intermittence remains and final rechecks are required.
+- **Status:** All current candidate automated checks PASS; Stage 6 **RELEASE HOLD** for manual acceptance. Official site remains v0.4.33; main change in this operation is handoff-only.
+- **Next action:** Human/device approval of the immutable UI2 preview; then recheck exact head and run controlled PR #122 merge, verify official production/live source/security, retain non-destructive revert option.
+
 ## 2026-11-04 12:36 Asia/Singapore · Resolved release PR documentation conflict without production changes
 
 - **Goal:** Remove an observed PR #122 merge blocker while retaining all source/UI tests and the current public-safe recovery state.
