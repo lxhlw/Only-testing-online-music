@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Stage 3 fully tested and visually reviewed; 2 release steps remaining
+
+- **Goal:** Complete the next design-acceptance milestone with synthetic screenshot coverage for immersive playback and unchanged mandatory real-music gates.
+- **Changes:** Test-only code `3feb287679e985757f8a3605470b8ed692259c7a` added immersive screenshots to the existing Chromium/WebKit now-playing browser regression: desktop and mobile × dark and light, one original audio element, visible album/lyric regions, no horizontal overflow, preserved theme toggling while modal open, play/pause/resume/close. Audio/album data in this screenshot run are local test fixtures; product runtime untouched. Downloaded and reviewed 24 generated CI PNGs (16 homepage + 8 immersive); desktop dark and 320 light plus full contact sheets inspected.
+- **Tests:** Exact-code [isolated strict Preview #41851542229](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41851542229) **SUCCESS** (local/deployed 16/16 Chromium/WebKit dark/light screen matrix, accessibility/theme/320/820/1440/404, KG `稻香`→KW real playable recovery, native MG `开始懂了` original real audio + cover + HTTP 200 with 55 timed LRC + pause/resume). Independent [PR browser/security #41851554252](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41851554252) SUCCESS; [privacy #41851542159](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41851542159) and [#41851554053](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41851554053) SUCCESS. Synthetic screenshot artifact [#13335596912](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41851542229/artifacts/13335596912), latest immutable visual Preview https://147e84c8.only-testing-online-music.pages.dev/ .
+- **Evidence/limitations:** UI screenshots visually sound at tested sizes. The local test cover is intentionally a **1×1 placeholder** (can appear as blank white/gray square), not an actual artwork test; strict original real MG coverLoaded is a separate successful test. Past upstream native MG flakiness persists in recorded attempts; no full hardware FPS/CPU/memory/touch or real screen reader was assessed. Production untouched, draft PR.
+- **Status:** Stage 3 visual implementation, synthetic screenshot QA and entire tested candidate pipeline green on `3feb2876`; release unapproved, not deployed. This docs-only checkpoint itself will create new CI, which must be checked separately.
+- **Not done:** Design owner's release signoff, v0.4.36/cache-bust release prep, official merge/deploy acceptance, actual device performance and screen-reader evidence.
+- **Next:** **2 steps remaining:** (1) controlled release candidate version/cache preparation + exact strict Preview/PR checks and review; (2) explicit-authorized nonforce production merge, Cloudflare deployment verification and public-safe final handoff.
+
 ## 2026-11-04 · Stage 3 visual QA: review real CI screenshots, extend immersive dark/light captures
 
 - **Goal:** Continue Stage 3 acceptance without conflating homepage screenshot quality and full now-playing experience; retain strict live original audio safety gate.
