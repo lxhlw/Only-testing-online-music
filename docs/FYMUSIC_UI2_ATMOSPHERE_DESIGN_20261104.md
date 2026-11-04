@@ -20,6 +20,12 @@ Upgrade the existing v0.4.35 music website without changing playback, lyrics, ca
 - `.github/workflows/fymusic-ui2-atmosphere-rc.yml`: nonproduction Cloudflare Preview and existing strict unmocked real Kagou-to-Kuwo and original Migu audio/timed lyrics tests. Includes short-lived public-safe screenshot artifact.
 - Both handoff documents: new operation checkpoint with accurate pending/verified release state.
 
+## Stage 3 immersive visual QA checkpoint
+
+The exact Stage 3 `6cf8dfc0` [Preview #41847480447](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41847480447) **FAILED** only the original native Migu real audio progression test (song found, no media progression in 35s); Stage 3 16/16 local and deployed Chromium/WebKit homepage/geometry/contrast, real original KG→KW playback, security and separate PR browser gates passed. The [16 synthetic screenshots](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41847480447/artifacts/13336510061) were actually downloaded and inspected: desktop/tablet/phone dark/light home screens stayed clear of floating dock. These do not prove the immersive lyrics view was aesthetically sound.
+
+This follow-up extends `scripts/test-ui2-desktop-browser.mjs` to capture **8 additional immersive screenshots** (Chromium/WebKit × desktop/phone × dark/light) from its existing real local WAV, synthetic album and two timed LRC lines, and to assert album+lyrics columns, no horizontal overflow and preserved theme switching without closing the overlay. The new code is a test-only change; no production app or real audio/lyric-provider tests were modified. New exact-head checks and screenshot review are pending, and the Migu live gate remains mandatory before release.
+
 ## Stage 3 — Spatial Music Polish (2026-11-04, candidate only)
 
 Second aesthetic pass on the existing `Atmosphere` branch, requested as a genuine beauty upgrade rather than merely repairing layout. The aim is a distinctive **album-first, cinematic yet quiet** music identity:

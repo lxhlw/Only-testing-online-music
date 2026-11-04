@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Stage 3 visual QA: review real CI screenshots, extend immersive dark/light captures
+
+- **Goal:** Continue Stage 3 acceptance without conflating homepage screenshot quality and full now-playing experience; retain strict live original audio safety gate.
+- **Changes:** Downloaded public CI [artifact 13336510061](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41847480447/artifacts/13336510061), visually inspected 16 synthetic homepage screenshots for Chromium/WebKit desktop 1440, tablet 820 and phones 390/320 in dark/light; no obvious first-screen hero-dock collision, clipping or horizontal overflow in examined samples. Expanded existing `scripts/test-ui2-desktop-browser.mjs` only: preserve real single synthetic WAV/audio fixture with actual album image/2 timed LRC lines and player controls, assert immersive album/lyric presence and no overflow, screenshot the immersive overlay in BOTH themes at desktop/mobile Chromium/WebKit (8 samples), ensure switching theme doesn't close the modal and original pause/resume/close checks remain. No runtime or CSS modifications.
+- **Tests:** Original Stage 3 code `6cf8dfc0` [Preview #41847480447](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41847480447) overall FAILED on native original Migu real audio stall within 35s, exact song found; **local/deployed 16-case visual/browser suite, original KG→KW strict real playback and Pages security PASSED**. Separate [PR browser/security #41847489368](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41847489368) SUCCESS, privacy #41847480458/#41847489169 SUCCESS. **New immersive screen exact-head CI PENDING**; no fake green release claim.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/124 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41847480447 .
+- **Not done:** New immersive screenshot inspection, physical modern-device metrics, real screen-reader, long-term original Migu reliability, design owner approval, release version bump or main deployment.
+- **Status:** Design candidate / additional test-only coverage. Production main v0.4.35 unchanged and PR draft.
+- **Next:** Observe precise new workflow + screenshot artifacts, correct actual failures if needed, then proceed to release preparation only once design accepted and strict native Migu passes.
+
 ## 2026-11-04 · Atmosphere Stage 3 second-round aesthetic enhancement, nonproduction candidate
 
 - **Goal:** Build a stronger professional music-product aesthetic than Stage 2 while preserving player reliability, responsive geometry and accessible light/dark themes.
