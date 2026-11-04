@@ -1,3 +1,14 @@
+## Stage 4.2B final actual UI preproduction readiness (2026-11-05)
+
+- [x] Exact code `5d2ce2d483b9a701a27cb6541a0a8bfe6e635ee1` [strict Preview #41874004682](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41874004682) SUCCESS, current v0.4.36 versioned assets and safe 404/static allowlist.
+- [x] 44 browser screenshot fixtures: Chromium/WebKit, 1440 dark/light focused input/volume mute/unmute and center lyrics >=330px, 16 homepage widths 1440/820/390/320, 12 cross-view and 8 immersive. Full circle no clipping, two-line visible lyric preview, dedicated volume control, no extra audio. [Artifact](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41874004682/artifacts/13346990599) human-reviewed.
+- [x] Native actual audio.muted toggle and accessible title, full lyrics via existing overlay on click. Strict unmocked original KG→KW fallback and original MG real audio, loaded cover, 55 timed LRC, pause/resume green in same exact Preview.
+- [x] Independent PR modern/browser/security #41874018232, Playlist #41874018049, Privacy #41874018742/#41874004884 all SUCCESS at exact code SHA.
+- [ ] Owner reviews [NONPRODUCTION actual UI2 v0.4.36 Preview](https://8a27e03f.only-testing-online-music.pages.dev/) and explicitly approves production release; no such authorization received yet.
+- [ ] Controlled nonforce main merge, official Cloudflare v0.4.36 live real source + lyrics + UI/404/seek/classic verification and rollback if needed; official live main remains v0.4.35.
+
+Past upstream transient 502/lrc timeout and KG timed lyric issues are recorded in CURRENT and LOG. Long-term provider reliability, populated real playlist art, physical device FPS/CPU/battery and screen reader remain unverified. This documentation-only checkpoint is separate from the exact tested code and generates new CI.
+
 ## Stage 4.1 exact-code final preproduction acceptance (2026-11-05; NOT YET LIVE)
 
 - Verified code HEAD `45f96d93c11636c5683a8e96d11b7ceafba56fed`: [strict isolated Preview #41866987311](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41866987311) SUCCESS. Chromium/WebKit 16 home dark/light/4 viewports + 12 cross-view (Playlist/Ranking/Library, both themes) and 8 immersive synthetic screenshots, classic, safe static 404, keyboard, no dock obscuring; strict original KG→KW fallback and native MG real audio + album + 55 timed LRC + pause/resume PASS. PR browser/security #41867001740 and Playlist #41867001753 SUCCESS. Privacy #41866987093 SUCCESS and second #41867001892 job completed/success (parent workflow status pending).

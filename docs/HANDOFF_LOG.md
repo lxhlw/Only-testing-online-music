@@ -5,6 +5,17 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Stage 4.2B full strict QA finished and actual 44 browser PNGs reviewed
+
+- **Goal:** Fix user-reported focused Search input collision, clipped mute focus circle, truncated right-side lyrics and bland real-web styling, and eliminate test blind spots exposed by direct screenshot inspection.
+- **Changes:** Actual `index.html` restructures desktop dock lyrics as clickable center 2-line preview above timeline, preserving original playback/cover overlay. UI2 scoped CSS unifies Search focus, isolates right-only speaker volume with no clipped outline, strengthens light/dark contrast and professional depth. Original Stage 4.2 source `81ddf8b7` passed whole strict Preview #41872524101 but screenshot inspection found inherited lyric `max-width:190px` and low-contrast light mute icon. Follow-up `5d2ce2d483b9a701a27cb6541a0a8bfe6e635ee1` releases desktop lyric width and improves icon colors; test now demands >=330px lyric and acceptable computed color while muted, plus previous focus/mute/single audio tests.
+- **Tests:** Exact corrected code [strict Preview #41874004682](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41874004682) COMPLETED **SUCCESS**, 16 homepage + 12 cross-view + 8 immersive + 8 interactive Chromium/WebKit dark/light PNGs, classic/320/security/404, exact original KG `稻香`→KW playable and original native MG `开始懂了` HTTP 200 real audio/cover/55 timed LRC/pause/resume. Independent browser/security #41874018232 SUCCESS, Playlist #41874018049 SUCCESS, privacy #41874018742/#41874004884 SUCCESS.
+- **Human visual:** Downloaded [44 screenshot artifact #13346990599](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41874004682/artifacts/13346990599). Reviewed full Chromium light muted-player with expanded inline lyric, WebKit dark focus/volume and 320 light Search; new contrast and hierarchy are coherent without clipping. Screenshots use synthetic/blocked provider fixtures and cannot prove real catalog covers/album art; live original MG cover was separately verified in provider gate.
+- **Evidence:** Real nonproduction site https://8a27e03f.only-testing-online-music.pages.dev/ ; [PR #124](https://github.com/lxhlw/Only-testing-online-music/pull/124) ; [original code commit `81ddf8b7`](https://github.com/lxhlw/Only-testing-online-music/commit/81ddf8b79b11f0646891ccc4284370e1da5235ad) and [corrected code `5d2ce2d4`](https://github.com/lxhlw/Only-testing-online-music/commit/5d2ce2d483b9a701a27cb6541a0a8bfe6e635ee1).
+- **Not done:** Physical mobile/FPS/battery or real screen reader, live populated album art gallery inspection, long-term uptime of third-party provider, production merge/deploy and owner's aesthetic/release approval. Historic original MG 502 and KG timed lyrics failures remain recorded; one success does not guarantee uptime. This docs-only handoff checkpoint may trigger new CI independently.
+- **Status:** Stage 4.2B design and exact-code strict CI green, PR still draft and live main v0.4.35 untouched.
+- **Next:** Exactly one final milestone: after explicit owner approval and fresh branch/main/check checks, controlled PR merge + official Cloudflare v0.4.36 live full audio/lyrics/UI/security QA + rollback if needed.
+
 ## 2026-11-05 · Stage 4.2B screenshot-found max-width regression and muted speaker contrast
 
 - **Goal:** Avoid falsely calling the real website visually finished merely because geometry tests are green.
