@@ -33,6 +33,19 @@ while ((cacheMatch = cacheBustPattern.exec(indexHtml))) cacheBustVersions.push(c
 while ((cacheMatch = cacheBustPattern.exec(settingsHtml))) cacheBustVersions.push(cacheMatch[1])
 assert.ok(cacheBustVersions.length >= 2, 'Expected versioned asset URLs for cache busting')
 assert.ok(cacheBustVersions.every(value => value === packageJson.version), 'Asset cache-bust version drift: ' + JSON.stringify(cacheBustVersions))
+for (const asset of [
+  'styles.css','modern.css','src/mobile-shell.css','src/ui2-preview.css',
+  'src/app-version.js','src/app.js','src/modern-ui.js','src/ui2-preview.js','src/mobile-shell.js'
+]) {
+  assert.ok(indexHtml.includes(asset + '?v=' + packageJson.version),
+    'Missing new cache identifier on entry asset: ' + asset)
+}
+assert.ok(indexHtml.includes('id="version-current">v' + packageJson.version + '<'),
+  'Settings panel current-version label drift')
+assert.ok(indexHtml.includes('id="version-release-date">' + versionJson.releaseDate + '<'),
+  'Settings panel release date drift')
+assert.ok(!indexHtml.includes('0.4.35') && !settingsHtml.includes('0.4.35'),
+  'Release candidate still contains old v0.4.35 references')
 assert.equal(context.OnlyTestingMusicVersionCheck.compareVersions('0.2.1', '0.2.1'), 0)
 assert.equal(context.OnlyTestingMusicVersionCheck.compareVersions('0.2.0', '0.2.1'), -1)
 assert.equal(context.OnlyTestingMusicVersionCheck.compareVersions('0.3.0', '0.2.1'), 1)

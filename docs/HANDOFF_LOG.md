@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · v0.4.36 controlled release candidate version/cache preparation
+
+- **Goal:** Prepare second-round UI2 Atmosphere Stage 3 for a safe future versioned production release, without deploying.
+- **Changes:** Bump candidate package/version/app/HTML/settings versions from 0.4.35 to 0.4.36; update all HTML query-string CSS and JS cache IDs. Add release/version consistency checks in `scripts/test-version.mjs`; replace stale pinned preview-workflow version assertions with current `version.json` checks; create [v0.4.36 RC checklist](FYMUSIC_STAGE3_V0436_RC_20261104.md), including explicit rollback and no-force deployment controls. Playback/providers/lyrics/routing/DOM unchanged.
+- **Tests:** Previous pre-bump `14241a9a` isolated strict Preview #41852903774, independent browser #41852918815 and privacy #41852918755/#41852903849 all SUCCESS, with earlier 16 homepage + 8 immersive UI and real KG→KW/MG tests. **New exact v0.4.36 HEAD tests are PENDING**; no inference from old SHA.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/124 ; [RC plan](FYMUSIC_STAGE3_V0436_RC_20261104.md).
+- **Not done:** v0.4.36 exact-head Preview/browser/security/native music results, physical device/screen-reader/perf, owner approval, main merge, official Cloudflare deployment.
+- **Status:** Candidate-only, v0.4.35 production and draft PR preserved.
+- **Next:** Observe exact v0.4.36 CI results; if green and approved, only one remaining production release/verification step.
+
 ## 2026-11-04 · Stage 3 fully tested and visually reviewed; 2 release steps remaining
 
 - **Goal:** Complete the next design-acceptance milestone with synthetic screenshot coverage for immersive playback and unchanged mandatory real-music gates.

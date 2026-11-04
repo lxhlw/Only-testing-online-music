@@ -20,6 +20,10 @@ Upgrade the existing v0.4.35 music website without changing playback, lyrics, ca
 - `.github/workflows/fymusic-ui2-atmosphere-rc.yml`: nonproduction Cloudflare Preview and existing strict unmocked real Kagou-to-Kuwo and original Migu audio/timed lyrics tests. Includes short-lived public-safe screenshot artifact.
 - Both handoff documents: new operation checkpoint with accurate pending/verified release state.
 
+## v0.4.36 candidate release preparation (not deployed)
+
+Release candidate v0.4.36 updates the version metadata and HTML CSS/JS cache identifiers, with strict consistency assertions and dynamic isolated Preview version verification. No player/source/lyrics/proxy runtime code changes. See [release checklist](FYMUSIC_STAGE3_V0436_RC_20261104.md). Full new-SHA tests remain pending; production remains v0.4.35 and PR #124 is draft.
+
 ## Stage 3 FINAL design acceptance checkpoint (candidate, not official release)
 
 [Exact source/test commit `3feb2876`](https://github.com/lxhlw/Only-testing-online-music/commit/3feb287679e985757f8a3605470b8ed692259c7a) passed the **entire** [strict isolated Preview #41851542229](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41851542229) on the first attempt, plus independent [PR browser/security #41851554252](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41851554252). Verified 16/16 homepage screenshots, immersive Chromium/WebKit dark/light desktop+phone screenshots (8), 320/820/1440 geometry, all old default/classic/theme/accessibility and asset tests. The strict unmocked original KG `稻香`→KW playable fallback and original native MG `开始懂了` real audio, cover and **55 synchronized lyrics** plus pause/resume PASSED on this candidate attempt.
