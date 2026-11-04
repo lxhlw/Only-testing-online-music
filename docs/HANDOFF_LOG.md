@@ -5,6 +5,15 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Stage 4.2B release-preflight review, explicit owner gate retained
+
+- **Goal:** Reconcile latest public handoff, official main/production and candidate v0.4.36 PR checks without accidentally merging a draft preview.
+- **Changes:** Reviewed main and PR-branch CURRENT/LOG/POLICY, PR #124 code-diff and commit history. Confirmed Stage 4.2B `5d2ce2d4`→`a81fe772` is documentation-only. Reviewed search focus, player-lyric relocation, accessible SVG volume icon and scoped v0.4.36 styling for release scope. Recorded this sanitized preflight only in PR development-branch CURRENT/LOG; no application files, providers, credentials, external music URL or production runtime modified.
+- **Tests:** Main exact `a8aafde8` Actions #41830551679 and privacy #41830551646 success. Code strict Preview #41874004682 success (unmocked KG→KW + original MG timed lyrics/cover/audio). Branch SHA `a81fe772`: UI isolated Preview #41875481813, playlist #41875494914, privacy #41875481994/#41875494741 success; full modern #41875494723 **IN PROGRESS (not yet passed)** at checkpoint preparation. Its status and any post-checkpoint Actions must be rechecked rather than assumed green. Direct live website fetch unavailable in this session.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/pull/124 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41874004682 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41875481813 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41875494723 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41830551679 .
+- **Not done:** Owner acceptance and explicit production permission; main merge, v0.4.36 official publish/verified real-site QA, physical mobile/screen-reader/hardware measurements and rollback rehearsal. Past provider intermittence remains a known risk.
+- **Status:** Candidate v0.4.36 held on draft PR; official v0.4.35 remains released. Documentation-only checkpoint does not supersede exact code test evidence.
+- **Next action:** Verify latest branch CI, obtain explicit visual/release approval, then perform nonforce reviewed merge and strict production acceptance with safe revert path; otherwise retain Preview only.
 ## 2026-11-05 · Stage 4.2B full strict QA finished and actual 44 browser PNGs reviewed
 
 - **Goal:** Fix user-reported focused Search input collision, clipped mute focus circle, truncated right-side lyrics and bland real-web styling, and eliminate test blind spots exposed by direct screenshot inspection.
