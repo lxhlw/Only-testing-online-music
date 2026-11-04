@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Controlled PR #122 merge and production v0.4.34 verification (mandatory live gate failing)
+
+- **Goal:** Proceed on a limited go-ahead, merge the reviewed v0.4.34 candidate safely and verify actual official Cloudflare Pages while keeping strict music acceptance and rollback.
+- **Changes:** GitHub [PR #122](https://github.com/lxhlw/Only-testing-online-music/pull/122) merged with exact head `b83ae5a3`, merge commit `e060b74c` on `main`; pre-merge main `f27f528e` retained as baseline. Official Cloudflare Pages deployed v0.4.34. No rollback was performed. Added public-safe evidence and unresolved status to CURRENT/LOG/release checklist; no private user data or signed provider URLs.
+- **Tests:** Exact release-branch preview #41781719596, full #41781725591, playlist #41781725549 and privacy #41781725539 SUCCESS at candidate SHA; exact merged-main handoff privacy #41785369728 SUCCESS. Production [workflow #41785369692](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41785369692) **FAILURE, attempts 1 and 2** despite successful deploy, production version metadata 0.4.34, branded 404 repository protection and browser/security checks. Attempt 1 strict MG real LRC HTTP **502 upstream_timeout** (2 upstream attempts). One same-code retry attempt 2 strict MG real music playback did **not** progress within 35 seconds, `readyState=0`; recorded as FAILED, not flaky-pass.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/commit/e060b74c66cb0868b9f70385205a344f078a187b ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41785369692 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41781719596 ; official https://only-testing-online-music.pages.dev/ ; UI2 opt-in https://only-testing-online-music.pages.dev/?ui2=1 .
+- **Not done:** Mandatory green official MG timed lyrics/audio and no new provider failures, default UI2 enablement (still opt-in), physical-device tap/FPS/CPU/memory/real screen-reader verification, tested rollback. Third-party source failures remain.
+- **Status:** **PARTIAL ROLLOUT / STRICT PRODUCTION ACCEPTANCE FAILED**; production v0.4.34 deployed, browser/security verified; default visitor UI remains legacy unless `?ui2=1`.
+- **Next action:** Diagnose real-source Migu relay/audio intermittence without mocking/weaking real acceptance; run a successful official strict test before marking release complete. Design a separate default UI2 activation with safe opt-out and cache/CI checks. Retain previous main commit as safe non-destructive revert baseline if release code regressions are demonstrated.
+
 ## 2026-11-04 · Preliminary visual experience accepted; full release signoff remains open
 
 - **Goal:** Record explicit human acceptance of the latest UI2 visual/basic experience, distinguish it from unobserved physical-device/accessibility testing, and preserve a precise release-ready handoff.

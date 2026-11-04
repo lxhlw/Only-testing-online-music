@@ -1,6 +1,6 @@
 # FyMusic v0.4.34 — Human Release Acceptance Checklist (Public-Safe)
 
-**Status:** PROVISIONAL VISUAL/BASIC-EXPERIENCE ACCEPTANCE RECORDED (2026-11-04); **FULL RELEASE NOT APPROVED / NOT DEPLOYED**. Current reviewed PR #122 candidate commit `b83ae5a3a1a576c7f934f771a8b8ab5c58c5c780`. This checklist documents test categories and results, not unverified device performance.
+**Status (2026-11-04):** v0.4.34 DEPLOYED by merged PR #122; **FULL RELEASE ACCEPTANCE BLOCKED** by mandatory real Migu playback/lyric test failures on both production workflow attempts (#41785369692). UI2 remains opt-in (`?ui2=1`), not homepage-default. Provisional visual/basic-experience signoff was accepted; unmeasured physical touch, real-screen-reader and FPS/CPU/memory checks remain NOT VERIFIED. No rollback performed.
 
 ## 1. Identify the exact reviewed build
 
@@ -29,3 +29,12 @@
 - Keep the last stable v0.4.33 commit as revert baseline. On regression, create a non-destructive revert and retest; never rewrite `main` history.
 
 **Signoff status (2026-11-04):** The reviewed v0.4.34 UI2 preview passed preliminary **visual/basic experience acceptance**, including the corrected narrow-screen welcome-card view. This is a limited go-ahead on appearance/usability impressions, **not a declaration of physical 320px tap testing, real screen-reader verification or physical FPS/CPU/memory acceptance**. Those items remain NOT VERIFIED. Production release and rollback exercises have NOT occurred. A separate explicit authorization and current-head checks are required before a controlled main merge. An automated pass does not mark manual device items complete.
+
+## Production rollout audit — 2026-11-04
+
+- GitHub PR #122 exact head `b83ae5a3` merged as `e060b74c`; stable pre-release main baseline `f27f528e`, preserve revert-ready history.
+- Cloudflare Pages production v0.4.34 deployment, version metadata, public static asset allowlist and browser/security PASS in #41785369692 attempts 1 and 2.
+- Mandatory production live MG acceptance **FAIL**: attempt 1 valid real song but LRC upstream HTTP 502/timeout after 2 source attempts; attempt 2 valid real song but no audio progress within 35s. Neither failure was silently waived; do not claim a completed green release.
+- Newly deployed UI2 code remains gated behind `?ui2=1`. Normal homepage still uses prior presentation. Default activation requires separate review, regression and deploy.
+- Manual physical screen-reader and device performance results **UNKNOWN / NOT VERIFIED**; preliminary visual approval is not equivalent to these checks.
+- Next: restore robust real Migu timed lyric and playback acceptance without mocked substitutions, then complete default UI2 activation and explicit production smoke tests. Preserve rollback baseline; do not force push.
