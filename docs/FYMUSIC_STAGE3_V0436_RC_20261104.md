@@ -10,6 +10,17 @@
 
 Initial v0.4.36 [Preview #41854783706](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41854783706) failed BEFORE preview deployment: the old UI2 contract still required `?v=0.4.35` even though all HTML references had correctly been bumped. The later always-run strict Migu task had no preview URL; this was NOT a real upstream fail. We fixed two UI2 tests to read `version.json` rather than pinning v0.4.35, and aligned the Atmosphere CSS label/style test to v0.4.36. No audio, provider, lyrics or DOM changes; new full exact-SHA CI is pending.
 
+## v0.4.36 exact-code readiness — confirmed
+
+- [x] [Isolated strict Preview #41855336495](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41855336495) success on source HEAD `c5985ef3`, correct v0.4.36 and safe static Pages 404/allowlist.
+- [x] Local+deployed Chromium/WebKit 16/16 dark/light desktop/tablet/mobile layout; 8 immersive screenshot fixture cases, one original audio, keyboard/reduced motion and `?ui2=0`.
+- [x] **Real unmocked** original KG《稻香》→KW playable; native original MG《开始懂了》 media+loaded art+55 timed lyrics+pause/resume success. Older upstream failures retained as historical risk.
+- [x] Independent PR browser/security #41855343685, Playlist regression #41855343551 and privacy #41855343553/#41855335973 success.
+- [x] Downloaded and directly viewed [24 screenshot PNGs](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41855336495/artifacts/13337537326); visual layout intact, v0.4.36 shown. Local immersive cover is a deterministic white 1×1 fixture, not real album art.
+- [ ] Explicit owner aesthetic/release approval, official production merge and live regression (NOT DONE).
+
+[Immutable nonproduction v0.4.36 Preview](https://a43bc825.only-testing-online-music.pages.dev/) · [Light theme](https://a43bc825.only-testing-online-music.pages.dev/?theme=light). This docs-only checkpoint creates new pending CI separately. **One remaining step** is production deployment and verification after explicit user authorization.
+
 ## Exact-SHA prerelease acceptance
 - [ ] Original isolated [Atmosphere RC workflow](https://github.com/lxhlw/Only-testing-online-music/actions/workflows/fymusic-ui2-atmosphere-rc.yml) **COMPLETED/SUCCESS at exact v0.4.36 commit**, confirm versioned CSS/JS and no official production deployment.
 - [ ] Local and deployed Chromium/WebKit × 1440/820/390/320 × dark/light: 16/16 homepage, 8 immersive screenshots, one audio, card-to-dock clearance, no overflow, touch reachability, keyboard, reduced motion, contrast, classic `?ui2=0`.

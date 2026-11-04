@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Step 2 v0.4.36 Stage 3 RC strictly verified; one production step remains
+
+- **Goal:** Finish version/cache release preparation without altering the official v0.4.35 website.
+- **Changes:** RC code `ab4feb60` bumped package/version/app/HTML/settings labels and CSS/JS cache queries to v0.4.36; build caught stale hardcoded v0.4.35 UI2 test assertions before Preview (#41854783706), repaired in `c5985ef328b8d16e828f3a20dbf3d5cf51788ebc` by deriving test versions from `version.json`. No playback/source/lyrics/proxy/runtime code changes or bypasses.
+- **Tests:** Exact corrected v0.4.36 code HEAD [isolated Preview #41855336495](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41855336495) SUCCESS: 16 Chromium/WebKit dark/light homepage + 8 immersive screenshots, accessibility/320/dock/404/classic gates, strict real KG `稻香`→KW playable fallback and original MG 孙燕姿《开始懂了》 real playback+cover+55 timed LRC+pause/resume. [PR security/browser #41855343685](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41855343685) SUCCESS, [playlist #41855343551](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41855343551) SUCCESS, privacy #41855343553/#41855335973 SUCCESS.
+- **Visual evidence:** Downloaded [24 PNG screenshot artifact #13337537326](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41855336495/artifacts/13337537326), inspected 1440 dark/light, 320 light and desktop/mobile immersive; layout clear and v0.4.36 shown. Immersive synthetic image is an intentionally blank 1×1 test cover; strict real MG separately verified loaded cover. New NONPRODUCTION Preview https://a43bc825.only-testing-online-music.pages.dev/ .
+- **Not done:** User's explicit final release approval, production merge/deployment, official live regression, physical device/screen reader/FPS, guaranteed upstream MG reliability. Docs-only checkpoint triggers new CI which must not be presumed green.
+- **Status:** Step 2 complete, candidate tested green, draft PR #124 unmerged; production main v0.4.35 unchanged.
+- **Next:** Exactly 1 step—after explicit release approval, nonforce merge, official Cloudflare v0.4.36 verification, real music/lyrics tests and public-safe final handoff or revert as necessary.
+
 ## 2026-11-04 · v0.4.36 isolated Preview build exposed hardcoded v0.4.35 UI2 test pins
 
 - **Goal:** Fix a release-version test mismatch without weakening a strict acceptance gate or changing runtime.

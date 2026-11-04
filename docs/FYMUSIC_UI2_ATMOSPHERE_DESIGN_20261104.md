@@ -20,6 +20,10 @@ Upgrade the existing v0.4.35 music website without changing playback, lyrics, ca
 - `.github/workflows/fymusic-ui2-atmosphere-rc.yml`: nonproduction Cloudflare Preview and existing strict unmocked real Kagou-to-Kuwo and original Migu audio/timed lyrics tests. Includes short-lived public-safe screenshot artifact.
 - Both handoff documents: new operation checkpoint with accurate pending/verified release state.
 
+## v0.4.36 release-candidate strict verification complete (NOT OFFICIAL)
+
+The exact corrected v0.4.36 code HEAD `c5985ef3` [strict Preview #41855336495](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41855336495) completed SUCCESS, with 16 homepage + 8 immersive Chromium/WebKit dark/light fixtures, source-real KG→KW playback and original native MG real audio, cover, 55 timed lyrics, pause/resume, plus independent PR/security/playlist/privacy checks. [24 screenshots](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41855336495/artifacts/13337537326) were downloaded and examined. White immersive cover is a synthetic 1×1 placeholder, not a real artwork failure. Candidate v0.4.36 [Preview](https://a43bc825.only-testing-online-music.pages.dev/) is nonproduction, public main remains v0.4.35 and PR #124 is still draft. One final merge/deploy/live-audio step remains after explicit approval.
+
 ## v0.4.36 candidate release preparation (not deployed)
 
 Release candidate v0.4.36 updates the version metadata and HTML CSS/JS cache identifiers, with strict consistency assertions and dynamic isolated Preview version verification. No player/source/lyrics/proxy runtime code changes. See [release checklist](FYMUSIC_STAGE3_V0436_RC_20261104.md). Full new-SHA tests remain pending; production remains v0.4.35 and PR #124 is draft.
