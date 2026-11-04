@@ -35,7 +35,7 @@ for(const [engine,adapter] of Object.entries({chromium,webkit})){
       ' api.on(api.EVENT_NAMES.request,function(){return Promise.resolve({url:"https://media.example.test/song.wav"});});',
       ' api.send(api.EVENT_NAMES.inited,{status:true,sources:{kw:{name:"Kuwo",type:"music",actions:["musicUrl"],qualitys:["128k"]}}});',
       '})();'
-     ].join('\\n');
+     ].join('\n');
      localStorage.setItem('only-testing-online-music.lx-sources',
       JSON.stringify([{id:'ui2-layout-test',name:'UI2 fixture',code:fixture,url:'https://example.com/source.js'}]));
      localStorage.setItem('only-testing-online-music.active-source-id','ui2-layout-test');
