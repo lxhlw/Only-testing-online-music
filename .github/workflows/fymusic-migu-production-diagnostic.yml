@@ -1,0 +1,39 @@
+name: FyMusic · Strict Migu production vs immutable preview diagnostic
+on:
+  push:
+    branches: [diagnostic/fymusic-migu-prod-20261104]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: fymusic-migu-forensics-20261104
+  cancel-in-progress: true
+jobs:
+  strict-comparison:
+    name: Read-only strict provider acceptance and safe lifecycle trace
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Parse, privacy and bounded Migu relay security checks
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/diagnostic/fymusic-migu-prod-20261104
+          npm install --no-audit --no-fund
+          node --check scripts/test-migu-lyrics-preview-live.mjs
+          node scripts/test-migu-lyrics-endpoint.mjs
+          node scripts/check-handoff-privacy.mjs
+          npx playwright install --with-deps chromium
+      - name: Strict REAL Migu on official production (cannot be waived)
+        env:
+          TEST_BASE_URL: https://only-testing-online-music.pages.dev
+          FYMUSIC_ACCEPT_PRODUCTION: '1'
+        run: node scripts/test-migu-lyrics-preview-live.mjs
+      - name: Compare REAL Migu on known green immutable v0.4.34 preview
+        if: always()
+        env:
+          TEST_BASE_URL: https://395bab85.only-testing-online-music.pages.dev
+        run: node scripts/test-migu-lyrics-preview-live.mjs

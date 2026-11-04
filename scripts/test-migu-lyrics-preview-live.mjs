@@ -63,6 +63,7 @@ try{
  console.log('FYMUSIC_MIGU_EXACT_SEARCH_AUDIT',JSON.stringify(attempts));
  assert.ok(index>=0,'Migu exact target not returned by bounded real searches');
  const api=await page.evaluate(async index=>{
+  const lrcStarted=performance.now();
   const song=window.__LXLastSearchResults[index],id=String(song.copyrightId||song.id||''),
    url=String(song.lyricId||song.raw?.lyricUrl||song.raw?.lrcUrl||'');
   const allowed=/^[A-Za-z0-9_-]{1,80}$/.test(id)&&
@@ -77,14 +78,57 @@ try{
   return {allowed:true,status:r.status,source:data.source,correctId:String(data.id)===id,
    lyricLines:lines.length,timed:lines.every(l=>Number.isFinite(l.time)),
    failureReason:knownReasons.has(data.reason)?data.reason:null,
-   attempts:Number.isInteger(data.attempts)&&data.attempts>=0&&data.attempts<=2?data.attempts:null};
+   attempts:Number.isInteger(data.attempts)&&data.attempts>=0&&data.attempts<=2?data.attempts:null,
+   elapsedMs:Math.min(120000,Math.max(0,Math.round(performance.now()-lrcStarted)))};
  },index);
+ console.log('FYMUSIC_MIGU_SAFE_LRC_OUTCOME',JSON.stringify({
+  allowed:api.allowed,status:api.status,correctId:api.correctId,
+  lyricLines:api.lyricLines,timed:api.timed,
+  failureReason:api.failureReason,attempts:api.attempts,elapsedMs:api.elapsedMs
+ }));
  assert.equal(api.allowed,true,JSON.stringify(api));
  assert.equal(api.status,200,JSON.stringify(api));
  assert.equal(api.source,'mg');
  assert.equal(api.correctId,true);
  assert.ok(api.lyricLines>=10,JSON.stringify(api));
  assert.equal(api.timed,true);
+ // Event-only live audit: no request bodies, provider URLs, headers,
+ // lyrics, private identifiers or raw error text are collected or logged.
+ await page.evaluate(()=>{
+  const started=performance.now(), events=[];
+  const sources=new Set(['kg','kw','mg','wy','tx']);
+  const codes=new Set(['timeout','network','invalid','unknown']);
+  const add=(event,details={})=>{
+   if(events.length>=44)return;
+   events.push({ms:Math.min(80000,Math.max(0,Math.round(performance.now()-started))),
+    event,...details});
+  };
+  for(const type of ['fymusic:resolver-attempt','fymusic:resolver-error',
+   'fymusic:url-resolved','fymusic:audio-play-rejected',
+   'fymusic:alternate-search','fymusic:alternate-approved']){
+   window.addEventListener(type,e=>{
+    const d=e.detail||{},rawSource=String(d.source||'');
+    const rawStatus=Number(d.status||0),rawCode=String(d.code||d.reason||'');
+    add(type.replace('fymusic:',''),{
+     source:sources.has(rawSource)?rawSource:'unknown',
+     ...(Number.isInteger(rawStatus)&&rawStatus>=400&&rawStatus<=599?{status:rawStatus}:{}),
+     ...(codes.has(rawCode)?{code:rawCode}:{}),
+     ...(typeof d.transport==='string'?{transport:d.transport==='direct'?'direct':d.transport==='proxy'?'proxy':'other'}:{})
+    });
+   });
+  }
+  const audio=document.getElementById('audio');
+  for(const type of ['loadstart','waiting','stalled','canplay','playing','pause','error','emptied']){
+   audio?.addEventListener(type,()=>{
+    add('audio:'+type,{
+     readyState:audio.readyState,networkState:audio.networkState,
+     mediaErrorCode:audio.error?.code||0,
+     sourceAttached:!!audio.getAttribute('src')
+    });
+   });
+  }
+  window.__FYMUSIC_MIGU_SAFE_EVENTS=events;
+ });
  await page.locator('#audio').evaluate(a=>{a.muted=true;a.volume=0});
  await page.locator('#search-results .search-song-row .search-song-main').nth(index).click();
  try{
@@ -101,9 +145,22 @@ try{
     progressConfirmed:!!a&&!a.paused&&a.currentTime>.8,
     source:['kg','kw','mg','wy','tx'].includes(s)?s:'unclassified'};
   });
+  const classified=await page.evaluate(()=>{
+   const a=document.getElementById('audio'),t=String(window.__LXNowPlayingTrack?.source||'');
+   return {events:(window.__FYMUSIC_MIGU_SAFE_EVENTS||[]).slice(0,44),
+    attached:!!a?.getAttribute('src'),
+    currentTimeBucket:Math.min(999,Math.max(0,Math.floor(Number(a?.currentTime||0)))),
+    trackSource:['kg','kw','mg','wy','tx'].includes(t)?t:'unknown'};
+  });
+  console.log('FYMUSIC_MIGU_SAFE_RESOLVER_AUDIO_TRACE',JSON.stringify(classified));
   console.log('FYMUSIC_MIGU_REAL_AUDIO_PROGRESS_FAILURE',JSON.stringify(diagnostic));
   throw error;
  }
+ console.log('FYMUSIC_MIGU_SAFE_RESOLVER_AUDIO_TRACE',
+  JSON.stringify(await page.evaluate(()=>({
+   events:(window.__FYMUSIC_MIGU_SAFE_EVENTS||[]).slice(0,44),
+   playbackProgressConfirmed:true
+  }))));
  await page.locator('#player-cover-button').click();
  await page.locator('#lyrics-overlay').waitFor({state:'visible',timeout:7000});
  await page.waitForFunction(()=>document.querySelectorAll('#lyrics-lines .lyrics-line').length>=10,
