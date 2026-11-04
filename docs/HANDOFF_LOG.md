@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04T15:20:45+08:00 · Official v0.4.34 real Migu production acceptance passed after bounded diagnosis
+
+- **Goal:** Recheck live Migu audio+timed-lyric failures in the official production release without weakening strict assertions; isolate upstream variability before modifying playback.
+- **Changes:** Created diagnostic-only branch `diagnostic/fymusic-migu-prod-20261104` at `a875f7a4`, modifying only `scripts/test-migu-lyrics-preview-live.mjs` and adding `.github/workflows/fymusic-migu-production-diagnostic.yml`. Script records allowlisted, bounded resolver/audio event types and numerical LRC timing, never raw URLs or credentials. No production player, lyrics relay, metadata or runtime modifications. Re-ran existing failed main publication job without code changes. Updated CURRENT, LOG and release checklist as public-safe documentation, not product code.
+- **Tests:** Standalone live production + immutable-preview strict [#41790673511](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41790673511) **SUCCESS**, both with original Migu `开始懂了` real playback, 55 timed lyrics, cover, pause/resume; official 6122ms and Preview 6673ms for LRC, each after 2 official upstream attempts, and direct original-Migu audio progress. Original mandatory official [#41786525697](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41786525697) **attempt 2 SUCCESS** on unchanged main `98b1dfd386d2509f0821ec634ed610c02866f144`; full production deployed version/assets/404, browser/security and strict Migu gate passed. Earlier mandatory failures remain documented and signify intermittent live-source availability. Static scan of changed public-safe docs was clean; automated post-handoff privacy check is launched by main doc commit.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/commit/a875f7a4dffb55b8f50b37619427378fc91e964f ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41790673511 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41786525697 ; https://only-testing-online-music.pages.dev/?ui2=1 .
+- **Not done:** UI2 is not homepage-default; no physical device/real-screen-reader/CPU/FPS/memory validation, no proof of stable upstream SLAs, no rollback performed, diagnostic branch not merged.
+- **Status:** Production v0.4.34 deployed, original critical live Migu acceptance **PASS on current runtime SHA**. One technical launch stage remains: default UI2 activation with reversible legacy escape hatch, independent review and production regression. No runtime changes in this operation.
+- **Next action:** Activate default UI2 in an isolated PR (opt-out `?ui2=0`, no new audio node), recheck both theme/browser/mobile/real-source and static 404 gates before controlled merge/deploy; preserve non-destructive revert baseline.
+
 ## 2026-11-04 · Controlled PR #122 merge and production v0.4.34 verification (mandatory live gate failing)
 
 - **Goal:** Proceed on a limited go-ahead, merge the reviewed v0.4.34 candidate safely and verify actual official Cloudflare Pages while keeping strict music acceptance and rollback.

@@ -1,6 +1,6 @@
 # FyMusic v0.4.34 — Human Release Acceptance Checklist (Public-Safe)
 
-**Status (2026-11-04):** v0.4.34 DEPLOYED by merged PR #122; **FULL RELEASE ACCEPTANCE BLOCKED** by mandatory real Migu playback/lyric test failures on both production workflow attempts (#41785369692). UI2 remains opt-in (`?ui2=1`), not homepage-default. Provisional visual/basic-experience signoff was accepted; unmeasured physical touch, real-screen-reader and FPS/CPU/memory checks remain NOT VERIFIED. No rollback performed.
+**Status (2026-11-04T15:20:45+08:00):** v0.4.34 DEPLOYED, **STRICT REAL Migu production acceptance PASSED on original main runtime SHA** `98b1dfd386d2509f0821ec634ed610c02866f144` in [Actions #41786525697](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41786525697) run attempt 2. Earlier failures preserved; upstream intermittence remains. **UI2 still opt-in `?ui2=1`, NOT homepage-default.** Visual/basic-experience accepted, but physical phone touch, real-screen-reader and physical FPS/CPU/memory remain NOT VERIFIED. No rollback performed.
 
 ## 1. Identify the exact reviewed build
 
@@ -38,3 +38,9 @@
 - Newly deployed UI2 code remains gated behind `?ui2=1`. Normal homepage still uses prior presentation. Default activation requires separate review, regression and deploy.
 - Manual physical screen-reader and device performance results **UNKNOWN / NOT VERIFIED**; preliminary visual approval is not equivalent to these checks.
 - Next: restore robust real Migu timed lyric and playback acceptance without mocked substitutions, then complete default UI2 activation and explicit production smoke tests. Preserve rollback baseline; do not force push.
+
+## Production strict re-acceptance checkpoint — 2026-11-04T15:20:45+08:00
+
+- [#41790673511](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41790673511) isolated read-only strict comparison: production and immutable preview both PASS real same-song Migu audio, 55 timed lyrics, artwork and pause/resume. Diagnostic branch `a875f7a4` is unmerged and changes **no** production code.
+- [#41786525697](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41786525697) attempt 2 on original main runtime `98b1dfd386d2509f0821ec634ed610c02866f144` **SUCCESS**, including mandatory real Migu playback/lyrics gate, deployed version/asset/404 checks, browser and security. Prior failures still document intermittent source availability; strict rules not weakened.
+- **Next remaining technical stage (1):** make UI2 the homepage default with a reversible `?ui2=0` legacy option, verify both paths/themes/desktop/mobile/screen-reader static semantics/actual music and cache/security, then deploy/verify. Unmeasured physical device performance is still NOT VERIFIED.
