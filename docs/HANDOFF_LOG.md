@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · Atmosphere design CI light-search computed base regression corrected
+
+- **Goal:** Keep strict light-theme accessibility checks while layering a gradient onto the homepage search field.
+- **Changes:** Initial exact `0131bc71` Preview #41839250683 failed existing light-theme desktop contrast computed-color gate because `background` shorthand made search background-color transparent. Updated CSS with explicit opaque white background-color and separate gradient background-image; augmented synthetic visual test to assert bright computed base. No media/lyrics/UI behavior code changed. Added accurate public-safe handoff and design report annotation.
+- **Tests:** Initial CSS/style/privacy/default/Atmosphere browser 12 cases PASS; light-theme existing test FAIL; deployed Preview not run, strict MG step did not have a test URL (not a provider failure). New exact-head CI **PENDING**.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41839250683 ; synthetic screenshot artifact 13326833761 (not physical device evidence).
+- **Not done:** Updated exact-head full CI, screenshot review, deployed strict live music, release/merge and physical device/screen reader tests.
+- **Status:** Candidate nonproduction; main unchanged.
+- **Next action:** Inspect new CI and ensure light background-color, visual matrix, real provider and privacy all pass.
+
 ## 2026-11-04 · UI2 Atmosphere editorial visual polish on isolated development branch
 
 - **Goal:** Make the official UI2 aesthetic more distinctive and refined while keeping performance, music reliability and 320px reachability intact.

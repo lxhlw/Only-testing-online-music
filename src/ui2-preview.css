@@ -1487,7 +1487,9 @@ html.modern-web.fy-ui2.fy-ui2-light .player-bar{
   box-shadow:0 16px 37px rgba(40,102,65,.14),inset 0 1px #fff!important;
 }
 html.modern-web.fy-ui2.fy-ui2-light .global-search{
-  background:linear-gradient(120deg,#fff,#f8fcfa)!important;
+  /* Keep a real opaque CSS background-color for contrast/a11y queries. */
+  background-color:#fff!important;
+  background-image:linear-gradient(120deg,#fff,#f8fcfa)!important;
 }
 @media (max-width:740px){
   html.modern-web.fy-ui2.fy-ui2-light.mobile-shell-ready .search-inspiration{

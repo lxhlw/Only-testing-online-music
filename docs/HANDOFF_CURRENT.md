@@ -2,6 +2,13 @@
 
 > Repository is PUBLIC. Keep only sanitized engineering facts. Read HANDOFF_LOG.md and HANDOFF_POLICY.md before each operation. GitHub branch SHA, workflow results and deployed-site behavior override stale notes.
 
+### 2026-11-04 — Atmosphere first CI: light search computed background regression fixed (CANDIDATE ONLY)
+
+- **Observed exact-head CI:** [initial Preview #41839250683](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41839250683) on `0131bc71` **FAILURE** in the existing light-theme browser gate because desktop search `getComputedStyle(...).backgroundColor` became transparent after the new light gradient used CSS background shorthand; the synthetic Atmosphere visual browser matrix itself **PASSED 12/12** and CSS/style/privacy/allowlist/local default/desktop checks passed. Preview deployment and live KG test were **SKIPPED** after failure; MG step failed because `TEST_BASE_URL` was absent, not evidence of an upstream MG regression. Synthetic screenshot artifact **13326833761** was uploaded for review; image content is local-fixture CI only.
+- **Narrow correction:** `src/ui2-preview.css` now uses explicit opaque `background-color:#fff!important` plus `background-image:linear-gradient(...)` for light-theme search. New Atmosphere browser script also asserts computed light-search base luminance rather than hiding the original failure. No player, audio, lyric, album, source or version changes; reduced-motion/320px contracts remain strict.
+- **Current status:** **NONPRODUCTION / new exact-head CI PENDING**. Official main `a8aafde8` remains deployed v0.4.35 with all last-known [main CI #41830551679](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41830551679) SUCCESS.
+- **Next goal:** Re-run exact candidate local + Cloudflare Preview Chromium/WebKit, review updated screenshots and strict original KG→KW and MG real audio+lyrics; only then consider human design approval. Document separately from production.
+
 ### 2026-11-04 — Atmosphere design polish for UI2 on isolated Preview candidate (NOT PRODUCTION)
 
 - **Baseline authority:** Public `main` at candidate creation `a8aafde80e18d76c03952680f7378a8eea93ae1c`, official **v0.4.35**, latest [main workflow #41830551679](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41830551679) **SUCCESS** and privacy [#41830551646](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41830551646) **SUCCESS**. Current UI2 default production remains unchanged. Working branch `design/fymusic-ui2-atmosphere-20261104` is an isolated **nonproduction** design candidate.
