@@ -1,0 +1,103 @@
+name: FyMusic · Integrated UI2 + Source Reliability RC (nonproduction)
+on:
+  push:
+    branches: [release/fymusic-stage5-stage6-rc-20261104]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: fymusic-integrated-rc-20261104
+  cancel-in-progress: true
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build and verify public-safe UI 2.0 implementation
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/release/fymusic-stage5-stage6-rc-20261104
+          npm install --no-audit --no-fund
+          node --check src/ui2-preview.js
+          node --check scripts/test-ui2-desktop-browser.mjs
+          node scripts/test-ui2-contract.mjs
+          node scripts/test-ui2-phase2-style.mjs
+          node --check scripts/test-ui2-phase2-browser.mjs
+          node --check scripts/test-ui2-visual-audit.mjs
+          node --check scripts/test-ui2-theme-browser.mjs
+          node --check scripts/test-ui2-touch-reachability-browser.mjs
+          node scripts/check-handoff-privacy.mjs
+          node scripts/test-migu-lyrics-endpoint.mjs
+          node scripts/test-version.mjs
+          node scripts/build-pages-dist.mjs
+          node scripts/test-pages-dist.mjs
+          node scripts/test-pages-route-guard.mjs
+          npx playwright install --with-deps chromium webkit
+      - name: Local browser regression on both rendering engines
+        run: |
+          set -euo pipefail
+          npx wrangler pages dev dist --ip 127.0.0.1 --port 8788 >/tmp/fymusic-ui2-pages.log 2>&1 &
+          ready=0
+          for i in {1..50}; do
+            if curl -fsSL http://127.0.0.1:8788/ >/dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          if [ "$ready" != 1 ]; then cat /tmp/fymusic-ui2-pages.log; exit 1; fi
+          node scripts/test-ui2-desktop-browser.mjs
+          node scripts/test-ui2-phase2-browser.mjs
+          node scripts/test-ui2-visual-audit.mjs
+          node scripts/test-ui2-theme-browser.mjs
+          node scripts/test-ui2-touch-reachability-browser.mjs
+          node scripts/test-now-playing-kuwo-browser.mjs
+          node scripts/test-seamless-cross-platform-browser.mjs
+      - name: Deploy isolated Cloudflare Pages preview (never production)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx wrangler pages deploy dist --project-name only-testing-online-music --branch fymusic-integrated-rc-test --commit-hash "$GITHUB_SHA" | tee /tmp/ui2-cloudflare-preview.log
+          url=$(grep -Eo 'https://[0-9a-f]{8}\.only-testing-online-music\.pages\.dev' /tmp/ui2-cloudflare-preview.log | head -n1)
+          test -n "$url"
+          test "$url" != https://only-testing-online-music.pages.dev
+          echo "TEST_BASE_URL=$url" >> "$GITHUB_ENV"
+          echo "FYMUSIC_RC_PREVIEW_URL=$url/?ui2=1"
+      - name: Validate deployed UI 2.0 URL, retained-file protection, browser regression
+        run: |
+          set -euo pipefail
+          curl -fsSL "$TEST_BASE_URL/?ui2=1" -o /tmp/ui2-index.html
+          grep -Fq 'ui2-preview.css?v=0.4.34' /tmp/ui2-index.html
+          curl -fsSL "$TEST_BASE_URL/src/ui2-preview.css" -o /tmp/ui2-preview-live.css
+          grep -Fq 'FyMusic UI 2.0' /tmp/ui2-preview-live.css
+          code=$(curl -sSL -o /tmp/ui2-public-guard -w '%{http_code}' "$TEST_BASE_URL/README.md")
+          test "$code" = 404
+          node scripts/test-ui2-desktop-browser.mjs
+          node scripts/test-ui2-phase2-browser.mjs
+          node scripts/test-ui2-visual-audit.mjs
+          node scripts/test-ui2-theme-browser.mjs
+          node scripts/test-ui2-touch-reachability-browser.mjs
+          node scripts/test-seamless-cross-platform-browser.mjs
+      - name: Upload public-safe UI2 screenshots and browser metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fymusic-ui2-visual-audit
+          path: .artifacts/ui2-visual/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Test real Kugou failure recovery on isolated preview
+        run: node scripts/test-seamless-live-daoxiang-preview.mjs
+      - name: Real Migu timed lyrics and audio-progress acceptance
+        if: always()
+        run: |
+          test -n "$TEST_BASE_URL"
+          node scripts/test-migu-lyrics-preview-live.mjs
+      - name: Integrated candidate never changes production
+        if: always()
+        run: echo FYMUSIC_RC_PREVIEW_NOT_PRODUCTION

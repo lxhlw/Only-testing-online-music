@@ -54,7 +54,35 @@ try{
  upstream=()=>new Response(sample,{status:200,headers:{'Content-Length':'250000'}});
  assert.equal((await hit('6005751FFGS',cdn)).status,502);
  upstream=()=>new Response(new Uint8Array(190000),{status:200});
- assert.equal((await hit('6005751FFGS',cdn)).status,502);
+ let oversized=await hit('6005751FFGS',cdn);
+ assert.equal(oversized.status,502);
+ assert.equal((await oversized.json()).reason,'oversized_body');
+ let trial=0;
+ upstream=()=>++trial===1?new Response(null,{status:503}):new Response(sample,{status:200});
+ let recovered=await hit('6005751FFGS',cdn);
+ assert.equal(recovered.status,200);
+ assert.equal((await recovered.json()).attempts,2);
+ assert.equal(trial,2);
+ trial=0;
+ upstream=()=>{trial++;return new Response(null,{status:502})};
+ let exhausted=await hit('6005751FFGS',cdn);
+ assert.equal(exhausted.status,502);
+ assert.equal((await exhausted.json()).reason,'upstream_transient_status');
+ assert.equal(trial,2,'Do not retry indefinitely');
+ trial=0;
+ upstream=()=>{trial++;return new Response(null,{status:404})};
+ let missing=await hit('6005751FFGS',cdn);
+ assert.equal(missing.status,502);
+ assert.equal((await missing.json()).reason,'upstream_http_status');
+ assert.equal(trial,1,'Non-transient status is never retried');
+ trial=0;
+ upstream=()=>{trial++;throw new Error('private-exception-marker')};
+ let exception=await hit('6005751FFGS',cdn);
+ assert.equal(exception.status,502);
+ assert.equal(trial,2);
+ let exceptionText=await exception.text();
+ assert.ok(!exceptionText.includes('private-exception-marker'));
+ assert.equal(JSON.parse(exceptionText).reason,'upstream_network');
  console.log('FYMUSIC_MIGU_LRC_SECURITY_UNIT_PASS',JSON.stringify({
   hostLocked:true,copyrightBound:true,timedLrc:true,redirectDenied:true,
   oversizedDenied:true,invalidTargetsRejected:rejected.length,calls

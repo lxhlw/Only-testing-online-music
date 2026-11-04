@@ -15,19 +15,53 @@ try{
  assert.equal(await page.evaluate(()=>String(window.LXSourceManager.getActive()?.name||'').includes('野花')),true);
  await page.locator('.nav-item[data-view="search"]').click();
  await page.locator('#channel-list .channel-button[title="MG"]').click();
+ // Live upstream catalogs sometimes fail or return unrelated pages. Listen
+ // for this UI's actual request completion rather than blindly sleeping 16s
+ // or sampling a stale result set. Retry the same exact recording at most
+ // three times; never substitute another artist/platform/song or mock media.
+ const attempts=[];
  let index=-1;
- for(const keyword of ['开始懂了','孙燕姿']){
-  await page.locator('#global-search-input').fill(keyword);
-  await page.locator('#global-search-btn').click();
-  try{await page.waitForFunction(()=>window.__LXLastSearchResults?.some(s=>
-   s.source==='mg'&&String(s.name||'').trim()==='开始懂了'&&
-   String(s.singer||'').includes('孙燕姿')),null,{timeout:16000});}catch{}
+ for(const [n,keyword] of ['开始懂了','孙燕姿','开始懂了'].entries()){
+  const outcome=await page.evaluate(keyword=>new Promise(resolve=>{
+   let id=null,done=false;
+   const codes=new Set(['timeout','http_error','network','unknown']);
+   const finish=(status,details={})=>{
+    if(done)return;done=true;clearTimeout(timer);
+    for(const [event,handler] of handlers)window.removeEventListener(event,handler);
+    resolve({status,...details});
+   };
+   const start=e=>{if(e.detail?.source==='mg')id=e.detail.id;};
+   const pageResult=e=>{
+    if(e.detail?.id!==id||e.detail?.source!=='mg'||e.detail?.page!==1)return;
+    const provider=String(e.detail.provider||'');
+    finish('page',{count:Math.min(160,Math.max(0,Number(e.detail.items?.length)||0)),
+     provider:['lx-native','gdstudio-native','migu-native'].includes(provider)?provider:'other'});
+   };
+   const error=e=>{
+    if(e.detail?.id!==id||e.detail?.source!=='mg')return;
+    const code=String(e.detail.code||'');
+    finish('search_error',{code:codes.has(code)?code:'unknown'});
+   };
+   const handlers=[['fymusic:search-start',start],['fymusic:search-page',pageResult],
+    ['fymusic:search-error',error]];
+   for(const [event,handler] of handlers)window.addEventListener(event,handler);
+   const timer=setTimeout(()=>finish('deadline'),24000);
+   document.getElementById('global-search-input').value=keyword;
+   document.getElementById('global-search-btn').click();
+  }),keyword);
   index=await page.evaluate(()=>window.__LXLastSearchResults?.findIndex(s=>
    s.source==='mg'&&String(s.name||'').trim()==='开始懂了'&&
    String(s.singer||'').includes('孙燕姿'))??-1);
+  attempts.push({attempt:n+1,queryKind:keyword==='开始懂了'?'title':'artist',
+   status:outcome.status,
+   ...(outcome.code?{code:outcome.code}:{}),
+   ...(outcome.count!==undefined?{count:outcome.count}:{}),
+   ...(outcome.provider?{provider:outcome.provider}:{}),
+   exactTargetPresent:index>=0});
   if(index>=0)break;
  }
- assert.ok(index>=0,'Migu target song is absent');
+ console.log('FYMUSIC_MIGU_EXACT_SEARCH_AUDIT',JSON.stringify(attempts));
+ assert.ok(index>=0,'Migu exact target not returned by bounded real searches');
  const api=await page.evaluate(async index=>{
   const song=window.__LXLastSearchResults[index],id=String(song.copyrightId||song.id||''),
    url=String(song.lyricId||song.raw?.lyricUrl||song.raw?.lrcUrl||'');
@@ -37,8 +71,13 @@ try{
   const r=await fetch('/api/migu-lyrics?id='+encodeURIComponent(id)+'&url='+encodeURIComponent(url));
   const data=await r.json().catch(()=>({}));
   const lines=window.LXMusicLyrics.parseLrc(data.lyric||'');
+  const knownReasons=new Set(['invalid_request','redirect_rejected','upstream_transient_status',
+   'upstream_http_status','upstream_timeout','oversized_body','empty_body',
+   'upstream_network','invalid_timed_lyric']);
   return {allowed:true,status:r.status,source:data.source,correctId:String(data.id)===id,
-   lyricLines:lines.length,timed:lines.every(l=>Number.isFinite(l.time))};
+   lyricLines:lines.length,timed:lines.every(l=>Number.isFinite(l.time)),
+   failureReason:knownReasons.has(data.reason)?data.reason:null,
+   attempts:Number.isInteger(data.attempts)&&data.attempts>=0&&data.attempts<=2?data.attempts:null};
  },index);
  assert.equal(api.allowed,true,JSON.stringify(api));
  assert.equal(api.status,200,JSON.stringify(api));
@@ -48,10 +87,23 @@ try{
  assert.equal(api.timed,true);
  await page.locator('#audio').evaluate(a=>{a.muted=true;a.volume=0});
  await page.locator('#search-results .search-song-row .search-song-main').nth(index).click();
- await page.waitForFunction(()=>{
-  const a=document.getElementById('audio');
-  return a&&!a.paused&&a.readyState>=2&&a.currentTime>.8;
- },null,{timeout:35000});
+ try{
+  await page.waitForFunction(()=>{
+   const a=document.getElementById('audio');
+   return a&&!a.paused&&a.readyState>=2&&a.currentTime>.8;
+  },null,{timeout:35000});
+ }catch(error){
+  const diagnostic=await page.evaluate(()=>{
+   const a=document.getElementById('audio');
+   const s=String(window.__LXNowPlayingTrack?.source||'');
+   return {readyState:a?.readyState??null,networkState:a?.networkState??null,
+    mediaErrorCode:a?.error?.code??0,paused:a?.paused??null,
+    progressConfirmed:!!a&&!a.paused&&a.currentTime>.8,
+    source:['kg','kw','mg','wy','tx'].includes(s)?s:'unclassified'};
+  });
+  console.log('FYMUSIC_MIGU_REAL_AUDIO_PROGRESS_FAILURE',JSON.stringify(diagnostic));
+  throw error;
+ }
  await page.locator('#player-cover-button').click();
  await page.locator('#lyrics-overlay').waitFor({state:'visible',timeout:7000});
  await page.waitForFunction(()=>document.querySelectorAll('#lyrics-lines .lyrics-line').length>=10,
