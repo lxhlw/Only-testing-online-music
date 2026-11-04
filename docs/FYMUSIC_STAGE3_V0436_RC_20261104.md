@@ -1,3 +1,9 @@
+## Stage 4.1 exact-code final preproduction acceptance (2026-11-05; NOT YET LIVE)
+
+- Verified code HEAD `45f96d93c11636c5683a8e96d11b7ceafba56fed`: [strict isolated Preview #41866987311](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41866987311) SUCCESS. Chromium/WebKit 16 home dark/light/4 viewports + 12 cross-view (Playlist/Ranking/Library, both themes) and 8 immersive synthetic screenshots, classic, safe static 404, keyboard, no dock obscuring; strict original KG→KW fallback and native MG real audio + album + 55 timed LRC + pause/resume PASS. PR browser/security #41867001740 and Playlist #41867001753 SUCCESS. Privacy #41866987093 SUCCESS and second #41867001892 job completed/success (parent workflow status pending).
+- Confirmed from **downloaded actual browser screenshot artifact [#13343420887](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41866987311/artifacts/13343420887)** that dark Playlist filters are no longer white and light Ranking empty block is no longer dark; real artwork in populated catalogs was not exercised by offline visual fixture. First Stage 4 run #41861872946 failed MG lyrics upstream HTTP 502; this intermittent source issue remains a deployment risk.
+- Current immutable nonproduction v0.4.36 Preview: https://adb161a5.only-testing-online-music.pages.dev/ ; light `?theme=light`. **Official production still v0.4.35, PR #124 DRAFT and unmerged.** Exactly **1 remaining stage**: explicit owner visual/release approval then nonforce merge, official live version/theme/all page and real source/lyrics/security verification + safe revert. No physical-device FPS/CPU/battery/screen-reader checks performed.
+
 # FyMusic v0.4.36 · Stage 3 release-candidate checklist (public safe)
 
 ## Status and scope

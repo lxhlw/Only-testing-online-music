@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Stage 4.1 strict real-preview browser and music acceptance complete; exactly 1 step remaining
+
+- **Goal:** Close screenshot-proven UI contrast failures in the real editable website before asking for the final production release.
+- **Changes:** Stage 4.1 CSS and Playwright checks at `45f96d93c11636c5683a8e96d11b7ceafba56fed`: correct dark Playlist source/category filters previously white, light Ranking empty pseudo-element previously dark, all theme states and forced colors. Browser assertions now verify computed filter colors and `::after` pseudo-element in Chromium/WebKit. No audio/source/lyrics/queue/runtime change.
+- **Tests:** Exact-code [isolated Preview #41866987311](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41866987311) **SUCCESS**, includes 16 home + 12 cross-view dark/light Chromium/WebKit page screens, 8 immersive local fixtures, protected/static Pages, strict original real KG《稻香》→KW fallback, original native MG 孙燕姿《开始懂了》 real HTTP 200 music/cover + 55 timed lyrics + pause/resume. Independent [modern PR browser/security #41867001740](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41867001740) **SUCCESS**, [Playlist PR #41867001753](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41867001753) **SUCCESS**, privacy #41866987093 success and #41867001892 **job completed/success** (workflow run status still propagating at that read). First Stage 4 Preview #41861872946 had MG 502 LRC upstream timeout, retained as historical intermittent failure rather than erased.
+- **Evidence:** Downloaded and examined [36 real-browser synthetic screenshots](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41866987311/artifacts/13343420887). Confirmed Chromium/WebKit dark Playlist filters dark, light Ranking empty placeholder light, other tested page surfaces legible and 320 light Search not clipped. New immutable **nonproduction** Preview https://adb161a5.only-testing-online-music.pages.dev/ . Visual screenshot fixtures do NOT exercise live populated playlist art; immersive fixture cover is a placeholder, while the separate strict original MG test verified live artwork.
+- **Not done:** User/owner visual approval of the final actual candidate, nonforce merge, official deployment, actual production music/playback/lyrics/site regression, real device/energy/FPS/accessibility screen-reader testing, long-run source availability.
+- **Status:** Stage 4.1 code acceptance green at exact code SHA; PR #124 remains DRAFT, official live main v0.4.35. This public docs-only checkpoint will introduce a different SHA and new CI; never equate its pending result with the tested source SHA.
+- **Next:** **Exactly one remaining production-release stage**, conditional on explicit approval: check PR/main/checks, merge safely, inspect actual Cloudflare official site, real original KG/MG audio+cover+lyrics, mobile/theme/404/seek/queue/classic, document rollback and final handoff.
+
 ## 2026-11-05 · Stage 4.1 confirmed visual defects in real screenshots, fixed targeted CSS and tests
 
 - **Goal:** Close search/playlist/chart/library screenshot defects rather than relying on superficially green home-only automated checks.

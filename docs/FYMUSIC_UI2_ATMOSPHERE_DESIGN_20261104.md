@@ -1,3 +1,7 @@
+## Stage 4.1 — Final real-browser correction QA (candidate, 2026-11-05)
+
+Before correction, actual 36-PNG browser evidence [#13339837999](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41861872946/artifacts/13339837999) showed dark-mode white Playlist filter strips and light-mode dark Ranking empty placeholder. Stage 4.1 `45f96d93` fixes these *real CSS specificity conflicts* and adds browser assertions covering the actual filter colors and `::after` pseudo-element. [Strict isolated Preview #41866987311](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41866987311) SUCCESS and [36 revised real-browser screenshots #13343420887](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41866987311/artifacts/13343420887) visually confirm both corrections in Chromium/WebKit light/dark. Exact source-original KG→KW and MG audio+55 timed lyrics/cover/pause/resume passed; earlier MG 502 remains recorded. Preview https://adb161a5.only-testing-online-music.pages.dev/ is **NOT PRODUCTION**. One final explicitly approved merge/deploy/full live regression remains.
+
 # FyMusic UI 2.0 — Atmosphere Visual Design Candidate (Public-Safe)
 
 ## Design intent
