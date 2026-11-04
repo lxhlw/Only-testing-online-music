@@ -1304,7 +1304,7 @@ html.modern-web.fy-ui2.fy-ui2-light :is(button,input,select,textarea,a):focus-vi
   }
 }
 
-/* FYMUSIC ATMOSPHERE DESIGN / v0.4.35 CANDIDATE
+/* FYMUSIC ATMOSPHERE DESIGN / v0.4.36 CANDIDATE
    A visual-only editorial layer: no DOM changes, playback JS, fetched assets,
    infinite animations, heavy backdrop blur or additional media instances. */
 html.modern-web.fy-ui2{

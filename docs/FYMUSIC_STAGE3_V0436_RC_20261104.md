@@ -6,6 +6,10 @@
 - Changes: package/version/app metadata, HTML/app-settings labels, every query-versioned UI2/modern CSS and JS entrypoint, automated consistency checks and immutable Preview version assertions. No modifications to player, source/proxy, lyrics, audio, navigation, playlist state, classic mode or CSS layout from already tested Stage 3.
 - Old `?v=0.4.35` references must be absent from both entrypoint HTML files. Version check must reject drift between package, `version.json`, app and HTML. Cloudflare Static Pages build must still exclude scripts, repository docs, workflow files and Android legacy assets.
 
+## Build contract correction (2026-11-04)
+
+Initial v0.4.36 [Preview #41854783706](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41854783706) failed BEFORE preview deployment: the old UI2 contract still required `?v=0.4.35` even though all HTML references had correctly been bumped. The later always-run strict Migu task had no preview URL; this was NOT a real upstream fail. We fixed two UI2 tests to read `version.json` rather than pinning v0.4.35, and aligned the Atmosphere CSS label/style test to v0.4.36. No audio, provider, lyrics or DOM changes; new full exact-SHA CI is pending.
+
 ## Exact-SHA prerelease acceptance
 - [ ] Original isolated [Atmosphere RC workflow](https://github.com/lxhlw/Only-testing-online-music/actions/workflows/fymusic-ui2-atmosphere-rc.yml) **COMPLETED/SUCCESS at exact v0.4.36 commit**, confirm versioned CSS/JS and no official production deployment.
 - [ ] Local and deployed Chromium/WebKit × 1440/820/390/320 × dark/light: 16/16 homepage, 8 immersive screenshots, one audio, card-to-dock clearance, no overflow, touch reachability, keyboard, reduced motion, contrast, classic `?ui2=0`.

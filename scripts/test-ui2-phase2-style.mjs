@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const css=readFileSync('src/ui2-preview.css','utf8');
 const html=readFileSync('index.html','utf8');
+const version=JSON.parse(readFileSync('version.json','utf8')).version;
 for(const label of [
  'UI 2.0 / PHASE 2','search-inspiration','playlist-card',
  'ranking-layout','music-library-workspace','settings-section',
@@ -10,7 +11,7 @@ for(const label of [
 ])assert.ok(css.includes(label),'Missing Phase 2 presentation: '+label);
 assert.match(css,/@media\(max-width:740px\)/);
 assert.match(css,/@media \(min-width: ?741px\)/);
-assert.match(html,/ui2-preview\.css\?v=0\.4\.35/);
+assert.ok(html.includes('ui2-preview.css?v='+version),'Phase 2 stylesheet version/cache mismatch');
 assert.equal((html.match(/<audio\b/g)||[]).length,1);
 assert.ok(!css.includes('@import'),'No remote font or CSS fetches');
 assert.ok(!css.includes('animation-iteration-count:infinite'),'No indefinite animations');

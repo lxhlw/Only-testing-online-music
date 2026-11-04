@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 const css=readFileSync('src/ui2-preview.css','utf8');
-const marker='/* FYMUSIC ATMOSPHERE DESIGN / v0.4.35 CANDIDATE';
+const version=JSON.parse(readFileSync('version.json','utf8')).version;
+const marker='/* FYMUSIC ATMOSPHERE DESIGN / v'+version+' CANDIDATE';
 assert.ok(css.includes(marker),'Atmosphere theme is missing');
 const addition=css.slice(css.indexOf(marker));
 for(const token of [

@@ -5,6 +5,16 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-04 · v0.4.36 isolated Preview build exposed hardcoded v0.4.35 UI2 test pins
+
+- **Goal:** Fix a release-version test mismatch without weakening a strict acceptance gate or changing runtime.
+- **Changes:** First candidate `ab4feb60` Preview #41854783706 FAILED build after version metadata test PASSED: old `test-ui2-contract.mjs` expected `?v=0.4.35`. Discovered another old pin in `test-ui2-phase2-style.mjs` plus old CSS Atmosphere candidate marker. Change checks to use authoritative `version.json` and update marker to v0.4.36 in CSS/style contract. The static asserts still enforce matching CSS/JS URLs; no source audio/lyrics/queue/network or product behavior modifications.
+- **Tests:** Exact follow-up corrected commit new strict Preview, PR security and privacy **PENDING** at checkpoint; initial build failure is not a native Migu failure. Prior v0.4.35 Stage 3 strict preview #41852903774 SUCCESS.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41854783706 ; https://github.com/lxhlw/Only-testing-online-music/pull/124.
+- **Not done:** Fresh corrected-SHA tests, isolated v0.4.36 Preview, production merge/deploy, owner signoff, hardware screen-reader/performance.
+- **Status:** v0.4.36 RC held on draft branch, v0.4.35 production unchanged.
+- **Next:** Verify exact-SHA corrected workflow before declaring release-preparation complete; one production release step only when green and approved.
+
 ## 2026-11-04 · v0.4.36 controlled release candidate version/cache preparation
 
 - **Goal:** Prepare second-round UI2 Atmosphere Stage 3 for a safe future versioned production release, without deploying.
