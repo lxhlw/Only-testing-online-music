@@ -78,13 +78,22 @@ html.modern-web.fy-ui2 #view-playlist .playlist-card:hover{
 }
 html.modern-web.fy-ui2 #view-ranking #ranking-title{
  background-color:#321a37!important;
- background-image:radial-gradient(ellipse at 95% 12%,rgba(255,156,92,.42),transparent 53%),
-  linear-gradient(115deg,#2b1539,#672a3b)!important;color:#fff6ed!important;
+ /* Three-layer ranking energy surface; keep inline SVG art for UI visual gate. */
+ background-image:radial-gradient(ellipse at 95% 12%,rgba(255,156,92,.35),transparent 53%),
+  linear-gradient(115deg,#2b1539 8%,rgba(103,42,59,.90) 56%,rgba(77,22,61,.62) 100%),
+  url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20760%20220%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22a%22%3E%3Cstop%20stop-color%3D%22%23ffb15e%22%20stop-opacity%3D%22.08%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23ffa0bb%22%20stop-opacity%3D%22.55%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20d%3D%22M220%20205L450%20-20%20760%20-20%20542%20205Z%22%20fill%3D%22url(%23a)%22%2F%3E%3Cpath%20d%3D%22M370%20220L635%20-30M460%20220L725%20-30M545%20220L810%20-30%22%20stroke%3D%22%23ffb15e%22%20stroke-width%3D%223%22%20opacity%3D%22.58%22%2F%3E%3Cpath%20d%3D%22M260%20180Q385%20150%20455%2096T760%2028M300%20214Q470%20174%20565%20126T790%2070%22%20stroke%3D%22%23ffd995%22%20fill%3D%22none%22%20stroke-width%3D%222%22%20opacity%3D%22.50%22%2F%3E%3Ccircle%20cx%3D%22580%22%20cy%3D%2279%22%20r%3D%227%22%20fill%3D%22%23ffd995%22%20opacity%3D%22.76%22%2F%3E%3Ccircle%20cx%3D%22690%22%20cy%3D%2236%22%20r%3D%224%22%20fill%3D%22%23ffb15e%22%20opacity%3D%22.92%22%2F%3E%3C%2Fsvg%3E")!important;
+ background-position:center,center,right center!important;
+ background-size:cover,cover,auto 160%!important;
+ background-repeat:no-repeat!important;color:#fff6ed!important;
 }
 html.modern-web.fy-ui2.fy-ui2-light #view-ranking #ranking-title{
  background-color:#f8ebe2!important;
- background-image:radial-gradient(ellipse at 95% 10%,rgba(244,169,95,.26),transparent 57%),
-  linear-gradient(110deg,#f9eee7,#f5dadd)!important;color:#61383b!important;
+ background-image:radial-gradient(ellipse at 95% 10%,rgba(244,169,95,.19),transparent 57%),
+  linear-gradient(110deg,#f9eee7 8%,rgba(245,218,221,.90) 58%,rgba(253,226,207,.58) 100%),
+  url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20760%20220%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22a%22%3E%3Cstop%20stop-color%3D%22%23f8d8ad%22%20stop-opacity%3D%22.08%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23b34b76%22%20stop-opacity%3D%22.55%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20d%3D%22M220%20205L450%20-20%20760%20-20%20542%20205Z%22%20fill%3D%22url(%23a)%22%2F%3E%3Cpath%20d%3D%22M370%20220L635%20-30M460%20220L725%20-30M545%20220L810%20-30%22%20stroke%3D%22%23b34b76%22%20stroke-width%3D%223%22%20opacity%3D%22.58%22%2F%3E%3Cpath%20d%3D%22M260%20180Q385%20150%20455%2096T760%2028M300%20214Q470%20174%20565%20126T790%2070%22%20stroke%3D%22%23ffffff%22%20fill%3D%22none%22%20stroke-width%3D%222%22%20opacity%3D%22.50%22%2F%3E%3Ccircle%20cx%3D%22580%22%20cy%3D%2279%22%20r%3D%227%22%20fill%3D%22%23fff3cd%22%20opacity%3D%22.76%22%2F%3E%3Ccircle%20cx%3D%22690%22%20cy%3D%2236%22%20r%3D%224%22%20fill%3D%22%23b34b76%22%20opacity%3D%22.92%22%2F%3E%3C%2Fsvg%3E")!important;
+ background-position:center,center,right center!important;
+ background-size:cover,cover,auto 160%!important;
+ background-repeat:no-repeat!important;color:#61383b!important;
 }
 html.modern-web.fy-ui2 #view-mylist .music-library-workspace{
  background-image:linear-gradient(120deg,rgba(230,159,116,.045),transparent 64%);
