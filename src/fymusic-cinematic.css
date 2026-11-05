@@ -506,7 +506,7 @@ html.modern-web.fy-ui2 #view-playlist #playlist-featured:not(:has(> .playlist-ca
 }
 
 
-/* FYMUSIC UI3 / STAGE C2 — music editorial content, not only hero shaders.
+/* FYMusic UI3 / STAGE C2 — music editorial content, not only hero shaders.
    State surfaces decorate truthful native placeholders; no sample music data,
    replacement controls, network requests, fonts or audio routing. */
 html.modern-web.fy-ui2 #view-search #search-song-view .results-head{
