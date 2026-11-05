@@ -5,6 +5,17 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Stage A strict MG recovered; Stage B1 large capture-only 64-band spectrum initiated
+
+- **Goal:** Reconcile newest strict original-platform audio results and address the user's weak/small spectrum without replacing native playback or inventing real audio data.
+- **Changes:** Stage B1 `d6b5e2a`: larger separate immersive canvas, shared 64-band 2048-point FFT, measured waveform/RMS, logarithmic band mapping, gain and peak dynamics; existing compact dock meter remains; CORS-protected output remains static. Scoped changes in `src/ui2-audio-visualizer.js`, `src/fymusic-cinematic.css`, `scripts/test-fymusic-ui3-style.mjs` and `scripts/test-ui2-visualizer-browser.mjs`. No source/native audio/lyric logic changed.
+- **Tests:** Pre-B1 [#41957980744](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41957980744) SUCCESS including strict KG/MG real music/55 timed LRC. Exact new B1 source `d6b5e2a` isolated [#41959333199](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41959333199) **COMPLETED SUCCESS**: build/security/allowlist; Chromium/WebKit UI2/UI3/default/classic/320px; deterministic 64-band oscillator FFT/live and separate uncapturable static fixture, pause/reduced motion; isolated Preview/version/404; original KG→KW real fallback; original MG `开始懂了` real audio/cover/55 timed LRC/pause-resume. Distinguish real song PLAYBACK from test-oscillator FFT, which cannot prove real-provider CORS capture.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/commit/d6b5e2a0914a0732b42d0b533db331115b829591 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41959333199 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41959333199/artifacts/13384613197 ; isolated Preview https://1e135831.only-testing-online-music.pages.dev/ . Screenshot review of live/static 1440 light immersive fixture shows distinct nonstatic captured-audio waveform/bar peaks and intentionally static un-capturable baseline; artifact also has other UI screenshots. These are synthetic controlled data, not arbitrary provider sound.
+- **Not done:** Real third-party FFT capture measurement and complete Stage B GPU multiband/onset coupling; Stage C distinct scene and transition design, Stage D user aesthetic/hardware/performance acceptance, long-term Migu reliability; no main merge or production release.
+- **Next:** Stage B2 real low/mid/high shader coupling and more cinematic motion without fake FFT; re-run exact modern UI/playlist/music/privacy tests, review screenshots, then Stage C/D. Official v0.4.35 main remains unchanged.
+- **Status:** Stage A functional GREEN; Stage B1 exact source strict CI GREEN on `d6b5e2a`. User aesthetic acceptance and production authorization are NOT given. Docs-only checkpoint will trigger its own CI, initially PENDING. Public-safe only.
+
+
 ## 2026-11-05 · UI3 Stage A audio-visualizer RAF idle-state fix and full exact-SHA browser/live QA
 
 - **Goal:** Avoid stale live spectrum indicator on reduced-motion/visibility/pause transition, without touching native playback or weakening tests.
