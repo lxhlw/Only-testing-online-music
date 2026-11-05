@@ -5,6 +5,17 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · UI3 Stage A audio-visualizer RAF idle-state fix and full exact-SHA browser/live QA
+
+- **Goal:** Avoid stale live spectrum indicator on reduced-motion/visibility/pause transition, without touching native playback or weakening tests.
+- **Changes:** Source [`3493099`](https://github.com/lxhlw/Only-testing-online-music/commit/349309923e260d740d3761da2ea6948d89342226) in `src/ui2-audio-visualizer.js` reconciles analyser mode and draws static bars on RAF exit when no longer permitted/playing, suspending independent capture analysis context only. No modifications to native music element, player, provider, source fallback, lyric system, test thresholds or fixture. Public docs-only milestone checkpoint follows.
+- **Tests:** [#41957103883](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41957103883) same code SHA: local 1440/820/390/320 Chromium/WebKit/default/classic/light/dark, synthetic capture and CORS static fallback, pause/reduced-motion, six UI3 GPU browser scenes, isolated Preview version/404 and real KG→KW all PASSED. Strict original MG exact song search succeeded but native audio failed to progress by 35s (`readyState:0`); **full run FAILED**, no 55-line LRC/media acceptance claim. Previous docs-only [#41956604828](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41956604828) canceled automatically on source push after preliminary tests, not a pass.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41957103883 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41957103883/artifacts/13383613326 ; exact source 3493099.
+- **Not done:** Prove and fix original MG upstream-vs-app cause; high-amplitude multi-band FFT Stage B; distinct scene transitions Stage C; user aesthetic/performance signoff Stage D; actual device/reader/battery measurements; main merge, production deploy or rollback drill.
+- **Status:** Stage A local visualizer and shader regressions PASS, candidate strict release gate **BLOCKED** by MG real media on same SHA. Main v0.4.35 unchanged, older UI2 visual PR #124 not released. New public-safe handoff commit will cause its own HEAD/CI; classify as pending until observed.
+- **Next:** Isolate MG native playback failure with accurate timing and no media credential leaks; keep strict KG/MG live tests; then advance cinematic integration + Stage B in independent preview only.
+
+
 ## 2026-11-05 · UI3 ranking SVG regression fix + strict attempt reconciliation (no production release)
 
 - **Goal:** Recover Stage A Chromium/WebKit screenshot/scene contract and preserve accurate real audio and reduced-motion failures.
