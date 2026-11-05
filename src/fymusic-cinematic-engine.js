@@ -17,7 +17,8 @@
     '#version 300 es',
     'precision highp float;',
     'uniform vec2 u_res,u_mouse;',
-    'uniform float u_time,u_scene,u_light,u_energy;',
+    'uniform float u_time,u_scene,u_light,u_energy,u_impact,u_audio_live;',
+    'uniform vec3 u_bands;',
     'out vec4 color;',
     'float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}',
     'float glow(float x,float w){return exp(-pow(x/max(w,.001),2.));}',
@@ -55,12 +56,23 @@
     '  flicker=glow(length(fract(q*vec2(4.4,2.5)+vec2(0.,t*.01))-.5)-.13,.07)*.62;',
     '  spark=(h(gl_FragCoord.xy*.25)-.5)*.08;',
     ' }else{',
-    '  // Immersive: album-centered energy nebula, sourced from available audio envelope.',
+    '  // Immersive: separate real bass/mid/treble controls for three optical layers.',
+    '  // Without capturable samples, u_audio_live=0 keeps atmospheric motion independent.',
     '  base=vec3(.021,.07,.085);a=vec3(.21,.99,.76);b=vec3(.62,.39,1.);',
+    '  float bass=u_bands.x*u_audio_live,mid=u_bands.y*u_audio_live,treble=u_bands.z*u_audio_live;',
+    '  float hit=u_impact*u_audio_live;',
     '  float d=length(q*vec2(1.,1.12));',
-    '  field=glow(d-.48-.10*u_energy,.18);',
-    '  flicker=pow(max(sin(d*21.-t*.7-u_energy*2.8),0.),7.)*.48;',
-    '  spark=glow(d-.86,.055)*.32;',
+    '  float angle=atan(q.y,q.x);',
+    '  float shape=sin(angle*(8.+mid*3.)+t*.4)*(.014+.045*mid);',
+    '  // Bass expands the principal halo and brightens the deep inner ring.',
+    '  field=glow(d-.48-.15*bass-shape,.17+.035*bass);',
+    '  field+=glow(d-.25-.09*bass,.047+.020*bass)*(.18+.88*bass);',
+    '  // Mids increase wavelength and modulation of the filament comb.',
+    '  flicker=pow(max(sin(d*(21.+11.*mid)-t*(.7+1.2*mid)-mid*2.6),0.),7.)*(.31+.57*mid);',
+    '  // Highs illuminate fine star dust; onsets drive a short outer shock ring.',
+    '  float dust=step(.997-treble*.002,h(floor(gl_FragCoord.xy/vec2(9.,9.))));',
+    '  spark=glow(d-.83-.22*hit,.065+.028*hit)*(.19+.92*hit);',
+    '  spark+=dust*glow(d-.72,.48)*(.05+.44*treble);',
     ' }',
     ' float breathe=.92+.08*sin(t*.66+q.x*1.1);',
     ' vec3 shade=base+a*(field*.59*breathe+flicker*.29)+b*(flicker*.4+field*.18)+spark*a;',
@@ -103,7 +115,8 @@
       const loc=gl.getAttribLocation(prog,'a_pos');gl.enableVertexAttribArray(loc);
       gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
       const u={};
-      for(const n of ['u_res','u_mouse','u_time','u_scene','u_light','u_energy'])
+      for(const n of ['u_res','u_mouse','u_time','u_scene','u_light',
+        'u_energy','u_bands','u_impact','u_audio_live'])
         u[n]=gl.getUniformLocation(prog,n);
       canvas.addEventListener('webglcontextlost',e=>{
         e.preventDefault();stop();root.classList.remove('fy3-gpu');
@@ -126,7 +139,17 @@
     root.dataset.fy3Scene=view;
     root.classList.toggle('fy3-gpu',Boolean(header));
   }
-  function draw(info,type,t,energy){
+  const silent=Object.freeze({live:false,low:0,mid:0,high:0,rms:0,onset:0,count:0});
+  let lastAudio=silent;
+  const readEnvelope=()=>{
+    if(!visible()||disabled())return silent;
+    const value=window.FyMusicUI2AudioVisualizer?.envelope?.();
+    if(!value||value.live!==true)return silent;
+    const n=v=>Math.max(0,Math.min(1,Number.isFinite(v)?v:0));
+    return {live:true,low:n(value.low),mid:n(value.mid),high:n(value.high),
+      rms:n(value.rms),onset:n(value.onset),count:Math.max(0,Math.floor(value.count||0))};
+  };
+  function draw(info,type,t,audio){
     if(!info)return;
     const {canvas,gl,prog,u}=info;
     const r=canvas.getBoundingClientRect();
@@ -140,7 +163,10 @@
     gl.uniform2f(u.u_mouse,px,py);gl.uniform1f(u.u_time,t);
     gl.uniform1f(u.u_scene,scenes[type]);
     gl.uniform1f(u.u_light,root.classList.contains('fy-ui2-light')?1:0);
-    gl.uniform1f(u.u_energy,energy);
+    gl.uniform1f(u.u_energy,audio.live?audio.rms:0);
+    gl.uniform3f(u.u_bands,audio.low,audio.mid,audio.high);
+    gl.uniform1f(u.u_impact,audio.onset);
+    gl.uniform1f(u.u_audio_live,audio.live?1:0);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
   }
   function frame(now){
@@ -148,12 +174,12 @@
     if(document.hidden||highContrast.matches)return;
     px+=(mx-px)*.048;py+=(my-py)*.048;
     const t=motion.matches?0:now*.001;
-    draw(header,view,t,0);
+    draw(header,view,t,silent);
+    lastAudio=readEnvelope();
     if(visible()){
-      // The existing analyser sets this value only for real capturable energy.
-      const raw=getComputedStyle(album).getPropertyValue('--fy-audio-energy');
-      const energy=Math.max(0,Math.min(1,parseFloat(raw)||0));
-      draw(immersive,'immersive',t,energy);
+      // These uniforms always come from a capture-only analyser snapshot.
+      // No CSS recalc per GPU frame and no fake spectrum for opaque audio.
+      draw(immersive,'immersive',t,lastAudio);
     }
     if(!motion.matches)raf=requestAnimationFrame(frame);
   }
@@ -182,6 +208,8 @@
   // Public-safe diagnostic exposes only scene identity and GPU status.
   window.FyMusicCinematic=Object.freeze({
     enabled:()=>Boolean(header),scene:()=>view,
-    gpu:()=>Boolean(header?.gl),reducedMotion:()=>disabled()
+    gpu:()=>Boolean(header?.gl),reducedMotion:()=>disabled(),
+    // Introspection contains only normalized signal magnitudes.
+    audioReactive:()=>visible()&&!disabled()?{...lastAudio}:{...silent}
   });
 })();

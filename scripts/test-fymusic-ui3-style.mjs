@@ -10,6 +10,7 @@ for(const asset of ['src/fymusic-cinematic-engine.js?v=0.4.36',
 for(const feature of ['webgl2','#version 300 es','getShaderParameter','getProgramParameter',
  'createProgram','requestAnimationFrame','cancelAnimationFrame','webglcontextlost',
  'visibilitychange','u_scene','u_energy','u_mouse','u_light','u_time',
+ 'u_bands','u_impact','u_audio_live','uniform3f','audioReactive',
  'prefers-reduced-motion: reduce','forced-colors: active',
  'search:0','playlist:1','ranking:2','mylist:3','immersive:4'])
  assert.ok(code.includes(feature),'UI3 GPU scene contract missing: '+feature);
@@ -23,7 +24,8 @@ assert.ok(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|localStorage\.setItem/i.test(c
  'No network/telemetry/storage in cinematic renderer');
 assert.ok(!/@import\b|url\(\s*["']?https?:/i.test(css),'No remote font/decor');
 for(const feature of ['BANDS=64','fft.fftSize=2048','getByteFrequencyData',
- 'getByteTimeDomainData','fy3-immersive-spectrum','--fy-audio-low',
+ 'getByteTimeDomainData','fy3-immersive-spectrum','envelope:()=>',
+ '--fy-audio-low',
  '--fy-audio-mid','--fy-audio-high'])
  assert.ok(analyzer.includes(feature),'Missing Stage B1 real FFT contract: '+feature);
 assert.ok(css.includes('#fy3-immersive-spectrum'),'Missing UI3 large spectrum style');

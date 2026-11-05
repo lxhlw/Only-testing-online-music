@@ -49,7 +49,7 @@
   stageCtx?.setTransform(ratio,0,0,ratio,0,0);
   const levels=new Float32Array(BANDS),peaks=new Float32Array(BANDS);
   let stream=null,context=null,sourceNode=null,analyser=null,bins=null,wave=null,ranges=null;
-  let rms=0,low=0,mid=0,high=0;
+  let rms=0,low=0,mid=0,high=0,onset=0,onsetCount=0,lastOnsetAt=0;
   let raf=0,lastFrame=0,lastEnergy=0,mode='idle',liveFrames=0;
   let captureAttempted=false,streamEventsBound=false,epoch=0;
   const isPlaying=()=>!audio.paused&&!audio.ended&&audio.readyState>1;
@@ -119,7 +119,8 @@
     if(context)try{const p=context.close();if(p?.catch)p.catch(()=>{});}catch{}
     stream=null;context=null;sourceNode=null;analyser=null;bins=null;wave=null;ranges=null;
     captureAttempted=false;streamEventsBound=false;
-    levels.fill(0);peaks.fill(0);rms=0;low=0;mid=0;high=0;lastEnergy=0;
+    levels.fill(0);peaks.fill(0);
+    rms=0;low=0;mid=0;high=0;onset=0;onsetCount=0;lastOnsetAt=0;lastEnergy=0;
     syncMode('idle');draw(false);
   };
   const frame=now=>{
@@ -144,6 +145,7 @@
     }catch{teardown();return;}
     let power=0;
     for(let i=0;i<wave.length;i+=4){const v=(wave[i]-128)/128;power+=v*v;}
+    const priorRms=rms;
     rms=Math.sqrt(power/Math.ceil(wave.length/4));
     const gain=clamp(.7/Math.max(.09,rms*2.3),1.15,5);
     let max=0,total=0;low=0;mid=0;high=0;
@@ -162,6 +164,16 @@
       else high+=levels[i]/21;
     }
     const valid=max>.012&&!audio.muted&&audio.volume>0;
+    // Measured positive RMS envelope derivative: onset-like accents, not
+    // fabricated beats/BPM. A refractory gate prevents constant flashing.
+    const rise=Math.max(0,rms-priorRms);
+    onset*=.78;
+    if(valid&&rise>.028&&now-lastOnsetAt>185){
+      onset=Math.max(onset,clamp(rise*8.5,0,1));
+      onsetCount++;
+      lastOnsetAt=now;
+    }
+    if(!valid)onset=0;
     syncMode(valid?'live':'ambient');
     if(valid){liveFrames++;draw(true);}else draw(false);
     if(valid&&coverOverlay.getAttribute('aria-hidden')!=='true'){
@@ -271,6 +283,17 @@
     originalAudio:()=>document.querySelectorAll('audio').length===1,
     spectrumPresent:()=>Boolean(document.getElementById('ui2-audio-spectrum')),
     immersivePresent:()=>Boolean(document.getElementById('fy3-immersive-spectrum')),
-    bands:()=>BANDS,rms:()=>Number(rms.toFixed(3))
+    bands:()=>BANDS,rms:()=>Number(rms.toFixed(3)),
+    // Numeric, bounded and read-only; never reveal sample bytes, song URLs or
+    // media metadata. Hidden/paused/reduced-motion/CORS is always nonreactive.
+    envelope:()=>{
+      const live=mode==='live'&&isPlaying()&&permitted();
+      return Object.freeze({
+        live,low:live?clamp(low,0,1):0,mid:live?clamp(mid,0,1):0,
+        high:live?clamp(high,0,1):0,
+        rms:live?clamp(rms,0,1):0,onset:live?clamp(onset,0,1):0,
+        count:live?onsetCount:0
+      });
+    }
   });
 })();

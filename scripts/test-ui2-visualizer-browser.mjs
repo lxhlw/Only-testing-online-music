@@ -52,13 +52,25 @@ try {
         configurable:true,value:function(){
           window.__stage53CaptureCalls++;
           const ctx=new (window.AudioContext||window.webkitAudioContext)();
-          const oscillator=ctx.createOscillator();
           const destination=ctx.createMediaStreamDestination();
-          oscillator.frequency.value=330;
-          oscillator.connect(destination);
-          oscillator.start();
+          // Test-only 3-band source: bass / mid / high are independent,
+          // with an amplitude transient. Never passed through native media.
+          const oscillators=[130,980,5200].map(hz=>{
+            const osc=ctx.createOscillator(),gain=ctx.createGain();
+            osc.frequency.value=hz;gain.gain.value=.22;
+            osc.connect(gain);gain.connect(destination);osc.start();
+            return {osc,gain};
+          });
+          const start=ctx.currentTime;
+          oscillators.forEach(({gain})=>{
+            gain.gain.setValueAtTime(.08,start);
+            gain.gain.setValueAtTime(.23,start+.14);
+            gain.gain.setValueAtTime(.08,start+.42);
+            gain.gain.setValueAtTime(.24,start+.69);
+            gain.gain.setValueAtTime(.09,start+1.05);
+          });
           ctx.resume?.().catch(()=>{});
-          window.__stage53Signal={ctx,oscillator};
+          window.__stage53Signal={ctx,oscillators};
           return destination.stream;
         }
       });
@@ -110,6 +122,18 @@ try {
    assert.equal(play.audioNodes,1);
    assert.equal(await page.evaluate(()=>window.FyMusicUI2AudioVisualizer.bands()),64);
    assert.equal(await page.locator('#fy3-immersive-spectrum canvas').count(),1);
+   const bands=await page.evaluate(()=>window.FyMusicUI2AudioVisualizer.envelope());
+   assert.equal(bands.live,forcedCapture);
+   for(const key of ['low','mid','high','rms','onset'])
+     assert.ok(Number.isFinite(bands[key])&&bands[key]>=0&&bands[key]<=1,
+      'Signal magnitude not normalized: '+key);
+   if(forcedCapture){
+     assert.ok(bands.low>.02&&bands.mid>.02&&bands.high>.02,
+      'Multitone synthetic input must populate all three independent bands');
+   }else{
+     assert.deepEqual([bands.low,bands.mid,bands.high,bands.rms,bands.onset],
+       [0,0,0,0,0],'Opaque audio must not invent spectral amplitude');
+   }
    assert.ok(play.spectrumWidth>90&&play.spectrumWidth<150);
    assert.equal(play.activeClass,forcedCapture);
    if(forcedCapture)assert.ok(play.captureCalls>=1);
@@ -127,6 +151,8 @@ try {
    await page.waitForFunction(()=>document.getElementById('audio')?.paused===false,null,{timeout:7500});
    await page.emulateMedia({reducedMotion:'reduce'});
    await page.waitForFunction(()=>window.FyMusicUI2AudioVisualizer?.mode()==='idle',null,{timeout:4500});
+   assert.equal((await page.evaluate(()=>window.FyMusicUI2AudioVisualizer.envelope())).live,false,
+     'Reduced motion cannot retain a reactive audio envelope');
    assert.equal(await page.locator('audio').evaluate(a=>a.paused),false,
      'Reduced motion cannot interrupt the original song');
    await page.emulateMedia({reducedMotion:'no-preference'});
@@ -147,6 +173,17 @@ try {
    }));
    assert.ok(stage.width>=240&&stage.height>=50&&stage.canvases===1,
     'Immersive spectrum must be displayed without replacing the original album cover');
+   await page.waitForFunction(expected=>window.FyMusicCinematic?.audioReactive?.().live===expected,
+     forcedCapture,{timeout:5500});
+   const cinematic=await page.evaluate(()=>window.FyMusicCinematic.audioReactive());
+   if(forcedCapture){
+     assert.ok(cinematic.low>.02&&cinematic.mid>.02&&cinematic.high>.02,
+       'GPU must receive real low/mid/high bands from shared analyser');
+   }else{
+     assert.equal(cinematic.live,false);
+     assert.deepEqual([cinematic.low,cinematic.mid,cinematic.high,cinematic.onset],
+       [0,0,0,0],'Opaque audio must not animate GPU from invented FFT');
+   }
    await page.screenshot({path:out+'/'+(forcedCapture?'live':'static')+'-light-cover.png',
      animations:'disabled'});
    assert.deepEqual(errors,[]);
@@ -155,7 +192,8 @@ try {
   } finally{
    await page.evaluate(()=>{
      const x=window.__stage53Signal;
-     if(x){try{x.oscillator.stop();}catch{};try{x.ctx.close();}catch{}}
+     if(x){for(const {osc} of x.oscillators||[])try{osc.stop();}catch{}
+       try{x.ctx.close();}catch{}}
    }).catch(()=>{});
    await page.close();
   }
