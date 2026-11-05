@@ -722,3 +722,17 @@ html.modern-web.fy-ui2 #view-playlist:has(#playlist-featured>.loading-note)>.pla
  position:relative!important;top:auto!important;z-index:2;
  margin-bottom:12px;
 }
+
+
+/* Stage D tested contrast regression: the stronger absolute-header selector
+   below the original @media block sets display:block!important, beating the
+   general .fy3-scene display:none!important rule. Hide both shader layers
+   at equal-or-higher specificity when forced colors are active. */
+@media(forced-colors:active){
+ html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header>.fy3-scene-header{
+  display:none!important;
+ }
+ html.modern-web.fy-ui2 #lyrics-overlay .now-playing-album-column>.fy3-scene-immersive{
+  display:none!important;
+ }
+}
