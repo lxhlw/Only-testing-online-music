@@ -118,6 +118,21 @@ for(const [engine,launcher] of [['chromium',chromium],['webkit',webkit]]){
            display:node?getComputedStyle(node).display:null};
        });
        if(loading.empty){
+         await page.waitForTimeout(260);
+         const loadingGeometry=await page.evaluate(()=>{
+           const filter=document.getElementById('playlist-filter-stack');
+           const area=document.getElementById('playlist-featured');
+           if(!area.querySelector(':scope > .loading-note'))return null;
+           const a=filter.getBoundingClientRect(),b=area.getBoundingClientRect();
+           return {gap:b.top-a.bottom,filterPosition:getComputedStyle(filter).position};
+         });
+         if(loadingGeometry){
+           assert.equal(loadingGeometry.filterPosition,'relative',
+             'Loading catalog filters must not float over a moving placeholder');
+           assert.ok(loadingGeometry.gap>=-2&&loadingGeometry.gap<=38,
+             'Filters must precede the loading theater without overlap/gap: '+
+               JSON.stringify(loadingGeometry));
+         }
          assert.equal(loading.display,'block',
            'Loading playlist text cannot shrink into a one-column grid item');
          const state=await page.evaluate(()=>{

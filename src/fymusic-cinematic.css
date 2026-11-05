@@ -713,3 +713,12 @@ html.modern-web.fy-ui2.fy-ui2-light #lyrics-overlay .now-playing-detail-column{
   color:CanvasText!important;
  }
 }
+
+
+/* Stage C2 screenshot finding: during catalog loading, sticky filters can
+   visually descend onto the new loading theater. In the loading-only state
+   restore ordinary document order; loaded catalogs retain existing sticky UX. */
+html.modern-web.fy-ui2 #view-playlist:has(#playlist-featured>.loading-note)>.playlist-filter-stack{
+ position:relative!important;top:auto!important;z-index:2;
+ margin-bottom:12px;
+}
