@@ -6,6 +6,16 @@
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
 
+## 2026-11-05 · Stage D cross-device CI audit, screenshot inspection and honest acceptance matrix
+
+- **Goal:** Audit current Stage D candidate rather than re-implement existing test, distinguish reliable automation evidence from unmeasured physical performance, and publish a safe actionable final signoff checklist.
+- **Changes:** No new runtime code changes this checkpoint. Inspected existing Stage D browser test and CSS regression fix on app source `4d82d0e`; reviewed representative genuine Chromium UI3 dark/light 1440 and narrow 320 screenshots from the 122-file artifact, created `docs/FYMUSIC_STAGE_D_ACCEPTANCE.md`, and updated public-safe CURRENT/LOG. Existing `85d7c806` test and `4d82d0e` forced-colors shader-hiding fix were already in development branch; recognized their actual status instead of duplicating.
+- **Tests:** [#41981920911](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41981920911) full GREEN at exact application commit `4d82d0e`. Chromium/WebKit × 4 resolutions × dark/light: 16 environments, 8 navigation scene cycles each, fixed dock, one audio, GPU context count, high contrast/reduced motion, headless WebGL draw count 5–31 in 520ms (not FPS or physical benchmark). Real KG→KW `稻香` and original MG `开始懂了` advancing playback/55 LRC/cover/pause-resume GREEN. Earlier `85d7c806` failed real high-contrast hidden-canvas assertion, fixed in `4d82d0e`. Prior MG provider intermittent remains unresolved. This document-only commit has separate CI status and must not be assumed GREEN until checked.
+- **Evidence:** Source https://github.com/lxhlw/Only-testing-online-music/commit/4d82d0e13ffd27fbb2f6f43b4afa3bc600c1d773 ; strict CI https://github.com/lxhlw/Only-testing-online-music/actions/runs/41981920911 ; 122-screen artifact https://github.com/lxhlw/Only-testing-online-music/actions/runs/41981920911/artifacts/13393659829 ; isolated Preview https://aded09ba.only-testing-online-music.pages.dev/ ; acceptance matrix `docs/FYMUSIC_STAGE_D_ACCEPTANCE.md`.
+- **Not done:** Real desktop/handset GPU FPS/frame time, CPU/memory/battery and 5–10 minute stress; physical touch and reader traversal; reliable real provider FFT capture; multiple MG provider run stability; user aesthetic signoff; rollback drill/production approval. Not claim all Stage D signoff complete.
+- **Next:** Owner tests immutable Preview on desktop+mobile, gathers anonymized device and browser metrics and visually approves or reports defects, then finalize Stage D signoff. **1 major acceptance step remains**. Production release is a separate explicit approval.
+
+
 ## 2026-11-05 · UI3 Stage C2 distinct content surfaces and screenshot geometry fix, exact-source strict GREEN
 
 - **Goal:** Make scenes distinct throughout actual Search, Playlist, Ranking, Library and Immersive CONTENT, not just shader headers; address truthful loading/empty states, real accessibility and mobile dock clearance.
