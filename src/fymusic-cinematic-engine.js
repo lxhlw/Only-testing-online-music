@@ -148,6 +148,16 @@
     }
     if(!header)header=create(parent,'header');
     else if(header.canvas.parentElement!==parent)parent.prepend(header.canvas);
+    // Canvas is a replaced element with intrinsic bitmap dimensions. Its
+    // CSS size must NOT depend on canvas.width/height, which draw() resets
+    // for DPR; otherwise a percentage/auto size can oscillate or drift.
+    // clientWidth/Height are the header padding-box dimensions (border
+    // excluded). With top/left 0 this preserves the <3px browser contract.
+    if(header){
+      const w=Math.max(1,parent.clientWidth),h=Math.max(1,parent.clientHeight);
+      header.canvas.style.setProperty('width',w+'px','important');
+      header.canvas.style.setProperty('height',h+'px','important');
+    }
     // Reuse one GPU context across all view changes. Repeated allocation
     // would otherwise cause browser context eviction during long sessions.
     root.dataset.fy3Scene=view;
