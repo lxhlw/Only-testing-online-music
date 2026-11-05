@@ -461,3 +461,12 @@ html.modern-web.fy-ui2 .view-container>.view-panel>.view-header>.fy3-scene-heade
  max-width:none!important;max-height:none!important;min-width:0!important;
  min-height:0!important;transform:none!important;scale:1!important;zoom:1!important;
 }
+
+/* Stage C1 verified root cause: UI2 .view-header>* sets position:relative
+   on every child and wins normal class specificity. The GPU canvas MUST NOT
+   join the header flex row; otherwise an 1146px style width shrinks to 815px. */
+html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header>.fy3-scene-header{
+ position:absolute!important;inset:0!important;display:block!important;
+ flex:none!important;align-self:auto!important;z-index:0!important;
+ pointer-events:none!important;
+}

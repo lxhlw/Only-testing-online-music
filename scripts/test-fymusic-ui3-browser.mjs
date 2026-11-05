@@ -49,6 +49,7 @@ for(const [engine,launcher] of [['chromium',chromium],['webkit',webkit]]){
        return {
          radius:getComputedStyle(head).borderRadius,
          lensFill:!lr||Math.abs(lr.width-hr.width)<3&&Math.abs(lr.height-hr.height)<3,
+         lensPosition:lens?getComputedStyle(lens).position:null,
          lensSize:lr?[Math.round(lr.width),Math.round(lr.height)]:null,
          headerSize:hr?[Math.round(hr.width),Math.round(hr.height)]:null,
          headerClient:head?[head.clientWidth,head.clientHeight]:null,
@@ -67,6 +68,8 @@ for(const [engine,launcher] of [['chromium',chromium],['webkit',webkit]]){
      },scene);
      assert.ok(editorial.radius!=='0px'&&editorial.accent!=='rgba(0, 0, 0, 0)',
        'Every scene requires an editorial header, not an unstyled strip');
+     if(editorial.lensSize)assert.equal(editorial.lensPosition,'absolute',
+       'WebGL canvas must not be a flex item (legacy UI2 header rule)');
      assert.equal(editorial.lensFill,true,
        'GPU must integrate into full header composition, not a floating rectangular lens: '+
         JSON.stringify({header:editorial.headerSize,lens:editorial.lensSize,client:editorial.headerClient,transform:editorial.headerTransform,inline:editorial.lensInline,computed:editorial.lensComputed,scene,width}));
