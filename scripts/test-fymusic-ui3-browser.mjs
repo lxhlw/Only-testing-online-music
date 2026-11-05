@@ -42,6 +42,23 @@ for(const [engine,launcher] of [['chromium',chromium],['webkit',webkit]]){
      }
      assert.equal(snap.headerVisible,true);
      assert.ok(snap.headerHeight>=(width<=740?40:52));
+     const editorial=await page.evaluate(scene=>{
+       const head=document.querySelector('#view-'+scene+' > .view-header');
+       const lens=head?.querySelector('.fy3-scene-header');
+       const hr=head?.getBoundingClientRect(),lr=lens?.getBoundingClientRect();
+       return {
+         radius:getComputedStyle(head).borderRadius,
+         lensFill:!lr||Math.abs(lr.width-hr.width)<3&&Math.abs(lr.height-hr.height)<3,
+         accent:getComputedStyle(head).backgroundColor,
+         transitionCount:window.FyMusicCinematic.transitionCounts().scene
+       };
+     },scene);
+     assert.ok(editorial.radius!=='0px'&&editorial.accent!=='rgba(0, 0, 0, 0)',
+       'Every scene requires an editorial header, not an unstyled strip');
+     assert.equal(editorial.lensFill,true,
+       'GPU must integrate into full header composition, not a floating rectangular lens');
+     if(scene!=='search')assert.ok(editorial.transitionCount>=1,
+       'Navigation must enable a nonblocking scene entrance');
      assert.equal(snap.narrow,false,'No cinematic horizontal scrolling');
      assert.equal(snap.nativeAudio,1,'Original music playback element must be reused');
      scenarios.push({scene,gpu:snap.gpu});
@@ -57,6 +74,11 @@ for(const [engine,launcher] of [['chromium',chromium],['webkit',webkit]]){
     if(width===1440)await page.screenshot({path:'.artifacts/ui3-cinematic/'+engine+'-mylist-light.png',animations:'disabled'});
     await page.emulateMedia({reducedMotion:'reduce'});
     await page.waitForFunction(()=>window.FyMusicCinematic.reducedMotion());
+    const before=await page.evaluate(()=>window.FyMusicCinematic.transitionCounts().scene);
+    await page.evaluate(()=>document.querySelector('.nav-item[data-view="ranking"]').click());
+    await page.waitForFunction(()=>window.FyMusicCinematic.scene()==='ranking');
+    assert.equal(await page.evaluate(()=>window.FyMusicCinematic.transitionCounts().scene),before,
+      'Reduced-motion navigation must not start a decorative WAAPI transition');
     assert.equal(await page.locator('audio').count(),1);
     await page.goto(base+'/?ui2=0',{waitUntil:'domcontentloaded'});
     assert.equal(await page.locator('.fy3-scene').count(),0,

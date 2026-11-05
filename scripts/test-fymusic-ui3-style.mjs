@@ -29,6 +29,14 @@ for(const feature of ['BANDS=64','fft.fftSize=2048','getByteFrequencyData',
  '--fy-audio-mid','--fy-audio-high'])
  assert.ok(analyzer.includes(feature),'Missing Stage B1 real FFT contract: '+feature);
 assert.ok(css.includes('#fy3-immersive-spectrum'),'Missing UI3 large spectrum style');
+for(const name of ['STAGE C1','#view-search .search-inspiration:after',
+ '#view-playlist #playlist-featured','grid-template-columns:repeat(12',
+ '#view-ranking .ranking-layout','#view-mylist .music-library-workspace',
+ '#lyrics-overlay .now-playing-cover-box','prefers-reduced-motion:reduce'])
+ assert.ok(css.includes(name),'Distinct UI3 C1 editorial scene missing: '+name);
+for(const name of ['sceneTransitions','overlayTransitions','section.animate',
+ 'syncOverlayEntrance','transitionCounts:'])
+ assert.ok(code.includes(name),'Accessible WAAPI scene transition missing: '+name);
 assert.ok(!/\.connect\((?:ac|context)\.destination\)/.test(analyzer),
  'Capture-only analyser cannot reroute native audio');
 console.log('FYMUSIC_UI3_SCENE_STYLE_CONTRACT_PASS');

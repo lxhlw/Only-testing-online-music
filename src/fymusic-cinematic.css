@@ -163,3 +163,290 @@ html.modern-web.fy-ui2.fy-ui2-light #fy3-immersive-spectrum{
 @media(forced-colors:active){
  html.modern-web.fy-ui2 #fy3-immersive-spectrum{display:none!important}
 }
+
+
+/* ----------------------------------------------------------------------
+   FYMUSIC UI3 / STAGE C1 — FIVE DISTINCT EDITORIAL COMPOSITIONS
+   GPU is integrated into the header instead of a disconnected corner
+   rectangle. All surfaces are click-through when ornamental, retain the
+   original fixed music dock, and do not require external media/fonts.
+   ---------------------------------------------------------------------- */
+@media(min-width:741px){
+ html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header{
+  min-height:172px;max-height:172px;box-sizing:border-box;
+  padding:24px clamp(22px,3.2vw,46px)!important;margin-bottom:19px;
+  border-radius:26px;align-items:center;gap:20px;
+  border:1px solid rgba(220,235,255,.13);overflow:hidden;
+  background-clip:padding-box;
+  box-shadow:0 18px 50px rgba(1,8,19,.16);
+ }
+ html.modern-web.fy-ui2 #view-search>.view-header{margin-bottom:0}
+ html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header>.fy3-scene-header{
+  inset:0!important;right:0!important;top:0!important;
+  width:100%!important;height:100%!important;opacity:.91;
+  border-radius:inherit;box-shadow:none!important;
+ }
+ html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header>div:first-of-type{
+  flex:0 1 auto;align-self:center;margin:0 auto 0 0!important;
+  max-width:66%;z-index:2;min-width:0;
+ }
+ html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header h1{
+  margin-top:7px;font-size:clamp(38px,4.2vw,62px)!important;
+  line-height:1.08;letter-spacing:-.045em!important;font-weight:820;
+ }
+ html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header .panel-kicker{
+  font-size:11px;letter-spacing:.31em!important;line-height:1.4;
+ }
+ html.modern-web.fy-ui2 :is(#view-playlist,#view-ranking,#view-mylist)>.view-header .view-note{
+  position:relative;z-index:2;max-width:230px;
+  align-self:flex-end;padding-bottom:4px;text-align:right;line-height:1.65;
+ }
+}
+html.modern-web.fy-ui2 #view-search>.view-header{
+ background:#081f35!important;
+}
+html.modern-web.fy-ui2 #view-search>.view-header:before{
+ background:linear-gradient(90deg,rgba(6,20,38,.95) 0%,rgba(5,28,45,.62) 45%,rgba(3,43,61,.10) 100%);
+}
+html.modern-web.fy-ui2 #view-search>.view-header h1{
+ text-shadow:0 4px 38px rgba(0,243,231,.19)!important;
+}
+html.modern-web.fy-ui2 #view-search .view-tabs{
+ position:relative;z-index:3;padding:5px;border-radius:999px;
+ background:rgba(8,36,48,.63);border:1px solid rgba(121,225,219,.25);
+}
+html.modern-web.fy-ui2 #view-search .view-tabs .view-tab{border-radius:999px}
+html.modern-web.fy-ui2 #view-search .search-inspiration{
+ position:relative;isolation:isolate;overflow:hidden;
+ border-radius:28px 16px 44px 16px;
+ background:
+  radial-gradient(ellipse 40% 120% at 0% 0%,rgba(54,207,200,.25),transparent 85%),
+  linear-gradient(105deg,#092c3e 0%,#12304b 56%,#292454 100%)!important;
+ border-color:rgba(103,211,217,.38);
+ box-shadow:0 24px 58px rgba(1,18,45,.25);
+}
+html.modern-web.fy-ui2 #view-search .search-inspiration:after{
+ content:"";position:absolute;z-index:0;pointer-events:none;
+ width:300px;height:300px;right:-80px;top:-86px;border-radius:50%;
+ border:1px solid rgba(103,239,224,.38);
+ box-shadow:0 0 0 17px rgba(103,239,224,.03),0 0 0 38px rgba(103,239,224,.04),
+  0 0 0 64px rgba(103,239,224,.025),inset 0 0 90px rgba(68,195,229,.09);
+}
+html.modern-web.fy-ui2 #view-search .search-inspiration>*{position:relative;z-index:1}
+html.modern-web.fy-ui2 #view-search .search-inspiration .search-inspiration-icon{
+ border-radius:14px;transform:rotate(-9deg);
+ background:linear-gradient(145deg,#49ceb5,#2774a6);
+}
+html.modern-web.fy-ui2 #view-search .search-suggestions button{
+ border-radius:999px;background:rgba(70,170,188,.14);
+ border-color:rgba(102,227,208,.30);color:#d9ffff;
+}
+
+/* Resonance / Playlists — staggered modular gallery and concentric stage. */
+html.modern-web.fy-ui2 #view-playlist>.view-header{background:#151238!important;border-radius:40px 16px 40px 16px}
+html.modern-web.fy-ui2 #view-playlist>.view-header:before{
+ background:linear-gradient(90deg,rgba(15,15,45,.96),rgba(31,17,70,.52) 50%,rgba(27,16,78,.09));
+}
+html.modern-web.fy-ui2 #view-playlist #playlist-filter-stack{
+ border:1px solid rgba(161,129,254,.23);border-radius:20px;overflow:hidden;
+ box-shadow:0 14px 44px rgba(19,15,56,.09);
+}
+html.modern-web.fy-ui2 #view-playlist #playlist-featured{
+ display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;
+ grid-auto-flow:dense;align-items:stretch;
+}
+html.modern-web.fy-ui2 #view-playlist #playlist-featured>.playlist-card{
+ grid-column:span 3;border:1px solid rgba(139,135,231,.35)!important;
+ border-radius:22px 22px 9px 22px!important;
+ background:linear-gradient(160deg,rgba(50,37,90,.87),rgba(19,30,57,.98))!important;
+ box-shadow:0 12px 36px rgba(17,12,45,.16);
+ min-width:0;position:relative;overflow:hidden;
+}
+html.modern-web.fy-ui2 #view-playlist #playlist-featured>.playlist-card:nth-child(6n+1){
+ grid-column:span 6;
+ background:linear-gradient(140deg,rgba(45,52,111,.94),rgba(53,31,91,.90))!important;
+ border-radius:30px 10px 30px 10px!important;
+}
+html.modern-web.fy-ui2 #view-playlist #playlist-featured>.playlist-card:nth-child(6n+4){
+ grid-column:span 6;
+ background:linear-gradient(140deg,rgba(20,64,95,.92),rgba(49,24,82,.88))!important;
+}
+html.modern-web.fy-ui2 #view-playlist #playlist-featured>.playlist-card:hover{
+ transform:translateY(-5px);border-color:rgba(210,169,255,.67)!important;
+ box-shadow:0 22px 50px rgba(25,14,74,.26);
+}
+html.modern-web.fy-ui2 #view-playlist .playlist-detail-header{
+ background:linear-gradient(115deg,rgba(54,42,110,.54),rgba(11,35,68,.31));
+ border-radius:22px;
+}
+
+/* Velocity / Rankings — asymmetrical speed lane with a gold TOP3 hierarchy. */
+html.modern-web.fy-ui2 #view-ranking>.view-header{background:#311624!important;border-radius:12px 36px 12px 36px}
+html.modern-web.fy-ui2 #view-ranking>.view-header:before{
+ background:linear-gradient(100deg,rgba(43,16,25,.98),rgba(96,36,40,.61) 53%,rgba(113,40,55,.06));
+}
+html.modern-web.fy-ui2 #view-ranking .ranking-source-switch{
+ border-radius:10px 22px 10px 22px;border:1px solid rgba(250,159,107,.29);
+ background:linear-gradient(105deg,rgba(71,32,43,.78),rgba(27,36,49,.93));
+}
+html.modern-web.fy-ui2 #view-ranking .ranking-layout{
+ border:1px solid rgba(233,158,101,.25);border-radius:12px 28px 20px 12px;
+ overflow:hidden;box-shadow:0 22px 48px rgba(33,12,28,.14);
+}
+html.modern-web.fy-ui2 #view-ranking .ranking-sidebar{
+ background:linear-gradient(180deg,#302029,#182b37)!important;
+ border-color:rgba(240,155,113,.21)!important;
+}
+html.modern-web.fy-ui2 #view-ranking .ranking-item.active{
+ background:linear-gradient(95deg,rgba(229,124,75,.30),rgba(134,57,68,.22))!important;
+ border-color:rgba(250,165,107,.57)!important;color:#ffe3bf!important;
+}
+html.modern-web.fy-ui2 #view-ranking #ranking-songs>.chart-song-row:nth-child(-n+3){
+ border-left:3px solid rgba(255,172,103,.76);
+ background:linear-gradient(100deg,rgba(110,66,54,.32),rgba(25,39,51,.92));
+}
+
+/* Warm Library / Memory — analog sleeve typography, amber collectors shelf. */
+html.modern-web.fy-ui2 #view-mylist>.view-header{background:#2d221c!important;border-radius:14px 14px 48px 14px}
+html.modern-web.fy-ui2 #view-mylist>.view-header:before{
+ background:linear-gradient(90deg,rgba(40,27,22,.97),rgba(78,46,36,.53) 53%,rgba(90,45,43,.05));
+}
+html.modern-web.fy-ui2 #view-mylist .music-library-workspace{
+ border-radius:22px;overflow:hidden;border:1px solid rgba(207,144,104,.28)!important;
+ box-shadow:0 22px 58px rgba(35,22,17,.16)!important;
+ background:linear-gradient(135deg,#2e2725,#1a2b33)!important;
+}
+html.modern-web.fy-ui2 #view-mylist .music-library-sidebar{
+ background:
+  repeating-radial-gradient(circle at 7% 98%,transparent 0 15px,rgba(215,144,107,.035) 16px 17px),
+  linear-gradient(155deg,#322b2a,#232f33)!important;
+ border-color:rgba(217,156,108,.23)!important;
+}
+html.modern-web.fy-ui2 #view-mylist .music-library-content{
+ background:linear-gradient(145deg,#25292b,#182a33)!important;
+}
+html.modern-web.fy-ui2 #view-mylist .my-tab.active{
+ background:linear-gradient(95deg,rgba(192,123,76,.31),rgba(113,68,75,.17))!important;
+ border-color:rgba(227,171,113,.36)!important;color:#ffe2c4!important;
+ box-shadow:inset 3px 0 #efb37c!important;
+}
+html.modern-web.fy-ui2 #view-mylist .library-row:hover{
+ background:rgba(211,157,105,.095)!important;
+}
+
+/* Immersive / Nebula — oversized artwork surrounded by optical rings,
+   airy lyrics surface; no controls are moved or covered by ornaments. */
+@media(min-width:981px){
+ html.modern-web.fy-ui2 #lyrics-overlay .now-playing-album-column{
+  background:radial-gradient(ellipse at 40% 34%,rgba(64,94,148,.23),transparent 69%),
+   linear-gradient(135deg,rgba(19,26,55,.72),rgba(20,47,52,.20))!important;
+  align-items:center;padding-inline:clamp(20px,3vw,48px);
+ }
+ html.modern-web.fy-ui2 #lyrics-overlay .now-playing-cover-box{
+  border-radius:25px 25px 85px 25px!important;
+  box-shadow:0 35px 85px rgba(0,0,0,.30),0 0 0 1px rgba(137,197,243,.27)!important;
+ }
+ html.modern-web.fy-ui2 #lyrics-overlay #fy3-immersive-spectrum{
+  width:min(100%,460px);background:linear-gradient(110deg,rgba(35,54,103,.45),rgba(60,34,90,.23));
+  border-color:rgba(143,203,255,.25);
+ }
+ html.modern-web.fy-ui2 #lyrics-overlay .now-playing-detail-column{
+  background:linear-gradient(110deg,rgba(8,21,43,.44),rgba(20,17,42,.26))!important;
+ }
+ html.modern-web.fy-ui2 #lyrics-overlay #lyrics-lines .lyrics-line.active{
+  border-left:3px solid rgba(111,216,247,.82);
+  border-radius:6px 16px 16px 6px;
+  background:linear-gradient(90deg,rgba(77,135,198,.19),transparent 87%)!important;
+ }
+}
+@media(min-width:741px) and (max-width:1100px){
+ html.modern-web.fy-ui2 #view-playlist #playlist-featured>.playlist-card{grid-column:span 6}
+ html.modern-web.fy-ui2 #view-playlist #playlist-featured>.playlist-card:nth-child(6n+1),
+ html.modern-web.fy-ui2 #view-playlist #playlist-featured>.playlist-card:nth-child(6n+4){grid-column:span 6}
+}
+@media(max-width:740px){
+ html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header{
+  padding:14px 16px!important;margin-bottom:12px;
+  border-radius:18px;overflow:hidden;
+  border:1px solid rgba(180,222,235,.18);min-height:90px;
+  align-items:center;gap:8px;
+ }
+ html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header>.fy3-scene-header{
+  inset:0!important;top:0!important;right:0!important;width:100%!important;
+  height:100%!important;border-radius:inherit;
+ }
+ html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header>div:first-of-type{
+  margin-right:auto;z-index:2;
+ }
+ html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header:before{
+  background:linear-gradient(90deg,rgba(11,23,32,.94),rgba(10,25,46,.24) 100%);
+ }
+ html.modern-web.fy-ui2 #view-playlist #playlist-featured{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+ }
+ html.modern-web.fy-ui2 #view-playlist #playlist-featured>.playlist-card,
+ html.modern-web.fy-ui2 #view-playlist #playlist-featured>.playlist-card:nth-child(6n+1),
+ html.modern-web.fy-ui2 #view-playlist #playlist-featured>.playlist-card:nth-child(6n+4){
+  grid-column:auto;min-width:0;border-radius:16px!important;
+ }
+ html.modern-web.fy-ui2 #view-search .search-inspiration{border-radius:20px}
+ html.modern-web.fy-ui2 #view-search .search-inspiration:after{
+  width:168px;height:168px;right:-52px;top:0;
+ }
+ html.modern-web.fy-ui2 #view-ranking .ranking-layout{border-radius:16px}
+ html.modern-web.fy-ui2 #view-mylist .music-library-workspace{border-radius:15px}
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-search>.view-header{
+ background:#dcf5ef!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-playlist>.view-header{
+ background:#e7e8ff!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking>.view-header{
+ background:#f7dcca!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist>.view-header{
+ background:#f8e4d3!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header:before{
+ background:linear-gradient(90deg,rgba(246,251,250,.97),rgba(247,249,249,.64) 60%,rgba(248,250,255,.06));
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-search .search-inspiration{
+ background:linear-gradient(110deg,#e0f7ed,#dbe9f4 62%,#ece6f8)!important;
+ border-color:rgba(79,166,173,.39);
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-search .search-suggestions button{
+ color:#186c67!important;background:rgba(98,187,169,.17)!important;
+ border-color:rgba(71,162,155,.29)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-playlist #playlist-featured>.playlist-card{
+ background:linear-gradient(155deg,#f4f2ff,#eaf3f7)!important;
+ border-color:rgba(125,106,181,.28)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking .ranking-source-switch{
+ background:linear-gradient(105deg,#fae9df,#f3edef)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking .ranking-sidebar{
+ background:linear-gradient(150deg,#f7ebdf,#f0eeee)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist .music-library-workspace{
+ background:linear-gradient(115deg,#fbf1e5,#eef4f1)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist .music-library-sidebar{
+ background:linear-gradient(150deg,#f4e8da,#f2eeee)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist .music-library-content{
+ background:#f8f7f4!important;
+}
+@media(prefers-reduced-motion:reduce),(forced-colors:active){
+ html.modern-web.fy-ui2 #view-playlist #playlist-featured>.playlist-card{transition:none!important}
+ html.modern-web.fy-ui2 #view-playlist #playlist-featured>.playlist-card:hover{transform:none!important}
+}
+@media(forced-colors:active){
+ html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header{
+  border:1px solid CanvasText!important;background:Canvas!important;border-radius:0;
+ }
+ html.modern-web.fy-ui2 #view-mylist :is(.music-library-workspace,.music-library-sidebar,.music-library-content){
+  background:Canvas!important;color:CanvasText!important;
+ }
+}

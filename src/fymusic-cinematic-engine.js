@@ -85,6 +85,7 @@
     '}'
   ].join('\n');
   let header=null,immersive=null,view='search',raf=0;
+  let sceneTransitions=0,overlayTransitions=0;
   let mx=0,my=0,px=0,py=0;
   const disabled=()=>motion.matches||highContrast.matches;
   const active=()=>container.querySelector('.view-panel.active');
@@ -131,7 +132,20 @@
     const next=section?.id?.slice(5)||'search';
     const parent=section?.querySelector('.view-header');
     if(!parent)return;
+    const previous=view;
     view=Object.prototype.hasOwnProperty.call(scenes,next)?next:'search';
+    // No navigation handler interception: animate only the existing active
+    // section after the app has already switched it. No duplicated content.
+    if(previous!==view&&!disabled()&&section.animate){
+      sceneTransitions++;
+      for(const [i,target] of [parent,
+        section.querySelector(':scope > .sub-toolbar, :scope > .playlist-filter-stack, :scope > .ranking-source-switch, :scope > .music-library-workspace')].entries()){
+        if(!target)continue;
+        target.animate([{opacity:.54,transform:'translate3d(0,12px,0)'},
+          {opacity:1,transform:'translate3d(0,0,0)'}],
+          {duration:i?380:470,delay:i?65:0,easing:'cubic-bezier(.2,.78,.2,1)'});
+      }
+    }
     if(!header)header=create(parent,'header');
     else if(header.canvas.parentElement!==parent)parent.prepend(header.canvas);
     // Reuse one GPU context across all view changes. Repeated allocation
@@ -185,10 +199,26 @@
   }
   function stop(){if(raf)cancelAnimationFrame(raf);raf=0;}
   function update(){
-    syncStage();stop();
+    syncStage();syncOverlayEntrance();stop();
     if(!document.hidden&&!highContrast.matches)raf=requestAnimationFrame(frame);
   }
   immersive=create(album,'immersive');
+  // A subtle scene entrance can animate a music overlay only when opening.
+  // The overlay and native transport handlers stay owned by the app.
+  let wasVisible=visible();
+  const syncOverlayEntrance=()=>{
+    const nowVisible=visible();
+    if(nowVisible&&!wasVisible&&!disabled()){
+      const cover=album.querySelector('.now-playing-cover-box');
+      if(cover?.animate){
+        overlayTransitions++;
+        cover.animate([{opacity:.66,transform:'translate3d(0,13px,0) scale(.974)'},
+          {opacity:1,transform:'translate3d(0,0,0) scale(1)'}],
+          {duration:540,easing:'cubic-bezier(.16,.82,.22,1)'});
+      }
+    }
+    wasVisible=nowVisible;
+  };
   const changed=new MutationObserver(update);
   changed.observe(container,{subtree:true,attributes:true,attributeFilter:['class']});
   changed.observe(overlay,{attributes:true,attributeFilter:['class','aria-hidden']});
@@ -209,6 +239,7 @@
   window.FyMusicCinematic=Object.freeze({
     enabled:()=>Boolean(header),scene:()=>view,
     gpu:()=>Boolean(header?.gl),reducedMotion:()=>disabled(),
+    transitionCounts:()=>Object.freeze({scene:sceneTransitions,overlay:overlayTransitions}),
     // Introspection contains only normalized signal magnitudes.
     audioReactive:()=>visible()&&!disabled()?{...lastAudio}:{...silent}
   });
