@@ -5,6 +5,18 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+
+## 2026-11-05 · Stage B2 multiband shader reaction, exact source CI and screenshot review
+
+- **Goal:** Use independently measured real low/mid/high FFT strength and transient envelope to make the cinematic immersive WebGL scene more responsive, while keeping source-opaque audio truthful and original player untouched.
+- **Changes:** [`505780d`](https://github.com/lxhlw/Only-testing-online-music/commit/505780d0d70d1e8ac8c14f11b847207a3b675177) modifies `src/ui2-audio-visualizer.js`, `src/fymusic-cinematic-engine.js` and two existing tests. Single capture-only analyzer exports bounded read-only live bands/RMS/onset; new GLSL uniforms alter bass halo radius, mid interference detail, treble dust and onset pulse. One audio output element and no transport/media rewrites. Opaque/paused/reduced-motion input zeroes reactive uniforms.
+- **Tests:** Exact source SHA isolated [#41961751756](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41961751756) SUCCESS. Browser/default/classic/320–1440 Chromium/WebKit, GPU compile, synthetic test-only 130/980/5200 Hz 3-band live and static/pauses/reduced-motion, source/privacy/Preview/404, KG→KW real playback, MG `开始懂了` real original song + correct album image and 55 timed lines + pause/resume all PASS. Historical docs-only [#41960763499](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41960763499) FAILED MG real playback while other stages PASS, no proven provider fix. No test thresholds loosened.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/41961751756 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41961751756/artifacts/13384884478 ; immutable isolated Preview https://a4cdb7bb.only-testing-online-music.pages.dev/ ; source commit https://github.com/lxhlw/Only-testing-online-music/commit/505780d0d70d1e8ac8c14f11b847207a3b675177 .
+- **Visual review:** Inspected actual desktop test oscillator dark dock and light immersive screenshots. FFT bars and waveform are visible and vary across frequency regions; no obvious obscured transport or lyrics within inspected frames. Light immersive layout and GPU/header visual integration remain comparatively sparse; human aesthetic approval not given.
+- **Not done:** Real third-party provider FFT capture proof; physical GPU pacing/energy measurements; design-polished scene compositions and transitions; persistent Migu reliability proof; official main merge, production release, rollback drill.
+- **Next:** Stage C complete distinct editorial compositions and fluid interaction/transition system with controls/language/keyboard/mobile safe; then Stage D physical device and user signoff. Full runtime B2 source green, handoff-only CI separately pending.
+- **Status:** Stage B2 source **GREEN**; **2 major stages remain C and D** plus separately gated release. All public-safe.
+
 ## 2026-11-05 · Stage A strict MG recovered; Stage B1 large capture-only 64-band spectrum initiated
 
 - **Goal:** Reconcile newest strict original-platform audio results and address the user's weak/small spectrum without replacing native playback or inventing real audio data.
