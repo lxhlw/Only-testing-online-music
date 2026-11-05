@@ -5,6 +5,18 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · Stage C1 mobile loading/card CSS regression resolved and strict Preview tested
+
+- **Goal:** Recover latest Stage C1 UI3 browser regression without undoing the newly integrated distinct editorial scenes or weakening strict media tests.
+- **Changes:** Source [`5ce51f5`](https://github.com/lxhlw/Only-testing-online-music/commit/5ce51f50444890b9dd064bbcf19adadc9f32d8bd) overrides mobile-shell `display:grid!important` only when `#playlist-featured` has no direct playlist cards, ensuring readable loading text; once card elements exist, a more specific mobile rule restores the two-column editorial gallery. Extended Chromium/WebKit browser contract for real loaded mobile playlist columns when present. No player/remote resolver/lyric modifications. C1 editorial baseline `526db47`, multiple layout fixes, previous strict passing `34d021d`, latest prior failure `ef422d9`.
+- **Tests:** Prior [#41967511760](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41967511760) RED at `test-fymusic-ui3-browser.mjs:86`, computed placeholder `grid` versus expected `block`, preventing actual Preview/MG check. Exact new source [#41972887409](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41972887409) **COMPLETED SUCCESS**: full build/static/privacy/allowlist, Chromium/WebKit 1440/390/320 scenes, reduced-motion, classic opt-out, immutable Cloudflare Preview browser/ver/404, real KG→KW and original MG audio/cover/55 timed LRC/pause-resume PASS. No fixture substitution for original MG. One pass does not eliminate provider intermittence.
+- **Evidence:** Source https://github.com/lxhlw/Only-testing-online-music/commit/5ce51f50444890b9dd064bbcf19adadc9f32d8bd ; strict CI https://github.com/lxhlw/Only-testing-online-music/actions/runs/41972887409 ; artifact https://github.com/lxhlw/Only-testing-online-music/actions/runs/41972887409/artifacts/13390762739 ; immutable isolated Preview https://27b7060e.only-testing-online-music.pages.dev/ .
+- **Visual review:** Inspected C1 browser screenshots from [#41966651822](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41966651822): Search aurora, Playlist rings, Ranking streaks, warm Library, light Library. Distinct colors and shader geometry confirmed; placeholder layout flaw identified separately and fixed under strict browser QA. User aesthetic approval NOT granted.
+- **Not done:** Stage C2 editorial content/empty-state enhancements and visual review of every light/mobile scene; Stage D physical frame rate, GPU/power/touch/accessibility quality; production release. Provider MG sporadically fails other exact-code attempts; no durable backend fix proven.
+- **Next:** Stage C2 intentional content composition and load/error/empty UX across views, with full Chromium/WebKit/mobile and original strict KG/MG gates; then Stage D signoff and separately authorize production release. **2 major stages remain: C finishing + D**, not counting release.
+- **Status:** Stage C1 local + isolated Preview + strict source real media QA GREEN. Official main v0.4.35 unchanged. Public-safe.
+
+
 
 ## 2026-11-05 · Stage B2 multiband shader reaction, exact source CI and screenshot review
 
