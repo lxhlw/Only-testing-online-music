@@ -5,6 +5,18 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+## 2026-11-05 · UI3 ranking SVG regression fix + strict attempt reconciliation (no production release)
+
+- **Goal:** Recover Stage A Chromium/WebKit screenshot/scene contract and preserve accurate real audio and reduced-motion failures.
+- **Changes:** CSS-only `src/fymusic-cinematic.css` fix at `07ab240`: new embedded dark/light ranked energy-lane SVG background beneath intact gradient treatment. No original audio, native player, lyrics, provider or test-threshold changes. This record is a docs-only public-safe checkpoint.
+- **Tests:** Previous #41893223192 FAILED computed chart artwork. On exact code `07ab240`, [#41955196501 attempt 1](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41955196501) FAILED overall, despite build/privacy, Chromium/WebKit local browsers, first-fold, isolated Preview and strict KG→KW live audio+48 timed lines all PASS; strict MG original `开始懂了` native audio did not advance in 35s (`readyState:0`). One unchanged-code attempt 2 FAILED local `test-ui2-visualizer-browser.mjs:127` reduced-motion idle sync within 4.5s; Preview was not deployed and MG was NOT actually checked on attempt 2. Tests were not weakened or reclassified.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/commit/07ab240097cfc0ccf122a803d1cf08e642a1e957 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41955196501 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41955196501/artifacts/13383195912 ; immutable nonproduction Preview attempt 1 https://8c92bf9f.only-testing-online-music.pages.dev/ .
+- **Visual QA:** 58 actual browser screenshots attached to attempt 1; representative search, playlist, ranking, library dark/light inspected. Distinct GLSL scene patterns are visible, with remaining disconnected rectangular GPU-header composition; aesthetic approval remains pending. No device FPS/memory/battery or screen-reader measurements.
+- **Not done:** Prove reduced-motion root cause/fix; pass strict original Migu audio+cover+55 timed LRC; comprehensive screenshot/performance/physical-device acceptance; Stage B FFT, Stage C transitions, Stage D quality, merge, production deploy, rollback drill.
+- **Status:** UI3 isolated candidate **HOLD/RED** after two exact-code attempts. Official main v0.4.35 unchanged; old UI2 PR #124 not released. This public docs-only checkpoint will have a NEW head/CI result, initially PENDING.
+- **Next:** Diagnose reduced-motion idle race without relaxing assertions; establish real Migu playback; rerun complete isolated Chromium/WebKit/Preview/KG/MG gates; redesign shader integration and then begin Stage B. No production authorization.
+
+
 ## 2026-11-05 · UI3 search header spacing after near-pass first-fold check
 
 - **Goal:** Complete desktop discovery card clearance under original 900px-height player dock contract.
