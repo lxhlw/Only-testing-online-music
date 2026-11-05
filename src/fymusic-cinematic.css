@@ -585,7 +585,7 @@ html.modern-web.fy-ui2 #view-playlist #playlist-featured>.playlist-card:hover .p
 /* Ranking is a visual scoreboard, not a second copy of the playlist grid. */
 html.modern-web.fy-ui2 #view-ranking .ranking-content{
  position:relative;isolation:isolate;
- background:radial-gradient(ellipse at 100% 0%,rgba(228,117,82,.10),transparent 57%);
+ background-image:radial-gradient(ellipse at 100% 0%,rgba(228,117,82,.10),transparent 57%)!important;
 }
 html.modern-web.fy-ui2 #view-ranking #ranking-songs:empty{
  display:block;min-height:190px;position:relative;overflow:hidden;
