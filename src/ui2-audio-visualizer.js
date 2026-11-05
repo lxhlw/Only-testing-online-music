@@ -77,7 +77,18 @@
   };
   const frame=now=>{
     raf=0;
-    if(!permitted()||!isPlaying()||!analyser||!context)return;
+    const allowed=permitted(),playing=isPlaying();
+    if(!allowed||!playing||!analyser||!context){
+      // The RAF can observe reduced motion / visibility / pause before a
+      // matchMedia or audio event reaches update(). Reconcile the UI mode
+      // synchronously so an old live indicator never remains stuck on-screen.
+      // This only suspends the independent analysis graph, not native audio.
+      if(!allowed||!playing){
+        syncMode('idle');draw(false);
+        if(context?.state==='running')try{context.suspend()?.catch(()=>{});}catch{}
+      }
+      return;
+    }
     if(lastFrame&&now-lastFrame<33){raf=requestAnimationFrame(frame);return;}
     lastFrame=now;
     try{analyser.getByteFrequencyData(bins);}catch{teardown();return;}
