@@ -491,6 +491,16 @@ html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylis
 /* Stage C1 visual screenshot QA: before cards arrive, text/loading placeholders
    must not become anonymous 1-of-12 CSS grid items (vertical glyph stacks).
    Only card-loaded collections use the asymmetric editorial grid. */
+/* Mobile shell declares .playlist-grid { display:grid!important }. Its
+   override caused loading text to collapse to a single character column.
+   Match specificity and use !important only for this scoped state, not all
+   playlist grids, leaving unrelated favorites/search layouts untouched. */
 html.modern-web.fy-ui2 #view-playlist #playlist-featured:not(:has(> .playlist-card)){
- display:block;min-height:90px;padding:14px 18px;box-sizing:border-box;
+ display:block!important;min-height:90px;padding:14px 18px;box-sizing:border-box;
+}
+@media(max-width:740px){
+ html.modern-web.fy-ui2.mobile-shell-ready #view-playlist #playlist-featured:has(> .playlist-card){
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:10px!important;padding:7px 0 14px!important;
+ }
 }

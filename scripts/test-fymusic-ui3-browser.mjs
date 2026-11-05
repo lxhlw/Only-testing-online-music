@@ -85,6 +85,23 @@ for(const [engine,launcher] of [['chromium',chromium],['webkit',webkit]]){
        });
        if(loading.empty)assert.equal(loading.display,'block',
          'Loading playlist text cannot shrink into a one-column grid item');
+       // The mobile shell's !important 3-column grid must not override the
+       // editorial 2-column card layout after actual cards arrive.
+       if(width<=740){
+         const actual=await page.evaluate(()=>{
+           const el=document.getElementById('playlist-featured');
+           if(el.querySelector(':scope > .playlist-card')){
+             const css=getComputedStyle(el);
+             return {loaded:true,display:css.display,columns:css.gridTemplateColumns};
+           }
+           return {loaded:false};
+         });
+         if(actual.loaded){
+           assert.equal(actual.display,'grid','Loaded playlists must use a grid');
+           assert.equal(actual.columns.trim().split(/\\s+/).length,2,
+             'Loaded mobile playlist cards need two editorial columns');
+         }
+       }
      }
      scenarios.push({scene,gpu:snap.gpu});
      if(width===1440){
