@@ -182,9 +182,10 @@ html.modern-web.fy-ui2.fy-ui2-light #fy3-immersive-spectrum{
  }
  html.modern-web.fy-ui2 #view-search>.view-header{margin-bottom:0}
  html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header>.fy3-scene-header{
-  inset:0!important;right:0!important;top:0!important;
-  width:100%!important;height:100%!important;opacity:.91;
-  border-radius:inherit;box-shadow:none!important;
+  /* Four-edge absolute stretch avoids 100%-content-box + padding gaps. */
+  top:0!important;right:0!important;bottom:0!important;left:0!important;
+  inset:0!important;width:auto!important;height:auto!important;opacity:.91;
+  box-sizing:border-box;border-radius:inherit;box-shadow:none!important;
  }
  html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header>div:first-of-type{
   flex:0 1 auto;align-self:center;margin:0 auto 0 0!important;
@@ -372,8 +373,9 @@ html.modern-web.fy-ui2 #view-mylist .library-row:hover{
   align-items:center;gap:8px;
  }
  html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header>.fy3-scene-header{
-  inset:0!important;top:0!important;right:0!important;width:100%!important;
-  height:100%!important;border-radius:inherit;
+  top:0!important;right:0!important;bottom:0!important;left:0!important;
+  inset:0!important;width:auto!important;height:auto!important;
+  box-sizing:border-box;border-radius:inherit;
  }
  html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylist)>.view-header>div:first-of-type{
   margin-right:auto;z-index:2;
