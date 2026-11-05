@@ -37,6 +37,8 @@ for(const name of ['STAGE C1','#view-search .search-inspiration:after',
 for(const name of ['sceneTransitions','overlayTransitions','section.animate',
  'syncOverlayEntrance','transitionCounts:'])
  assert.ok(code.includes(name),'Accessible WAAPI scene transition missing: '+name);
+assert.ok(css.includes('#playlist-featured:not(:has(> .playlist-card))'),
+ 'Playlist empty-loading text must remain legible before cards arrive');
 assert.ok(!/\.connect\((?:ac|context)\.destination\)/.test(analyzer),
  'Capture-only analyser cannot reroute native audio');
 console.log('FYMUSIC_UI3_SCENE_STYLE_CONTRACT_PASS');

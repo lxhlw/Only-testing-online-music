@@ -77,6 +77,15 @@ for(const [engine,launcher] of [['chromium',chromium],['webkit',webkit]]){
        'Navigation must enable a nonblocking scene entrance');
      assert.equal(snap.narrow,false,'No cinematic horizontal scrolling');
      assert.equal(snap.nativeAudio,1,'Original music playback element must be reused');
+     if(scene==='playlist'){
+       const loading=await page.evaluate(()=>{
+         const node=document.getElementById('playlist-featured');
+         return {empty:!node?.querySelector(':scope > .playlist-card'),
+           display:node?getComputedStyle(node).display:null};
+       });
+       if(loading.empty)assert.equal(loading.display,'block',
+         'Loading playlist text cannot shrink into a one-column grid item');
+     }
      scenarios.push({scene,gpu:snap.gpu});
      if(width===1440){
        await page.waitForTimeout(240);
