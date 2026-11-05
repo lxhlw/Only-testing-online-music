@@ -26,6 +26,7 @@ jobs:
           node --check src/ui2-preview.js
           node --check src/ui2-audio-visualizer.js
           node --check src/fymusic-cinematic-engine.js
+          node --check scripts/test-fymusic-ui3-stage-d-endurance.mjs
           node scripts/test-fymusic-ui3-style.mjs
           node --check scripts/test-ui2-default-browser.mjs
           node scripts/test-version.mjs
@@ -54,6 +55,7 @@ jobs:
           node scripts/test-ui2-visualizer-browser.mjs
           node scripts/test-fymusic-ui3-browser.mjs
           node scripts/test-fymusic-ui3-stage-d-browser.mjs
+          node scripts/test-fymusic-ui3-stage-d-endurance.mjs
           node scripts/test-ui2-theme-browser.mjs
           node scripts/test-ui2-touch-reachability-browser.mjs
           node scripts/test-modern-web-browser.mjs
