@@ -51,6 +51,9 @@ for(const [engine,launcher] of [['chromium',chromium],['webkit',webkit]]){
          lensFill:!lr||Math.abs(lr.width-hr.width)<3&&Math.abs(lr.height-hr.height)<3,
          lensSize:lr?[Math.round(lr.width),Math.round(lr.height)]:null,
          headerSize:hr?[Math.round(hr.width),Math.round(hr.height)]:null,
+         headerClient:head?[head.clientWidth,head.clientHeight]:null,
+         headerTransform:head?getComputedStyle(head).transform:null,
+         lensInline:lens?lens.getAttribute('style'):null,
          accent:getComputedStyle(head).backgroundColor,
          transitionCount:window.FyMusicCinematic.transitionCounts().scene
        };
@@ -59,7 +62,7 @@ for(const [engine,launcher] of [['chromium',chromium],['webkit',webkit]]){
        'Every scene requires an editorial header, not an unstyled strip');
      assert.equal(editorial.lensFill,true,
        'GPU must integrate into full header composition, not a floating rectangular lens: '+
-        JSON.stringify({header:editorial.headerSize,lens:editorial.lensSize,scene,width}));
+        JSON.stringify({header:editorial.headerSize,lens:editorial.lensSize,client:editorial.headerClient,transform:editorial.headerTransform,inline:editorial.lensInline,scene,width}));
      if(scene!=='search')assert.ok(editorial.transitionCount>=1,
        'Navigation must enable a nonblocking scene entrance');
      assert.equal(snap.narrow,false,'No cinematic horizontal scrolling');

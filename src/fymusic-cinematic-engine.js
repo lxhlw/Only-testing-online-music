@@ -86,6 +86,19 @@
   ].join('\n');
   let header=null,immersive=null,view='search',raf=0;
   let sceneTransitions=0,overlayTransitions=0;
+  // Initial layout may be narrower while the app and web fonts initialize.
+  // Observe the header's actual final layout instead of freezing the first
+  // clientWidth forever. The canvas is absolute, so it cannot resize parent.
+  let watchedHeader=null;
+  const fitHeaderCanvas=()=>{
+    if(!header||!watchedHeader)return;
+    const width=Math.max(1,watchedHeader.clientWidth);
+    const height=Math.max(1,watchedHeader.clientHeight);
+    header.canvas.style.setProperty('width',width+'px','important');
+    header.canvas.style.setProperty('height',height+'px','important');
+  };
+  const headerResizeObserver=typeof ResizeObserver==='function'
+    ?new ResizeObserver(fitHeaderCanvas):null;
   let mx=0,my=0,px=0,py=0;
   const disabled=()=>motion.matches||highContrast.matches;
   const active=()=>container.querySelector('.view-panel.active');
@@ -153,11 +166,12 @@
     // for DPR; otherwise a percentage/auto size can oscillate or drift.
     // clientWidth/Height are the header padding-box dimensions (border
     // excluded). With top/left 0 this preserves the <3px browser contract.
-    if(header){
-      const w=Math.max(1,parent.clientWidth),h=Math.max(1,parent.clientHeight);
-      header.canvas.style.setProperty('width',w+'px','important');
-      header.canvas.style.setProperty('height',h+'px','important');
+    if(watchedHeader!==parent){
+      if(watchedHeader)headerResizeObserver?.unobserve(watchedHeader);
+      watchedHeader=parent;
+      headerResizeObserver?.observe(parent);
     }
+    fitHeaderCanvas();
     // Reuse one GPU context across all view changes. Repeated allocation
     // would otherwise cause browser context eviction during long sessions.
     root.dataset.fy3Scene=view;
