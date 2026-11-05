@@ -5,6 +5,18 @@
 > [CURRENT](HANDOFF_CURRENT.md) for the latest authoritative state and
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
+
+## 2026-11-05 · UI3 Stage C2 distinct content surfaces and screenshot geometry fix, exact-source strict GREEN
+
+- **Goal:** Make scenes distinct throughout actual Search, Playlist, Ranking, Library and Immersive CONTENT, not just shader headers; address truthful loading/empty states, real accessibility and mobile dock clearance.
+- **Changes:** Source changes `5e89194`→`390a7e9`→`ce45546`→`25ae480`→`f44906c`→**[`7835f46`](https://github.com/lxhlw/Only-testing-online-music/commit/7835f46fa4667305b964e2a99e24d28d0bb70435)**: CSS design detail/independent scene texture, native loading-only placeholders and empty state, medium/light-mode and forced-colors, compositor-only decorative record/ring motion; source style/browser tests strengthened. Cleared 1440 fixed player collision without weakening thresholds, applied selectors to override prior important backgrounds, and from *real screenshot* fixed a sticky filter overlay above playlist loading panel. Latest test asserts loading filter placement and rect gap in Chromium/WebKit. No media/resolver/network/lyrics/native audio changes.
+- **Tests:** Exact C2 `7835f46` [#41978836793](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41978836793) **COMPLETED SUCCESS**, build/static/privacy and route guard, Chromium/WebKit 1440/390/320 plus other modern UI modes, classic/reduced motion/force-color fallback contracts, synthetic tri-band analyzer vs inaccessible source static, isolated Preview/version/404, original KG→KW `稻香` full real audio/artwork/LRC and exact MG `开始懂了` 55 timed lyrics/audio/cover/pause-resume PASS. Earlier C2 `f44906c` full run [#41977701786](https://github.com/lxhlw/Only-testing-online-music/actions/runs/41977701786) attempt 1 FAILED only original MG, attempt 2 CANCELLED after MG had passed when new branch push superseded it. Historical MG intermittent remains unresolved.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/commit/7835f46fa4667305b964e2a99e24d28d0bb70435 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/41978836793 ; screenshot https://github.com/lxhlw/Only-testing-online-music/actions/runs/41978836793/artifacts/13393227552 ; immutable isolated Preview https://7c69bc75.only-testing-online-music.pages.dev/ . Human reviewed final 1440 desktop playlist screenshot: original overlapping sticky filter and loading theater resolved with correct flow, theme and fixed dock visible.
+- **Not done:** User aesthetic acceptance, real hardware/GPU FPS/battery/reader/touch completion, real-provider CORS FFT capture proof, repeat provider reliability, production authorization/merge/rollback drill. Content may appear intentionally empty while no source data is available; fake song lists remain prohibited.
+- **Next:** Stage D one major milestone remaining: deeper cross-device visual/accessibility/performance/media acceptance and explicit aesthetic signoff; then production deployment separately and only if explicitly authorized.
+- **Status:** Stage C2 strict source CI GREEN, engineering completed on development branch; official v0.4.35 main unchanged. New docs-only workflow PENDING until verified; sanitized public record only.
+
+
 ## 2026-11-05 · Stage C1 mobile loading/card CSS regression resolved and strict Preview tested
 
 - **Goal:** Recover latest Stage C1 UI3 browser regression without undoing the newly integrated distinct editorial scenes or weakening strict media tests.
