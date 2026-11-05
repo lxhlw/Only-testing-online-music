@@ -77,14 +77,65 @@ for(const [engine,launcher] of [['chromium',chromium],['webkit',webkit]]){
        'Navigation must enable a nonblocking scene entrance');
      assert.equal(snap.narrow,false,'No cinematic horizontal scrolling');
      assert.equal(snap.nativeAudio,1,'Original music playback element must be reused');
+     if(scene==='search'){
+       const discovery=await page.evaluate(()=>{
+         const n=document.querySelector('#view-search .search-inspiration');
+         const head=document.querySelector('#view-search #search-song-view .results-head');
+         return {record:getComputedStyle(n,'::after').animationName,
+           introBorder:getComputedStyle(head).borderLeftWidth};
+       });
+       assert.equal(discovery.record,'fy3-c2-record-drift',
+         'Search record atmosphere must be a distinct scene animation');
+       assert.ok(parseFloat(discovery.introBorder)>=3);
+     }
+     if(scene==='ranking'){
+       const lane=await page.evaluate(()=>{
+         const el=document.querySelector('#ranking-songs');
+         const content=document.querySelector('#view-ranking .ranking-content');
+         return {empty:el.childElementCount===0,
+           minHeight:parseFloat(getComputedStyle(el).minHeight),
+           surface:getComputedStyle(content).backgroundImage,
+           prompt:getComputedStyle(el,'::before').content};
+       });
+       assert.ok(lane.surface.includes('gradient'),
+         'Ranking content must have its own editorial material');
+       if(lane.empty){
+         assert.ok(lane.minHeight>=100);
+         assert.ok(lane.prompt.includes('选择一张榜单'));
+       }
+     }
+     if(scene==='mylist'){
+       const library=await page.evaluate(()=>({
+         background:getComputedStyle(document.querySelector('#view-mylist .music-library-content')).backgroundImage
+       }));
+       assert.ok(library.background.includes('gradient'),
+         'Library needs an analog sleeve content material, not a blank sheet');
+     }
      if(scene==='playlist'){
        const loading=await page.evaluate(()=>{
          const node=document.getElementById('playlist-featured');
          return {empty:!node?.querySelector(':scope > .playlist-card'),
            display:node?getComputedStyle(node).display:null};
        });
-       if(loading.empty)assert.equal(loading.display,'block',
-         'Loading playlist text cannot shrink into a one-column grid item');
+       if(loading.empty){
+         assert.equal(loading.display,'block',
+           'Loading playlist text cannot shrink into a one-column grid item');
+         const state=await page.evaluate(()=>{
+           const host=document.getElementById('playlist-featured');
+           const realLoading=host.querySelector(':scope > .loading-note');
+           if(!realLoading)return null;
+           const css=getComputedStyle(host),ring=getComputedStyle(host,'::after');
+           return {height:parseFloat(css.minHeight),
+             material:css.backgroundImage,ring:ring.animationName,
+             text:realLoading.textContent};
+         });
+         if(state){
+           assert.ok(state.height>=(width<=740?100:140));
+           assert.ok(state.material.includes('gradient'));
+           assert.equal(state.ring,'fy3-c2-loading-breathe');
+           assert.ok(state.text.includes('歌单'),'Keep real loading status text visible');
+         }
+       }
        // The mobile shell's !important 3-column grid must not override the
        // editorial 2-column card layout after actual cards arrive.
        if(width<=740){
@@ -116,6 +167,11 @@ for(const [engine,launcher] of [['chromium',chromium],['webkit',webkit]]){
     if(width===1440)await page.screenshot({path:'.artifacts/ui3-cinematic/'+engine+'-mylist-light.png',animations:'disabled'});
     await page.emulateMedia({reducedMotion:'reduce'});
     await page.waitForFunction(()=>window.FyMusicCinematic.reducedMotion());
+    const quiet=await page.evaluate(()=>{
+      const record=document.querySelector('#view-search .search-inspiration');
+      return getComputedStyle(record,'::after').animationName;
+    });
+    assert.equal(quiet,'none','Decorative rotating record must stop with reduced motion');
     const before=await page.evaluate(()=>window.FyMusicCinematic.transitionCounts().scene);
     await page.evaluate(()=>document.querySelector('.nav-item[data-view="ranking"]').click());
     await page.waitForFunction(()=>window.FyMusicCinematic.scene()==='ranking');

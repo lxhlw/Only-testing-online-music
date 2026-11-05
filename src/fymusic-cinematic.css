@@ -504,3 +504,210 @@ html.modern-web.fy-ui2 #view-playlist #playlist-featured:not(:has(> .playlist-ca
   gap:10px!important;padding:7px 0 14px!important;
  }
 }
+
+
+/* FYMUSIC UI3 / STAGE C2 — music editorial content, not only hero shaders.
+   State surfaces decorate truthful native placeholders; no sample music data,
+   replacement controls, network requests, fonts or audio routing. */
+html.modern-web.fy-ui2 #view-search #search-song-view .results-head{
+ position:relative;isolation:isolate;display:flex;align-items:center;
+ min-height:49px;padding:0 16px;margin:7px 0 11px;border-radius:12px;
+ border-left:3px solid rgba(73,220,202,.75);
+ background:linear-gradient(100deg,rgba(41,147,157,.13),rgba(19,69,85,.035) 63%,transparent);
+}
+html.modern-web.fy-ui2 #view-search .results-head strong{
+ letter-spacing:.055em;font-size:15px;
+}
+html.modern-web.fy-ui2 #view-search .search-inspiration{
+ min-width:0;transition:box-shadow .45s ease,border-color .45s ease;
+ box-shadow:0 19px 54px rgba(4,22,42,.24),inset 0 1px rgba(220,255,255,.08)!important;
+}
+html.modern-web.fy-ui2 #view-search .search-inspiration:after{
+ transform-origin:50% 50%;
+ animation:fy3-c2-record-drift 32s linear infinite;
+}
+html.modern-web.fy-ui2 #view-search .search-suggestions button{
+ transition:transform .24s cubic-bezier(.2,.7,.3,1),background-color .24s,border-color .24s;
+}
+html.modern-web.fy-ui2 #view-search .search-suggestions button:is(:hover,:focus-visible){
+ transform:translateY(-3px);border-color:rgba(110,241,216,.7);
+ background-color:rgba(66,178,185,.29);outline-offset:3px;
+}
+html.modern-web.fy-ui2 #view-search .search-inspiration-foot{
+ border-top:1px solid rgba(137,222,224,.17);padding-top:12px;
+}
+
+/* Playlist gallery: readable true loading/error/empty states, immersive covers. */
+html.modern-web.fy-ui2 #view-playlist #playlist-filter-stack{
+ position:relative;isolation:isolate;
+ background:linear-gradient(115deg,rgba(47,37,92,.27),rgba(18,59,73,.18))!important;
+}
+html.modern-web.fy-ui2 #view-playlist #playlist-featured:has(> .loading-note){
+ position:relative;isolation:isolate;min-height:144px!important;
+ padding:28px 26px!important;border:1px solid rgba(180,154,248,.29);
+ border-radius:18px;background:
+ radial-gradient(ellipse at 91% 20%,rgba(154,117,248,.23),transparent 55%),
+ repeating-linear-gradient(90deg,transparent 0 19px,rgba(181,145,246,.034) 20px 21px),
+ linear-gradient(110deg,rgba(31,27,66,.78),rgba(22,41,66,.72));
+ box-shadow:inset 0 1px rgba(245,235,255,.05);
+}
+html.modern-web.fy-ui2 #view-playlist #playlist-featured:has(> .loading-note):after{
+ content:"";position:absolute;z-index:-1;pointer-events:none;
+ width:84px;height:84px;right:31px;top:28px;border-radius:50%;
+ border:1px solid rgba(186,167,255,.34);
+ box-shadow:0 0 0 13px rgba(174,152,240,.044),
+  0 0 0 29px rgba(160,128,240,.033),
+  inset 0 0 0 25px rgba(138,119,224,.055);
+ animation:fy3-c2-loading-breathe 2.8s ease-in-out infinite alternate;
+}
+html.modern-web.fy-ui2 #view-playlist #playlist-featured>.loading-note{
+ position:relative;z-index:1;margin:0;padding:15px 6px;
+ font-size:15px;letter-spacing:.03em;text-align:left;
+}
+html.modern-web.fy-ui2 #view-playlist #playlist-featured>.empty-note{
+ min-height:100px;padding:25px 20px;border:1px dashed rgba(169,145,232,.36);
+ border-radius:18px;background:rgba(106,81,177,.06);
+}
+html.modern-web.fy-ui2 #view-playlist #playlist-featured>.playlist-card{
+ isolation:isolate;transition:transform .4s cubic-bezier(.18,.8,.2,1),
+  box-shadow .4s ease,border-color .4s ease;
+}
+html.modern-web.fy-ui2 #view-playlist #playlist-featured>.playlist-card .playlist-cover{
+ position:relative;overflow:hidden;transform:translateZ(0);
+}
+html.modern-web.fy-ui2 #view-playlist #playlist-featured>.playlist-card .playlist-cover:after{
+ content:"";position:absolute;inset:0;pointer-events:none;opacity:.65;
+ background:linear-gradient(138deg,rgba(255,255,255,.17),transparent 40%,rgba(18,26,60,.16));
+ transition:opacity .3s ease; 
+}
+html.modern-web.fy-ui2 #view-playlist #playlist-featured>.playlist-card:hover .playlist-cover:after{opacity:1}
+
+/* Ranking is a visual scoreboard, not a second copy of the playlist grid. */
+html.modern-web.fy-ui2 #view-ranking .ranking-content{
+ position:relative;isolation:isolate;
+ background:radial-gradient(ellipse at 100% 0%,rgba(228,117,82,.10),transparent 57%);
+}
+html.modern-web.fy-ui2 #view-ranking #ranking-songs:empty{
+ display:block;min-height:190px;position:relative;overflow:hidden;
+ border:1px dashed rgba(229,148,98,.28);border-radius:16px;
+ background:
+ radial-gradient(circle at 84% 45%,transparent 0 30px,rgba(235,136,89,.13) 31px 33px,transparent 34px 57px,rgba(235,136,89,.10) 58px 60px,transparent 61px),
+ linear-gradient(125deg,rgba(74,42,46,.37),rgba(19,34,46,.27));
+}
+html.modern-web.fy-ui2 #view-ranking #ranking-songs:empty:before{
+ content:"先选择一张榜单，开启热榜聆听";position:absolute;left:24px;top:40%;
+ right:24px;max-width:310px;white-space:normal;line-height:1.7;
+ color:#e6bfa4;font-size:15px;letter-spacing:.025em;
+}
+html.modern-web.fy-ui2 #view-ranking #ranking-songs>.chart-song-row{
+ transition:background-color .22s ease,transform .25s ease;
+}
+html.modern-web.fy-ui2 #view-ranking #ranking-songs>.chart-song-row:nth-child(-n+3){
+ box-shadow:inset 0 0 0 1px rgba(238,169,102,.075);
+}
+
+/* Memory library: a quieter, album-sleeve material language and rich empties. */
+html.modern-web.fy-ui2 #view-mylist .music-library-content{
+ position:relative;isolation:isolate;
+ background-image:radial-gradient(ellipse at 100% 0%,rgba(228,166,118,.105),transparent 53%)!important;
+}
+html.modern-web.fy-ui2 #view-mylist .list-toolbar{
+ border-bottom:1px solid rgba(216,166,124,.17);padding-bottom:13px;
+}
+html.modern-web.fy-ui2 #view-mylist :is(#history-list,#favorite-list,#queue-list):empty{
+ position:relative;display:block;min-height:144px;
+ background:radial-gradient(circle at 85% 40%,rgba(208,152,110,.09),transparent 47%);
+ border:1px dashed rgba(205,162,123,.24);border-radius:14px;
+}
+html.modern-web.fy-ui2 #view-mylist :is(#history-list,#favorite-list,#queue-list):empty:after{
+ content:"从下一首喜欢的歌，开始收藏自己的音乐故事";
+ display:block;max-width:350px;padding:49px 20px 20px;
+ font-size:13px;line-height:1.7;color:#b8a291;
+}
+html.modern-web.fy-ui2 #view-mylist .library-row{
+ transition:background-color .23s ease,box-shadow .23s ease;
+}
+html.modern-web.fy-ui2 #view-mylist .library-row:focus-within{
+ box-shadow:inset 3px 0 rgba(226,167,116,.7);
+}
+
+/* Immersive reading: soft lyric deck and typography breathing room. */
+html.modern-web.fy-ui2 #lyrics-overlay .now-playing-detail-column{
+ background-image:radial-gradient(ellipse at 5% 0%,rgba(72,138,169,.15),transparent 52%)!important;
+}
+html.modern-web.fy-ui2 #lyrics-overlay #lyrics-lines .lyrics-line.active{
+ transition:background-color .22s ease,border-color .22s ease;
+}
+
+/* Daylight versions preserve actual readable text/empty state controls. */
+html.modern-web.fy-ui2.fy-ui2-light #view-search #search-song-view .results-head{
+ background:linear-gradient(95deg,rgba(54,153,143,.12),transparent 77%);
+ border-left-color:#27998f;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-playlist #playlist-featured:has(> .loading-note){
+ border-color:rgba(129,117,192,.28);
+ background:radial-gradient(ellipse at 90% 25%,rgba(157,143,224,.25),transparent 58%),
+ linear-gradient(110deg,#f3efff,#e6f2f7);
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking #ranking-songs:empty{
+ border-color:rgba(168,113,100,.31);
+ background:radial-gradient(circle at 84% 45%,transparent 0 30px,rgba(180,112,97,.13) 31px 33px,transparent 34px 57px,rgba(180,112,97,.10) 58px 60px,transparent 61px),linear-gradient(130deg,#fbf1e9,#f3e9e9);
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-ranking #ranking-songs:empty:before{color:#865b55}
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist .music-library-content{
+ background-image:radial-gradient(ellipse at 100% 0%,rgba(226,167,118,.12),transparent 54%)!important;
+}
+html.modern-web.fy-ui2.fy-ui2-light #view-mylist :is(#history-list,#favorite-list,#queue-list):empty:after{color:#75655b}
+html.modern-web.fy-ui2.fy-ui2-light #lyrics-overlay .now-playing-detail-column{
+ background-image:radial-gradient(ellipse at 5% 0%,rgba(118,165,186,.09),transparent 55%)!important;
+}
+@keyframes fy3-c2-record-drift{
+ from{transform:rotate(0deg)}
+ to{transform:rotate(360deg)}
+}
+@keyframes fy3-c2-loading-breathe{
+ from{opacity:.45;transform:scale(.96)}
+ to{opacity:.95;transform:scale(1.035)}
+}
+@media(max-width:740px){
+ html.modern-web.fy-ui2 #view-search #search-song-view .results-head{
+  min-height:38px;margin:5px 0 8px;padding:0 10px;
+ }
+ html.modern-web.fy-ui2 #view-playlist #playlist-featured:has(> .loading-note){
+  min-height:105px!important;padding:14px 17px!important;
+ }
+ html.modern-web.fy-ui2 #view-playlist #playlist-featured:has(> .loading-note):after{
+  width:55px;height:55px;right:18px;top:24px;
+ }
+ html.modern-web.fy-ui2 #view-ranking #ranking-songs:empty{min-height:115px}
+ html.modern-web.fy-ui2 #view-ranking #ranking-songs:empty:before{
+  font-size:12px;left:13px;top:24px;max-width:190px;
+ }
+ html.modern-web.fy-ui2 #view-mylist :is(#history-list,#favorite-list,#queue-list):empty{
+  min-height:100px;
+ }
+ html.modern-web.fy-ui2 #view-mylist :is(#history-list,#favorite-list,#queue-list):empty:after{
+  padding:30px 12px 12px;font-size:12px;
+ }
+}
+@media(prefers-reduced-motion:reduce),(forced-colors:active){
+ html.modern-web.fy-ui2 #view-search .search-inspiration:after,
+ html.modern-web.fy-ui2 #view-playlist #playlist-featured:has(> .loading-note):after{
+  animation:none!important;
+ }
+ html.modern-web.fy-ui2 #view-search .search-suggestions button,
+ html.modern-web.fy-ui2 #view-playlist #playlist-featured>.playlist-card,
+ html.modern-web.fy-ui2 #view-mylist .library-row{transition:none!important}
+ html.modern-web.fy-ui2 #view-search .search-suggestions button:is(:hover,:focus-visible){transform:none}
+}
+@media(forced-colors:active){
+ html.modern-web.fy-ui2 #view-playlist #playlist-featured:has(> .loading-note),
+ html.modern-web.fy-ui2 #view-ranking #ranking-songs:empty,
+ html.modern-web.fy-ui2 #view-mylist :is(#history-list,#favorite-list,#queue-list):empty{
+  background:Canvas!important;color:CanvasText!important;border:1px solid CanvasText!important;
+ }
+ html.modern-web.fy-ui2 #view-ranking #ranking-songs:empty:before,
+ html.modern-web.fy-ui2 #view-mylist :is(#history-list,#favorite-list,#queue-list):empty:after{
+  color:CanvasText!important;
+ }
+}

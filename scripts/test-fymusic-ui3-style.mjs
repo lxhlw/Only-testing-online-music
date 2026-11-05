@@ -18,6 +18,11 @@ for(const feature of ['#view-search','#view-playlist','#view-ranking','#view-myl
  'fy3-scene-immersive','fy-ui2-light','forced-colors:active',
  'prefers-reduced-motion:reduce','height:170px'])
  assert.ok(css.includes(feature),'UI3 scene styling missing: '+feature);
+for(const feature of ['FYMusic UI3 / STAGE C2','fy3-c2-record-drift',
+ 'fy3-c2-loading-breathe',':has(> .loading-note)',
+ '#ranking-songs:empty','#history-list','prefers-reduced-motion:reduce',
+ 'forced-colors:active'])
+ assert.ok(css.includes(feature),'Stage C2 editorial state missing: '+feature);
 assert.ok(!/\bnew Audio\s*\(|createMediaElementSource\s*\(|audio\.src\s*=/i.test(code),
  'Cinematic renderer cannot own or reroute native music playback');
 assert.ok(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|localStorage\.setItem/i.test(code),
