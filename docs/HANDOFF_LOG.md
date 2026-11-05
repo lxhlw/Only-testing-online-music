@@ -6,6 +6,17 @@
 > [POLICY](HANDOFF_POLICY.md) for privacy and writing rules.
 
 
+## 2026-11-05 · Stage D trusted navigation and headless endurance strict GREEN; physical gate remains
+
+- **Goal:** Substantially extend short UI3 acceptance with repeated real browser keyboard/touch navigation, source-preserving resource reuse and **explicitly labeled** headless timing sampling. No fabricated device performance assertions.
+- **Changes:** Source [`82a631a`](https://github.com/lxhlw/Only-testing-online-music/commit/82a631a07b0322ec014a1733d6aa499f8b975566) adds `scripts/test-fymusic-ui3-stage-d-endurance.mjs` and workflow build/node syntax gate + runtime invocation; **no application runtime changes**. Candidate 8-case matrix, real Playwright trusted input followed by 64 rAF-yielded scene stress per case, native immersive open/close, fixed player/one native audio/two shader nodes constraints. CI screenshot artifact `ui3-stage-d/endurance-*`.
+- **Tests:** Strict exact source [#42032450022](https://github.com/lxhlw/Only-testing-online-music/actions/runs/42032450022) **COMPLETED SUCCESS 8/8**. 8 environments × 68 scenes = 544 changes, of which 32 trusted mobile drawer taps/desktop Enter and 512 programmatic yielded switches. Recorded browser 2.2s RAF medians 16–16.7ms, p95 16.7–50ms; Chromium desktop p95 33.4–50ms, Chromium LongTask max 101–139ms; WebKit LongTask unavailable, memory measurements non-evidentiary. Full existing offline/online/Preview/source/lyrics gates green; original MG `开始懂了` 55 timed lines + audio art pause/resume and KG→KW `稻香` true fallback green on this attempt. Historical provider intermittence NOT fixed.
+- **Evidence:** https://github.com/lxhlw/Only-testing-online-music/actions/runs/42032450022 ; https://github.com/lxhlw/Only-testing-online-music/actions/runs/42032450022/artifacts/13417341692 ; https://d39221f1.only-testing-online-music.pages.dev/ ; `docs/FYMUSIC_STAGE_D_ACCEPTANCE.md`.
+- **Not done:** Physical device FPS/CPU/GPU/battery and >5-minute music soak, physical touch/reader, real third-party capture FFT certainty, MG repeat reliability, aesthetic signoff or production approval. No release performed; official main unchanged.
+- **Next:** One major acceptance gate: real-device 5–10 minute performance + subjective design approval and operational/assistive testing, followed by separately authorized release and rollback plan. Docs-only CI status independent of source exact green; public-safe only.
+
+
+
 ## 2026-11-05 · Stage D cross-device CI audit, screenshot inspection and honest acceptance matrix
 
 - **Goal:** Audit current Stage D candidate rather than re-implement existing test, distinguish reliable automation evidence from unmeasured physical performance, and publish a safe actionable final signoff checklist.
