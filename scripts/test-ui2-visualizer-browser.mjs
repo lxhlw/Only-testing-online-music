@@ -108,6 +108,8 @@ try {
    }));
    assert.ok(play.nativeCurrentTime>.35);
    assert.equal(play.audioNodes,1);
+   assert.equal(await page.evaluate(()=>window.FyMusicUI2AudioVisualizer.bands()),64);
+   assert.equal(await page.locator('#fy3-immersive-spectrum canvas').count(),1);
    assert.ok(play.spectrumWidth>90&&play.spectrumWidth<150);
    assert.equal(play.activeClass,forcedCapture);
    if(forcedCapture)assert.ok(play.captureCalls>=1);
@@ -139,6 +141,12 @@ try {
    });
    assert.ok(cover.background.includes('gradient'),'Immersive cover glow missing');
    assert.equal(cover.audioNodes,1);
+   const stage=await page.locator('#fy3-immersive-spectrum').evaluate(el=>({
+     width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,
+     canvases:el.querySelectorAll('canvas').length
+   }));
+   assert.ok(stage.width>=240&&stage.height>=50&&stage.canvases===1,
+    'Immersive spectrum must be displayed without replacing the original album cover');
    await page.screenshot({path:out+'/'+(forcedCapture?'live':'static')+'-light-cover.png',
      animations:'disabled'});
    assert.deepEqual(errors,[]);

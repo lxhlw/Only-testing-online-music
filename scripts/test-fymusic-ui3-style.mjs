@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const html=readFileSync('index.html','utf8');
 const code=readFileSync('src/fymusic-cinematic-engine.js','utf8');
+const analyzer=readFileSync('src/ui2-audio-visualizer.js','utf8');
 const css=readFileSync('src/fymusic-cinematic.css','utf8');
 for(const asset of ['src/fymusic-cinematic-engine.js?v=0.4.36',
  'src/fymusic-cinematic.css?v=0.4.36'])
@@ -21,4 +22,11 @@ assert.ok(!/\bnew Audio\s*\(|createMediaElementSource\s*\(|audio\.src\s*=/i.test
 assert.ok(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|localStorage\.setItem/i.test(code),
  'No network/telemetry/storage in cinematic renderer');
 assert.ok(!/@import\b|url\(\s*["']?https?:/i.test(css),'No remote font/decor');
+for(const feature of ['BANDS=64','fft.fftSize=2048','getByteFrequencyData',
+ 'getByteTimeDomainData','fy3-immersive-spectrum','--fy-audio-low',
+ '--fy-audio-mid','--fy-audio-high'])
+ assert.ok(analyzer.includes(feature),'Missing Stage B1 real FFT contract: '+feature);
+assert.ok(css.includes('#fy3-immersive-spectrum'),'Missing UI3 large spectrum style');
+assert.ok(!/\.connect\((?:ac|context)\.destination\)/.test(analyzer),
+ 'Capture-only analyser cannot reroute native audio');
 console.log('FYMUSIC_UI3_SCENE_STYLE_CONTRACT_PASS');
