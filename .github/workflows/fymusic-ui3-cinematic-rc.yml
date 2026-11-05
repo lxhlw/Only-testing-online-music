@@ -53,6 +53,7 @@ jobs:
           node scripts/test-ui2-desktop-browser.mjs
           node scripts/test-ui2-visualizer-browser.mjs
           node scripts/test-fymusic-ui3-browser.mjs
+          node scripts/test-fymusic-ui3-stage-d-browser.mjs
           node scripts/test-ui2-theme-browser.mjs
           node scripts/test-ui2-touch-reachability-browser.mjs
           node scripts/test-modern-web-browser.mjs
@@ -109,6 +110,7 @@ jobs:
           path: |
             .artifacts/ui2-atmosphere
             .artifacts/ui3-cinematic
+            .artifacts/ui3-stage-d
           if-no-files-found: ignore
           retention-days: 7
       - name: Preview must not deploy the official site
