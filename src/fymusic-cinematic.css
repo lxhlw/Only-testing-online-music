@@ -470,3 +470,20 @@ html.modern-web.fy-ui2 :is(#view-search,#view-playlist,#view-ranking,#view-mylis
  flex:none!important;align-self:auto!important;z-index:0!important;
  pointer-events:none!important;
 }
+
+/* Stage C1: 320x640 touch first fold — preserve a usable song/playlist
+   switcher but return decorative header height to discoverable content.
+   No fixed-dock position, touch target, or strict browser assertion changes. */
+@media(max-width:390px) and (max-height:700px){
+ html.modern-web.fy-ui2.mobile-shell-ready #view-search>.view-header{
+  height:49px!important;min-height:49px!important;max-height:49px!important;
+  padding:5px 10px!important;margin-bottom:4px!important;
+  border-radius:12px!important;
+ }
+ html.modern-web.fy-ui2.mobile-shell-ready #view-search>.view-header .view-tabs{
+  padding:2px;gap:4px;
+ }
+ html.modern-web.fy-ui2.mobile-shell-ready #view-search>.view-header .view-tab{
+  min-height:35px;padding:5px 11px;
+ }
+}
